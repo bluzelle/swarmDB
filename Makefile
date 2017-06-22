@@ -5,7 +5,4 @@ all: $(ALL_OBJECTS)
 	g++ -o kepler $(ALL_OBJECTS) $(LIB_FLAGS)
 
 clean:
-	rm -rf *.o
-
-mrproper: clean
-	rm -rf kepler
+	rm -rf *.o kepler
