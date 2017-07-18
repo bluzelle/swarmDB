@@ -48,7 +48,7 @@ bool KeplerApplication::OnInit()
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
-                     "Kepler TestNet Node")
+                     "Kepler TestNet Simulator")
     {
     wxMenu *menuFile = new wxMenu;
 
@@ -91,7 +91,8 @@ KeplerFrame::KeplerFrame()
          this, 
          wxID_EXIT);
 
-    wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
+    wxBoxSizer *topsizer = new wxBoxSizer( wxHORIZONTAL );
+
     // create text ctrl with minimal size 100x60
     topsizer->Add(
         new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
@@ -99,7 +100,7 @@ KeplerFrame::KeplerFrame()
         wxEXPAND |    // make horizontally stretchable
         wxALL,        //   and make border all around
         10 );         // set border width to 10
-    wxBoxSizer *button_sizer = new wxBoxSizer( wxHORIZONTAL );
+    wxBoxSizer *button_sizer = new wxBoxSizer( wxVERTICAL );
     button_sizer->Add(
         new wxButton( this, wxID_OK, "OK" ),
         0,           // make horizontally unstretchable
