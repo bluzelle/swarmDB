@@ -9,6 +9,10 @@
     #include <wx/wx.h>
 #endif
 
+#include <wx/listctrl.h>
+
+
+
 class KeplerApplication: public wxApp
     {
     public:
@@ -91,30 +95,59 @@ KeplerFrame::KeplerFrame()
          this, 
          wxID_EXIT);
 
-    wxBoxSizer *topsizer = new wxBoxSizer( wxHORIZONTAL );
+    wxBoxSizer *topsizer = new wxBoxSizer(wxHORIZONTAL);
 
-    // create text ctrl with minimal size 100x60
+    wxListView* listView = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+
+    listView->AppendColumn("Node Cardinality #");
+    listView->AppendColumn("Node Physical Hash Id");
+
+    // Add three items to the list
+    listView->InsertItem(0, "1");
+    listView->SetItem(0, 1, "Alfa");
+    listView->InsertItem(1, "2");
+    listView->SetItem(1, 1, "Bravo");
+    listView->InsertItem(2, "3");
+    listView->SetItem(2, 1, "Charlie");
+
     topsizer->Add(
-        new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
-        1,            // make vertically stretchable
+        listView,
+        1,            // make horizontal weight 1
         wxEXPAND |    // make horizontally stretchable
         wxALL,        //   and make border all around
         10 );         // set border width to 10
-    wxBoxSizer *button_sizer = new wxBoxSizer( wxVERTICAL );
+
+    wxBoxSizer *button_sizer = new wxBoxSizer(wxVERTICAL);
+
+    wxListView* listView2 = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+
+    listView2->AppendColumn("Attribute Name");
+    listView2->AppendColumn("Attribute Value");
+
+    // Add three items to the list
+    listView2->InsertItem(0, "Name");
+    listView2->SetItem(0, 1, "Alfa");
+    listView2->InsertItem(1, "Weight");
+    listView2->SetItem(1, 1, "5");
+    listView2->InsertItem(2, "Address");
+    listView2->SetItem(2, 1, "Sesame Street");
+
+
     button_sizer->Add(
-        new wxButton( this, wxID_OK, "OK" ),
-        0,           // make horizontally unstretchable
-        wxALL,       // make border all around (implicit top alignment)
+        listView2,
+        4,           // make horizontally unstretchable
+        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
         10 );        // set border width to 10
     button_sizer->Add(
-        new wxButton( this, wxID_CANCEL, "Cancel" ),
-        0,           // make horizontally unstretchable
-        wxALL,       // make border all around (implicit top alignment)
+        new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
+        1,           // make horizontally unstretchable
+        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
         10 );        // set border width to 10
+
     topsizer->Add(
         button_sizer,
-        0,                // make vertically unstretchable
-        wxALIGN_CENTER ); // no border and centre horizontally
+        1,                // make vertically unstretchable
+        wxEXPAND | wxALL ); // no border and centre horizontally
     SetSizerAndFit(topsizer); // use the sizer for layout and size window
                               // accordingly and prevent it from being resized
                               // to smaller size
