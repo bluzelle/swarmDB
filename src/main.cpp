@@ -179,7 +179,62 @@ KeplerFrame::KeplerFrame()
     listViewNodeKeyValuesStore->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     boxSizerSelectedThread->Add(listViewNodeKeyValuesStore,
-                                3,
+                                2,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
+
+
+
+    wxBoxSizer *boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
+
+    boxSizerSelectedThread->Add(boxSizerThreadMessages,
+                                0,5,
+                                wxEXPAND | 
+                                wxALL );
+
+
+
+    wxListView* listViewNodeInbox = new wxListView(this, 
+                                                   wxID_ANY, 
+                                                   wxDefaultPosition, 
+                                                   wxSize(250, 200));
+
+    listViewNodeInbox->AppendColumn("Inbox Message");
+
+    // Add three items to the list
+
+    listViewNodeInbox->InsertItem(0, "id1");
+    listViewNodeInbox->InsertItem(1, "address1");
+    listViewNodeInbox->InsertItem(2, "DOB1");
+
+    listViewNodeInbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
+
+    boxSizerThreadMessages->Add(listViewNodeInbox,
+                                1,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
+
+
+
+    wxListView* listViewNodeOutbox = new wxListView(this, 
+                                                    wxID_ANY, 
+                                                    wxDefaultPosition, 
+                                                    wxSize(250, 200));
+
+    listViewNodeOutbox->AppendColumn("Outbox Message");
+
+    // Add three items to the list
+
+    listViewNodeOutbox->InsertItem(0, "id1");
+    listViewNodeOutbox->InsertItem(1, "address1");
+    listViewNodeOutbox->InsertItem(2, "DOB1");
+
+    listViewNodeOutbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
+
+    boxSizerThreadMessages->Add(listViewNodeOutbox,
+                                1,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
@@ -207,7 +262,7 @@ KeplerFrame::KeplerFrame()
     listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     boxSizerSelectedThread->Add(listViewNodeAttributes,
-                                0.5,
+                                0.25,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
@@ -222,7 +277,7 @@ KeplerFrame::KeplerFrame()
                                                    wxTE_MULTILINE);
 
     boxSizerSelectedThread->Add(textCtrlThreadLog,
-                                0.25,
+                                0.1,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
