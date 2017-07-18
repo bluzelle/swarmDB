@@ -96,8 +96,26 @@ KeplerFrame::KeplerFrame()
          wxID_EXIT);
 
 
+    wxBoxSizer *boxSizerApplication = new wxBoxSizer(wxVERTICAL);
+
+
 
     wxBoxSizer *boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
+
+
+
+    boxSizerApplication->Add(
+        boxSizerTop,
+        4,                // make vertically unstretchable
+        wxEXPAND | wxALL ); // no border and centre horizontally
+
+
+    boxSizerApplication->Add(
+        new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
+        1,           // make horizontally unstretchable
+        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
+        10 );        // set border width to 10
+
 
 
 
@@ -169,7 +187,7 @@ KeplerFrame::KeplerFrame()
 
 
 
-    SetSizerAndFit(boxSizerTop); // use the sizer for layout and size window
+    SetSizerAndFit(boxSizerApplication); // use the sizer for layout and size window
                               // accordingly and prevent it from being resized
                               // to smaller size
     }
