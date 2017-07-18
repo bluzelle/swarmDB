@@ -95,60 +95,81 @@ KeplerFrame::KeplerFrame()
          this, 
          wxID_EXIT);
 
-    wxBoxSizer *topsizer = new wxBoxSizer(wxHORIZONTAL);
 
-    wxListView* listView = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
 
-    listView->AppendColumn("Node Cardinality #");
-    listView->AppendColumn("Node Physical Hash Id");
+    wxBoxSizer *boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
+
+
+
+    wxListView* listViewNodes = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+
+    listViewNodes->AppendColumn("Node Cardinality #");
+    listViewNodes->AppendColumn("Node Physical Hash Id");
 
     // Add three items to the list
-    listView->InsertItem(0, "1");
-    listView->SetItem(0, 1, "Alfa");
-    listView->InsertItem(1, "2");
-    listView->SetItem(1, 1, "Bravo");
-    listView->InsertItem(2, "3");
-    listView->SetItem(2, 1, "Charlie");
 
-    topsizer->Add(
-        listView,
+    listViewNodes->InsertItem(0, "1");
+    listViewNodes->SetItem(0, 1, "Alfa");
+    listViewNodes->InsertItem(1, "2");
+    listViewNodes->SetItem(1, 1, "Bravo");
+    listViewNodes->InsertItem(2, "3");
+    listViewNodes->SetItem(2, 1, "Charlie");
+
+
+
+    boxSizerTop->Add(
+        listViewNodes,
         1,            // make horizontal weight 1
         wxEXPAND |    // make horizontally stretchable
         wxALL,        //   and make border all around
         10 );         // set border width to 10
 
-    wxBoxSizer *button_sizer = new wxBoxSizer(wxVERTICAL);
 
-    wxListView* listView2 = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
 
-    listView2->AppendColumn("Attribute Name");
-    listView2->AppendColumn("Attribute Value");
+    wxBoxSizer *boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
+
+    wxListView* listViewNodeAttributes = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+
+
+
+    listViewNodeAttributes->AppendColumn("Attribute Name");
+    listViewNodeAttributes->AppendColumn("Attribute Value");
 
     // Add three items to the list
-    listView2->InsertItem(0, "Name");
-    listView2->SetItem(0, 1, "Alfa");
-    listView2->InsertItem(1, "Weight");
-    listView2->SetItem(1, 1, "5");
-    listView2->InsertItem(2, "Address");
-    listView2->SetItem(2, 1, "Sesame Street");
+
+    listViewNodeAttributes->InsertItem(0, "Name");
+    listViewNodeAttributes->SetItem(0, 1, "Alfa");
+    listViewNodeAttributes->InsertItem(1, "Weight");
+    listViewNodeAttributes->SetItem(1, 1, "5");
+    listViewNodeAttributes->InsertItem(2, "Address");
+    listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
 
 
-    button_sizer->Add(
-        listView2,
+
+    boxSizerSelectedThread->Add(
+        listViewNodeAttributes,
         4,           // make horizontally unstretchable
         wxEXPAND | wxALL,       // make border all around (implicit top alignment)
         10 );        // set border width to 10
-    button_sizer->Add(
+
+
+
+    boxSizerSelectedThread->Add(
         new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
         1,           // make horizontally unstretchable
         wxEXPAND | wxALL,       // make border all around (implicit top alignment)
         10 );        // set border width to 10
 
-    topsizer->Add(
-        button_sizer,
+
+
+    boxSizerTop->Add(
+        boxSizerSelectedThread,
         1,                // make vertically unstretchable
         wxEXPAND | wxALL ); // no border and centre horizontally
-    SetSizerAndFit(topsizer); // use the sizer for layout and size window
+
+
+
+    SetSizerAndFit(boxSizerTop); // use the sizer for layout and size window
                               // accordingly and prevent it from being resized
                               // to smaller size
     }
