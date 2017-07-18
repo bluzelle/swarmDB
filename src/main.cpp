@@ -143,7 +143,8 @@ KeplerFrame::KeplerFrame()
     listViewNodes->InsertItem(2, "3");
     listViewNodes->SetItem(2, 1, "Charlie");
 
-
+    listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     boxSizerTop->Add(listViewNodes,
                      1,
@@ -155,12 +156,40 @@ KeplerFrame::KeplerFrame()
 
     wxBoxSizer *boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
 
+
+
+    wxListView* listViewNodeKeyValuesStore = new wxListView(this, 
+                                                            wxID_ANY, 
+                                                            wxDefaultPosition, 
+                                                            wxSize(250, 200));
+
+    listViewNodeKeyValuesStore->AppendColumn("Key");
+    listViewNodeKeyValuesStore->AppendColumn("Value");
+
+    // Add three items to the list
+
+    listViewNodeKeyValuesStore->InsertItem(0, "id1");
+    listViewNodeKeyValuesStore->SetItem(0, 1, "Alfa");
+    listViewNodeKeyValuesStore->InsertItem(1, "address1");
+    listViewNodeKeyValuesStore->SetItem(1, 1, "Sesame Street");
+    listViewNodeKeyValuesStore->InsertItem(2, "DOB1");
+    listViewNodeKeyValuesStore->SetItem(2, 1, "18/05/1976");
+
+    listViewNodeKeyValuesStore->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    listViewNodeKeyValuesStore->SetColumnWidth(1, wxLIST_AUTOSIZE);
+
+    boxSizerSelectedThread->Add(listViewNodeKeyValuesStore,
+                                3,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
+
+
+
     wxListView* listViewNodeAttributes = new wxListView(this, 
                                                         wxID_ANY, 
                                                         wxDefaultPosition, 
                                                         wxSize(250, 200));
-
-
 
     listViewNodeAttributes->AppendColumn("Attribute Name");
     listViewNodeAttributes->AppendColumn("Attribute Value");
@@ -174,10 +203,11 @@ KeplerFrame::KeplerFrame()
     listViewNodeAttributes->InsertItem(2, "Address");
     listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
 
-
+    listViewNodeAttributes->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     boxSizerSelectedThread->Add(listViewNodeAttributes,
-                                4,
+                                0.5,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
@@ -192,7 +222,7 @@ KeplerFrame::KeplerFrame()
                                                    wxTE_MULTILINE);
 
     boxSizerSelectedThread->Add(textCtrlThreadLog,
-                                0.5,
+                                0.25,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
