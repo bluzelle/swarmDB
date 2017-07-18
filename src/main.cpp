@@ -158,6 +158,21 @@ KeplerFrame::KeplerFrame()
 
 
 
+    wxStaticText *staticTextThreadIdentifier = new wxStaticText(this, 
+                                                                wxID_ANY,
+                                                                "Foo",
+                                                                wxDefaultPosition,
+                                                                wxDefaultSize,
+                                                                wxALIGN_CENTRE);
+
+    boxSizerSelectedThread->Add(staticTextThreadIdentifier,
+                                0,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
+
+
+
     wxListView* listViewNodeKeyValuesStore = new wxListView(this, 
                                                             wxID_ANY, 
                                                             wxDefaultPosition, 
@@ -189,7 +204,7 @@ KeplerFrame::KeplerFrame()
     wxBoxSizer *boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
 
     boxSizerSelectedThread->Add(boxSizerThreadMessages,
-                                0,5,
+                                0.5,
                                 wxEXPAND | 
                                 wxALL );
 
