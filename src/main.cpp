@@ -104,22 +104,32 @@ KeplerFrame::KeplerFrame()
 
 
 
-    boxSizerApplication->Add(
-        boxSizerTop,
-        4,                // make vertically unstretchable
-        wxEXPAND | wxALL ); // no border and centre horizontally
-
-
-    boxSizerApplication->Add(
-        new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
-        1,           // make horizontally unstretchable
-        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
-        10 );        // set border width to 10
+    boxSizerApplication->Add(boxSizerTop,
+                             4,                
+                             wxEXPAND | 
+                             wxALL ); 
 
 
 
+    wxTextCtrl *textCtrlApplicationWideLog = new wxTextCtrl(this, 
+                                                            -1, 
+                                                            "My text.", 
+                                                            wxDefaultPosition, 
+                                                            wxSize(100,60), 
+                                                            wxTE_MULTILINE);
 
-    wxListView* listViewNodes = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+    boxSizerApplication->Add(textCtrlApplicationWideLog,
+                             0.5,
+                             wxEXPAND | 
+                             wxALL,       
+                             10);
+
+
+
+    wxListView* listViewNodes = new wxListView(this, 
+                                               wxID_ANY, 
+                                               wxDefaultPosition, 
+                                               wxSize(250, 200));
 
     listViewNodes->AppendColumn("Node Cardinality #");
     listViewNodes->AppendColumn("Node Physical Hash Id");
@@ -135,18 +145,20 @@ KeplerFrame::KeplerFrame()
 
 
 
-    boxSizerTop->Add(
-        listViewNodes,
-        1,            // make horizontal weight 1
-        wxEXPAND |    // make horizontally stretchable
-        wxALL,        //   and make border all around
-        10 );         // set border width to 10
+    boxSizerTop->Add(listViewNodes,
+                     1,
+                     wxEXPAND | 
+                     wxALL, 
+                     10);
 
 
 
     wxBoxSizer *boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
 
-    wxListView* listViewNodeAttributes = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250, 200));
+    wxListView* listViewNodeAttributes = new wxListView(this, 
+                                                        wxID_ANY, 
+                                                        wxDefaultPosition, 
+                                                        wxSize(250, 200));
 
 
 
@@ -164,32 +176,37 @@ KeplerFrame::KeplerFrame()
 
 
 
-    boxSizerSelectedThread->Add(
-        listViewNodeAttributes,
-        4,           // make horizontally unstretchable
-        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
-        10 );        // set border width to 10
+    boxSizerSelectedThread->Add(listViewNodeAttributes,
+                                4,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
 
 
 
-    boxSizerSelectedThread->Add(
-        new wxTextCtrl( this, -1, "My text.", wxDefaultPosition, wxSize(100,60), wxTE_MULTILINE),
-        1,           // make horizontally unstretchable
-        wxEXPAND | wxALL,       // make border all around (implicit top alignment)
-        10 );        // set border width to 10
+    wxTextCtrl *textCtrlThreadLog = new wxTextCtrl(this, 
+                                                   -1, 
+                                                   "My text.", 
+                                                   wxDefaultPosition, 
+                                                   wxSize(100,60), 
+                                                   wxTE_MULTILINE);
+
+    boxSizerSelectedThread->Add(textCtrlThreadLog,
+                                0.5,
+                                wxEXPAND | 
+                                wxALL,
+                                10);
 
 
 
-    boxSizerTop->Add(
-        boxSizerSelectedThread,
-        1,                // make vertically unstretchable
-        wxEXPAND | wxALL ); // no border and centre horizontally
+    boxSizerTop->Add(boxSizerSelectedThread,
+                     1,
+                     wxEXPAND | 
+                     wxALL );
 
 
 
-    SetSizerAndFit(boxSizerApplication); // use the sizer for layout and size window
-                              // accordingly and prevent it from being resized
-                              // to smaller size
+    SetSizerAndFit(boxSizerApplication);
     }
 
 void KeplerFrame::OnExit(wxCommandEvent& event)
