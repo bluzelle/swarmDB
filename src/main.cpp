@@ -33,6 +33,27 @@ class KeplerFrame: public wxFrame
         void OnKepler(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
+
+        wxMenu *m_ptr_menuFile;
+        wxMenu *m_ptr_menuHelp;
+
+        wxMenuBar *m_ptr_menuBar;
+
+        wxBoxSizer *boxSizerApplication;
+        wxBoxSizer *boxSizerTop;
+        wxBoxSizer *boxSizerSelectedThread;
+        wxBoxSizer *boxSizerThreadMessages;
+
+        wxTextCtrl *textCtrlApplicationWideLog;
+        wxTextCtrl *textCtrlThreadLog;        
+
+        wxListView* listViewNodes;
+        wxListView* listViewNodeKeyValuesStore;
+        wxListView* listViewNodeInbox;
+        wxListView* listViewNodeOutbox; 
+        wxListView* listViewNodeAttributes;
+
+        wxStaticText *staticTextThreadIdentifier; 
     };
 
 enum
@@ -65,33 +86,36 @@ KeplerFrame::KeplerFrame()
 std::thread t1(call_from_thread);
 t1.join();
 
-    wxMenu *menuFile = new wxMenu;
-
-    menuFile->Append(ID_Kepler, 
+    m_ptr_menuFile = new wxMenu;
+    m_ptr_menuFile->Append(ID_Kepler, 
                      "&Welcome...\tCtrl-H",
-                     "Change this text to something appropriate");
+                     "Change this text to something appropriate");   
+    m_ptr_menuFile->AppendSeparator();  
+    m_ptr_menuFile->Append(wxID_EXIT);
+
+
+   
+    m_ptr_menuHelp = new wxMenu;
+    m_ptr_menuHelp->Append(wxID_ABOUT);
+
+
     
-    menuFile->AppendSeparator();
-    
-    menuFile->Append(wxID_EXIT);
-    
-    wxMenu *menuHelp = new wxMenu;
-    
-    menuHelp->Append(wxID_ABOUT);
-    
-    wxMenuBar *menuBar = new wxMenuBar;
-    
-    menuBar->Append(menuFile, 
-                    "&File");
-    
-    menuBar->Append(menuHelp, 
-                    "&Help");
-    
-    SetMenuBar(menuBar);
+    m_ptr_menuBar = new wxMenuBar;    
+    m_ptr_menuBar->Append(m_ptr_menuFile, 
+                    "&File");    
+    m_ptr_menuBar->Append(m_ptr_menuHelp, 
+                    "&Help");    
+    SetMenuBar(m_ptr_menuBar);
+
+
     
     CreateStatusBar();
+
+
     
     SetStatusText("Welcome to Kepler!");
+
+
     
     Bind(wxEVT_MENU, 
          &KeplerFrame::OnKepler, 
@@ -107,11 +131,12 @@ t1.join();
          wxID_EXIT);
 
 
-    wxBoxSizer *boxSizerApplication = new wxBoxSizer(wxVERTICAL);
+
+    boxSizerApplication = new wxBoxSizer(wxVERTICAL);
 
 
 
-    wxBoxSizer *boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
+    boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
 
 
 
@@ -122,13 +147,12 @@ t1.join();
 
 
 
-    wxTextCtrl *textCtrlApplicationWideLog = new wxTextCtrl(this, 
-                                                            -1, 
-                                                            "My text.", 
-                                                            wxDefaultPosition, 
-                                                            wxSize(100,60), 
-                                                            wxTE_MULTILINE);
-
+    textCtrlApplicationWideLog = new wxTextCtrl(this, 
+                                                -1, 
+                                                "My text.", 
+                                                wxDefaultPosition, 
+                                                wxSize(100,60), 
+                                                wxTE_MULTILINE);
     boxSizerApplication->Add(textCtrlApplicationWideLog,
                              0.5,
                              wxEXPAND | 
@@ -137,7 +161,7 @@ t1.join();
 
 
 
-    wxListView* listViewNodes = new wxListView(this, 
+    listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
                                                wxDefaultPosition, 
                                                wxSize(250, 200));
@@ -165,11 +189,11 @@ t1.join();
 
 
 
-    wxBoxSizer *boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
+    boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
 
 
 
-    wxStaticText *staticTextThreadIdentifier = new wxStaticText(this, 
+    staticTextThreadIdentifier = new wxStaticText(this, 
                                                                 wxID_ANY,
                                                                 "Foo",
                                                                 wxDefaultPosition,
@@ -184,7 +208,7 @@ t1.join();
 
 
 
-    wxListView* listViewNodeKeyValuesStore = new wxListView(this, 
+    listViewNodeKeyValuesStore = new wxListView(this, 
                                                             wxID_ANY, 
                                                             wxDefaultPosition, 
                                                             wxSize(250, 200));
@@ -212,7 +236,7 @@ t1.join();
 
 
 
-    wxBoxSizer *boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
+    boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
 
     boxSizerSelectedThread->Add(boxSizerThreadMessages,
                                 0.5,
@@ -221,7 +245,7 @@ t1.join();
 
 
 
-    wxListView* listViewNodeInbox = new wxListView(this, 
+    listViewNodeInbox = new wxListView(this, 
                                                    wxID_ANY, 
                                                    wxDefaultPosition, 
                                                    wxSize(250, 200));
@@ -244,7 +268,7 @@ t1.join();
 
 
 
-    wxListView* listViewNodeOutbox = new wxListView(this, 
+    listViewNodeOutbox = new wxListView(this, 
                                                     wxID_ANY, 
                                                     wxDefaultPosition, 
                                                     wxSize(250, 200));
@@ -267,7 +291,7 @@ t1.join();
 
 
 
-    wxListView* listViewNodeAttributes = new wxListView(this, 
+    listViewNodeAttributes = new wxListView(this, 
                                                         wxID_ANY, 
                                                         wxDefaultPosition, 
                                                         wxSize(250, 200));
@@ -295,7 +319,7 @@ t1.join();
 
 
 
-    wxTextCtrl *textCtrlThreadLog = new wxTextCtrl(this, 
+    textCtrlThreadLog = new wxTextCtrl(this, 
                                                    -1, 
                                                    "My text.", 
                                                    wxDefaultPosition, 
