@@ -11,6 +11,8 @@
 
 #include <wx/listctrl.h>
 
+#include <thread>
+
 
 
 class KeplerApplication: public wxApp
@@ -49,11 +51,20 @@ bool KeplerApplication::OnInit()
     return true;
     }
 
+   void call_from_thread() {
+         std::cout << "Hello, World" << std::endl;
+   }
+ 
+
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
+
+std::thread t1(call_from_thread);
+t1.join();
+
     wxMenu *menuFile = new wxMenu;
 
     menuFile->Append(ID_Kepler, 
