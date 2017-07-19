@@ -1,3 +1,5 @@
+#include "KeplerSynchronizedSet.hpp"
+
 #include <boost/locale.hpp>
 
 #include <iostream>
@@ -15,12 +17,22 @@
 
 
 
+#define MAX_THREADS 9
+
+
+
 class KeplerApplication: public wxApp
     {
     public:
 
         virtual bool OnInit();
+
+        static KeplerSynchronizedSet<std::thread> s_threads;
     };
+
+
+
+KeplerSynchronizedSet<std::thread> KeplerApplication::s_threads;
 
 
 
@@ -29,7 +41,7 @@ class KeplerFrame: public wxFrame
     public:
     
         KeplerFrame();
-    
+
     private:
     
         void OnKepler(wxCommandEvent& event);
@@ -79,6 +91,10 @@ bool KeplerApplication::OnInit()
     
     return true;
     }
+
+   void call_from_thread() {
+         std::cout << "Hello, World" << std::endl;
+   }
  
 
 
@@ -87,6 +103,10 @@ KeplerFrame::KeplerFrame()
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
+
+std::thread t1(call_from_thread);
+t1.join();
+
     m_ptr_menuFile = new wxMenu;
     m_ptr_menuFile->Append(ID_Kepler, 
                      "&Welcome...\tCtrl-H",
