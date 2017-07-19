@@ -22,6 +22,8 @@ class KeplerApplication: public wxApp
         virtual bool OnInit();
     };
 
+
+
 class KeplerFrame: public wxFrame
     {
     public:
@@ -39,29 +41,35 @@ class KeplerFrame: public wxFrame
 
         wxMenuBar *m_ptr_menuBar;
 
-        wxBoxSizer *boxSizerApplication;
-        wxBoxSizer *boxSizerTop;
-        wxBoxSizer *boxSizerSelectedThread;
-        wxBoxSizer *boxSizerThreadMessages;
+        wxBoxSizer *m_ptr_boxSizerApplication;
+        wxBoxSizer *m_ptr_boxSizerTop;
+        wxBoxSizer *m_ptr_boxSizerSelectedThread;
+        wxBoxSizer *m_ptr_boxSizerThreadMessages;
 
-        wxTextCtrl *textCtrlApplicationWideLog;
-        wxTextCtrl *textCtrlThreadLog;        
+        wxTextCtrl *m_ptr_textCtrlApplicationWideLog;
+        wxTextCtrl *m_ptr_textCtrlThreadLog;        
 
-        wxListView* listViewNodes;
-        wxListView* listViewNodeKeyValuesStore;
-        wxListView* listViewNodeInbox;
-        wxListView* listViewNodeOutbox; 
-        wxListView* listViewNodeAttributes;
+        wxListView *m_ptr_listViewNodes;
+        wxListView *m_ptr_listViewNodeKeyValuesStore;
+        wxListView *m_ptr_listViewNodeInbox;
+        wxListView *m_ptr_listViewNodeOutbox; 
+        wxListView *m_ptr_listViewNodeAttributes;
 
-        wxStaticText *staticTextThreadIdentifier; 
+        wxStaticText *m_ptr_staticTextThreadIdentifier; 
     };
+
+
 
 enum
     {
     ID_Kepler = 1
     };
 
+
+
 wxIMPLEMENT_APP(KeplerApplication);
+
+
 
 bool KeplerApplication::OnInit()
     {
@@ -71,21 +79,14 @@ bool KeplerApplication::OnInit()
     
     return true;
     }
-
-   void call_from_thread() {
-         std::cout << "Hello, World" << std::endl;
-   }
  
+
 
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
-
-std::thread t1(call_from_thread);
-t1.join();
-
     m_ptr_menuFile = new wxMenu;
     m_ptr_menuFile->Append(ID_Kepler, 
                      "&Welcome...\tCtrl-H",
@@ -132,28 +133,28 @@ t1.join();
 
 
 
-    boxSizerApplication = new wxBoxSizer(wxVERTICAL);
+    m_ptr_boxSizerApplication = new wxBoxSizer(wxVERTICAL);
 
 
 
-    boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
+    m_ptr_boxSizerTop = new wxBoxSizer(wxHORIZONTAL);
 
 
 
-    boxSizerApplication->Add(boxSizerTop,
+    m_ptr_boxSizerApplication->Add(m_ptr_boxSizerTop,
                              4,                
                              wxEXPAND | 
                              wxALL ); 
 
 
 
-    textCtrlApplicationWideLog = new wxTextCtrl(this, 
+    m_ptr_textCtrlApplicationWideLog = new wxTextCtrl(this, 
                                                 -1, 
                                                 "My text.", 
                                                 wxDefaultPosition, 
                                                 wxSize(100,60), 
                                                 wxTE_MULTILINE);
-    boxSizerApplication->Add(textCtrlApplicationWideLog,
+    m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
                              0.5,
                              wxEXPAND | 
                              wxALL,       
@@ -161,27 +162,27 @@ t1.join();
 
 
 
-    listViewNodes = new wxListView(this, 
+    m_ptr_listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
                                                wxDefaultPosition, 
                                                wxSize(250, 200));
 
-    listViewNodes->AppendColumn("Node Cardinality #");
-    listViewNodes->AppendColumn("Node Physical Hash Id");
+    m_ptr_listViewNodes->AppendColumn("Node Cardinality #");
+    m_ptr_listViewNodes->AppendColumn("Node Physical Hash Id");
 
     // Add three items to the list
 
-    listViewNodes->InsertItem(0, "1");
-    listViewNodes->SetItem(0, 1, "Alfa");
-    listViewNodes->InsertItem(1, "2");
-    listViewNodes->SetItem(1, 1, "Bravo");
-    listViewNodes->InsertItem(2, "3");
-    listViewNodes->SetItem(2, 1, "Charlie");
+    m_ptr_listViewNodes->InsertItem(0, "1");
+    m_ptr_listViewNodes->SetItem(0, 1, "Alfa");
+    m_ptr_listViewNodes->InsertItem(1, "2");
+    m_ptr_listViewNodes->SetItem(1, 1, "Bravo");
+    m_ptr_listViewNodes->InsertItem(2, "3");
+    m_ptr_listViewNodes->SetItem(2, 1, "Charlie");
 
-    listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
-    boxSizerTop->Add(listViewNodes,
+    m_ptr_boxSizerTop->Add(m_ptr_listViewNodes,
                      1,
                      wxEXPAND | 
                      wxALL, 
@@ -189,18 +190,18 @@ t1.join();
 
 
 
-    boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
+    m_ptr_boxSizerSelectedThread = new wxBoxSizer(wxVERTICAL);
 
 
 
-    staticTextThreadIdentifier = new wxStaticText(this, 
+    m_ptr_staticTextThreadIdentifier = new wxStaticText(this, 
                                                                 wxID_ANY,
                                                                 "Foo",
                                                                 wxDefaultPosition,
                                                                 wxDefaultSize,
                                                                 wxALIGN_CENTRE);
 
-    boxSizerSelectedThread->Add(staticTextThreadIdentifier,
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_staticTextThreadIdentifier,
                                 0,
                                 wxEXPAND | 
                                 wxALL,
@@ -208,27 +209,27 @@ t1.join();
 
 
 
-    listViewNodeKeyValuesStore = new wxListView(this, 
+    m_ptr_listViewNodeKeyValuesStore = new wxListView(this, 
                                                             wxID_ANY, 
                                                             wxDefaultPosition, 
                                                             wxSize(250, 200));
 
-    listViewNodeKeyValuesStore->AppendColumn("Key");
-    listViewNodeKeyValuesStore->AppendColumn("Value");
+    m_ptr_listViewNodeKeyValuesStore->AppendColumn("Key");
+    m_ptr_listViewNodeKeyValuesStore->AppendColumn("Value");
 
     // Add three items to the list
 
-    listViewNodeKeyValuesStore->InsertItem(0, "id1");
-    listViewNodeKeyValuesStore->SetItem(0, 1, "Alfa");
-    listViewNodeKeyValuesStore->InsertItem(1, "address1");
-    listViewNodeKeyValuesStore->SetItem(1, 1, "Sesame Street");
-    listViewNodeKeyValuesStore->InsertItem(2, "DOB1");
-    listViewNodeKeyValuesStore->SetItem(2, 1, "18/05/1976");
+    m_ptr_listViewNodeKeyValuesStore->InsertItem(0, "id1");
+    m_ptr_listViewNodeKeyValuesStore->SetItem(0, 1, "Alfa");
+    m_ptr_listViewNodeKeyValuesStore->InsertItem(1, "address1");
+    m_ptr_listViewNodeKeyValuesStore->SetItem(1, 1, "Sesame Street");
+    m_ptr_listViewNodeKeyValuesStore->InsertItem(2, "DOB1");
+    m_ptr_listViewNodeKeyValuesStore->SetItem(2, 1, "18/05/1976");
 
-    listViewNodeKeyValuesStore->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    listViewNodeKeyValuesStore->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeKeyValuesStore->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeKeyValuesStore->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
-    boxSizerSelectedThread->Add(listViewNodeKeyValuesStore,
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeKeyValuesStore,
                                 2,
                                 wxEXPAND | 
                                 wxALL,
@@ -236,31 +237,31 @@ t1.join();
 
 
 
-    boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
+    m_ptr_boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
 
-    boxSizerSelectedThread->Add(boxSizerThreadMessages,
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_boxSizerThreadMessages,
                                 0.5,
                                 wxEXPAND | 
                                 wxALL );
 
 
 
-    listViewNodeInbox = new wxListView(this, 
+    m_ptr_listViewNodeInbox = new wxListView(this, 
                                                    wxID_ANY, 
                                                    wxDefaultPosition, 
                                                    wxSize(250, 200));
 
-    listViewNodeInbox->AppendColumn("Inbox Message");
+    m_ptr_listViewNodeInbox->AppendColumn("Inbox Message");
 
     // Add three items to the list
 
-    listViewNodeInbox->InsertItem(0, "id1");
-    listViewNodeInbox->InsertItem(1, "address1");
-    listViewNodeInbox->InsertItem(2, "DOB1");
+    m_ptr_listViewNodeInbox->InsertItem(0, "id1");
+    m_ptr_listViewNodeInbox->InsertItem(1, "address1");
+    m_ptr_listViewNodeInbox->InsertItem(2, "DOB1");
 
-    listViewNodeInbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeInbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
-    boxSizerThreadMessages->Add(listViewNodeInbox,
+    m_ptr_boxSizerThreadMessages->Add(m_ptr_listViewNodeInbox,
                                 1,
                                 wxEXPAND | 
                                 wxALL,
@@ -268,22 +269,22 @@ t1.join();
 
 
 
-    listViewNodeOutbox = new wxListView(this, 
+    m_ptr_listViewNodeOutbox = new wxListView(this, 
                                                     wxID_ANY, 
                                                     wxDefaultPosition, 
                                                     wxSize(250, 200));
 
-    listViewNodeOutbox->AppendColumn("Outbox Message");
+    m_ptr_listViewNodeOutbox->AppendColumn("Outbox Message");
 
     // Add three items to the list
 
-    listViewNodeOutbox->InsertItem(0, "id1");
-    listViewNodeOutbox->InsertItem(1, "address1");
-    listViewNodeOutbox->InsertItem(2, "DOB1");
+    m_ptr_listViewNodeOutbox->InsertItem(0, "id1");
+    m_ptr_listViewNodeOutbox->InsertItem(1, "address1");
+    m_ptr_listViewNodeOutbox->InsertItem(2, "DOB1");
 
-    listViewNodeOutbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeOutbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
-    boxSizerThreadMessages->Add(listViewNodeOutbox,
+    m_ptr_boxSizerThreadMessages->Add(m_ptr_listViewNodeOutbox,
                                 1,
                                 wxEXPAND | 
                                 wxALL,
@@ -291,27 +292,27 @@ t1.join();
 
 
 
-    listViewNodeAttributes = new wxListView(this, 
+    m_ptr_listViewNodeAttributes = new wxListView(this, 
                                                         wxID_ANY, 
                                                         wxDefaultPosition, 
                                                         wxSize(250, 200));
 
-    listViewNodeAttributes->AppendColumn("Attribute Name");
-    listViewNodeAttributes->AppendColumn("Attribute Value");
+    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Name");
+    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Value");
 
     // Add three items to the list
 
-    listViewNodeAttributes->InsertItem(0, "Name");
-    listViewNodeAttributes->SetItem(0, 1, "Alfa");
-    listViewNodeAttributes->InsertItem(1, "Weight");
-    listViewNodeAttributes->SetItem(1, 1, "5");
-    listViewNodeAttributes->InsertItem(2, "Address");
-    listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
+    m_ptr_listViewNodeAttributes->InsertItem(0, "Name");
+    m_ptr_listViewNodeAttributes->SetItem(0, 1, "Alfa");
+    m_ptr_listViewNodeAttributes->InsertItem(1, "Weight");
+    m_ptr_listViewNodeAttributes->SetItem(1, 1, "5");
+    m_ptr_listViewNodeAttributes->InsertItem(2, "Address");
+    m_ptr_listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
 
-    listViewNodeAttributes->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeAttributes->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
-    boxSizerSelectedThread->Add(listViewNodeAttributes,
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeAttributes,
                                 0.25,
                                 wxEXPAND | 
                                 wxALL,
@@ -319,14 +320,14 @@ t1.join();
 
 
 
-    textCtrlThreadLog = new wxTextCtrl(this, 
+    m_ptr_textCtrlThreadLog = new wxTextCtrl(this, 
                                                    -1, 
                                                    "My text.", 
                                                    wxDefaultPosition, 
                                                    wxSize(100,60), 
                                                    wxTE_MULTILINE);
 
-    boxSizerSelectedThread->Add(textCtrlThreadLog,
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
                                 0.1,
                                 wxEXPAND | 
                                 wxALL,
@@ -334,14 +335,14 @@ t1.join();
 
 
 
-    boxSizerTop->Add(boxSizerSelectedThread,
+    m_ptr_boxSizerTop->Add(m_ptr_boxSizerSelectedThread,
                      1,
                      wxEXPAND | 
                      wxALL );
 
 
 
-    SetSizerAndFit(boxSizerApplication);
+    SetSizerAndFit(m_ptr_boxSizerApplication);
     }
 
 void KeplerFrame::OnExit(wxCommandEvent& event)
