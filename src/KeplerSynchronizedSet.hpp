@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <set>
+#include <mutex>
 
 
 
@@ -44,6 +45,6 @@ inline bool KeplerSynchronizedSet<T>::safe_insert(T &object)
     return iteratorReturnValueFromInsertion->second;
     }
 
-    
+
 
 #endif // KEPLERSYNCHRONIZEDSET_H

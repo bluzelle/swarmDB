@@ -1,6 +1,7 @@
 #include "KeplerSynchronizedSet.hpp"
 
 #include <boost/locale.hpp>
+#include <boost/range/irange.hpp>
 
 #include <iostream>
 
@@ -92,9 +93,14 @@ bool KeplerApplication::OnInit()
     return true;
     }
 
-   void call_from_thread() {
-         std::cout << "Hello, World" << std::endl;
-   }
+
+
+void threadFunction(const unsigned int i) 
+    {
+    const std::thread::id myThreadId = std::this_thread::get_id();
+
+    std::cout << "Hello, " << i << std::endl;
+    }
  
 
 
@@ -103,9 +109,23 @@ KeplerFrame::KeplerFrame()
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
+// if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
+// else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
+// else std::cout << "pre-standard C++\n" ;
 
-std::thread t1(call_from_thread);
-t1.join();
+
+
+    // i goes from 0 to 99 inclusive
+
+    for (const unsigned int i : boost::irange(0,
+                                              1)) 
+        {
+        std::thread newThread(threadFunction, i);
+
+//        KeplerApplication::s_threads.safe_insert(newThread);
+        }
+
+
 
     m_ptr_menuFile = new wxMenu;
     m_ptr_menuFile->Append(ID_Kepler, 

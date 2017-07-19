@@ -1,5 +1,9 @@
 # Define default flags (include your source tree for example
 
+#CC = gcc-7
+CXX       := g++-7
+
+
 CXXFLAGS = `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
 LDLIBS   = `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
 
