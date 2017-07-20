@@ -28,12 +28,12 @@ class KeplerApplication: public wxApp
 
         virtual bool OnInit();
 
-        static KeplerSynchronizedSet<std::thread> s_threads;
+        static KeplerSynchronizedSet<std::unique_ptr<std::thread>> s_threads;
     };
 
 
 
-KeplerSynchronizedSet<std::thread> KeplerApplication::s_threads;
+KeplerSynchronizedSet<std::unique_ptr<std::thread>> KeplerApplication::s_threads;
 
 
 
@@ -126,9 +126,7 @@ KeplerFrame::KeplerFrame()
         {
         std::thread newThread(threadFunction, i);
 
-// std::thread foo(std::move(newThread));
-
-        KeplerApplication::s_threads.safe_insert(std::move(newThread));
+//        KeplerApplication::s_threads.safe_insert(std::move(newThread));
 
         newThread.join();
         }

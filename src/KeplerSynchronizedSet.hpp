@@ -15,7 +15,7 @@ class KeplerSynchronizedSet
     {
     public:
 
-        bool safe_insert(const T &object);
+        bool safe_insert(T &object);
 
     private:
 
@@ -29,7 +29,7 @@ class KeplerSynchronizedSet
 
 
 template <class T>
-inline bool KeplerSynchronizedSet<T>::safe_insert(const T &object)
+inline bool KeplerSynchronizedSet<T>::safe_insert(T &object)
     {
     std::pair<typename KeplerSynchronizedSetType::iterator, bool> pairReturnValueFromInsertion;
 
