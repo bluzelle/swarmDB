@@ -21,9 +21,9 @@
 
 
 
-#define MAX_THREADS 6
+#define MAX_THREADS 1
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 20000
-#define THREAD_SLEEP_TIME_MILLISECONDS 75
+#define THREAD_SLEEP_TIME_MILLISECONDS 400
 
 
 
@@ -177,11 +177,13 @@ bool KeplerApplication::OnInit()
 
 void threadIntroduction(const unsigned int i)
     {
-    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+//    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
     std::thread::id myThreadId = std::this_thread::get_id();
 
-    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;        
+    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl << std::flush;
+
+//    lockStdOut.unlock();        
     }
 
 void threadLifeCycle(const unsigned int i)
@@ -207,9 +209,9 @@ void threadLifeCycle(const unsigned int i)
 
         KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
 
-        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+//        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-        std::cout << strOutput;
+//        std::cout << strOutput;
         }
     }
 
@@ -253,7 +255,7 @@ KeplerFrame::KeplerFrame()
 
         const bool boolInsertionResult = KeplerApplication::s_threads.safe_insert(ptr_newThread);
 
-        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+//        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
         std::cout << "Started thread" << "\n";
 
@@ -583,16 +585,18 @@ std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &str)
     {
-    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
+    // std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
     m_queueTextCtrlApplicationWideLog.push(str);
     }
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
-    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
+    //std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
     std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+
+    std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
 
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
@@ -606,6 +610,8 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
 void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
+    std::cout << "OnIdle called" << std::endl;
+
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
 
