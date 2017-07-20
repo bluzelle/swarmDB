@@ -28,12 +28,30 @@ class KeplerApplication: public wxApp
 
         virtual bool OnInit();
 
+        static std::unique_lock<std::mutex> getStdOutLock();
+
+
+
         static KeplerSynchronizedSet<std::shared_ptr<std::thread>> s_threads;
+        static std::mutex s_printMutex;               
     };
 
 
 
 KeplerSynchronizedSet<std::shared_ptr<std::thread>> KeplerApplication::s_threads;
+std::mutex KeplerApplication::s_printMutex;
+
+
+
+std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
+    {
+    std::unique_lock<std::mutex> mutexLock(s_printMutex,
+                                           std::defer_lock);
+
+    mutexLock.lock();
+
+    return mutexLock;
+    }
 
 
 
@@ -95,11 +113,34 @@ bool KeplerApplication::OnInit()
 
 
 
+void threadIntroduction(const unsigned int i)
+    {
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+    std::thread::id myThreadId = std::this_thread::get_id();
+
+    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;        
+    }
+
+void threadLifeCycle(const unsigned int i)
+    {
+    while (true)
+        {
+        std::this_thread::sleep_for(std::chrono::seconds(2));            
+
+        std::thread::id myThreadId = std::this_thread::get_id();
+
+        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+        std::cout << "Thread #: " << i << " awakens and then goes back to sleep with id: " << myThreadId << std::endl;                
+        }
+    }
+
 void threadFunction(const unsigned int i) 
     {
-    const std::thread::id myThreadId = std::this_thread::get_id();
+    threadIntroduction(i);
 
-    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;
+    threadLifeCycle(i);
     }
  
 
@@ -126,7 +167,13 @@ KeplerFrame::KeplerFrame()
         {
         std::shared_ptr<std::thread> ptr_newThread(new std::thread(threadFunction, i));
 
-        KeplerApplication::s_threads.safe_insert(ptr_newThread);
+        // Is this safe? Do we now have two ref-counted objects pointing to the thread but each with a count of 1?
+
+        const bool boolInsertionResult = KeplerApplication::s_threads.safe_insert(ptr_newThread);
+
+        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+        std::cout << "Started thread" << "\n";
 
         // We don't do a join on these threads -- might want to when the program quits?
         }
