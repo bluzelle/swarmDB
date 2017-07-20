@@ -15,7 +15,7 @@ class KeplerSynchronizedSet
     {
     public:
 
-        bool safe_insert(T &object);
+        bool safe_insert(const T &object);
 
     private:
 
@@ -29,20 +29,20 @@ class KeplerSynchronizedSet
 
 
 template <class T>
-inline bool KeplerSynchronizedSet<T>::safe_insert(T &object)
+inline bool KeplerSynchronizedSet<T>::safe_insert(const T &object)
     {
-    typename KeplerSynchronizedSetType::iterator iteratorReturnValueFromInsertion;
+    std::pair<typename KeplerSynchronizedSetType::iterator, bool> pairReturnValueFromInsertion;
 
     std::unique_lock<std::mutex> mutexLock(m_mutex,
                                            std::defer_lock);
 
     mutexLock.lock();
 
-    iteratorReturnValueFromInsertion = m_unsafeSet.insert(object);
+    pairReturnValueFromInsertion = m_unsafeSet.insert(object);
 
     mutexLock.unlock();
 
-    return iteratorReturnValueFromInsertion->second;
+    return pairReturnValueFromInsertion.second;
     }
 
 

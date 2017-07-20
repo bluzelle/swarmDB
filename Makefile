@@ -1,11 +1,15 @@
+# brew install boost --cc=gcc-7
+# brew install gcc (7.0) does not work because wxWidgets refuses to build
+# brew install gcc6
+# brew install wxmac --cc=gcc-6
+# brew search gcc
+
+
 # Define default flags (include your source tree for example
 
-#CC = gcc-7
-CXX       := g++-7
-
-
-CXXFLAGS = `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
-LDLIBS   = `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
+#CXX      = g++-5
+CXXFLAGS = -std=c++11 `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
+LDLIBS   = -std=c++11 `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
 
 ifdef FINAL
     EXTRAFLAGS = -MD -O2 -fno-rtti -fno-exceptions -fomit-frame-pointer

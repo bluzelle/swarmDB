@@ -99,7 +99,7 @@ void threadFunction(const unsigned int i)
     {
     const std::thread::id myThreadId = std::this_thread::get_id();
 
-    std::cout << "Hello, " << i << std::endl;
+    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;
     }
  
 
@@ -109,20 +109,28 @@ KeplerFrame::KeplerFrame()
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
-// if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
-// else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
-// else std::cout << "pre-standard C++\n" ;
+    if ( __cplusplus == 201103L ) std::cout << "C++11\n" ;
+ 
+    else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
+ 
+    else std::cout << "pre-standard C++\n" ;
 
 
 
-    // i goes from 0 to 99 inclusive
+    std::cout << "Main thread id: " << std::this_thread::get_id() << "\n";
+
+
 
     for (const unsigned int i : boost::irange(0,
-                                              1)) 
+                                              MAX_THREADS)) 
         {
         std::thread newThread(threadFunction, i);
 
-//        KeplerApplication::s_threads.safe_insert(newThread);
+// std::thread foo(std::move(newThread));
+
+        KeplerApplication::s_threads.safe_insert(std::move(newThread));
+
+        newThread.join();
         }
 
 
