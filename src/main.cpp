@@ -20,7 +20,7 @@
 
 
 
-#define MAX_THREADS 9
+#define MAX_THREADS 1
 
 
 
@@ -31,28 +31,32 @@ class KeplerApplication: public wxApp
         virtual bool OnInit();
 
         static std::unique_lock<std::mutex> getStdOutLock();
+
         static unsigned int sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds);
 
         static KeplerSynchronizedSet<std::shared_ptr<std::thread>> s_threads;
-        static std::mutex s_printMutex;               
+
+        static std::mutex s_stdOutMutex;              
     };
 
 
 
 KeplerSynchronizedSet<std::shared_ptr<std::thread>> KeplerApplication::s_threads;
-std::mutex KeplerApplication::s_printMutex;
+
+std::mutex KeplerApplication::s_stdOutMutex;
 
 
 
 std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
     {
-    std::unique_lock<std::mutex> mutexLock(s_printMutex,
+    std::unique_lock<std::mutex> mutexLock(s_stdOutMutex,
                                            std::defer_lock);
 
     mutexLock.lock();
 
     return mutexLock;
     }
+
 
 
 unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds)
@@ -64,7 +68,7 @@ unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintM
 
     gettimeofday(&tv,NULL);
     u64useconds = (1000000*tv.tv_sec) + tv.tv_usec;
-    
+
     std::srand(u64useconds); // use current time as seed for random generator
 
     int intRandomVariable = std::rand();
@@ -83,6 +87,12 @@ class KeplerFrame: public wxFrame
     public:
     
         KeplerFrame();
+
+        std::unique_lock<std::mutex> getTextCtrlApplicationWideLogLock();
+
+        void addTextToTextCtrlApplicationWideLog(const std::string &str);
+
+        static KeplerFrame *s_ptr_global;
 
     private:
     
@@ -110,7 +120,13 @@ class KeplerFrame: public wxFrame
         wxListView *m_ptr_listViewNodeAttributes;
 
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
+
+        std::mutex m_textCtrlApplicationWideLogMutex;
     };
+
+
+
+KeplerFrame *KeplerFrame::s_ptr_global = NULL;
 
 
 
@@ -149,19 +165,27 @@ void threadLifeCycle(const unsigned int i)
     {
     while (true)
         {
-        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(2000);
+        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(1000);
 
         std::thread::id myThreadId = std::this_thread::get_id();
 
-        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+        std::stringstream stringStreamOutput;
 
-        std::cout << "Thread #: " 
+        stringStreamOutput << "Thread #: " 
                   << i 
                   << " awakens after " 
                   << uintActualMillisecondsToSleep 
                   << "ms and then goes back to sleep with id: " 
                   << myThreadId 
-                  << std::endl;                
+                  << std::endl;      
+
+        std::string strOutput = stringStreamOutput.str();          
+
+        KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLog(strOutput);
+
+        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+        std::cout << strOutput;
         }
     }
 
@@ -179,6 +203,8 @@ KeplerFrame::KeplerFrame()
                      wxID_ANY, 
                      "Kepler TestNet Simulator")
     {
+    KeplerFrame::s_ptr_global = this;
+
     if ( __cplusplus == 201103L ) std::cout << "C++11\n" ;
  
     else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
@@ -275,14 +301,14 @@ KeplerFrame::KeplerFrame()
                                                 "My text.", 
                                                 wxDefaultPosition, 
                                                 wxSize(100,60), 
-                                                wxTE_MULTILINE);
+                                                wxTE_MULTILINE | 
+                                                wxTE_READONLY |
+                                                wxHSCROLL);
     m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
                              0.5,
                              wxEXPAND | 
                              wxALL,       
                              10);
-
-
 
     m_ptr_listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
@@ -469,6 +495,14 @@ KeplerFrame::KeplerFrame()
 
 void KeplerFrame::OnExit(wxCommandEvent& event)
     {
+int myints[] = {75,23,65,42,13};
+  std::set<int> myset (myints,myints+5);
+
+  std::cout << "myset contains:";
+  for (std::set<int>::iterator it=myset.begin(); it!=myset.end(); ++it)
+    std::cout << ' ' << *it;
+
+
     Close(true);
     }
 
@@ -491,9 +525,49 @@ void KeplerFrame::OnAbout(wxCommandEvent& event)
     wxMessageBox(str,
                  "About Kepler", 
                  wxOK | wxICON_INFORMATION);
+
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
+    addTextToTextCtrlApplicationWideLog("Batman");
     }
 
 void KeplerFrame::OnKepler(wxCommandEvent& event)
     {
     wxLogMessage("Hello from Kepler!");
+    }
+
+std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogLock()
+    {
+    std::unique_lock<std::mutex> mutexLock(m_textCtrlApplicationWideLogMutex,
+                                           std::defer_lock);
+
+    mutexLock.lock();
+
+    return mutexLock;
+    }
+
+void KeplerFrame::addTextToTextCtrlApplicationWideLog(const std::string &str)
+    {
+    wxMutexGuiEnter();
+
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogLock();   
+
+    // std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+
+    // stream << str << std::endl;
+
+    // stream.flush();
+
+    wxMutexGuiLeave();    
     }
