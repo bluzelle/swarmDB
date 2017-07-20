@@ -28,12 +28,12 @@ class KeplerApplication: public wxApp
 
         virtual bool OnInit();
 
-        static KeplerSynchronizedSet<std::unique_ptr<std::thread>> s_threads;
+        static KeplerSynchronizedSet<std::shared_ptr<std::thread>> s_threads;
     };
 
 
 
-KeplerSynchronizedSet<std::unique_ptr<std::thread>> KeplerApplication::s_threads;
+KeplerSynchronizedSet<std::shared_ptr<std::thread>> KeplerApplication::s_threads;
 
 
 
@@ -124,11 +124,11 @@ KeplerFrame::KeplerFrame()
     for (const unsigned int i : boost::irange(0,
                                               MAX_THREADS)) 
         {
-        std::thread newThread(threadFunction, i);
+        std::shared_ptr<std::thread> ptr_newThread(new std::thread(threadFunction, i));
 
-//        KeplerApplication::s_threads.safe_insert(std::move(newThread));
+        KeplerApplication::s_threads.safe_insert(ptr_newThread);
 
-        newThread.join();
+        // We don't do a join on these threads -- might want to when the program quits?
         }
 
 
