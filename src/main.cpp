@@ -17,10 +17,13 @@
 
 #include <thread>
 #include <chrono>
+#include <queue>
 
 
 
-#define MAX_THREADS 1
+#define MAX_THREADS 3
+#define MAIN_WINDOW_IDLE_PERIOD_MILLISECONDS 200
+#define THREAD_SLEEP_TIME_MILLISECONDS 400
 
 
 
@@ -88,17 +91,22 @@ class KeplerFrame: public wxFrame
     
         KeplerFrame();
 
-        std::unique_lock<std::mutex> getTextCtrlApplicationWideLogLock();
+        std::unique_lock<std::mutex> getTextCtrlApplicationWideLogQueueLock();
 
-        void addTextToTextCtrlApplicationWideLog(const std::string &str);
+        void addTextToTextCtrlApplicationWideLogQueue(const std::string &str);
 
         static KeplerFrame *s_ptr_global;
 
     private:
     
+        void addTextToTextCtrlApplicationWideLogFromQueue();
+
         void OnKepler(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
+        void OnTimer(wxTimerEvent& event);
+
+        wxTimer m_timerIdle;
 
         wxMenu *m_ptr_menuFile;
         wxMenu *m_ptr_menuHelp;
@@ -122,6 +130,8 @@ class KeplerFrame: public wxFrame
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
 
         std::mutex m_textCtrlApplicationWideLogMutex;
+
+        std::queue<std::string> m_queueTextCtrlApplicationWideLog;
     };
 
 
@@ -165,7 +175,7 @@ void threadLifeCycle(const unsigned int i)
     {
     while (true)
         {
-        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(1000);
+        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
 
         std::thread::id myThreadId = std::this_thread::get_id();
 
@@ -181,7 +191,7 @@ void threadLifeCycle(const unsigned int i)
 
         std::string strOutput = stringStreamOutput.str();          
 
-        KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLog(strOutput);
+        KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
 
         std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
@@ -201,7 +211,9 @@ void threadFunction(const unsigned int i)
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
-                     "Kepler TestNet Simulator")
+                     "Kepler TestNet Simulator"),
+             m_timerIdle(this, 
+                         wxID_ANY)
     {
     KeplerFrame::s_ptr_global = this;
 
@@ -290,7 +302,7 @@ KeplerFrame::KeplerFrame()
 
 
     m_ptr_boxSizerApplication->Add(m_ptr_boxSizerTop,
-                             4,                
+                             3,                
                              wxEXPAND | 
                              wxALL ); 
 
@@ -298,14 +310,14 @@ KeplerFrame::KeplerFrame()
 
     m_ptr_textCtrlApplicationWideLog = new wxTextCtrl(this, 
                                                 -1, 
-                                                "My text.", 
+                                                "", 
                                                 wxDefaultPosition, 
                                                 wxSize(100,60), 
                                                 wxTE_MULTILINE | 
                                                 wxTE_READONLY |
                                                 wxHSCROLL);
     m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
-                             0.5,
+                             2,
                              wxEXPAND | 
                              wxALL,       
                              10);
@@ -313,7 +325,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
                                                wxDefaultPosition, 
-                                               wxSize(250, 200));
+                                               wxSize(150, 150));
 
     m_ptr_listViewNodes->AppendColumn("Node Cardinality #");
     m_ptr_listViewNodes->AppendColumn("Node Physical Hash Id");
@@ -344,7 +356,7 @@ KeplerFrame::KeplerFrame()
 
     m_ptr_staticTextThreadIdentifier = new wxStaticText(this, 
                                                                 wxID_ANY,
-                                                                "Foo",
+                                                                "",
                                                                 wxDefaultPosition,
                                                                 wxDefaultSize,
                                                                 wxALIGN_CENTRE);
@@ -360,7 +372,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeKeyValuesStore = new wxListView(this, 
                                                             wxID_ANY, 
                                                             wxDefaultPosition, 
-                                                            wxSize(250, 200));
+                                                            wxSize(150, 100));
 
     m_ptr_listViewNodeKeyValuesStore->AppendColumn("Key");
     m_ptr_listViewNodeKeyValuesStore->AppendColumn("Value");
@@ -397,7 +409,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeInbox = new wxListView(this, 
                                                    wxID_ANY, 
                                                    wxDefaultPosition, 
-                                                   wxSize(250, 200));
+                                                   wxSize(150, 100));
 
     m_ptr_listViewNodeInbox->AppendColumn("Inbox Message");
 
@@ -420,7 +432,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeOutbox = new wxListView(this, 
                                                     wxID_ANY, 
                                                     wxDefaultPosition, 
-                                                    wxSize(250, 200));
+                                                    wxSize(150, 100));
 
     m_ptr_listViewNodeOutbox->AppendColumn("Outbox Message");
 
@@ -443,7 +455,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeAttributes = new wxListView(this, 
                                                         wxID_ANY, 
                                                         wxDefaultPosition, 
-                                                        wxSize(250, 200));
+                                                        wxSize(150, 100));
 
     m_ptr_listViewNodeAttributes->AppendColumn("Attribute Name");
     m_ptr_listViewNodeAttributes->AppendColumn("Attribute Value");
@@ -470,10 +482,12 @@ KeplerFrame::KeplerFrame()
 
     m_ptr_textCtrlThreadLog = new wxTextCtrl(this, 
                                                    -1, 
-                                                   "My text.", 
+                                                   "", 
                                                    wxDefaultPosition, 
-                                                   wxSize(100,60), 
-                                                   wxTE_MULTILINE);
+                                                   wxSize(50,60), 
+                                                   wxTE_MULTILINE |
+                                                   wxTE_READONLY |
+                                                   wxHSCROLL);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
                                 0.1,
@@ -491,6 +505,16 @@ KeplerFrame::KeplerFrame()
 
 
     SetSizerAndFit(m_ptr_boxSizerApplication);
+
+
+
+    m_timerIdle.Start(MAIN_WINDOW_IDLE_PERIOD_MILLISECONDS);
+  
+    Connect(m_timerIdle.GetId(), 
+            wxEVT_TIMER, 
+            wxTimerEventHandler(KeplerFrame::OnTimer), 
+            NULL, 
+            this); 
     }
 
 void KeplerFrame::OnExit(wxCommandEvent& event)
@@ -525,21 +549,6 @@ void KeplerFrame::OnAbout(wxCommandEvent& event)
     wxMessageBox(str,
                  "About Kepler", 
                  wxOK | wxICON_INFORMATION);
-
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
-    addTextToTextCtrlApplicationWideLog("Batman");
     }
 
 void KeplerFrame::OnKepler(wxCommandEvent& event)
@@ -547,7 +556,7 @@ void KeplerFrame::OnKepler(wxCommandEvent& event)
     wxLogMessage("Hello from Kepler!");
     }
 
-std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogLock()
+std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock()
     {
     std::unique_lock<std::mutex> mutexLock(m_textCtrlApplicationWideLogMutex,
                                            std::defer_lock);
@@ -557,17 +566,31 @@ std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogLock()
     return mutexLock;
     }
 
-void KeplerFrame::addTextToTextCtrlApplicationWideLog(const std::string &str)
+void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &str)
     {
-    wxMutexGuiEnter();
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
-    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogLock();   
-
-    // std::ostream stream(m_ptr_textCtrlApplicationWideLog);
-
-    // stream << str << std::endl;
-
-    // stream.flush();
-
-    wxMutexGuiLeave();    
+    m_queueTextCtrlApplicationWideLog.push(str);
     }
+
+void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
+    {
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
+
+    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+
+    while (!m_queueTextCtrlApplicationWideLog.empty())
+        {
+        stream << m_queueTextCtrlApplicationWideLog.front();
+
+        m_queueTextCtrlApplicationWideLog.pop();
+        }
+
+    stream.flush();
+    }
+
+void KeplerFrame::OnTimer(wxTimerEvent &e)
+    {
+    addTextToTextCtrlApplicationWideLogFromQueue();
+    }
+
