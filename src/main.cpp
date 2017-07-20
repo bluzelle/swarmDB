@@ -21,9 +21,9 @@
 
 
 
-#define MAX_THREADS 1
-#define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 20000
-#define THREAD_SLEEP_TIME_MILLISECONDS 400
+#define MAX_THREADS 200
+#define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
+#define THREAD_SLEEP_TIME_MILLISECONDS 50
 
 
 
@@ -139,6 +139,7 @@ class KeplerFrame: public wxFrame
         std::queue<std::string> m_queueTextCtrlApplicationWideLog;
 
         unsigned int m_uintTimerCounter;
+        unsigned int m_uintIdleCounter;
     };
 
 
@@ -230,7 +231,8 @@ KeplerFrame::KeplerFrame()
                      "Kepler TestNet Simulator"),
              m_timerIdle(this, 
                          wxID_ANY),
-             m_uintTimerCounter(0)
+             m_uintTimerCounter(0),
+             m_uintIdleCounter(0)
     {
     KeplerFrame::s_ptr_global = this;
 
@@ -585,43 +587,53 @@ std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &str)
     {
-    // std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLog = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
     m_queueTextCtrlApplicationWideLog.push(str);
     }
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
-    //std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
-
-    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
     std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
 
+    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
-        stream << m_queueTextCtrlApplicationWideLog.front() << std::flush;
+//        stream << m_queueTextCtrlApplicationWideLog.front() << std::flush;
 
         m_queueTextCtrlApplicationWideLog.pop();
         }
-
-    // stream.flush();
     }
+
+// This event only fires if there is activity. It does not ALWAYS fire.
 
 void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
-    std::cout << "OnIdle called" << std::endl;
+    m_uintIdleCounter++;
 
-    addTextToTextCtrlApplicationWideLogFromQueue();
+    // std::stringstream stringStreamOutput;
+
+    // stringStreamOutput << "OnIdle called " << m_uintIdleCounter << std::endl;
+
+    // std::cout << stringStreamOutput.str();
     }
 
 void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
 
-    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+    std::stringstream stringStreamOutput;
 
-    stream << "Neeraj is the best " << m_uintTimerCounter++ << std::endl << std::flush;
+    // stringStreamOutput << "Neeraj is the best " << m_uintTimerCounter << std::endl;
 
-    // stream.flush();
+    std::ostream streamTextCtrlApplicationWideLog(m_ptr_textCtrlApplicationWideLog);
+
+    streamTextCtrlApplicationWideLog << stringStreamOutput.str();
+
+    std::cout << stringStreamOutput.str();
+
+    addTextToTextCtrlApplicationWideLogFromQueue();
     }
