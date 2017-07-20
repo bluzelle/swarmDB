@@ -2,6 +2,7 @@
 
 #include <boost/locale.hpp>
 #include <boost/range/irange.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <iostream>
 
@@ -15,6 +16,7 @@
 #include <wx/listctrl.h>
 
 #include <thread>
+#include <chrono>
 
 
 
@@ -29,8 +31,7 @@ class KeplerApplication: public wxApp
         virtual bool OnInit();
 
         static std::unique_lock<std::mutex> getStdOutLock();
-
-
+        static unsigned int sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds);
 
         static KeplerSynchronizedSet<std::shared_ptr<std::thread>> s_threads;
         static std::mutex s_printMutex;               
@@ -51,6 +52,28 @@ std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
     mutexLock.lock();
 
     return mutexLock;
+    }
+
+
+unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds)
+    {
+    typedef unsigned long long u64;
+
+    u64 u64useconds;
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    u64useconds = (1000000*tv.tv_sec) + tv.tv_usec;
+    
+    std::srand(u64useconds); // use current time as seed for random generator
+
+    int intRandomVariable = std::rand();
+
+    unsigned int uintActualMillisecondsToSleep = intRandomVariable % uintMaximumMilliseconds;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(uintActualMillisecondsToSleep));      
+
+    return uintActualMillisecondsToSleep;      
     }
 
 
@@ -126,13 +149,19 @@ void threadLifeCycle(const unsigned int i)
     {
     while (true)
         {
-        std::this_thread::sleep_for(std::chrono::seconds(2));            
+        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(2000);
 
         std::thread::id myThreadId = std::this_thread::get_id();
 
         std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-        std::cout << "Thread #: " << i << " awakens and then goes back to sleep with id: " << myThreadId << std::endl;                
+        std::cout << "Thread #: " 
+                  << i 
+                  << " awakens after " 
+                  << uintActualMillisecondsToSleep 
+                  << "ms and then goes back to sleep with id: " 
+                  << myThreadId 
+                  << std::endl;                
         }
     }
 
