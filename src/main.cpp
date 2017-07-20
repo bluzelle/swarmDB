@@ -21,9 +21,9 @@
 
 
 
-#define MAX_THREADS 3
-#define MAIN_WINDOW_IDLE_PERIOD_MILLISECONDS 200
-#define THREAD_SLEEP_TIME_MILLISECONDS 400
+#define MAX_THREADS 6
+#define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 20000
+#define THREAD_SLEEP_TIME_MILLISECONDS 75
 
 
 
@@ -97,6 +97,10 @@ class KeplerFrame: public wxFrame
 
         static KeplerFrame *s_ptr_global;
 
+    protected:
+
+        DECLARE_EVENT_TABLE()
+
     private:
     
         void addTextToTextCtrlApplicationWideLogFromQueue();
@@ -105,6 +109,7 @@ class KeplerFrame: public wxFrame
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void OnTimer(wxTimerEvent& event);
+        void OnIdle(wxIdleEvent& event);
 
         wxTimer m_timerIdle;
 
@@ -132,7 +137,15 @@ class KeplerFrame: public wxFrame
         std::mutex m_textCtrlApplicationWideLogMutex;
 
         std::queue<std::string> m_queueTextCtrlApplicationWideLog;
+
+        unsigned int m_uintTimerCounter;
     };
+
+
+
+BEGIN_EVENT_TABLE(KeplerFrame, wxFrame)
+   EVT_IDLE(KeplerFrame::OnIdle)
+END_EVENT_TABLE()
 
 
 
@@ -187,7 +200,8 @@ void threadLifeCycle(const unsigned int i)
                   << uintActualMillisecondsToSleep 
                   << "ms and then goes back to sleep with id: " 
                   << myThreadId 
-                  << std::endl;      
+                  << std::endl
+                  << std::flush;      
 
         std::string strOutput = stringStreamOutput.str();          
 
@@ -213,7 +227,8 @@ KeplerFrame::KeplerFrame()
                      wxID_ANY, 
                      "Kepler TestNet Simulator"),
              m_timerIdle(this, 
-                         wxID_ANY)
+                         wxID_ANY),
+             m_uintTimerCounter(0)
     {
     KeplerFrame::s_ptr_global = this;
 
@@ -508,7 +523,7 @@ KeplerFrame::KeplerFrame()
 
 
 
-    m_timerIdle.Start(MAIN_WINDOW_IDLE_PERIOD_MILLISECONDS);
+    m_timerIdle.Start(MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS);
   
     Connect(m_timerIdle.GetId(), 
             wxEVT_TIMER, 
@@ -581,16 +596,26 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
-        stream << m_queueTextCtrlApplicationWideLog.front();
+        stream << m_queueTextCtrlApplicationWideLog.front() << std::flush;
 
         m_queueTextCtrlApplicationWideLog.pop();
         }
 
-    stream.flush();
+    // stream.flush();
     }
 
-void KeplerFrame::OnTimer(wxTimerEvent &e)
+void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
 
+void KeplerFrame::OnTimer(wxTimerEvent &e)
+    {
+    m_uintTimerCounter++;
+
+    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+
+    stream << "Neeraj is the best " << m_uintTimerCounter++ << std::endl << std::flush;
+
+    // stream.flush();
+    }
