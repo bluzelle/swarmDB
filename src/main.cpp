@@ -259,7 +259,7 @@ KeplerFrame::KeplerFrame()
 
         const bool boolInsertionResult = KeplerApplication::s_threads.safe_insert(ptr_newThread);
 
-        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+        // std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
         // std::cout << "Started thread: " << i << std::endl;
 
