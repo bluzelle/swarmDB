@@ -22,11 +22,13 @@
 
 
 
-#define MAX_THREADS 200
+#define MAX_THREADS 1
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 60
 #define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.5
+#define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
+
 
 
 class KeplerApplication: public wxApp
@@ -271,9 +273,12 @@ void threadLifeCycle(const unsigned int i)
 
     KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
 
-    // We only flag the thread to be killed manually if it naturally decided to die
+    // We only flag the thread to be killed manually if it naturally decided to die AND the system is not already
+    // set to end all threads. If the latter is true, this thread will be killed anyways. We certainly don't
+    // want it dying twice.
 
-    if (boolThreadRandomlyShouldDie)
+    if ((boolThreadRandomlyShouldDie) && 
+        (!KeplerApplication::s_bool_endAllThreads))
         {
         KeplerApplication::s_threadIdsToKill.safe_insert(myThreadId); 
         }
@@ -619,6 +624,8 @@ void KeplerFrame::OnKepler(wxCommandEvent& event)
 
 void KeplerFrame::OnExit(wxCommandEvent& event)
     {
+//    std::this_thread::sleep_for(std::chrono::milliseconds(MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS));      
+
     onClose();
 
     Close(true);
@@ -626,6 +633,8 @@ void KeplerFrame::OnExit(wxCommandEvent& event)
 
 void KeplerFrame::OnClose(wxCloseEvent& event)
     {
+//    std::this_thread::sleep_for(std::chrono::milliseconds(MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS));      
+
     onClose();
 
     Destroy();
