@@ -21,7 +21,7 @@
 
 
 
-#define MAX_THREADS 200
+#define MAX_THREADS 20
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 
@@ -178,13 +178,13 @@ bool KeplerApplication::OnInit()
 
 void threadIntroduction(const unsigned int i)
     {
-//    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
     std::thread::id myThreadId = std::this_thread::get_id();
 
-    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl << std::flush;
+    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;
 
-//    lockStdOut.unlock();        
+    lockStdOut.unlock();        
     }
 
 void threadLifeCycle(const unsigned int i)
@@ -257,9 +257,9 @@ KeplerFrame::KeplerFrame()
 
         const bool boolInsertionResult = KeplerApplication::s_threads.safe_insert(ptr_newThread);
 
-//        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-        std::cout << "Started thread" << "\n";
+        std::cout << "Started thread: " << i << std::endl;
 
         // We don't do a join on these threads -- might want to when the program quits?
         }
@@ -595,17 +595,30 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &st
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
     std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
     std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
 
     std::ostream stream(m_ptr_textCtrlApplicationWideLog);
 
+    unsigned int counter = 0;
+
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
-//        stream << m_queueTextCtrlApplicationWideLog.front() << std::flush;
+        counter++;
+
+        std::cout << "Before streaming " << m_uintTimerCounter << " " << counter << std::endl;
+
+        std::cout << "After streaming " << m_uintTimerCounter << " " << counter << std::endl;
+
+//        stream << m_queueTextCtrlApplicationWideLog.front() << std::endl;
 
         m_queueTextCtrlApplicationWideLog.pop();
         }
+
+    stream << m_uintTimerCounter << std::endl;
+
+    lockStdOut.unlock();
     }
 
 // This event only fires if there is activity. It does not ALWAYS fire.
@@ -625,15 +638,15 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
 
-    std::stringstream stringStreamOutput;
+    // std::stringstream stringStreamOutput;
 
     // stringStreamOutput << "Neeraj is the best " << m_uintTimerCounter << std::endl;
 
-    std::ostream streamTextCtrlApplicationWideLog(m_ptr_textCtrlApplicationWideLog);
+    // std::ostream streamTextCtrlApplicationWideLog(m_ptr_textCtrlApplicationWideLog);
 
-    streamTextCtrlApplicationWideLog << stringStreamOutput.str();
+    // streamTextCtrlApplicationWideLog << stringStreamOutput.str();
 
-    std::cout << stringStreamOutput.str();
+    // std::cout << stringStreamOutput.str();
 
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
