@@ -204,11 +204,17 @@ bool KeplerApplication::OnInit()
 
 void threadIntroduction(const unsigned int i)
     {
-    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
-
     std::thread::id myThreadId = std::this_thread::get_id();
 
-    std::cout << "Hello. This is NEW thread #: " << i << " that was JUST BORN with id: " << myThreadId << std::endl;
+    std::stringstream stringStreamOutput;
+    stringStreamOutput << "Hello. This is NEW thread #: " << i << " that was JUST BORN with id: " << myThreadId << std::endl;
+    const std::string strOutput = stringStreamOutput.str();
+
+    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
+
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+    std::cout << strOutput;
 
     lockStdOut.unlock();        
     }
