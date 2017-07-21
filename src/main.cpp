@@ -124,7 +124,6 @@ class KeplerFrame: public wxFrame
         wxBoxSizer *m_ptr_boxSizerSelectedThread;
         wxBoxSizer *m_ptr_boxSizerThreadMessages;
 
-//        wxTextCtrl *m_ptr_textCtrlApplicationWideLog;
         wxTextCtrl *m_ptr_textCtrlThreadLog;        
 
         wxListView *m_ptr_listCtrlApplicationWideLog;
@@ -347,19 +346,6 @@ KeplerFrame::KeplerFrame()
                               wxALL,       
                               10);
 
-    // m_ptr_textCtrlApplicationWideLog = new wxTextCtrl(this, 
-    //                                             -1, 
-    //                                             "", 
-    //                                             wxDefaultPosition, 
-    //                                             wxSize(100,60), 
-    //                                             wxTE_MULTILINE | 
-    //                                             wxTE_READONLY |
-    //                                             wxHSCROLL);
-    // m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
-    //                          2,
-    //                          wxEXPAND | 
-    //                          wxALL,       
-    //                          10);
 
 
     m_ptr_listViewNodes = new wxListView(this, 
