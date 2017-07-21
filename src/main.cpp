@@ -21,10 +21,10 @@
 
 
 
-#define MAX_THREADS 20
+#define MAX_THREADS 40
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
-#define MAX_LOG_ENTRIES 100
+#define MAX_LOG_ENTRIES 120
 
 
 
@@ -262,7 +262,7 @@ KeplerFrame::KeplerFrame()
 
         std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-        std::cout << "Started thread: " << i << std::endl;
+        // std::cout << "Started thread: " << i << std::endl;
 
         // We don't do a join on these threads -- might want to when the program quits?
         }
