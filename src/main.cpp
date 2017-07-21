@@ -111,6 +111,8 @@ class KeplerFrame: public wxFrame
         void OnAbout(wxCommandEvent& event);
         void OnTimer(wxTimerEvent& event);
         void OnIdle(wxIdleEvent& event);
+        void OnClose(wxCloseEvent& event);
+        void OnClose();
 
         wxTimer m_timerIdle;
 
@@ -148,6 +150,7 @@ class KeplerFrame: public wxFrame
 
 BEGIN_EVENT_TABLE(KeplerFrame, wxFrame)
    EVT_IDLE(KeplerFrame::OnIdle)
+   EVT_CLOSE(KeplerFrame::OnClose)
 END_EVENT_TABLE()
 
 
@@ -543,19 +546,6 @@ KeplerFrame::KeplerFrame()
             this); 
     }
 
-void KeplerFrame::OnExit(wxCommandEvent& event)
-    {
-int myints[] = {75,23,65,42,13};
-  std::set<int> myset (myints,myints+5);
-
-  std::cout << "myset contains:";
-  for (std::set<int>::iterator it=myset.begin(); it!=myset.end(); ++it)
-    std::cout << ' ' << *it;
-
-
-    Close(true);
-    }
-
 void KeplerFrame::OnAbout(wxCommandEvent& event)
     {
     using namespace boost::locale;
@@ -580,6 +570,32 @@ void KeplerFrame::OnAbout(wxCommandEvent& event)
 void KeplerFrame::OnKepler(wxCommandEvent& event)
     {
     wxLogMessage("Hello from Kepler!");
+    }
+
+void KeplerFrame::OnExit(wxCommandEvent& event)
+    {
+    OnClose();
+
+    Close(true);
+    }
+
+void KeplerFrame::OnClose(wxCloseEvent& event)
+    {
+    OnClose();
+
+    Destroy();
+    }
+
+void KeplerFrame::OnClose()
+    {
+int myints[] = {75,23,65,42,13};
+  std::set<int> myset (myints,myints+5);
+
+  std::cout << "myset contains:";
+  for (std::set<int>::iterator it=myset.begin(); it!=myset.end(); ++it)
+    std::cout << ' ' << *it;
+
+std::set<unsigned long>::iterator it;
     }
 
 std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock()
