@@ -589,31 +589,13 @@ void KeplerFrame::OnClose(wxCloseEvent& event)
 
 void KeplerFrame::onClose()
     {
-int myints[] = {75,23,65,42,13};
-  std::set<int> myset (myints,myints+5);
+    KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
+        {
+        std::cout << "Joining thread: " << ptr_newThread->get_id() << std::endl;
 
-  std::cout << "myset contains:";
-  for (std::set<int>::iterator it=myset.begin(); it!=myset.end(); ++it)
-    std::cout << ' ' << *it;
-
-std::set<unsigned long>::iterator it;
-
-
-
-
-
-//std::set<std::shared_ptr<std::thread>> 
-
-std::set<std::shared_ptr<int>> foo;
-foo.insert(std::shared_ptr<int>(new int(1976)));
-for (std::set<std::shared_ptr<int>>::iterator it=foo.begin(); it!=foo.end(); ++it) 
-    {
-    std::cout << *it;
+        ptr_newThread->join();
+        });
     }
-}
-
-
-
 
 std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock()
     {
@@ -671,10 +653,10 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
 void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
-    KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
-        {
-        std::cout << ptr_newThread->get_id() << std::endl;
-        });
+    // KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
+    //     {
+    //     std::cout << ptr_newThread->get_id() << std::endl;
+    //     });
 
     m_uintIdleCounter++;
     }

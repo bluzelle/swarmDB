@@ -17,8 +17,14 @@ class KeplerSynchronizedSetWrapper
 
         bool safe_insert(T &object);
 
-        template<typename Functor>
+        // Example usage:
+        //
+	    // KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
+	    //     {
+	    //     std::cout << ptr_newThread->get_id() << std::endl;
+	    //     });
 
+        template<typename Functor>
         void safe_iterate(Functor function)
 	        {
 		    std::unique_lock<std::mutex> mutexLock(m_mutex,
