@@ -123,8 +123,10 @@ class KeplerFrame: public wxFrame
         wxBoxSizer *m_ptr_boxSizerSelectedThread;
         wxBoxSizer *m_ptr_boxSizerThreadMessages;
 
-        wxTextCtrl *m_ptr_textCtrlApplicationWideLog;
+//        wxTextCtrl *m_ptr_textCtrlApplicationWideLog;
         wxTextCtrl *m_ptr_textCtrlThreadLog;        
+
+        wxListView *m_ptr_listCtrlApplicationWideLog;
 
         wxListView *m_ptr_listViewNodes;
         wxListView *m_ptr_listViewNodeKeyValuesStore;
@@ -327,19 +329,37 @@ KeplerFrame::KeplerFrame()
 
 
 
-    m_ptr_textCtrlApplicationWideLog = new wxTextCtrl(this, 
-                                                -1, 
-                                                "", 
-                                                wxDefaultPosition, 
-                                                wxSize(100,60), 
-                                                wxTE_MULTILINE | 
-                                                wxTE_READONLY |
-                                                wxHSCROLL);
-    m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
-                             2,
-                             wxEXPAND | 
-                             wxALL,       
-                             10);
+    m_ptr_listCtrlApplicationWideLog = new wxListView(this, 
+                                               wxID_ANY, 
+                                               wxDefaultPosition, 
+                                               wxSize(150, 150));
+
+    m_ptr_listCtrlApplicationWideLog->AppendColumn("#");
+    m_ptr_listCtrlApplicationWideLog->AppendColumn("Network-Wide Log");
+
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
+ 
+    m_ptr_boxSizerApplication->Add(m_ptr_listCtrlApplicationWideLog,
+                              2,
+                              wxEXPAND | 
+                              wxALL,       
+                              10);
+
+    // m_ptr_textCtrlApplicationWideLog = new wxTextCtrl(this, 
+    //                                             -1, 
+    //                                             "", 
+    //                                             wxDefaultPosition, 
+    //                                             wxSize(100,60), 
+    //                                             wxTE_MULTILINE | 
+    //                                             wxTE_READONLY |
+    //                                             wxHSCROLL);
+    // m_ptr_boxSizerApplication->Add(m_ptr_textCtrlApplicationWideLog,
+    //                          2,
+    //                          wxEXPAND | 
+    //                          wxALL,       
+    //                          10);
+
 
     m_ptr_listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
@@ -595,11 +615,9 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &st
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
     std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
-    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+//    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-    std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
-
-    std::ostream stream(m_ptr_textCtrlApplicationWideLog);
+    // std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
 
     unsigned int counter = 0;
 
@@ -607,18 +625,22 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
         {
         counter++;
 
-        std::cout << "Before streaming " << m_uintTimerCounter << " " << counter << std::endl;
+        // std::cout << "Before streaming " << m_uintTimerCounter << " " << counter << std::endl;
 
-        std::cout << "After streaming " << m_uintTimerCounter << " " << counter << std::endl;
+        // std::cout << "After streaming " << m_uintTimerCounter << " " << counter << std::endl;
 
-//        stream << m_queueTextCtrlApplicationWideLog.front() << std::endl;
+        const std::string &strFrontLogEvent = m_queueTextCtrlApplicationWideLog.front();
+
+        m_ptr_listCtrlApplicationWideLog->InsertItem(0, std::to_string(m_uintTimerCounter));
+        m_ptr_listCtrlApplicationWideLog->SetItem(0, 1, strFrontLogEvent);
 
         m_queueTextCtrlApplicationWideLog.pop();
         }
 
-    stream << m_uintTimerCounter << std::endl;
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
-    lockStdOut.unlock();
+    // lockStdOut.unlock();
     }
 
 // This event only fires if there is activity. It does not ALWAYS fire.
@@ -626,12 +648,6 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
     m_uintIdleCounter++;
-
-    // std::stringstream stringStreamOutput;
-
-    // stringStreamOutput << "OnIdle called " << m_uintIdleCounter << std::endl;
-
-    // std::cout << stringStreamOutput.str();
     }
 
 void KeplerFrame::OnTimer(wxTimerEvent &e)
