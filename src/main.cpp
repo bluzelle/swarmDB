@@ -22,7 +22,7 @@
 
 
 
-#define MAX_THREADS 40
+#define MAX_THREADS 1
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 120
@@ -260,6 +260,15 @@ void threadLifeCycle(const unsigned int i)
     std::string strOutput = stringStreamOutput.str();          
 
     KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
+
+    KeplerApplication::s_threads.safe_use([&myThreadId] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+        {
+            std::cout << "Will try: " << myThreadId << std::endl;
+            std::cout << "Count: " << mapThreads.size() << std::endl;
+            std::cout << "Foo: " << mapThreads.begin()->first << std::endl;
+
+        mapThreads.erase(myThreadId);
+        });
 
     std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
