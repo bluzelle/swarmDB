@@ -707,14 +707,28 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
         {
         KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads] (const std::thread::id &threadId) 
             {
+            std::stringstream stringStreamOutput1;
+            stringStreamOutput1 << threadId << " has been flagged to die... joining it..." << std::endl;
+            const std::string strOutput1 = stringStreamOutput1.str();
+
+            KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput1);
+
             std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
-            std::cout << threadId << " has been flagged to die... joining it..." << std::endl;
+            std::cout << strOutput1;
             lockStdOut.unlock();
+
+
 
             mapThreads[threadId]->join();
 
+
+
+            std::stringstream stringStreamOutput2;
+            stringStreamOutput2 << threadId << " joining DONE" << std::endl;
+            const std::string strOutput2 = stringStreamOutput2.str();
+
             lockStdOut.lock();
-            std::cout << threadId << " joining DONE" << std::endl;
+            std::cout << strOutput2;
             lockStdOut.unlock();
 
             mapThreads.erase(threadId);
