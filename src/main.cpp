@@ -1,4 +1,4 @@
-#include "KeplerSynchronizedSet.hpp"
+#include "KeplerSynchronizedSetWrapper.hpp"
 
 #include <boost/locale.hpp>
 #include <boost/range/irange.hpp>
