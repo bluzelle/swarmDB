@@ -248,6 +248,15 @@ void threadFunction(const unsigned int i)
     threadLifeCycle(i);
     }
  
+void printCPPVersion()
+    {
+    if ( __cplusplus == 201103L ) std::cout << "C++11\n" ;
+ 
+    else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
+ 
+    else std::cout << "pre-standard C++\n" ;        
+    }
+
 
 
 KeplerFrame::KeplerFrame()
@@ -261,13 +270,7 @@ KeplerFrame::KeplerFrame()
     {
     KeplerFrame::s_ptr_global = this;
 
-    if ( __cplusplus == 201103L ) std::cout << "C++11\n" ;
- 
-    else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
- 
-    else std::cout << "pre-standard C++\n" ;
-
-
+    printCPPVersion();
 
     std::cout << "Main thread id: " << std::this_thread::get_id() << "\n";
 
@@ -609,7 +612,7 @@ void KeplerFrame::OnClose(wxCloseEvent& event)
 void KeplerFrame::onClose()
     {
     KeplerApplication::s_bool_endAllThreads = true;
-    
+
     KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
         {
         std::cout << "Joining thread: " << ptr_newThread->get_id() << std::endl;
@@ -637,12 +640,6 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &st
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
-    // std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
-
-    // std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
-
-    // lockStdOut.unlock();
-
     unsigned int counter = 0;
 
     if (m_ptr_listCtrlApplicationWideLog->GetItemCount() > MAX_LOG_ENTRIES)
@@ -674,23 +671,12 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
 void KeplerFrame::OnIdle(wxIdleEvent& event)
     {
-    // KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
-    //     {
-    //     std::cout << ptr_newThread->get_id() << std::endl;
-    //     });
-
     m_uintIdleCounter++;
     }
 
 void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
-
-    // std::stringstream stringStreamOutput;
-
-    // stringStreamOutput << "Neeraj is the best " << m_uintTimerCounter << std::endl;
-
-    // std::cout << stringStreamOutput.str();
 
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
