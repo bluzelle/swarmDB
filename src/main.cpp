@@ -22,7 +22,7 @@
 
 
 
-#define MAX_THREADS 1
+#define MAX_THREADS 20
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 120
@@ -232,7 +232,7 @@ void threadLifeCycleLoop(const unsigned int i)
 
     std::string strOutput = stringStreamOutput.str();          
 
-    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);        
+//    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);        
     }
 
 void threadLifeCycle(const unsigned int i)
@@ -632,7 +632,15 @@ void KeplerFrame::onClose()
     KeplerApplication::s_threads.safe_iterate([] (const std::thread::id &threadId, 
                                                   const std::shared_ptr<std::thread> &ptr_thread) 
         {
-        std::cout << "Joining thread: " << ptr_thread->get_id() << std::endl;
+        std::stringstream stringStreamOutput;
+        stringStreamOutput << "Joining thread: " << ptr_thread->get_id() << std::endl;
+        const std::string strOutput = stringStreamOutput.str();
+
+        KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
+
+//        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+        std::cout << strOutput;
 
         ptr_thread->join();
         });
