@@ -25,7 +25,7 @@
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 120
-
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.5
 
 
 class KeplerApplication: public wxApp
@@ -67,7 +67,7 @@ std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
 
 
 
-int getThreadFriendlyRandomNumber()
+int getThreadFriendlyLargeRandomNumber()
     {
     typedef unsigned long long u64;
 
@@ -89,8 +89,8 @@ int getThreadFriendlyRandomNumber()
 
 unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds)
     {
-    int intRandomVariable = getThreadFriendlyRandomNumber();
-    
+    int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+
     unsigned int uintActualMillisecondsToSleep = intRandomVariable % uintMaximumMilliseconds;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(uintActualMillisecondsToSleep));      
@@ -208,29 +208,42 @@ void threadIntroduction(const unsigned int i)
     lockStdOut.unlock();        
     }
 
+void threadLifeCycleLoop(const unsigned int i)
+    {
+    unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
+
+    std::thread::id myThreadId = std::this_thread::get_id();
+
+    std::stringstream stringStreamOutput;
+
+    stringStreamOutput << "Thread #: " 
+              << i 
+              << " awakens after " 
+              << uintActualMillisecondsToSleep 
+              << "ms and then goes back to sleep with id: " 
+              << myThreadId 
+              << std::endl
+              << std::flush;      
+
+    std::string strOutput = stringStreamOutput.str();          
+
+    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);        
+    }
+
 void threadLifeCycle(const unsigned int i)
     {
-    while (!KeplerApplication::s_bool_endAllThreads)
+    bool boolThreadRandomlyShouldDie = false;
+
+    do 
         {
-        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
+        int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+        float floatComputedRandomValue = (intRandomVariable % 10000) * 1.0 / 100.0;
+        boolThreadRandomlyShouldDie = (floatComputedRandomValue <= THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE);
 
-        std::thread::id myThreadId = std::this_thread::get_id();
-
-        std::stringstream stringStreamOutput;
-
-        stringStreamOutput << "Thread #: " 
-                  << i 
-                  << " awakens after " 
-                  << uintActualMillisecondsToSleep 
-                  << "ms and then goes back to sleep with id: " 
-                  << myThreadId 
-                  << std::endl
-                  << std::flush;      
-
-        std::string strOutput = stringStreamOutput.str();          
-
-        KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
+        threadLifeCycleLoop(i);
         }
+    while ((!KeplerApplication::s_bool_endAllThreads) && 
+           (!boolThreadRandomlyShouldDie));
 
     std::thread::id myThreadId = std::this_thread::get_id();
 
