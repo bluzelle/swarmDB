@@ -22,11 +22,11 @@
 
 
 
-#define MAX_THREADS 1
+#define MAX_THREADS 200
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 60
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.5
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 10.5
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 
 
@@ -648,7 +648,7 @@ void KeplerFrame::onClose()
                                                   const std::shared_ptr<std::thread> &ptr_thread) 
         {
         std::stringstream stringStreamOutput;
-        stringStreamOutput << "Joining thread: " << ptr_thread->get_id() << std::endl;
+        stringStreamOutput << "Joining thread: " << threadId << std::endl;
         const std::string strOutput = stringStreamOutput.str();
 
         KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
@@ -657,7 +657,10 @@ void KeplerFrame::onClose()
 
         std::cout << strOutput;
 
-        ptr_thread->join();
+        if (ptr_thread->joinable())
+            {
+            ptr_thread->join();
+            }
         });
     }
 
@@ -734,7 +737,10 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
 
 
 
-            mapThreads[threadId]->join();
+            if (mapThreads[threadId]->joinable())
+                {
+                mapThreads[threadId]->join();
+                }
 
 
 
