@@ -614,20 +614,19 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &st
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
-    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
-//    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-    // std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
+    std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
+
+    lockStdOut.unlock();
 
     unsigned int counter = 0;
+
+    std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
         counter++;
-
-        // std::cout << "Before streaming " << m_uintTimerCounter << " " << counter << std::endl;
-
-        // std::cout << "After streaming " << m_uintTimerCounter << " " << counter << std::endl;
 
         const std::string &strFrontLogEvent = m_queueTextCtrlApplicationWideLog.front();
 
@@ -637,10 +636,10 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
         m_queueTextCtrlApplicationWideLog.pop();
         }
 
+    lockTextCtrlApplicationWideLogQueue.unlock();
+
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
-
-    // lockStdOut.unlock();
     }
 
 // This event only fires if there is activity. It does not ALWAYS fire.
@@ -657,10 +656,6 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
     // std::stringstream stringStreamOutput;
 
     // stringStreamOutput << "Neeraj is the best " << m_uintTimerCounter << std::endl;
-
-    // std::ostream streamTextCtrlApplicationWideLog(m_ptr_textCtrlApplicationWideLog);
-
-    // streamTextCtrlApplicationWideLog << stringStreamOutput.str();
 
     // std::cout << stringStreamOutput.str();
 
