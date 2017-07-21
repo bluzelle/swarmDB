@@ -109,6 +109,7 @@ class KeplerFrame: public wxFrame
     private:
     
         void addTextToTextCtrlApplicationWideLogFromQueue();
+        void createNewThreadsIfNeeded();
 
         void OnKepler(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
@@ -273,26 +274,6 @@ KeplerFrame::KeplerFrame()
     printCPPVersion();
 
     std::cout << "Main thread id: " << std::this_thread::get_id() << "\n";
-
-
-
-    for (const unsigned int i : boost::irange(0,
-                                              MAX_THREADS)) 
-        {
-        std::shared_ptr<std::thread> ptr_newThread(new std::thread(threadFunction, i));
-
-        // Is this safe? Do we now have two ref-counted objects pointing to the thread but each with a count of 1?
-
-        const bool boolInsertionResult = KeplerApplication::s_threads.safe_insert(ptr_newThread);
-
-        // std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
-
-        // std::cout << "Started thread: " << i << std::endl;
-
-        // We don't do a join on these threads -- might want to when the program quits?
-        }
-
-
 
     m_ptr_menuFile = new wxMenu;
     m_ptr_menuFile->Append(ID_Kepler, 
@@ -674,9 +655,43 @@ void KeplerFrame::OnIdle(wxIdleEvent& event)
     m_uintIdleCounter++;
     }
 
+void KeplerFrame::createNewThreadsIfNeeded()
+    {
+    if (KeplerApplication::s_bool_endAllThreads == false)
+        {
+        // Access the threads object inside a critical section
+
+        KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>>::KeplerSynchronizedSetType &setThreads) 
+            {
+            const int intThreadCount = setThreads.size();
+                
+            if (intThreadCount < MAX_THREADS)
+                {
+                std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+                std::cout << "Number of threads in set: " << setThreads.size() << std::endl;
+
+                for (const unsigned int i : boost::irange(intThreadCount,
+                                                          MAX_THREADS)) 
+                    {
+                    std::shared_ptr<std::thread> ptr_newThread(new std::thread(threadFunction, i));
+
+                    // Is this safe? Do we now have two ref-counted objects pointing to the thread but each with a count of 1?
+
+                    setThreads.insert(ptr_newThread);
+                    }
+
+                std::cout << "Number of threads in set is NOW: " << setThreads.size() << std::endl;
+                }
+            });
+        }
+    }
+
 void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
+
+    createNewThreadsIfNeeded();
 
     addTextToTextCtrlApplicationWideLogFromQueue();
     }

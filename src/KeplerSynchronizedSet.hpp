@@ -15,7 +15,10 @@ class KeplerSynchronizedSetWrapper
     {
     public:
 
+        typedef std::set<T> KeplerSynchronizedSetType;
+
         bool safe_insert(T &object);
+        bool unsafe_insert(T &object);
 
         // Example usage:
         //
@@ -44,9 +47,20 @@ class KeplerSynchronizedSetWrapper
 		    mutexLock.unlock();
 	        }
 
-    private:
+        template<typename Functor>
+        void safe_use(Functor function)
+	        {
+		    std::unique_lock<std::mutex> mutexLock(m_mutex,
+		                                           std::defer_lock);
 
-        typedef std::set<T> KeplerSynchronizedSetType;
+		    mutexLock.lock();
+
+		    function(m_unsafeSet);
+
+		    mutexLock.unlock();
+	        }
+
+    private:
 
         KeplerSynchronizedSetType m_unsafeSet;
 
@@ -68,6 +82,18 @@ inline bool KeplerSynchronizedSetWrapper<T>::safe_insert(T &object)
     pairReturnValueFromInsertion = m_unsafeSet.insert(object);
 
     mutexLock.unlock();
+
+    return pairReturnValueFromInsertion.second;
+    }
+
+// ONLY use this if you are already in a critical section when you need to an insertion
+
+template <class T>
+inline bool KeplerSynchronizedSetWrapper<T>::unsafe_insert(T &object)
+    {
+    std::pair<typename KeplerSynchronizedSetType::iterator, bool> pairReturnValueFromInsertion;
+
+    pairReturnValueFromInsertion = m_unsafeSet.insert(object);
 
     return pairReturnValueFromInsertion.second;
     }
