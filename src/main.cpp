@@ -618,7 +618,8 @@ void KeplerFrame::onClose()
     {
     KeplerApplication::s_bool_endAllThreads = true;
 
-    KeplerApplication::s_threads.safe_iterate([] (const std::thread::id &threadId, const std::shared_ptr<std::thread> &ptr_thread) 
+    KeplerApplication::s_threads.safe_iterate([] (const std::thread::id &threadId, 
+                                                  const std::shared_ptr<std::thread> &ptr_thread) 
         {
         std::cout << "Joining thread: " << ptr_thread->get_id() << std::endl;
 
