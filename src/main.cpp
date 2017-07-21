@@ -41,6 +41,8 @@ class KeplerApplication: public wxApp
         static KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>> s_threads;
 
         static std::mutex s_stdOutMutex;              
+
+        static bool s_bool_endAllThreads;
     };
 
 
@@ -48,6 +50,8 @@ class KeplerApplication: public wxApp
 KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>> KeplerApplication::s_threads;
 
 std::mutex KeplerApplication::s_stdOutMutex;
+
+bool KeplerApplication::s_bool_endAllThreads = false;
 
 
 
@@ -195,7 +199,7 @@ void threadIntroduction(const unsigned int i)
 
 void threadLifeCycle(const unsigned int i)
     {
-    while (true)
+    while (!KeplerApplication::s_bool_endAllThreads)
         {
         unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
 
@@ -215,11 +219,26 @@ void threadLifeCycle(const unsigned int i)
         std::string strOutput = stringStreamOutput.str();          
 
         KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
-
-//        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
-
-//        std::cout << strOutput;
         }
+
+    std::thread::id myThreadId = std::this_thread::get_id();
+
+    std::stringstream stringStreamOutput;
+
+    stringStreamOutput << "Thread #: " 
+              << i 
+              << " is ending its lifecycle with id: " 
+              << myThreadId 
+              << std::endl
+              << std::flush;      
+
+    std::string strOutput = stringStreamOutput.str();          
+
+    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
+
+    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+    std::cout << strOutput;
     }
 
 void threadFunction(const unsigned int i) 
@@ -589,6 +608,8 @@ void KeplerFrame::OnClose(wxCloseEvent& event)
 
 void KeplerFrame::onClose()
     {
+    KeplerApplication::s_bool_endAllThreads = true;
+    
     KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
         {
         std::cout << "Joining thread: " << ptr_newThread->get_id() << std::endl;
