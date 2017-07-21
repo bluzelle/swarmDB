@@ -24,6 +24,7 @@
 #define MAX_THREADS 20
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
+#define MAX_LOG_ENTRIES 100
 
 
 
@@ -614,13 +615,18 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &st
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     {
-    std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+    // std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-    std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
+    // std::cout << "Size of Application-Wide Log Queue: " << m_queueTextCtrlApplicationWideLog.size() << std::endl;
 
-    lockStdOut.unlock();
+    // lockStdOut.unlock();
 
     unsigned int counter = 0;
+
+    if (m_ptr_listCtrlApplicationWideLog->GetItemCount() > MAX_LOG_ENTRIES)
+        {
+        m_ptr_listCtrlApplicationWideLog->DeleteAllItems();
+        }
 
     std::unique_lock<std::mutex> lockTextCtrlApplicationWideLogQueue = KeplerFrame::getTextCtrlApplicationWideLogQueueLock();   
 
