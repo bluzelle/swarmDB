@@ -11,11 +11,32 @@
 
 
 template <class T> 
-class KeplerSynchronizedSet
+class KeplerSynchronizedSetWrapper
     {
     public:
 
         bool safe_insert(T &object);
+
+        template<typename Functor>
+
+        void safe_iterate(Functor function)
+	        {
+		    std::unique_lock<std::mutex> mutexLock(m_mutex,
+		                                           std::defer_lock);
+
+		    mutexLock.lock();
+
+			for (typename KeplerSynchronizedSetType::iterator iteratorSet = m_unsafeSet.begin(); 
+				 iteratorSet != m_unsafeSet.end(); 
+				 ++iteratorSet) 
+			    {
+			    const T &t = *iteratorSet;
+
+			    function(t);
+			    }
+
+		    mutexLock.unlock();
+	        }
 
     private:
 
@@ -29,7 +50,7 @@ class KeplerSynchronizedSet
 
 
 template <class T>
-inline bool KeplerSynchronizedSet<T>::safe_insert(T &object)
+inline bool KeplerSynchronizedSetWrapper<T>::safe_insert(T &object)
     {
     std::pair<typename KeplerSynchronizedSetType::iterator, bool> pairReturnValueFromInsertion;
 
@@ -44,7 +65,5 @@ inline bool KeplerSynchronizedSet<T>::safe_insert(T &object)
 
     return pairReturnValueFromInsertion.second;
     }
-
-
 
 #endif // KEPLERSYNCHRONIZEDSET_H
