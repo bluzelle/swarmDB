@@ -208,7 +208,7 @@ void threadIntroduction(const unsigned int i)
 
     std::thread::id myThreadId = std::this_thread::get_id();
 
-    std::cout << "Hello. This is thread #: " << i << " with id: " << myThreadId << std::endl;
+    std::cout << "Hello. This is NEW thread #: " << i << " that was JUST BORN with id: " << myThreadId << std::endl;
 
     lockStdOut.unlock();        
     }
@@ -265,7 +265,12 @@ void threadLifeCycle(const unsigned int i)
 
     KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
 
-    KeplerApplication::s_threadIdsToKill.safe_insert(myThreadId); 
+    // We only flag the thread to be killed manually if it naturally decided to die
+
+    if (boolThreadRandomlyShouldDie)
+        {
+        KeplerApplication::s_threadIdsToKill.safe_insert(myThreadId); 
+        }
 
     std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
@@ -688,10 +693,32 @@ void KeplerFrame::OnIdle(wxIdleEvent& event)
 
 void KeplerFrame::killAndJoinThreadsIfNeeded()
     {
-    KeplerApplication::s_threadIdsToKill.safe_iterate([] (const std::thread::id &threadId) 
+    // Access the threads object inside a critical section
+
+    KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
         {
-        std::cout << threadId << " has been flagged to die" << std::endl;
-        });
+        KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads] (const std::thread::id &threadId) 
+            {
+            std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+            std::cout << threadId << " has been flagged to die... joining it..." << std::endl;
+            lockStdOut.unlock();
+
+            mapThreads[threadId]->join();
+
+            lockStdOut.lock();
+            std::cout << threadId << " joining DONE" << std::endl;
+            lockStdOut.unlock();
+
+            mapThreads.erase(threadId);
+            });
+        });  
+
+    KeplerApplication::s_threadIdsToKill.safe_use([] (KeplerSynchronizedSetWrapper<std::thread::id>::KeplerSynchronizedSetType &setThreadsToKill)
+        {
+        setThreadsToKill.clear();
+
+        //std::cout << setThreadsToKill.size() << " size of erasure\n";
+        }); 
     }
 
 void KeplerFrame::createNewThreadsIfNeeded()
