@@ -97,4 +97,4 @@ inline bool KeplerSynchronizedSetWrapper<T>::unsafe_insert(T &object)
     return pairReturnValueFromInsertion.second;
     }
 
-#endif // KEPLERSYNCHRONIZEDSET_H
+#endif // KEPLERSYNCHRONIZEDSETWRAPPER_H
