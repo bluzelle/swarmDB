@@ -67,20 +67,30 @@ std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
 
 
 
-unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds)
+int getThreadFriendlyRandomNumber()
     {
     typedef unsigned long long u64;
 
     u64 u64useconds;
     struct timeval tv;
 
-    gettimeofday(&tv,NULL);
-    u64useconds = (1000000*tv.tv_sec) + tv.tv_usec;
+    gettimeofday(&tv,
+                 NULL);
+    u64useconds = (1000000 * tv.tv_sec) + tv.tv_usec;
 
     std::srand(u64useconds); // use current time as seed for random generator
 
-    int intRandomVariable = std::rand();
+    int intRandomVariable = std::rand();  
 
+    return intRandomVariable;
+    }
+
+
+
+unsigned int KeplerApplication::sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds)
+    {
+    int intRandomVariable = getThreadFriendlyRandomNumber();
+    
     unsigned int uintActualMillisecondsToSleep = intRandomVariable % uintMaximumMilliseconds;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(uintActualMillisecondsToSleep));      
