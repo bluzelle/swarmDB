@@ -727,6 +727,8 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
             stringStreamOutput2 << threadId << " joining DONE" << std::endl;
             const std::string strOutput2 = stringStreamOutput2.str();
 
+            KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput2);
+
             lockStdOut.lock();
             std::cout << strOutput2;
             lockStdOut.unlock();
@@ -738,8 +740,6 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
     KeplerApplication::s_threadIdsToKill.safe_use([] (KeplerSynchronizedSetWrapper<std::thread::id>::KeplerSynchronizedSetType &setThreadsToKill)
         {
         setThreadsToKill.clear();
-
-        //std::cout << setThreadsToKill.size() << " size of erasure\n";
         }); 
     }
 
@@ -755,9 +755,15 @@ void KeplerFrame::createNewThreadsIfNeeded()
                 
             if (intThreadCount < MAX_THREADS)
                 {
-                std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+                std::stringstream stringStreamOutput1;
+                stringStreamOutput1 << "Number of threads in map: " << mapThreads.size() << std::endl;
+                const std::string strOutput1 = stringStreamOutput1.str();
 
-                std::cout << "Number of threads in map: " << mapThreads.size() << std::endl;
+                KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput1);
+
+                std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+                std::cout << strOutput1;
+                lockStdOut.unlock();
 
                 for (const unsigned int i : boost::irange(intThreadCount,
                                                           MAX_THREADS)) 
@@ -770,7 +776,15 @@ void KeplerFrame::createNewThreadsIfNeeded()
                                                                                                                                                          ptr_newThread));
                     }
 
-                std::cout << "Number of threads in map is NOW: " << mapThreads.size() << std::endl;
+                std::stringstream stringStreamOutput2;
+                stringStreamOutput2 << "Number of threads in map is NOW: " << mapThreads.size() << std::endl;
+                const std::string strOutput2 = stringStreamOutput2.str();
+
+                KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput2);
+
+                lockStdOut.lock();
+                std::cout << strOutput2;
+                lockStdOut.unlock();
                 }
             });
         }
