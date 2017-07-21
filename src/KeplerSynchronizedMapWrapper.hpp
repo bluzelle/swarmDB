@@ -71,6 +71,10 @@ class KeplerSynchronizedMapWrapper
 		    mutexLock.unlock();
 	        }
 
+        // KeplerApplication::s_threads.safe_use([&myThreadId] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+        //     {
+        //     });
+
         template<typename Functor>
         void safe_use(Functor function)
 	        {

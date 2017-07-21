@@ -1,4 +1,4 @@
-//#include "KeplerSynchronizedSetWrapper.hpp"
+#include "KeplerSynchronizedSetWrapper.hpp"
 #include "KeplerSynchronizedMapWrapper.hpp"
 
 #include <boost/locale.hpp>
@@ -40,6 +40,7 @@ class KeplerApplication: public wxApp
         static unsigned int sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds);
 
         static KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> s_threads;
+        static KeplerSynchronizedSetWrapper<std::thread::id> s_threadIdsToKill;
 
         static std::mutex s_stdOutMutex;              
 
@@ -49,6 +50,7 @@ class KeplerApplication: public wxApp
 
 
 KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> KeplerApplication::s_threads;
+KeplerSynchronizedSetWrapper<std::thread::id> KeplerApplication::s_threadIdsToKill;
 
 std::mutex KeplerApplication::s_stdOutMutex;
 
@@ -120,7 +122,9 @@ class KeplerFrame: public wxFrame
     private:
     
         void addTextToTextCtrlApplicationWideLogFromQueue();
+
         void createNewThreadsIfNeeded();
+        void killAndJoinThreadsIfNeeded();
 
         void OnKepler(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
@@ -261,14 +265,7 @@ void threadLifeCycle(const unsigned int i)
 
     KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
 
-    KeplerApplication::s_threads.safe_use([&myThreadId] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
-        {
-            std::cout << "Will try: " << myThreadId << std::endl;
-            std::cout << "Count: " << mapThreads.size() << std::endl;
-            std::cout << "Foo: " << mapThreads.begin()->first << std::endl;
-
-        mapThreads.erase(myThreadId);
-        });
+    KeplerApplication::s_threadIdsToKill.safe_insert(myThreadId); 
 
     std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
@@ -689,6 +686,14 @@ void KeplerFrame::OnIdle(wxIdleEvent& event)
     m_uintIdleCounter++;
     }
 
+void KeplerFrame::killAndJoinThreadsIfNeeded()
+    {
+    KeplerApplication::s_threadIdsToKill.safe_iterate([] (const std::thread::id &threadId) 
+        {
+        std::cout << threadId << " has been flagged to die" << std::endl;
+        });
+    }
+
 void KeplerFrame::createNewThreadsIfNeeded()
     {
     if (KeplerApplication::s_bool_endAllThreads == false)
@@ -726,6 +731,7 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
 
+    killAndJoinThreadsIfNeeded();
     createNewThreadsIfNeeded();
 
     addTextToTextCtrlApplicationWideLogFromQueue();
