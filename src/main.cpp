@@ -1,4 +1,4 @@
-#include "KeplerSynchronizedSetWrapper.hpp"
+//#include "KeplerSynchronizedSetWrapper.hpp"
 #include "KeplerSynchronizedMapWrapper.hpp"
 
 #include <boost/locale.hpp>
@@ -39,7 +39,7 @@ class KeplerApplication: public wxApp
 
         static unsigned int sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds);
 
-        static KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>> s_threads;
+        static KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> s_threads;
 
         static std::mutex s_stdOutMutex;              
 
@@ -48,7 +48,7 @@ class KeplerApplication: public wxApp
 
 
 
-KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>> KeplerApplication::s_threads;
+KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> KeplerApplication::s_threads;
 
 std::mutex KeplerApplication::s_stdOutMutex;
 
@@ -618,11 +618,11 @@ void KeplerFrame::onClose()
     {
     KeplerApplication::s_bool_endAllThreads = true;
 
-    KeplerApplication::s_threads.safe_iterate([] (const std::shared_ptr<std::thread> &ptr_newThread) 
+    KeplerApplication::s_threads.safe_iterate([] (const std::thread::id &threadId, const std::shared_ptr<std::thread> &ptr_thread) 
         {
-        std::cout << "Joining thread: " << ptr_newThread->get_id() << std::endl;
+        std::cout << "Joining thread: " << ptr_thread->get_id() << std::endl;
 
-        ptr_newThread->join();
+        ptr_thread->join();
         });
     }
 
@@ -685,15 +685,15 @@ void KeplerFrame::createNewThreadsIfNeeded()
         {
         // Access the threads object inside a critical section
 
-        KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedSetWrapper<std::shared_ptr<std::thread>>::KeplerSynchronizedSetType &setThreads) 
+        KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
             {
-            const int intThreadCount = setThreads.size();
+            const int intThreadCount = mapThreads.size();
                 
             if (intThreadCount < MAX_THREADS)
                 {
                 std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
 
-                std::cout << "Number of threads in set: " << setThreads.size() << std::endl;
+                std::cout << "Number of threads in map: " << mapThreads.size() << std::endl;
 
                 for (const unsigned int i : boost::irange(intThreadCount,
                                                           MAX_THREADS)) 
@@ -702,10 +702,11 @@ void KeplerFrame::createNewThreadsIfNeeded()
 
                     // Is this safe? Do we now have two ref-counted objects pointing to the thread but each with a count of 1?
 
-                    setThreads.insert(ptr_newThread);
+                    mapThreads.insert(KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType::value_type(ptr_newThread->get_id(),
+                                                                                                                                                         ptr_newThread));
                     }
 
-                std::cout << "Number of threads in set is NOW: " << setThreads.size() << std::endl;
+                std::cout << "Number of threads in map is NOW: " << mapThreads.size() << std::endl;
                 }
             });
         }
