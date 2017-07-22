@@ -976,18 +976,29 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
 
     killAndJoinThreadsIfNeeded();
 
+    // If there are no threads in play, immediately create them (ie: skip the probability thing where we only create threads with some probability)
 
+    bool boolNoThreadsInPlay = false;
 
-    int intRandomVariable = getThreadFriendlyLargeRandomNumber();
-    float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
-    const bool boolCreateNewDeficitThreads = (floatComputedRandomValue <= CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE);
+    KeplerApplication::s_threads.safe_use([&boolNoThreadsInPlay] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads)
+        {
+        if (mapThreads.empty())
+            {
+            boolNoThreadsInPlay = true;            
+            }
+        });
+    
+    if ((boolNoThreadsInPlay) || ([] ()->bool
+                                              {
+                                              int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+                                              float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
+                                              const bool boolCreateNewDeficitThreads = (floatComputedRandomValue <= CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE);
 
-    if (boolCreateNewDeficitThreads)
+                                              return boolCreateNewDeficitThreads;
+                                              }))
         {
         createNewThreadsIfNeeded();
-        }
-
-
+        }    
 
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
