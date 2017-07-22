@@ -280,22 +280,6 @@ void threadIntroduction(const unsigned int i)
 
 void threadLifeCycleLoop(const unsigned int i)
     {
-    unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
-
-    std::thread::id myThreadId = std::this_thread::get_id();
-
-    std::stringstream stringStreamOutput;
-
-    stringStreamOutput << "Node awakens after " 
-                       << uintActualMillisecondsToSleep 
-                       << "ms and then goes back to sleep with id: " 
-                       << myThreadId 
-                       << std::endl
-                       << std::flush;      
-
-    std::string strOutput = stringStreamOutput.str();          
-
-//    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);        
     }
 
 void threadLifeCycle(const unsigned int i)
@@ -304,6 +288,25 @@ void threadLifeCycle(const unsigned int i)
 
     do 
         {
+        unsigned int uintActualMillisecondsToSleep = KeplerApplication::sleepRandomMilliseconds(THREAD_SLEEP_TIME_MILLISECONDS);
+
+        std::thread::id myThreadId = std::this_thread::get_id();
+
+        std::stringstream stringStreamOutput;
+
+        stringStreamOutput << "Node awakens after " 
+                           << uintActualMillisecondsToSleep 
+                           << "ms and then goes back to sleep with id: " 
+                           << myThreadId 
+                           << std::endl
+                           << std::flush;      
+
+        std::string strOutput = stringStreamOutput.str();          
+
+//    KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);        
+
+
+
         int intRandomVariable = getThreadFriendlyLargeRandomNumber();
         float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
         boolThreadRandomlyShouldDie = (floatComputedRandomValue <= THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE);
