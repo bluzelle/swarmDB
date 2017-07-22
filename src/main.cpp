@@ -28,6 +28,7 @@
 #define THREAD_SLEEP_TIME_MILLISECONDS 40
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 
+#define THREAD_RANDOM_LOG_ARBITRARY_MESSAGE_PROBABILITY_PERCENTAGE 1
 #define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.1
 #define CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE 0.5
 
@@ -278,8 +279,32 @@ void threadIntroduction(const unsigned int i)
 //    KeplerFrame::s_ptr_global->addThreadToListViewNodes(myThreadId);
     }
 
-void threadLifeCycleLoop(const unsigned int i)
+void logArbitraryThreadLogMessage(const std::thread::id &myThreadId,
+                                  const std::string &strLogMessage)
     {
+    KeplerApplication::s_threads.safe_use_member(myThreadId, 
+                                                 [&strLogMessage,
+                                                  &myThreadId] (ThreadData &threadData) 
+        {
+        threadData.m_vectorLogMessages.push_back(strLogMessage);
+
+        std::unique_lock<std::mutex> lockStdOut = KeplerApplication::getStdOutLock();
+
+        std::cout << "Thread with id: " << myThreadId << " now has " << threadData.m_vectorLogMessages.size() << " messages in it" << std::endl;
+        });
+    }
+
+void threadLifeCycleLoop(const std::thread::id &myThreadId)
+    {
+    int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+    float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
+    const bool boolThreadRandomlyLogsArbitraryMessage = (floatComputedRandomValue <= THREAD_RANDOM_LOG_ARBITRARY_MESSAGE_PROBABILITY_PERCENTAGE);
+
+    if (boolThreadRandomlyLogsArbitraryMessage)
+        {
+        logArbitraryThreadLogMessage(myThreadId,
+                                     getStringFromThreadId(myThreadId));        
+        }
     }
 
 void threadLifeCycle(const unsigned int i)
@@ -311,7 +336,7 @@ void threadLifeCycle(const unsigned int i)
         float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
         boolThreadRandomlyShouldDie = (floatComputedRandomValue <= THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE);
 
-        threadLifeCycleLoop(i);
+        threadLifeCycleLoop(myThreadId);
         }
     while ((!KeplerApplication::s_bool_endAllThreads) && 
            (!boolThreadRandomlyShouldDie));
@@ -505,7 +530,8 @@ void KeplerFrame::addListViewNodes()
     m_ptr_listViewNodes = new wxListView(this, 
                                          wxID_ANY, 
                                          wxDefaultPosition, 
-                                         wxDefaultSize);
+                                         wxDefaultSize,
+                                         wxLC_REPORT | wxLC_SINGLE_SEL);
 
     m_ptr_listViewNodes->AppendColumn("Node Id");
 

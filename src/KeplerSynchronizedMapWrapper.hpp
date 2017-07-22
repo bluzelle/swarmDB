@@ -88,6 +88,19 @@ class KeplerSynchronizedMapWrapper
 		    mutexLock.unlock();
 	        }
 
+        template<typename Functor>
+        void safe_use_member(const T &key, Functor function)
+            {
+            std::unique_lock<std::mutex> mutexLock(m_mutex,
+                                                   std::defer_lock);
+
+            mutexLock.lock();
+
+            function(m_unsafeMap.at(key));
+
+            mutexLock.unlock();
+            }
+
     private:
 
         KeplerSynchronizedMapType m_unsafeMap;
