@@ -199,6 +199,7 @@ class KeplerFrame: public wxFrame
         wxMenuBar *m_ptr_menuBar;
 
         wxBoxSizer *m_ptr_boxSizerApplication;
+        wxBoxSizer *m_ptr_boxSizerNodeList;
         wxBoxSizer *m_ptr_boxSizerTop;
         wxBoxSizer *m_ptr_boxSizerSelectedThread;
         wxBoxSizer *m_ptr_boxSizerThreadMessages;
@@ -516,6 +517,15 @@ KeplerFrame::KeplerFrame()
 
 
 
+    m_ptr_boxSizerNodeList = new wxBoxSizer(wxVERTICAL);
+    m_ptr_boxSizerTop->Add(m_ptr_boxSizerNodeList,
+                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                           wxEXPAND | 
+                           wxALL,
+                           GLOBAL_CONTROL_BORDER);
+
+
+
     addListViewNodes();
 
 
@@ -577,11 +587,11 @@ void KeplerFrame::addListViewNodes()
 
     m_ptr_listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
-    m_ptr_boxSizerTop->Add(m_ptr_listViewNodes,
-                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
-                           wxEXPAND | 
-                           wxALL,
-                           GLOBAL_CONTROL_BORDER);    
+    m_ptr_boxSizerNodeList->Add(m_ptr_listViewNodes,
+                                50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                wxEXPAND | 
+                                wxALL,
+                                GLOBAL_CONTROL_BORDER);    
     }
 
 void KeplerFrame::addListViewNodeKeyValuesStore()
