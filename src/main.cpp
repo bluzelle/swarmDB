@@ -114,10 +114,10 @@ class KeplerFrame: public wxFrame
         KeplerFrame();
 
         std::unique_lock<std::mutex> getTextCtrlApplicationWideLogQueueLock();
-        std::unique_lock<std::mutex> getListViewNodesQueueLock();
+//        std::unique_lock<std::mutex> getListViewNodesQueueLock();
 
         void addTextToTextCtrlApplicationWideLogQueue(const std::string &str);
-        void addThreadToListViewNodes(const std::thread::id &threadId);
+//        void addThreadToListViewNodes(const std::thread::id &threadId);
 
         static KeplerFrame *s_ptr_global;
 
@@ -174,10 +174,10 @@ class KeplerFrame: public wxFrame
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
 
         std::mutex m_textCtrlApplicationWideLogQueueMutex;
-        std::mutex m_listViewNodesQueueMutex;
+ //       std::mutex m_listViewNodesQueueMutex;
 
         std::queue<std::string> m_queueTextCtrlApplicationWideLog;
-        std::queue<std::thread::id> m_queueListViewNodes;
+//        std::queue<std::thread::id> m_queueListViewNodes;
 
         unsigned int m_uintTimerCounter;
         unsigned int m_uintIdleCounter;
@@ -235,7 +235,7 @@ void threadIntroduction(const unsigned int i)
 
     lockStdOut.unlock();        
 
-    KeplerFrame::s_ptr_global->addThreadToListViewNodes(myThreadId);
+//    KeplerFrame::s_ptr_global->addThreadToListViewNodes(myThreadId);
     }
 
 void threadLifeCycleLoop(const unsigned int i)
@@ -737,22 +737,22 @@ std::unique_lock<std::mutex> KeplerFrame::getTextCtrlApplicationWideLogQueueLock
     return mutexLock;
     }
 
-std::unique_lock<std::mutex> KeplerFrame::getListViewNodesQueueLock()
-    {
-    std::unique_lock<std::mutex> mutexLock(m_listViewNodesQueueMutex,
-                                           std::defer_lock);
+// std::unique_lock<std::mutex> KeplerFrame::getListViewNodesQueueLock()
+//     {
+//     std::unique_lock<std::mutex> mutexLock(m_listViewNodesQueueMutex,
+//                                            std::defer_lock);
 
-    mutexLock.lock();
+//     mutexLock.lock();
 
-    return mutexLock;
-    }   
+//     return mutexLock;
+//     }   
 
-void KeplerFrame::addThreadToListViewNodes(const std::thread::id &threadId)
-    {
-    std::unique_lock<std::mutex> lockListViewNodesQueue = KeplerFrame::getListViewNodesQueueLock();   
+// void KeplerFrame::addThreadToListViewNodes(const std::thread::id &threadId)
+//     {
+//     std::unique_lock<std::mutex> lockListViewNodesQueue = KeplerFrame::getListViewNodesQueueLock();   
 
-    m_queueListViewNodes.push(threadId);
-    }
+//     m_queueListViewNodes.push(threadId);
+//     }
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &str)
     {
