@@ -130,6 +130,8 @@ class KeplerFrame: public wxFrame
         void createNewThreadsIfNeeded();
         void killAndJoinThreadsIfNeeded();
 
+        void addThreadInboxOutboxControls();
+
         void OnKepler(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
@@ -311,6 +313,7 @@ KeplerFrame::KeplerFrame()
                      "Kepler TestNet Simulator",
                      wxDefaultPosition,
                      wxDefaultSize,
+//                     wxSize(1000,1000),
                      wxDEFAULT_FRAME_STYLE),
              m_timerIdle(this, 
                          wxID_ANY),
@@ -487,6 +490,78 @@ KeplerFrame::KeplerFrame()
 
 
 
+    addThreadInboxOutboxControls();
+
+
+
+    m_ptr_listViewNodeAttributes = new wxListView(this, 
+                                                  wxID_ANY, 
+                                                  wxDefaultPosition, 
+                                                  wxDefaultSize);
+
+    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Name");
+    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Value");
+
+    // Add three items to the list
+
+    m_ptr_listViewNodeAttributes->InsertItem(0, "Name");
+    m_ptr_listViewNodeAttributes->SetItem(0, 1, "Alfa");
+    m_ptr_listViewNodeAttributes->InsertItem(1, "Weight");
+    m_ptr_listViewNodeAttributes->SetItem(1, 1, "5");
+    m_ptr_listViewNodeAttributes->InsertItem(2, "Address");
+    m_ptr_listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
+
+    m_ptr_listViewNodeAttributes->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    m_ptr_listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
+
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeAttributes,
+                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
+
+
+
+    m_ptr_textCtrlThreadLog = new wxTextCtrl(this, 
+                                             -1, 
+                                             "", 
+                                             wxDefaultPosition, 
+                                             wxDefaultSize, 
+                                             wxTE_MULTILINE |
+                                             wxTE_READONLY |
+                                             wxHSCROLL);
+
+    m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
+                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
+
+
+
+    m_ptr_boxSizerTop->Add(m_ptr_boxSizerSelectedThread,
+                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                           wxEXPAND | 
+                           wxALL,
+                           GLOBAL_CONTROL_BORDER);
+
+
+
+    SetSizerAndFit(m_ptr_boxSizerApplication);
+
+
+
+    m_timerIdle.Start(MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS);
+  
+    Connect(m_timerIdle.GetId(), 
+            wxEVT_TIMER, 
+            wxTimerEventHandler(KeplerFrame::OnTimer), 
+            NULL, 
+            this); 
+    }
+
+void KeplerFrame::addThreadInboxOutboxControls()
+    {
     m_ptr_boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_boxSizerThreadMessages,
@@ -539,74 +614,7 @@ KeplerFrame::KeplerFrame()
                                       50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
                                       wxEXPAND | 
                                       wxALL,
-                                      GLOBAL_CONTROL_BORDER);
-
-
-
-    m_ptr_listViewNodeAttributes = new wxListView(this, 
-                                                        wxID_ANY, 
-                                                        wxDefaultPosition, 
-                                                        wxDefaultSize);
-
-    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Name");
-    m_ptr_listViewNodeAttributes->AppendColumn("Attribute Value");
-
-    // Add three items to the list
-
-    m_ptr_listViewNodeAttributes->InsertItem(0, "Name");
-    m_ptr_listViewNodeAttributes->SetItem(0, 1, "Alfa");
-    m_ptr_listViewNodeAttributes->InsertItem(1, "Weight");
-    m_ptr_listViewNodeAttributes->SetItem(1, 1, "5");
-    m_ptr_listViewNodeAttributes->InsertItem(2, "Address");
-    m_ptr_listViewNodeAttributes->SetItem(2, 1, "Sesame Street");
-
-    m_ptr_listViewNodeAttributes->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_ptr_listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
-
-    m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeAttributes,
-                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
-                                      wxEXPAND | 
-                                      wxALL,
-                                      GLOBAL_CONTROL_BORDER);
-
-
-
-    m_ptr_textCtrlThreadLog = new wxTextCtrl(this, 
-                                                   -1, 
-                                                   "", 
-                                                   wxDefaultPosition, 
-                                                   wxDefaultSize, 
-                                                   wxTE_MULTILINE |
-                                                   wxTE_READONLY |
-                                                   wxHSCROLL);
-
-    m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
-                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
-                                      wxEXPAND | 
-                                      wxALL,
-                                      GLOBAL_CONTROL_BORDER);
-
-
-
-    m_ptr_boxSizerTop->Add(m_ptr_boxSizerSelectedThread,
-                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
-                           wxEXPAND | 
-                           wxALL,
-                           GLOBAL_CONTROL_BORDER);
-
-
-
-    SetSizerAndFit(m_ptr_boxSizerApplication);
-
-
-
-    m_timerIdle.Start(MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS);
-  
-    Connect(m_timerIdle.GetId(), 
-            wxEVT_TIMER, 
-            wxTimerEventHandler(KeplerFrame::OnTimer), 
-            NULL, 
-            this); 
+                                      GLOBAL_CONTROL_BORDER);   
     }
 
 void KeplerFrame::OnAbout(wxCommandEvent& event)
