@@ -31,7 +31,7 @@
 #define GLOBAL_CONTROL_PROPORTION_MULTIPLIER 3
 
 #define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 1.0
-#define CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE 10.0
+#define CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE 20.0
 
 
 
@@ -899,8 +899,18 @@ void KeplerFrame::createNewThreadsIfNeeded()
                 std::cout << strOutput1;
                 lockStdOut.unlock();
 
-                for (const unsigned int i : boost::irange(intThreadCount,
-                                                          MAX_THREADS)) 
+
+                // We don't actually create all the deficit threads, necessarily. We choose the number to create randomly, from 1 to the actual total number needed
+
+                const int uintMaximumNewThreadsToCreate = (MAX_THREADS - intThreadCount);
+
+                int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+                const int uintNumberOfNewThreadsToActuallyCreate = ((intRandomVariable % uintMaximumNewThreadsToCreate) + 1);
+
+
+
+                for (const unsigned int i : boost::irange(0,
+                                                          uintNumberOfNewThreadsToActuallyCreate)) 
                     {
                     std::shared_ptr<std::thread> ptr_newThread(new std::thread(threadFunction, i));
 
