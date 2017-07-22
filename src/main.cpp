@@ -177,6 +177,7 @@ class KeplerFrame: public wxFrame
         std::mutex m_listViewNodesQueueMutex;
 
         std::queue<std::string> m_queueTextCtrlApplicationWideLog;
+        std::queue<std::thread::id> m_queueListViewNodes;
 
         unsigned int m_uintTimerCounter;
         unsigned int m_uintIdleCounter;
@@ -749,6 +750,8 @@ std::unique_lock<std::mutex> KeplerFrame::getListViewNodesQueueLock()
 void KeplerFrame::addThreadToListViewNodes(const std::thread::id &threadId)
     {
     std::unique_lock<std::mutex> lockListViewNodesQueue = KeplerFrame::getListViewNodesQueueLock();   
+
+    m_queueListViewNodes.push(threadId);
     }
 
 void KeplerFrame::addTextToTextCtrlApplicationWideLogQueue(const std::string &str)
