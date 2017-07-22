@@ -383,7 +383,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listCtrlApplicationWideLog = new wxListView(this, 
                                                wxID_ANY, 
                                                wxDefaultPosition, 
-                                               wxSize(150, 150));
+                                               wxDefaultSize);
 
     m_ptr_listCtrlApplicationWideLog->AppendColumn("Timer Loop #");
     m_ptr_listCtrlApplicationWideLog->AppendColumn("Entry #");
@@ -406,7 +406,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodes = new wxListView(this, 
                                                wxID_ANY, 
                                                wxDefaultPosition, 
-                                               wxSize(150, 150));
+                                               wxDefaultSize);
 
     m_ptr_listViewNodes->AppendColumn("Node Cardinality #");
     m_ptr_listViewNodes->AppendColumn("Node Physical Hash Id");
@@ -452,7 +452,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeKeyValuesStore = new wxListView(this, 
                                                             wxID_ANY, 
                                                             wxDefaultPosition, 
-                                                            wxSize(150, 100));
+                                                            wxDefaultSize);
 
     m_ptr_listViewNodeKeyValuesStore->AppendColumn("Key");
     m_ptr_listViewNodeKeyValuesStore->AppendColumn("Value");
@@ -489,7 +489,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeInbox = new wxListView(this, 
                                                    wxID_ANY, 
                                                    wxDefaultPosition, 
-                                                   wxSize(150, 100));
+                                                   wxDefaultSize);
 
     m_ptr_listViewNodeInbox->AppendColumn("Inbox Message");
 
@@ -512,7 +512,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeOutbox = new wxListView(this, 
                                                     wxID_ANY, 
                                                     wxDefaultPosition, 
-                                                    wxSize(150, 100));
+                                                    wxDefaultSize);
 
     m_ptr_listViewNodeOutbox->AppendColumn("Outbox Message");
 
@@ -535,7 +535,7 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeAttributes = new wxListView(this, 
                                                         wxID_ANY, 
                                                         wxDefaultPosition, 
-                                                        wxSize(150, 100));
+                                                        wxDefaultSize);
 
     m_ptr_listViewNodeAttributes->AppendColumn("Attribute Name");
     m_ptr_listViewNodeAttributes->AppendColumn("Attribute Value");
@@ -564,13 +564,13 @@ KeplerFrame::KeplerFrame()
                                                    -1, 
                                                    "", 
                                                    wxDefaultPosition, 
-                                                   wxSize(50,60), 
+                                                   wxDefaultSize, 
                                                    wxTE_MULTILINE |
                                                    wxTE_READONLY |
                                                    wxHSCROLL);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
-                                0.1,
+                                1,
                                 wxEXPAND | 
                                 wxALL,
                                 10);
