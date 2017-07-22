@@ -11,8 +11,8 @@
 
 # Define default flags (include your source tree for example
 
-CXXFLAGS = -std=c++11 `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
-LDLIBS   = -std=c++11 `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
+CXXFLAGS = -std=c++14 `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
+LDLIBS   = -std=c++14 `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
 
 ifdef FINAL
     EXTRAFLAGS = -MD -O2 -fno-rtti -fno-exceptions -fomit-frame-pointer
@@ -44,7 +44,7 @@ endif
 # c++ -o kepler  src/main.o -std=c++11 -L/usr/local/lib   -framework IOKit -framework Carbon -framework Cocoa -framework AudioToolbox -framework System -framework OpenGL /usr/local/lib/libwx_osx_cocoau_xrc-3.0.a /usr/local/lib/libwx_osx_cocoau_webview-3.0.a /usr/local/lib/libwx_osx_cocoau_qa-3.0.a /usr/local/lib/libwx_baseu_net-3.0.a /usr/local/lib/libwx_osx_cocoau_html-3.0.a /usr/local/lib/libwx_osx_cocoau_adv-3.0.a /usr/local/lib/libwx_osx_cocoau_core-3.0.a /usr/local/lib/libwx_baseu_xml-3.0.a /usr/local/lib/libwx_baseu-3.0.a /usr/local/opt/libpng/lib/libpng16.a /usr/local/opt/jpeg/lib/libjpeg.a /usr/local/opt/libtiff/lib/libtiff.a -framework WebKit -lexpat -lwxregexu-3.0 -lz -lpthread -liconv -L/usr/local/Cellar/boost/1.64.0_1/lib /usr/local/opt/boost/lib/libboost_locale-mt.a /usr/local/opt/boost/lib/libboost_system.a
 
 hack_static: 
-	c++ -o kepler_static src/main.o -std=c++11 -L/usr/local/lib   -framework IOKit -framework Carbon -framework Cocoa -framework AudioToolbox -framework System -framework OpenGL /usr/local/lib/libwx_osx_cocoau_xrc-3.0.a /usr/local/lib/libwx_osx_cocoau_webview-3.0.a /usr/local/lib/libwx_osx_cocoau_qa-3.0.a /usr/local/lib/libwx_baseu_net-3.0.a /usr/local/lib/libwx_osx_cocoau_html-3.0.a /usr/local/lib/libwx_osx_cocoau_adv-3.0.a /usr/local/lib/libwx_osx_cocoau_core-3.0.a /usr/local/lib/libwx_baseu_xml-3.0.a /usr/local/lib/libwx_baseu-3.0.a /usr/local/opt/libpng/lib/libpng16.a /usr/local/opt/jpeg/lib/libjpeg.a /usr/local/opt/libtiff/lib/libtiff.a -framework WebKit -lexpat -lwxregexu-3.0 -lz -lpthread -liconv -L/usr/local/Cellar/boost/1.64.0_1/lib /usr/local/opt/boost/lib/libboost_locale-mt.a /usr/local/opt/boost/lib/libboost_system.a
+	c++ -o kepler_static src/main.o -std=c++14 -L/usr/local/lib   -framework IOKit -framework Carbon -framework Cocoa -framework AudioToolbox -framework System -framework OpenGL /usr/local/lib/libwx_osx_cocoau_xrc-3.0.a /usr/local/lib/libwx_osx_cocoau_webview-3.0.a /usr/local/lib/libwx_osx_cocoau_qa-3.0.a /usr/local/lib/libwx_baseu_net-3.0.a /usr/local/lib/libwx_osx_cocoau_html-3.0.a /usr/local/lib/libwx_osx_cocoau_adv-3.0.a /usr/local/lib/libwx_osx_cocoau_core-3.0.a /usr/local/lib/libwx_baseu_xml-3.0.a /usr/local/lib/libwx_baseu-3.0.a /usr/local/opt/libpng/lib/libpng16.a /usr/local/opt/jpeg/lib/libjpeg.a /usr/local/opt/libtiff/lib/libtiff.a -framework WebKit -lexpat -lwxregexu-3.0 -lz -lpthread -liconv -L/usr/local/Cellar/boost/1.64.0_1/lib /usr/local/opt/boost/lib/libboost_locale-mt.a /usr/local/opt/boost/lib/libboost_system.a
 
 clean:
 	rm -rf kepler.exe kepler kepler_static $(KEPLER_OBJECTS) $(KEPLER_DEPS)
