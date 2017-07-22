@@ -1,18 +1,13 @@
 #ifndef THREAD_DATA_H
 #define THREAD_DATA_H
 
-
-
 #include <iostream>
 #include <vector>
 #include <thread>
 
-
-
 class ThreadData
     {
     public:
-
         ThreadData(std::shared_ptr<std::thread> ptr_thread)
             {
             m_ptr_thread = ptr_thread;     

@@ -1,13 +1,9 @@
 #ifndef KEPLERSYNCHRONIZEDMAPWRAPPER_H
 #define KEPLERSYNCHRONIZEDMAPWRAPPER_H
 
-
-
 #include <iostream>
 #include <map>
 #include <mutex>
-
-
 
 template <class T, class Y> 
 class KeplerSynchronizedMapWrapper

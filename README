@@ -1,1 +1,33 @@
-Kepler POC
+Kepler Project
+
+Project Layout
+- bluzelle
+    |- bluzelle <- gui project
+    |- bluzelled <- deamon project
+    |- bluzellePOC <- original proof of concept
+
+
+BUILD INSTRUCTIONS
+From the command line:
+- clone the project
+- checkout the 'cmake' branch
+- create a build folder with 'mkdir build'
+- cd to the build folder
+- execute 'cmake ..' from the build folder, this will generate the Makefile
+- execute 'make' from the build folder, this will build the kepler executables
+- cd to bluzelle from build to execute './bluzelle' or './bluzelle_test'
+- cd to bluzellePoc from build to execute './bluzelle_poc'
+- cd to bluzelle from build to execute './bluzelled' or './bluzelled_test'
+
+
+
+
+Linux Specifics:
+http://codelite.org/LiteEditor/WxWidgets31Binaries#toc2
+http://www.boost.org/doc/libs/1_61_0/more/getting_started/unix-variants.html
+
+
+
+QUESTIONS
+- contact Rich via richard@bluzelle.com
+
