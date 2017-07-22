@@ -22,12 +22,14 @@
 
 
 
-#define MAX_THREADS 200
+#define MAX_THREADS 5
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 300
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.005
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.2
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
+#define GLOBAL_CONTROL_BORDER 3
+#define GLOBAL_CONTROL_PROPORTION_MULTIPLIER 3
 
 
 
@@ -306,13 +308,19 @@ void printCPPVersion()
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
-                     "Kepler TestNet Simulator"),
+                     "Kepler TestNet Simulator",
+                     wxDefaultPosition,
+                     wxDefaultSize,
+                     wxDEFAULT_FRAME_STYLE),
              m_timerIdle(this, 
                          wxID_ANY),
              m_uintTimerCounter(0),
              m_uintIdleCounter(0),
              m_uintListCtrlApplicationWideLogCounter(0)
     {
+    // SetMinSize(wxSize(300,300));
+    // SetMinSize(wxSize(800,800));
+
     KeplerFrame::s_ptr_global = this;
 
     printCPPVersion();
@@ -374,16 +382,17 @@ KeplerFrame::KeplerFrame()
 
 
     m_ptr_boxSizerApplication->Add(m_ptr_boxSizerTop,
-                             3,                
-                             wxEXPAND | 
-                             wxALL ); 
+                                   75 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,                
+                                   wxEXPAND | 
+                                   wxALL,
+                                   GLOBAL_CONTROL_BORDER); 
 
 
 
     m_ptr_listCtrlApplicationWideLog = new wxListView(this, 
-                                               wxID_ANY, 
-                                               wxDefaultPosition, 
-                                               wxDefaultSize);
+                                                      wxID_ANY, 
+                                                      wxDefaultPosition, 
+                                                      wxDefaultSize);
 
     m_ptr_listCtrlApplicationWideLog->AppendColumn("Timer Loop #");
     m_ptr_listCtrlApplicationWideLog->AppendColumn("Entry #");
@@ -396,10 +405,10 @@ KeplerFrame::KeplerFrame()
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(3, wxLIST_AUTOSIZE);
  
     m_ptr_boxSizerApplication->Add(m_ptr_listCtrlApplicationWideLog,
-                              2,
-                              wxEXPAND | 
-                              wxALL,       
-                              10);
+                                   25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                   wxEXPAND | 
+                                   wxALL,
+                                   GLOBAL_CONTROL_BORDER);
 
 
 
@@ -424,9 +433,10 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerTop->Add(m_ptr_listViewNodes,
-                     2,
-                     wxEXPAND | 
-                     wxALL);
+                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                           wxEXPAND | 
+                           wxALL,
+                           GLOBAL_CONTROL_BORDER);
 
 
 
@@ -442,10 +452,10 @@ KeplerFrame::KeplerFrame()
                                                         wxALIGN_CENTRE);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_staticTextThreadIdentifier,
-                                0,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      0 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
@@ -470,26 +480,27 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeKeyValuesStore->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeKeyValuesStore,
-                                2,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      35 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
     m_ptr_boxSizerThreadMessages = new wxBoxSizer(wxHORIZONTAL);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_boxSizerThreadMessages,
-                                0.5,
-                                wxEXPAND | 
-                                wxALL );
+                                      15 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
     m_ptr_listViewNodeInbox = new wxListView(this, 
-                                                   wxID_ANY, 
-                                                   wxDefaultPosition, 
-                                                   wxDefaultSize);
+                                             wxID_ANY, 
+                                             wxDefaultPosition, 
+                                             wxDefaultSize);
 
     m_ptr_listViewNodeInbox->AppendColumn("Inbox Message");
 
@@ -502,10 +513,10 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeInbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerThreadMessages->Add(m_ptr_listViewNodeInbox,
-                                1,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
@@ -525,10 +536,10 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeOutbox->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerThreadMessages->Add(m_ptr_listViewNodeOutbox,
-                                1,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
@@ -553,10 +564,10 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodeAttributes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_listViewNodeAttributes,
-                                0.25,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
@@ -570,17 +581,18 @@ KeplerFrame::KeplerFrame()
                                                    wxHSCROLL);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_textCtrlThreadLog,
-                                1,
-                                wxEXPAND | 
-                                wxALL,
-                                10);
+                                      25 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                      wxEXPAND | 
+                                      wxALL,
+                                      GLOBAL_CONTROL_BORDER);
 
 
 
     m_ptr_boxSizerTop->Add(m_ptr_boxSizerSelectedThread,
-                     2,
-                     wxEXPAND | 
-                     wxALL);
+                           50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                           wxEXPAND | 
+                           wxALL,
+                           GLOBAL_CONTROL_BORDER);
 
 
 
