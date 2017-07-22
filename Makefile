@@ -1,3 +1,6 @@
+# On OSX, if you want static WX Widgets, install it with: brew install wxmac --with-static
+# Once installed, this makefile will automatically link against the static WX Widgets libraries
+
 # Define default flags (include your source tree for example
 
 CXXFLAGS = -std=c++11 `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
