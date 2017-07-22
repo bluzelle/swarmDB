@@ -170,6 +170,7 @@ class KeplerFrame: public wxFrame
         void killAndJoinThreadsIfNeeded();
 
         void addThreadInboxOutboxControls();
+        void addStaticTextNodeListIdentifier();
         void addStaticTextApplicationWideLogIdentifier();
         void addListCtrlApplicationWideLog();
         void addListViewNodes();
@@ -214,6 +215,7 @@ class KeplerFrame: public wxFrame
         wxListView *m_ptr_listViewNodeOutbox; 
         wxListView *m_ptr_listViewNodeAttributes;
 
+        wxStaticText *m_ptr_staticTextNodeListIdentifier;
         wxStaticText *m_ptr_staticTextApplicationWideLogIdentifier;
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
 
@@ -526,6 +528,10 @@ KeplerFrame::KeplerFrame()
 
 
 
+    addStaticTextNodeListIdentifier();
+
+
+
     addListViewNodes();
 
 
@@ -588,7 +594,7 @@ void KeplerFrame::addListViewNodes()
     m_ptr_listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerNodeList->Add(m_ptr_listViewNodes,
-                                50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                100 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
                                 wxEXPAND | 
                                 wxALL,
                                 GLOBAL_CONTROL_BORDER);    
@@ -641,21 +647,21 @@ void KeplerFrame::addTextCtrlThreadLog()
                                       GLOBAL_CONTROL_BORDER);
     }
 
-// void KeplerFrame::addStaticTextListViewNodesIdentifier()
-//     {
-//     m_ptr_staticTextListViewNodesIdentifier = new wxStaticText(this, 
-//                                                                wxID_ANY,
-//                                                                "Node List",
-//                                                                wxDefaultPosition,
-//                                                                wxDefaultSize,
-//                                                                wxALIGN_CENTRE);
+void KeplerFrame::addStaticTextNodeListIdentifier()
+    {
+    m_ptr_staticTextNodeListIdentifier = new wxStaticText(this, 
+                                                          wxID_ANY,
+                                                          "Node List",
+                                                          wxDefaultPosition,
+                                                          wxDefaultSize,
+                                                          wxALIGN_CENTRE);
 
-//     m_ptr_boxSizerSelectedThread->Add(m_ptr_staticTextListViewNodesIdentifier,
-//                                       0 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
-//                                       wxEXPAND | 
-//                                       wxALL,
-//                                       GLOBAL_CONTROL_BORDER);
-//     }
+    m_ptr_boxSizerNodeList->Add(m_ptr_staticTextNodeListIdentifier,
+                                0 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                wxEXPAND | 
+                                wxALL,
+                                GLOBAL_CONTROL_BORDER);
+    }
 
 void KeplerFrame::addStaticTextApplicationWideLogIdentifier()
     {
