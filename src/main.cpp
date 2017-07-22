@@ -987,17 +987,22 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
             boolNoThreadsInPlay = true;            
             }
         });
-    
-    if ((boolNoThreadsInPlay) || ([] ()->bool
-                                              {
-                                              int intRandomVariable = getThreadFriendlyLargeRandomNumber();
-                                              float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
-                                              const bool boolCreateNewDeficitThreads = (floatComputedRandomValue <= CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE);
 
-                                              return boolCreateNewDeficitThreads;
-                                              }))
+    if (boolNoThreadsInPlay)
         {
-        createNewThreadsIfNeeded();
+        createNewThreadsIfNeeded();            
+        }
+    
+    else
+        {
+        int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+        float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
+        const bool boolCreateNewDeficitThreads = (floatComputedRandomValue <= CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE);
+
+        if (boolCreateNewDeficitThreads)
+            {
+            createNewThreadsIfNeeded();
+            }
         }    
 
     addTextToTextCtrlApplicationWideLogFromQueue();
