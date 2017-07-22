@@ -890,7 +890,7 @@ void KeplerFrame::createNewThreadsIfNeeded()
             if (intThreadCount < MAX_THREADS)
                 {
                 std::stringstream stringStreamOutput1;
-                stringStreamOutput1 << "Number of nodes in map: " << mapThreads.size() << std::endl;
+                stringStreamOutput1 << "Number of nodes in map: " << intThreadCount << std::endl;
                 const std::string strOutput1 = stringStreamOutput1.str();
 
                 KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput1);
