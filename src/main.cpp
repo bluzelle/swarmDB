@@ -25,8 +25,8 @@
 #define MAX_THREADS 200
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
-#define MAX_LOG_ENTRIES 60
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 10.5
+#define MAX_LOG_ENTRIES 300
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.001
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 
 
@@ -209,7 +209,7 @@ void threadIntroduction(const unsigned int i)
     std::thread::id myThreadId = std::this_thread::get_id();
 
     std::stringstream stringStreamOutput;
-    stringStreamOutput << "Hello. This is NEW thread #: " << i << " that was JUST BORN with id: " << myThreadId << std::endl;
+    stringStreamOutput << "Hello. This is a NEW node that was JUST BORN with id: " << myThreadId << std::endl;
     const std::string strOutput = stringStreamOutput.str();
 
     KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
@@ -229,14 +229,12 @@ void threadLifeCycleLoop(const unsigned int i)
 
     std::stringstream stringStreamOutput;
 
-    stringStreamOutput << "Thread #: " 
-              << i 
-              << " awakens after " 
-              << uintActualMillisecondsToSleep 
-              << "ms and then goes back to sleep with id: " 
-              << myThreadId 
-              << std::endl
-              << std::flush;      
+    stringStreamOutput << "Node awakens after " 
+                       << uintActualMillisecondsToSleep 
+                       << "ms and then goes back to sleep with id: " 
+                       << myThreadId 
+                       << std::endl
+                       << std::flush;      
 
     std::string strOutput = stringStreamOutput.str();          
 
@@ -250,7 +248,7 @@ void threadLifeCycle(const unsigned int i)
     do 
         {
         int intRandomVariable = getThreadFriendlyLargeRandomNumber();
-        float floatComputedRandomValue = (intRandomVariable % 10000) * 1.0 / 100.0;
+        float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
         boolThreadRandomlyShouldDie = (floatComputedRandomValue <= THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE);
 
         threadLifeCycleLoop(i);
@@ -262,12 +260,10 @@ void threadLifeCycle(const unsigned int i)
 
     std::stringstream stringStreamOutput;
 
-    stringStreamOutput << "Thread #: " 
-              << i 
-              << " is ending its lifecycle with id: " 
-              << myThreadId 
-              << std::endl
-              << std::flush;      
+    stringStreamOutput << "Node is ending its lifecycle with id: " 
+                       << myThreadId 
+                       << std::endl
+                       << std::flush;      
 
     std::string strOutput = stringStreamOutput.str();          
 
@@ -319,7 +315,7 @@ KeplerFrame::KeplerFrame()
 
     printCPPVersion();
 
-    std::cout << "Main thread id: " << std::this_thread::get_id() << "\n";
+    std::cout << "Main Node id: " << std::this_thread::get_id() << "\n";
 
     m_ptr_menuFile = new wxMenu;
     m_ptr_menuFile->Append(ID_Kepler, 
@@ -434,11 +430,11 @@ KeplerFrame::KeplerFrame()
 
 
     m_ptr_staticTextThreadIdentifier = new wxStaticText(this, 
-                                                                wxID_ANY,
-                                                                "",
-                                                                wxDefaultPosition,
-                                                                wxDefaultSize,
-                                                                wxALIGN_CENTRE);
+                                                        wxID_ANY,
+                                                        "N/A",
+                                                        wxDefaultPosition,
+                                                        wxDefaultSize,
+                                                        wxALIGN_CENTRE);
 
     m_ptr_boxSizerSelectedThread->Add(m_ptr_staticTextThreadIdentifier,
                                 0,
@@ -648,7 +644,7 @@ void KeplerFrame::onClose()
                                                   const std::shared_ptr<std::thread> &ptr_thread) 
         {
         std::stringstream stringStreamOutput;
-        stringStreamOutput << "Joining thread: " << threadId << std::endl;
+        stringStreamOutput << "Joining Node: " << threadId << std::endl;
         const std::string strOutput = stringStreamOutput.str();
 
         KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput);
@@ -726,7 +722,7 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
         KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads] (const std::thread::id &threadId) 
             {
             std::stringstream stringStreamOutput1;
-            stringStreamOutput1 << threadId << " has been flagged to die... joining it..." << std::endl;
+            stringStreamOutput1 << "Node with id: " << threadId << " has 'decided' to 'crash'... joining it..." << std::endl;
             const std::string strOutput1 = stringStreamOutput1.str();
 
             KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput1);
@@ -745,7 +741,7 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
 
 
             std::stringstream stringStreamOutput2;
-            stringStreamOutput2 << threadId << " joining DONE" << std::endl;
+            stringStreamOutput2 << "Node with id: " << threadId << " joining DONE" << std::endl;
             const std::string strOutput2 = stringStreamOutput2.str();
 
             KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput2);
@@ -777,7 +773,7 @@ void KeplerFrame::createNewThreadsIfNeeded()
             if (intThreadCount < MAX_THREADS)
                 {
                 std::stringstream stringStreamOutput1;
-                stringStreamOutput1 << "Number of threads in map: " << mapThreads.size() << std::endl;
+                stringStreamOutput1 << "Number of nodes in map: " << mapThreads.size() << std::endl;
                 const std::string strOutput1 = stringStreamOutput1.str();
 
                 KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput1);
@@ -798,7 +794,7 @@ void KeplerFrame::createNewThreadsIfNeeded()
                     }
 
                 std::stringstream stringStreamOutput2;
-                stringStreamOutput2 << "Number of threads in map is NOW: " << mapThreads.size() << std::endl;
+                stringStreamOutput2 << "Number of nodes in map is NOW: " << mapThreads.size() << std::endl;
                 const std::string strOutput2 = stringStreamOutput2.str();
 
                 KeplerFrame::s_ptr_global->addTextToTextCtrlApplicationWideLogQueue(strOutput2);
