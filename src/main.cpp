@@ -424,10 +424,9 @@ KeplerFrame::KeplerFrame()
     m_ptr_listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerTop->Add(m_ptr_listViewNodes,
-                     1,
+                     2,
                      wxEXPAND | 
-                     wxALL, 
-                     10);
+                     wxALL);
 
 
 
@@ -579,9 +578,9 @@ KeplerFrame::KeplerFrame()
 
 
     m_ptr_boxSizerTop->Add(m_ptr_boxSizerSelectedThread,
-                     1,
+                     2,
                      wxEXPAND | 
-                     wxALL );
+                     wxALL);
 
 
 
