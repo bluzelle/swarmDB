@@ -48,10 +48,13 @@ class ThreadData
 
         ThreadData(const ThreadData &original)
             {
-            m_ptr_thread = original.m_ptr_thread;     
+            m_ptr_thread = original.m_ptr_thread;    
+
+            m_vectorLogMessages = original.m_vectorLogMessages;
             }
 
         std::shared_ptr<std::thread> m_ptr_thread;
+        std::vector<std::string> m_vectorLogMessages;
     };
 
 
@@ -325,7 +328,7 @@ void threadLifeCycle(const unsigned int i)
 
     // We only flag the thread to be killed manually if it naturally decided to die AND the system is not already
     // set to end all threads. If the latter is true, this thread will be killed anyways. We certainly don't
-    // want it dying twice.
+    // want it being killed twice -- that will cause a crash.
 
     if ((boolThreadRandomlyShouldDie) && 
         (!KeplerApplication::s_bool_endAllThreads))
