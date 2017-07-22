@@ -170,6 +170,7 @@ class KeplerFrame: public wxFrame
         void killAndJoinThreadsIfNeeded();
 
         void addThreadInboxOutboxControls();
+        void addStaticTextApplicationWideLogIdentifier();
         void addListCtrlApplicationWideLog();
         void addListViewNodes();
         void addListViewNodeAttributes();
@@ -212,6 +213,7 @@ class KeplerFrame: public wxFrame
         wxListView *m_ptr_listViewNodeOutbox; 
         wxListView *m_ptr_listViewNodeAttributes;
 
+        wxStaticText *m_ptr_staticTextApplicationWideLogIdentifier;
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
 
         std::mutex m_textCtrlApplicationWideLogQueueMutex;
@@ -506,6 +508,10 @@ KeplerFrame::KeplerFrame()
 
 
 
+    addStaticTextApplicationWideLogIdentifier();
+
+
+
     addListCtrlApplicationWideLog();
 
 
@@ -623,6 +629,38 @@ void KeplerFrame::addTextCtrlThreadLog()
                                       wxEXPAND | 
                                       wxALL,
                                       GLOBAL_CONTROL_BORDER);
+    }
+
+// void KeplerFrame::addStaticTextListViewNodesIdentifier()
+//     {
+//     m_ptr_staticTextListViewNodesIdentifier = new wxStaticText(this, 
+//                                                                wxID_ANY,
+//                                                                "Node List",
+//                                                                wxDefaultPosition,
+//                                                                wxDefaultSize,
+//                                                                wxALIGN_CENTRE);
+
+//     m_ptr_boxSizerSelectedThread->Add(m_ptr_staticTextListViewNodesIdentifier,
+//                                       0 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+//                                       wxEXPAND | 
+//                                       wxALL,
+//                                       GLOBAL_CONTROL_BORDER);
+//     }
+
+void KeplerFrame::addStaticTextApplicationWideLogIdentifier()
+    {
+    m_ptr_staticTextApplicationWideLogIdentifier = new wxStaticText(this, 
+                                                                    wxID_ANY,
+                                                                    "Application-wide Log",
+                                                                    wxDefaultPosition,
+                                                                    wxDefaultSize,
+                                                                    wxALIGN_CENTRE);
+
+    m_ptr_boxSizerApplication->Add(m_ptr_staticTextApplicationWideLogIdentifier,
+                                   0 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
+                                   wxEXPAND | 
+                                   wxALL,
+                                   GLOBAL_CONTROL_BORDER);
     }
 
 void KeplerFrame::addStaticTextThreadIdentifier()
