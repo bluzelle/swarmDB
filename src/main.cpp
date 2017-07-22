@@ -22,14 +22,16 @@
 
 
 
-#define MAX_THREADS 5
+#define MAX_THREADS 25
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 300
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 1.0
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 #define GLOBAL_CONTROL_BORDER 3
 #define GLOBAL_CONTROL_PROPORTION_MULTIPLIER 3
+
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 1.0
+#define CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE 10.0
 
 
 
@@ -159,6 +161,8 @@ class KeplerFrame: public wxFrame
 
         void onClose();
         void onNewlyCreatedThread(const std::thread::id &idNewlyCreatedThread);
+        void onNewlyKilledThread(const std::thread::id &idNewlyKilledThread);
+
         void removeThreadIdFromListViewNodes(const std::thread::id &idThreadToRemove);
  
         wxTimer m_timerIdle;
@@ -808,11 +812,14 @@ void KeplerFrame::OnIdle(wxIdleEvent& event)
 
 void KeplerFrame::killAndJoinThreadsIfNeeded()
     {
+    std::vector<std::thread::id> vectorNewlyKilledThreadIds;
+
     // Access the threads object inside a critical section
 
-    KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+    KeplerApplication::s_threads.safe_use([&vectorNewlyKilledThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
         {
-        KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads] (const std::thread::id &threadId) 
+        KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads,
+                                                           &vectorNewlyKilledThreadIds] (const std::thread::id &threadId) 
             {
             std::stringstream stringStreamOutput1;
             stringStreamOutput1 << "Node with id: " << threadId << " has 'decided' to 'crash'... joining it..." << std::endl;
@@ -844,16 +851,28 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
             lockStdOut.unlock();
 
             mapThreads.erase(threadId);
+
+            vectorNewlyKilledThreadIds.push_back(threadId);
             });
         });  
 
     // WATCHOUT -- there could be a race condition newly deleted threads get into the s_threadIdsToKill map before the code below fires, which means those
-    // newly deleted threads don't get processed as above.
+    // newly deleted threads don't get processed as above. Maybe. Not sure. The deleting of only items in the vector probably ensures this cannot happen.
 
-    KeplerApplication::s_threadIdsToKill.safe_use([] (KeplerSynchronizedSetWrapper<std::thread::id>::KeplerSynchronizedSetType &setThreadsToKill)
+    KeplerApplication::s_threadIdsToKill.safe_use([&vectorNewlyKilledThreadIds] (KeplerSynchronizedSetWrapper<std::thread::id>::KeplerSynchronizedSetType &setThreadsToKill)
         {
-        setThreadsToKill.clear();
+        for (const auto &currentNewlyKilledThreadId : vectorNewlyKilledThreadIds)
+            {
+            setThreadsToKill.erase(currentNewlyKilledThreadId);
+
+//            onNewlyCreatedThread(currentNewlyCreatedThreadId);
+            }
         }); 
+
+    for (const auto &currentNewlyKilledThreadId : vectorNewlyKilledThreadIds)
+        {
+        onNewlyKilledThread(currentNewlyKilledThreadId);
+        }
     }
 
 void KeplerFrame::createNewThreadsIfNeeded()
@@ -934,12 +953,29 @@ void KeplerFrame::onNewlyCreatedThread(const std::thread::id &idNewlyCreatedThre
                                         wxLIST_AUTOSIZE);
     }
 
+void KeplerFrame::onNewlyKilledThread(const std::thread::id &idNewlyKilledThread)
+    {
+    removeThreadIdFromListViewNodes(idNewlyKilledThread);
+    }
+
 void KeplerFrame::OnTimer(wxTimerEvent &e)
     {
     m_uintTimerCounter++;
 
     killAndJoinThreadsIfNeeded();
-    createNewThreadsIfNeeded();
+
+
+
+    int intRandomVariable = getThreadFriendlyLargeRandomNumber();
+    float floatComputedRandomValue = (intRandomVariable % 1000000) * 1.0 / 10000.0;
+    const bool boolCreateNewDeficitThreads = (floatComputedRandomValue <= CREATE_NEW_DEFICIT_THREADS_PROBABILITY_PERCENTAGE);
+
+    if (boolCreateNewDeficitThreads)
+        {
+        createNewThreadsIfNeeded();
+        }
+
+
 
     addTextToTextCtrlApplicationWideLogFromQueue();
     }
