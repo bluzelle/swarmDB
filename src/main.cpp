@@ -26,7 +26,7 @@
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 300
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.2
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 1.0
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 #define GLOBAL_CONTROL_BORDER 3
 #define GLOBAL_CONTROL_PROPORTION_MULTIPLIER 3
@@ -70,6 +70,16 @@ std::unique_lock<std::mutex> KeplerApplication::getStdOutLock()
     mutexLock.lock();
 
     return mutexLock;
+    }
+
+
+
+std::string getStringFromThreadId(const std::thread::id &idThread)
+    {
+    std::stringstream ss;
+    ss << idThread;
+    
+    return ss.str();
     }
 
 
@@ -148,7 +158,9 @@ class KeplerFrame: public wxFrame
         void OnClose(wxCloseEvent& event);
 
         void onClose();
-
+        void onNewlyCreatedThread(const std::thread::id &idNewlyCreatedThread);
+        void removeThreadIdFromListViewNodes(const std::thread::id &idThreadToRemove);
+ 
         wxTimer m_timerIdle;
 
         wxMenu *m_ptr_menuFile;
@@ -464,20 +476,9 @@ void KeplerFrame::addListViewNodes()
                                          wxDefaultPosition, 
                                          wxDefaultSize);
 
-    m_ptr_listViewNodes->AppendColumn("Node Cardinality #");
-    m_ptr_listViewNodes->AppendColumn("Node Physical Hash Id");
-
-    // Add three items to the list
-
-    m_ptr_listViewNodes->InsertItem(0, "1");
-    m_ptr_listViewNodes->SetItem(0, 1, "Alfa");
-    m_ptr_listViewNodes->InsertItem(1, "2");
-    m_ptr_listViewNodes->SetItem(1, 1, "Bravo");
-    m_ptr_listViewNodes->InsertItem(2, "3");
-    m_ptr_listViewNodes->SetItem(2, 1, "Charlie");
+    m_ptr_listViewNodes->AppendColumn("Node Id");
 
     m_ptr_listViewNodes->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_ptr_listViewNodes->SetColumnWidth(1, wxLIST_AUTOSIZE);
 
     m_ptr_boxSizerTop->Add(m_ptr_listViewNodes,
                            50 * GLOBAL_CONTROL_PROPORTION_MULTIPLIER,
@@ -856,9 +857,11 @@ void KeplerFrame::createNewThreadsIfNeeded()
     {
     if (KeplerApplication::s_bool_endAllThreads == false)
         {
+        std::vector<std::thread::id> vectorNewlyCreatedThreadIds;
+
         // Access the threads object inside a critical section
 
-        KeplerApplication::s_threads.safe_use([] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+        KeplerApplication::s_threads.safe_use([&vectorNewlyCreatedThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
             {
             const int intThreadCount = mapThreads.size();
                 
@@ -883,6 +886,8 @@ void KeplerFrame::createNewThreadsIfNeeded()
 
                     mapThreads.insert(KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType::value_type(ptr_newThread->get_id(),
                                                                                                                                                          ptr_newThread));
+
+                    vectorNewlyCreatedThreadIds.push_back(ptr_newThread->get_id());
                     }
 
                 std::stringstream stringStreamOutput2;
@@ -896,7 +901,34 @@ void KeplerFrame::createNewThreadsIfNeeded()
                 lockStdOut.unlock();
                 }
             });
+
+        for (const auto &currentNewlyCreatedThreadId : vectorNewlyCreatedThreadIds)
+            {
+            onNewlyCreatedThread(currentNewlyCreatedThreadId);
+            }
         }
+    }
+
+void KeplerFrame::removeThreadIdFromListViewNodes(const std::thread::id &idThreadToRemove)
+    {
+    const long longIndexOfThreadToRemove = m_ptr_listViewNodes->FindItem(-1,
+                                                                         getStringFromThreadId(idThreadToRemove));
+
+    if (longIndexOfThreadToRemove != wxNOT_FOUND)
+        {
+        m_ptr_listViewNodes->DeleteItem(longIndexOfThreadToRemove);
+        }
+    }
+
+void KeplerFrame::onNewlyCreatedThread(const std::thread::id &idNewlyCreatedThread)
+    {
+    removeThreadIdFromListViewNodes(idNewlyCreatedThread);
+
+    m_ptr_listViewNodes->InsertItem(0, 
+                                    getStringFromThreadId(idNewlyCreatedThread));
+
+    m_ptr_listViewNodes->SetColumnWidth(0, 
+                                        wxLIST_AUTOSIZE);
     }
 
 void KeplerFrame::OnTimer(wxTimerEvent &e)
