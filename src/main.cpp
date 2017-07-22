@@ -847,6 +847,9 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
             });
         });  
 
+    // WATCHOUT -- there could be a race condition newly deleted threads get into the s_threadIdsToKill map before the code below fires, which means those
+    // newly deleted threads don't get processed as above.
+
     KeplerApplication::s_threadIdsToKill.safe_use([] (KeplerSynchronizedSetWrapper<std::thread::id>::KeplerSynchronizedSetType &setThreadsToKill)
         {
         setThreadsToKill.clear();
