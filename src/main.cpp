@@ -376,13 +376,47 @@ void threadFunction(const unsigned int i)
     threadLifeCycle(i);
     }
  
+
+
+std::string getCPPVersionString()
+    {
+    if ( __cplusplus == 201402L ) 
+        {
+        return "C++14" ;
+        }
+ 
+    else if ( __cplusplus == 201103L ) 
+        {
+        return "C++11" ;
+        }
+ 
+    else if( __cplusplus == 19971L ) 
+        {
+        return "C++98" ;
+        }
+ 
+    else 
+        {
+        return "pre-standard C++" ;      
+        }
+    }
+
+
+
 void printCPPVersion()
     {
-    if ( __cplusplus == 201103L ) std::cout << "C++11\n" ;
- 
-    else if( __cplusplus == 19971L ) std::cout << "C++98\n" ;
- 
-    else std::cout << "pre-standard C++\n" ;        
+    std::cout << getCPPVersionString() << std::endl;
+    }
+
+
+
+std::string getBuildInformationString()
+    {
+    const std::string strRetVal = getCPPVersionString() + " - " + __DATE__ + " - " + __TIME__;
+
+    std::cout << strRetVal;
+
+    return strRetVal;
     }
 
 
@@ -390,7 +424,7 @@ void printCPPVersion()
 KeplerFrame::KeplerFrame()
             :wxFrame(NULL, 
                      wxID_ANY, 
-                     "Kepler TestNet Simulator",
+                     "Kepler TestNet Simulator - " + getBuildInformationString(),
                      wxDefaultPosition,
                      wxDefaultSize,
 //                     wxSize(1000,1000),
