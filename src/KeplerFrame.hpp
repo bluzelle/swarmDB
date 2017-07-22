@@ -27,10 +27,8 @@ class KeplerFrame: public wxFrame
         KeplerFrame();
 
         std::unique_lock<std::mutex> getTextCtrlApplicationWideLogQueueLock();
-//        std::unique_lock<std::mutex> getListViewNodesQueueLock();
 
         void addTextToTextCtrlApplicationWideLogQueue(const std::string &str);
-//        void addThreadToListViewNodes(const std::thread::id &threadId);
 
         static KeplerFrame *s_ptr_global;
 
@@ -96,10 +94,8 @@ class KeplerFrame: public wxFrame
         wxStaticText *m_ptr_staticTextThreadIdentifier; 
 
         std::mutex m_textCtrlApplicationWideLogQueueMutex;
- //       std::mutex m_listViewNodesQueueMutex;
 
         std::queue<std::string> m_queueTextCtrlApplicationWideLog;
-//        std::queue<std::thread::id> m_queueListViewNodes;
 
         unsigned int m_uintTimerCounter;
         unsigned int m_uintIdleCounter;
