@@ -26,7 +26,7 @@
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 300
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.002
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.005
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 
 
@@ -714,10 +714,10 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
     lockTextCtrlApplicationWideLogQueue.unlock();
 
-    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
-    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(2, wxLIST_AUTOSIZE);
-    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(3, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(2, wxLIST_AUTOSIZE_USEHEADER);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(3, wxLIST_AUTOSIZE_USEHEADER);
     }
 
 // This event only fires if there is activity. It does not ALWAYS fire.
