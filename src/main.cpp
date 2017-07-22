@@ -26,7 +26,7 @@
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 125
 #define THREAD_SLEEP_TIME_MILLISECONDS 50
 #define MAX_LOG_ENTRIES 300
-#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.001
+#define THREAD_RANDOM_DEATH_PROBABILITY_PERCENTAGE 0.002
 #define MAIN_THREAD_DEATH_PRE_DELAY_MILLISECONDS 5000
 
 
@@ -167,6 +167,7 @@ class KeplerFrame: public wxFrame
 
         unsigned int m_uintTimerCounter;
         unsigned int m_uintIdleCounter;
+        unsigned int m_uintListCtrlApplicationWideLogCounter;
     };
 
 
@@ -309,7 +310,8 @@ KeplerFrame::KeplerFrame()
              m_timerIdle(this, 
                          wxID_ANY),
              m_uintTimerCounter(0),
-             m_uintIdleCounter(0)
+             m_uintIdleCounter(0),
+             m_uintListCtrlApplicationWideLogCounter(0)
     {
     KeplerFrame::s_ptr_global = this;
 
@@ -383,11 +385,15 @@ KeplerFrame::KeplerFrame()
                                                wxDefaultPosition, 
                                                wxSize(150, 150));
 
-    m_ptr_listCtrlApplicationWideLog->AppendColumn("#");
+    m_ptr_listCtrlApplicationWideLog->AppendColumn("Timer Loop #");
+    m_ptr_listCtrlApplicationWideLog->AppendColumn("Entry #");
+    m_ptr_listCtrlApplicationWideLog->AppendColumn("Timestamp");
     m_ptr_listCtrlApplicationWideLog->AppendColumn("Network-Wide Log");
 
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(2, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(3, wxLIST_AUTOSIZE);
  
     m_ptr_boxSizerApplication->Add(m_ptr_listCtrlApplicationWideLog,
                               2,
@@ -691,11 +697,17 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
     while (!m_queueTextCtrlApplicationWideLog.empty())
         {
         counter++;
+        m_uintListCtrlApplicationWideLogCounter++;
+
+        const std::time_t timeCurrent = std::time(nullptr);
+        const std::string strCurrentTime = std::asctime(std::localtime(&timeCurrent));
 
         const std::string &strFrontLogEvent = m_queueTextCtrlApplicationWideLog.front();
 
         m_ptr_listCtrlApplicationWideLog->InsertItem(0, std::to_string(m_uintTimerCounter));
-        m_ptr_listCtrlApplicationWideLog->SetItem(0, 1, strFrontLogEvent);
+        m_ptr_listCtrlApplicationWideLog->SetItem(0, 1, std::to_string(m_uintListCtrlApplicationWideLogCounter));
+        m_ptr_listCtrlApplicationWideLog->SetItem(0, 2, strCurrentTime);
+        m_ptr_listCtrlApplicationWideLog->SetItem(0, 3, strFrontLogEvent);
 
         m_queueTextCtrlApplicationWideLog.pop();
         }
@@ -704,6 +716,8 @@ void KeplerFrame::addTextToTextCtrlApplicationWideLogFromQueue()
 
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(0, wxLIST_AUTOSIZE);
     m_ptr_listCtrlApplicationWideLog->SetColumnWidth(1, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(2, wxLIST_AUTOSIZE);
+    m_ptr_listCtrlApplicationWideLog->SetColumnWidth(3, wxLIST_AUTOSIZE);
     }
 
 // This event only fires if there is activity. It does not ALWAYS fire.
