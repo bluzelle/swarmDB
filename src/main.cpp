@@ -37,6 +37,25 @@
 
 
 
+class ThreadData
+    {
+    public:
+
+        ThreadData(std::shared_ptr<std::thread> ptr_thread)
+            {
+            m_ptr_thread = ptr_thread;     
+            }
+
+        ThreadData(const ThreadData &original)
+            {
+            m_ptr_thread = original.m_ptr_thread;     
+            }
+
+        std::shared_ptr<std::thread> m_ptr_thread;
+    };
+
+
+
 class KeplerApplication: public wxApp
     {
     public:
@@ -47,7 +66,7 @@ class KeplerApplication: public wxApp
 
         static unsigned int sleepRandomMilliseconds(const unsigned int uintMaximumMilliseconds);
 
-        static KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> s_threads;
+        static KeplerSynchronizedMapWrapper<std::thread::id, ThreadData> s_threads;
         static KeplerSynchronizedSetWrapper<std::thread::id> s_threadIdsToKill;
 
         static std::mutex s_stdOutMutex;              
@@ -57,7 +76,7 @@ class KeplerApplication: public wxApp
 
 
 
-KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>> KeplerApplication::s_threads;
+KeplerSynchronizedMapWrapper<std::thread::id, ThreadData> KeplerApplication::s_threads;
 KeplerSynchronizedSetWrapper<std::thread::id> KeplerApplication::s_threadIdsToKill;
 
 std::mutex KeplerApplication::s_stdOutMutex;
@@ -715,7 +734,7 @@ void KeplerFrame::onClose()
     KeplerApplication::s_bool_endAllThreads = true;
 
     KeplerApplication::s_threads.safe_iterate([] (const std::thread::id &threadId, 
-                                                  const std::shared_ptr<std::thread> &ptr_thread) 
+                                                  const ThreadData &currentThreadData) 
         {
         std::stringstream stringStreamOutput;
         stringStreamOutput << "Joining Node: " << threadId << std::endl;
@@ -727,9 +746,9 @@ void KeplerFrame::onClose()
 
         std::cout << strOutput;
 
-        if (ptr_thread->joinable())
+        if (currentThreadData.m_ptr_thread->joinable())
             {
-            ptr_thread->join();
+            currentThreadData.m_ptr_thread->join();
             }
         });
     }
@@ -818,7 +837,7 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
 
     // Access the threads object inside a critical section
 
-    KeplerApplication::s_threads.safe_use([&vectorNewlyKilledThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+    KeplerApplication::s_threads.safe_use([&vectorNewlyKilledThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, ThreadData>::KeplerSynchronizedMapType &mapThreads) 
         {
         KeplerApplication::s_threadIdsToKill.safe_iterate([&mapThreads,
                                                            &vectorNewlyKilledThreadIds] (const std::thread::id &threadId) 
@@ -835,9 +854,9 @@ void KeplerFrame::killAndJoinThreadsIfNeeded()
 
 
 
-            if (mapThreads[threadId]->joinable())
+            if (mapThreads.at(threadId).m_ptr_thread->joinable())
                 {
-                mapThreads[threadId]->join();
+                mapThreads.at(threadId).m_ptr_thread->join();
                 }
 
 
@@ -885,7 +904,7 @@ void KeplerFrame::createNewThreadsIfNeeded()
 
         // Access the threads object inside a critical section
 
-        KeplerApplication::s_threads.safe_use([&vectorNewlyCreatedThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads) 
+        KeplerApplication::s_threads.safe_use([&vectorNewlyCreatedThreadIds] (KeplerSynchronizedMapWrapper<std::thread::id, ThreadData>::KeplerSynchronizedMapType &mapThreads) 
             {
             const int intThreadCount = mapThreads.size();
                 
@@ -980,7 +999,7 @@ void KeplerFrame::OnTimer(wxTimerEvent &e)
 
     bool boolNoThreadsInPlay = false;
 
-    KeplerApplication::s_threads.safe_use([&boolNoThreadsInPlay] (KeplerSynchronizedMapWrapper<std::thread::id, std::shared_ptr<std::thread>>::KeplerSynchronizedMapType &mapThreads)
+    KeplerApplication::s_threads.safe_use([&boolNoThreadsInPlay] (KeplerSynchronizedMapWrapper<std::thread::id, ThreadData>::KeplerSynchronizedMapType &mapThreads)
         {
         if (mapThreads.empty())
             {
