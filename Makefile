@@ -12,7 +12,7 @@
 # Define default flags (include your source tree for example
 
 CXXFLAGS = -std=c++14 `wx-config --cxxflags` -I/usr/local/Cellar/boost/1.64.0_1/include
-LDLIBS   = -std=c++14 `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -lboost_locale-mt
+LDLIBS   = -std=c++14 `wx-config --libs` -L/usr/local/Cellar/boost/1.64.0_1/lib -L/usr/lib/x86_64-linux-gnu/ -lboost_locale
 
 ifdef FINAL
     EXTRAFLAGS = -MD -O2 -fno-rtti -fno-exceptions -fomit-frame-pointer
