@@ -62,3 +62,8 @@ build
 .idea/**/sqlDataSources.xml
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
+
+# Scott
+workspace.xml
+/web/dist/generated
+node_modules
