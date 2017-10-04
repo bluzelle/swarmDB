@@ -9,10 +9,8 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 if(MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wnested-anon-types)
 endif()
-
-add_compile_options(-Wnested-anon-types)
 
 find_package(Boost 1.64.0 REQUIRED COMPONENTS system coroutine thread REQUIRED)
 if(Boost_FOUND)
@@ -42,6 +40,14 @@ target_link_libraries(bluzelled ${Boost_LIBRARIES})
 
 ################################################################
 # Unit tests
+
+
+if(MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wnested-anon-types)
+endif()
+
 find_package(Boost 1.64.0 COMPONENTS unit_test_framework thread system timer REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -59,7 +65,7 @@ set(SOURCE_FILES
 
 
 
-add_compile_options(-Wnested-anon-types)
+
 
 file(COPY assets/words.txt DESTINATION ${CMAKE_BINARY_DIR})
 add_executable(bluzelled_test ${SOURCE_FILES})

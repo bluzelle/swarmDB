@@ -36,17 +36,21 @@ void reaper(Nodes *nodes)
         }
 
 
-//    nodes->erase
-//            (
-//                    std::remove_if
-//                            (
-//                                    nodes->begin(),
-//                                    nodes->end(),
-//                                    [](auto node)
-//                                        {
-//                                        return (node->state() == Task::dead);
-//                                        }
-//                            )
-//            );
+    std::cout << "**** before erase\n";
+    nodes->erase
+            (
+                    std::remove_if
+                            (
+                                    nodes->begin(),
+                                    nodes->end(),
+                                    [](auto node)
+                                        {
+                                        return (node->state() == Task::dead);
+                                        }
+                            )
+            );
+
+    std::cout << " ***** nodes:[" << nodes->size() << "]\n\n";
+
 }
 
