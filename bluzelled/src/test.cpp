@@ -1,6 +1,5 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE "BaseClassModule"
-#define BOOST_USE_VALGRIND
 
 #include "CMap.h"
 #include "CSet.h"
@@ -62,10 +61,10 @@ BOOST_AUTO_TEST_CASE(cset_concurrent_insert)
     std::vector<boost::thread *> threads;
     for (int i = 0; i < numThreads; ++i)
         {
-        threads.emplace_back(new boost::thread(csetInsertThreadFunction, words, &sut));
+        threads.emplace_back(new boost::thread(csetInsertThreadFunction,words,  &sut));
         }
 
-    for (auto t : threads)
+    for(auto t : threads)
         {
         t->join();
         delete t;
@@ -83,7 +82,7 @@ BOOST_AUTO_TEST_CASE(cset_find)
 
     CSet<std::string> sut;
 
-    for (auto w : words)
+    for(auto w : words)
         {
         BOOST_CHECK(sut.insert(w));
         }
@@ -181,7 +180,8 @@ BOOST_AUTO_TEST_CASE(cset_remove)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Test Helpers
-unsigned long hash(const char *str) {
+unsigned long hash(const char *str)
+{
     unsigned long hash = 5381;
     int c;
     while ((c = *str++))
@@ -194,8 +194,8 @@ void csetInsertThreadFunction(std::vector<std::string>& words, CSet<std::string>
     std::time_t now = std::time(0);
     boost::random::mt19937 gen{static_cast<std::uint32_t>(now)};
     unsigned long max = words.size();
-    boost::random::uniform_int_distribution<unsigned long> dist{0, max - 1};
-    while (sut->size() < words.size())
+    boost::random::uniform_int_distribution<unsigned long> dist{0, max-1};
+    while(sut->size() < words.size())
         {
         std::string str = words[dist(gen)];
         sut->cInsert(str);

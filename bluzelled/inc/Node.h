@@ -6,7 +6,6 @@
 #include <boost/random.hpp>
 #include <boost/random/random_device.hpp>
 #include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include "Task.h"
 
@@ -80,7 +79,6 @@ public:
     }
 
     void on_birth() {
-        std::cout << "Node created: " << name_ << std::endl;
         auto lp = listener_.lock();
         if (lp !=  nullptr) {
             for (auto s : lp->sessions_)
@@ -101,8 +99,8 @@ public:
             }
     }
 
-    void on_death() {
-        std::cout << "Node destroyed: " << name_ << std::endl;
+    void on_death()
+    {
         auto lp = listener_.lock();
         if (lp !=  nullptr) {
             for (auto s : lp->sessions_)
