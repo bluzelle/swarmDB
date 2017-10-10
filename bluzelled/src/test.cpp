@@ -95,6 +95,9 @@ BOOST_AUTO_TEST_CASE(cset_find)
         }
 }
 
+BOOST_AUTO_TEST_CASE(cset_remove) {
+    std::vector<std::string> words = ReadWords(WORDS_FILENAME, MAX_WORDS);
+    BOOST_CHECK(words.size() == MAX_WORDS);
 
 //  --run_test=cset_remove
 BOOST_AUTO_TEST_CASE(cset_remove)
@@ -144,38 +147,104 @@ BOOST_AUTO_TEST_CASE(cset_remove)
 //    node2.join();
 //}
 
-//BOOST_AUTO_TEST_CASE(test_wait_for_all_nodes_to_start) {
-//    const int kTEST_NODE_COUNT = 3;
-//    Nodes *nodes;
-//    nodes = create_test_nodes(kTEST_NODE_COUNT);
-//
-//
-//
-//    wait_for_all_nodes_to_start(*nodes);
-//
-//    // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive.
-//    for (auto node : *nodes)
-//        {
-//        BOOST_CHECK(node->state() == Task::alive);
-//        }
-//
-//    for(auto node : *nodes)
-//        {
-//        node->kill();
-//        }
-//
-//    for(auto node : *nodes)
-//        {
-//        node->join();
-//        }
-//
-//    for(auto node : *nodes)
-//        {
-//        delete node;
-//        }
-//
-//    delete nodes;
-//}
+    BOOST_CHECK(!all_nodes_alive(nodes));
+
+    nodes.emplace_back(&node0);
+    nodes.emplace_back(&node1);
+    nodes.emplace_back(&node2);
+
+    // NOTE: the assumption here is that 100ms is long enough for 3 nodes to
+    // get initialized and running in the alive state.
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+
+    BOOST_CHECK(all_nodes_alive(nodes));
+    node0.kill();
+    BOOST_CHECK(!all_nodes_alive(nodes));
+    node0.join();
+    BOOST_CHECK(!all_nodes_alive(nodes));
+
+    node1.kill();
+    node1.join();
+
+    node2.kill();
+    node2.join();
+}
+
+BOOST_AUTO_TEST_CASE(test_wait_for_all_nodes_to_start) {
+    Nodes nodes;
+    Node node0;
+    Node node1;
+    Node node2;
+
+    // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive,
+    // but the next block *assumes* the tasks haven't started yet...
+    for (auto node : nodes)
+        {
+        BOOST_CHECK(node->state() != Task::alive);
+        }
+
+    nodes.emplace_back(&node0);
+    nodes.emplace_back(&node1);
+    nodes.emplace_back(&node2);
+
+    wait_for_all_nodes_to_start(nodes);
+
+    // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive.
+    for (auto node : nodes)
+        {
+        BOOST_CHECK(node->state() == Task::alive);
+        }
+}
+
+BOOST_AUTO_TEST_CASE(test_reaper) {
+    auto incr_alive = [](auto p, auto node)
+        {
+        return p + ((Task::alive == node->state()) ? 1 : 0);
+        };
+
+    auto alive_count = [incr_alive](auto nodes)
+        {
+        return std::accumulate
+                (
+                        nodes.begin(),
+                        nodes.end(),
+                        0,
+                        incr_alive
+                );
+        };
+
+
+    const int TEST_NODE_COUNT = 25;
+    Nodes nodes;
+
+    for (int i = 0; i < TEST_NODE_COUNT; ++i)
+        {
+        nodes.emplace_back(new Node());
+        }
+
+    BOOST_CHECK(nodes.size());
+
+    wait_for_all_nodes_to_start(nodes);
+
+    BOOST_CHECK( TEST_NODE_COUNT == alive_count(nodes));
+
+
+
+
+    for(auto n : nodes)
+        {
+        n->kill();
+        n->join();
+        }
+
+    int count = 0;
+    for(auto n : nodes)
+        {
+        std::cout << count++ << " ";
+        delete n;
+        }
+    nodes.clear();
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
