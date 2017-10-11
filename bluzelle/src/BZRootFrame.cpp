@@ -2,6 +2,7 @@
 #include "bluzelleLogo.xpm.h"
 #include "BZApplicationLogListView.h"
 #include "BZTask.h"
+#include "EthereumApi.h"
 
 #include <iostream>
 #include <wx/wxprec.h>
@@ -120,7 +121,15 @@ BZRootFrame::BZRootFrame()
 
 
 
+    EthereumApi* me =   new EthereumApi("0xe04f27eb70e025b78871a2ad7eabe85e61212761");
+    EthereumApi* dude = new EthereumApi("0x033484274a3181685bf73aac3c89568e4d4cacad");
 
+    const string Lunyr("0xfa05A73FfE78ef8f1a739473e462c54bae6567D9");
+
+    //me->restTest();
+
+    auto mybalance = me->tokenBalance(Lunyr);
+    auto dudebalance = dude->tokenBalance(Lunyr);
 
 
     nodeListTitle = new BZStaticText(

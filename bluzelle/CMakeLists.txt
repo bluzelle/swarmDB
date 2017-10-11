@@ -45,6 +45,7 @@ set(INCLUDE_FILES
         inc/containers/BZSyncSetWrapper.hpp
         inc/containers/BZSyncMapWrapper.hpp
         inc/containers/CQueue.h
+        inc/EthereumApi.h
         )
 
 set(SOURCE_FILES
@@ -58,12 +59,14 @@ set(SOURCE_FILES
         src/gui_components/BZStaticText.cpp
         src/gui_components/BZNodeListView.cpp
         src/gui_components/BZApplicationLogListView.cpp
-        )
+        src/EthereumApi.cpp)
 
-add_executable(bluzelle ${SOURCE_FILES} ${INCLUDE_FILES})
+add_executable(bluzelle ${SOURCE_FILES} ${INCLUDE_FILES} src/EthereumApi.cpp inc/EthereumApi.h)
 target_link_libraries(bluzelle ${wxWidgets_LIBRARIES})
 target_link_libraries(bluzelle ${Boost_LIBRARIES})
-
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    target_link_libraries(bluzelle rt)
+endif()
 
 
 ###############################################################################
