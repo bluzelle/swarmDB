@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( parse_http_response )
 
         // Payload is JSON.
         BOOST_CHECK_EQUAL(s.front(), '{');
-        BOOST_CHECK_EQUAL(s.front(), '}');
+        BOOST_CHECK_EQUAL(s.back(), '}');
     }
 
 // Sends GET to http://jsonplaceholder.typicode.com/posts/1
