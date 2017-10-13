@@ -12,29 +12,6 @@ export default class LogComponentView extends Component {
         this.resizeGrid = () => this.setState({gridHeight: this.wrapper.clientHeight})
     }
 
-    columns() {
-        return [{
-            key: 'timer_no',
-            name: 'Timer loop #',
-            resizable: true,
-            width: 100
-        }, {
-            key: 'entry_no',
-            name: 'Entry #',
-            resizable: true,
-            width: 100
-        }, {
-            key: 'timestamp',
-            name: 'Timestamp',
-            resizable: true,
-            width: 250
-        }, {
-            key: 'message',
-            name: 'Message',
-            resizable: true
-        }]
-    }
-
     componentDidMount() {
         window.addEventListener('resize', this.resizeGrid);
         this.resizeGrid();
@@ -51,7 +28,7 @@ export default class LogComponentView extends Component {
         return (
             <div ref={r => this.wrapper = r} style={{height: '100%'}}>
                 <ReactDataGrid
-                    columns={this.columns()}
+                    columns={columns}
                     rowGetter={i => logEntries[i]}
                     rowsCount={logEntries.length}
                     minHeight={gridHeight}
@@ -61,3 +38,25 @@ export default class LogComponentView extends Component {
         )
     }
 }
+
+const columns = [{
+    key: 'timer_no',
+    name: 'Timer loop #',
+    resizable: true,
+    width: 100
+}, {
+    key: 'entry_no',
+    name: 'Entry #',
+    resizable: true,
+    width: 100
+}, {
+    key: 'timestamp',
+    name: 'Timestamp',
+    resizable: true,
+    width: 150
+}, {
+    key: 'message',
+    name: 'Message',
+    resizable: true
+}];
+
