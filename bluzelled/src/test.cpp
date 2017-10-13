@@ -216,9 +216,8 @@ unsigned long hash(const char *str)
     return hash;
 }
 
-
-
-void csetInsertThreadFunction(std::vector<std::string> &words, CSet<std::string> *sut) {
+void csetInsertThreadFunction(std::vector<std::string>& words, CSet<std::string>* sut)
+{
     std::time_t now = std::time(0);
     boost::random::mt19937 gen{static_cast<std::uint32_t>(now)};
     unsigned long max = words.size();
