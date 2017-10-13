@@ -192,47 +192,47 @@ BOOST_AUTO_TEST_CASE( test_wait_for_all_nodes_to_start)
         }
 }
 
-BOOST_AUTO_TEST_CASE( test_reaper )
-{
-    const int TEST_NODE_COUNT = 3;
-    Nodes nodes;
-
-    for(int i = 0; i < TEST_NODE_COUNT ; ++i)
-        {
-        nodes.emplace_back(new Node());
-        }
-
-    BOOST_CHECK( 3 == nodes.size() );
-    wait_for_all_nodes_to_start(nodes);
-    reaper(&nodes);
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-    BOOST_CHECK( 3 == nodes.size() );
-
-    nodes[1]->kill();
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-
-    const int alive_count = std::accumulate(
-            nodes.begin(),
-            nodes.end(),
-            0,
-            [](auto p, auto node)
-                {
-                return p + ((Task::alive == node->state()) ? 1 : 0);
-                }
-    );
-    BOOST_CHECK(2==alive_count);
-
-    reaper(&nodes);
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-
-    BOOST_CHECK( 2 == nodes.size() );
-
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-
-
-
-
-}
+//BOOST_AUTO_TEST_CASE( test_reaper )
+//{
+//    const int TEST_NODE_COUNT = 3;
+//    Nodes nodes;
+//
+//    for(int i = 0; i < TEST_NODE_COUNT ; ++i)
+//        {
+//        nodes.emplace_back(new Node());
+//        }
+//
+//    BOOST_CHECK( 3 == nodes.size() );
+//    wait_for_all_nodes_to_start(nodes);
+//    reaper(&nodes);
+//    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+//    BOOST_CHECK( 3 == nodes.size() );
+//
+//    nodes[1]->kill();
+//    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+//
+//    const int alive_count = std::accumulate(
+//            nodes.begin(),
+//            nodes.end(),
+//            0,
+//            [](auto p, auto node)
+//                {
+//                return p + ((Task::alive == node->state()) ? 1 : 0);
+//                }
+//    );
+//    BOOST_CHECK(2==alive_count);
+//
+//    reaper(&nodes);
+//    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+//
+//    BOOST_CHECK( 2 == nodes.size() );
+//
+//    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+//
+//
+//
+//
+//}
 
 
 
