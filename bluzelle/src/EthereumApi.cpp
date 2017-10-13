@@ -33,7 +33,10 @@ double EthereumApi::tokenBalance(const string& tokenContractAddress) {
         ss << body;
         boost::property_tree::read_json(ss, tuple);
 
-        return boost::lexical_cast<double>(tuple.get<string>("result"));
+        auto result_s = tuple.get<string>("result");
+        auto message_s = tuple.get<string>("message");
+        if (message_s == "OK")
+            return boost::lexical_cast<double>(result_s);
     }
 
     return -1.0; // Negative balance indicates error.

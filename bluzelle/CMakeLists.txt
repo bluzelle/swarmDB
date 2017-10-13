@@ -45,6 +45,7 @@ set(INCLUDE_FILES
         inc/containers/BZSyncSetWrapper.hpp
         inc/containers/BZSyncMapWrapper.hpp
         inc/containers/CQueue.h
+        inc/gui_components/BZEthereumAddressDialog.h
         inc/EthereumApi.h
         inc/HttpResponse.hpp
         inc/HttpRequest.hpp
@@ -61,6 +62,7 @@ set(SOURCE_FILES
         src/gui_components/BZStaticText.cpp
         src/gui_components/BZNodeListView.cpp
         src/gui_components/BZApplicationLogListView.cpp
+        src/gui_components/BZEthereumAddressDialog.cpp
         src/EthereumApi.cpp)
 
 add_executable(bluzelle ${SOURCE_FILES} ${INCLUDE_FILES})

@@ -7,7 +7,7 @@ using std::string;
 
 class EthereumApi {
 protected:
-    const string host = "api.etherscan.io";
+    const string host = "ropsten.etherscan.io";
     const string httpGetFormat =
             "GET %s HTTP/1.0\r\nHost: %s\r\nAccept: */*\r\nConnection: close\r\n\r\n";
     const string getTokenBalanceByTokenContractAddressFormat =

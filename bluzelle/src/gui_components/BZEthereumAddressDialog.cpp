@@ -35,5 +35,5 @@ BZEthereumAddressDialog::BZEthereumAddressDialog(const wxString& title)
 }
 
 wxString BZEthereumAddressDialog:: GetAddress() {
-    return addressTextCtrl->GetValue();
+    return "0x" + addressTextCtrl->GetValue();
 }
