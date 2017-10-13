@@ -125,7 +125,7 @@ BZRootFrame::BZRootFrame()
     ethereumAddress = addressDialog->GetAddress();
     addressDialog->Destroy();
 
-    ethereumAddress = "0x006eae72077449caca91078ef78552c0cd9bce8f";
+    //ethereumAddress = "0x006eae72077449caca91078ef78552c0cd9bce8f";
 
     auto api = make_unique<EthereumApi>(ethereumAddress);
     double balance = 0.0;
