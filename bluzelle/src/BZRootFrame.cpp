@@ -2,6 +2,7 @@
 #include "bluzelleLogo.xpm.h"
 #include "BZApplicationLogListView.h"
 #include "BZTask.h"
+#include "EthereumApi.h"
 
 #include <iostream>
 #include <wx/wxprec.h>
@@ -114,13 +115,6 @@ BZRootFrame::BZRootFrame()
 //            wxString("bluzelleBanner")
 //    );
 //
-
-
-
-
-
-
-
 
 
     nodeListTitle = new BZStaticText(

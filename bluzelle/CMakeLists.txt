@@ -17,7 +17,7 @@ include(${wxWidgets_USE_FILE})
 
 
 
-find_package(Boost 1.62.0 COMPONENTS system filesystem locale REQUIRED)
+find_package(Boost 1.62.0 COMPONENTS system filesystem locale regex REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
@@ -45,6 +45,9 @@ set(INCLUDE_FILES
         inc/containers/BZSyncSetWrapper.hpp
         inc/containers/BZSyncMapWrapper.hpp
         inc/containers/CQueue.h
+        inc/EthereumApi.h
+        inc/HttpResponse.hpp
+        inc/HttpRequest.hpp
         )
 
 set(SOURCE_FILES
@@ -58,20 +61,29 @@ set(SOURCE_FILES
         src/gui_components/BZStaticText.cpp
         src/gui_components/BZNodeListView.cpp
         src/gui_components/BZApplicationLogListView.cpp
-        )
+        src/EthereumApi.cpp)
 
 add_executable(bluzelle ${SOURCE_FILES} ${INCLUDE_FILES})
 target_link_libraries(bluzelle ${wxWidgets_LIBRARIES})
 target_link_libraries(bluzelle ${Boost_LIBRARIES})
-
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    target_link_libraries(bluzelle rt)
+endif()
 
 
 ###############################################################################
 ## Unit Tests.
-find_package(Boost 1.62 COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost 1.62 COMPONENTS unit_test_framework system filesystem locale regex REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
+
+include_directories(
+        inc
+        inc/gui_components
+        inc/sim
+        inc/containers
+)
 
 enable_testing()
 
@@ -80,6 +92,10 @@ set(SOURCE_FILES
         src/test.cpp
         src/sim/ThreadData.tests.cpp
         src/containers/BZSyncMapWrapper.tests.cpp
-        src/containers/BZSyncSetWrapper.tests.cpp inc/containers/CQueue.h src/containers/BZSyncQueue.tests.cpp)
+        src/containers/BZSyncSetWrapper.tests.cpp
+        inc/containers/CQueue.h
+        src/containers/BZSyncQueue.tests.cpp
+        src/EthereumApi.cpp
+        )
 add_executable(bluzelle_test ${SOURCE_FILES})
 target_link_libraries(bluzelle_test ${Boost_LIBRARIES})
