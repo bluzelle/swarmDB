@@ -1,6 +1,5 @@
-import  {getNodes} from 'services/NodeService'
+import Node from './Node'
 
-@observer
 export default class NodeGraph extends Component {
     constructor() {
         super();
@@ -11,31 +10,19 @@ export default class NodeGraph extends Component {
         this.setState({selectedNodeAddress: node.address})
     }
 
-    getLayout() {
-        const nodes = getNodes();
-        return nodes.map((node, idx) => {
-            const angle = ((Math.PI * 2 / nodes.length) * idx);
-            return {
-                xAngle: Math.cos(angle),
-                yAngle: Math.sin(angle),
-                ...node
-            }
-        });
-    }
-
     findNodeByAddress(address) {
-        return getNodes().find(node => node.address === address);
+        return this.props.nodes.find(node => node.address === address);
     }
 
     render() {
         const {selectedNodeAddress} = this.state;
-        const nodes = getNodes();
+        const {nodes} = this.props;
         const selectedNode = selectedNodeAddress ? this.findNodeByAddress(selectedNodeAddress) : undefined;
 
         return (
             <div style={{height: '100%', position: 'relative'}}>
                 <svg style={{height: '100%', width: '100%'}} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                    {this.getLayout().map(node => <Node selected={selectedNode && node.address === selectedNode.address} onMouseOver={this.selectNode.bind(this, node)} key={node.address} {...node}/>)}
+                    {nodes.map(node => <Node selected={selectedNode && node.address === selectedNode.address} onMouseOver={this.selectNode.bind(this, node)} key={node.address} {...node}/>)}
                 </svg>
                 <div style={styles.nodeCount}>
                     {nodes.length} Nodes
@@ -81,12 +68,3 @@ const styles = {
     }
 };
 
-const Node = ({address, messages, xAngle, yAngle, onMouseOver, selected}) => {
-    const cx = 90 * xAngle + 100;
-    const cy = 90 * yAngle + 100;
-
-    return [
-        selected && <circle fill='white' stroke="red" strokeWidth="1" key={`circle-border=${address}`} cx={cx} cy={cy} r="4"/>,
-        <circle onMouseOver={onMouseOver} key={`circle-${address}`} cx={cx} cy={cy} r="3"/>
-    ];
-};

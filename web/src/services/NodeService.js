@@ -1,6 +1,6 @@
 const nodes = observable([]);
 
-export const getNodes = () => nodes;
+export const getNodes = () => nodes.toJS();
 
 // Fake stuff down here
 autorun(() => {

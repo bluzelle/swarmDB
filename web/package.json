@@ -14,7 +14,7 @@
     "babel-preset-stage-3": "^6.24.1",
     "bootstrap": "^3.3.7",
     "chai": "^4.1.2",
-    "chai-enzyme": "^0.8.0",
+    "chai-enzyme": "beta",
     "create-react-class": "^15.6.2",
     "css-loader": "^0.28.7",
     "enzyme": "^3.1.0",
