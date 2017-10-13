@@ -95,7 +95,8 @@ BOOST_AUTO_TEST_CASE(cset_find)
         }
 }
 
-BOOST_AUTO_TEST_CASE(cset_remove) {
+BOOST_AUTO_TEST_CASE(cset_remove)
+{
     std::vector<std::string> words = ReadWords(WORDS_FILENAME, MAX_WORDS);
     BOOST_CHECK(words.size() == MAX_WORDS);
 
@@ -171,79 +172,36 @@ BOOST_AUTO_TEST_CASE(cset_remove)
 }
 
 BOOST_AUTO_TEST_CASE(test_wait_for_all_nodes_to_start) {
-    Nodes nodes;
-    Node node0;
-    Node node1;
-    Node node2;
+    const int kTEST_NODE_COUNT = 3;
+    Nodes *nodes;
+    nodes = create_test_nodes(kTEST_NODE_COUNT);
 
-    // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive,
-    // but the next block *assumes* the tasks haven't started yet...
-    for (auto node : nodes)
-        {
-        BOOST_CHECK(node->state() != Task::alive);
-        }
 
-    nodes.emplace_back(&node0);
-    nodes.emplace_back(&node1);
-    nodes.emplace_back(&node2);
 
-    wait_for_all_nodes_to_start(nodes);
+    wait_for_all_nodes_to_start(*nodes);
 
     // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive.
-    for (auto node : nodes)
+    for (auto node : *nodes)
         {
         BOOST_CHECK(node->state() == Task::alive);
         }
-}
 
-BOOST_AUTO_TEST_CASE(test_reaper) {
-    auto incr_alive = [](auto p, auto node)
+    for(auto node : *nodes)
         {
-        return p + ((Task::alive == node->state()) ? 1 : 0);
-        };
-
-    auto alive_count = [incr_alive](auto nodes)
-        {
-        return std::accumulate
-                (
-                        nodes.begin(),
-                        nodes.end(),
-                        0,
-                        incr_alive
-                );
-        };
-
-
-    const int TEST_NODE_COUNT = 25;
-    Nodes nodes;
-
-    for (int i = 0; i < TEST_NODE_COUNT; ++i)
-        {
-        nodes.emplace_back(new Node());
+        node->kill();
         }
 
-    BOOST_CHECK(nodes.size());
-
-    wait_for_all_nodes_to_start(nodes);
-
-    BOOST_CHECK( TEST_NODE_COUNT == alive_count(nodes));
-
-
-
-
-    for(auto n : nodes)
+    for(auto node : *nodes)
         {
-        n->kill();
-        n->join();
+        node->join();
         }
 
-    int count = 0;
-    for(auto n : nodes)
+    for(auto node : *nodes)
         {
-        std::cout << count++ << " ";
-        delete n;
+        delete node;
         }
-    nodes.clear();
+
+    delete nodes;
 }
 
 
@@ -258,13 +216,14 @@ unsigned long hash(const char *str)
     return hash;
 }
 
-void csetInsertThreadFunction(std::vector<std::string>& words, CSet<std::string>* sut)
-{
+
+
+void csetInsertThreadFunction(std::vector<std::string> &words, CSet<std::string> *sut) {
     std::time_t now = std::time(0);
     boost::random::mt19937 gen{static_cast<std::uint32_t>(now)};
     unsigned long max = words.size();
-    boost::random::uniform_int_distribution<unsigned long> dist{0, max-1};
-    while(sut->size() < words.size())
+    boost::random::uniform_int_distribution<unsigned long> dist{0, max - 1};
+    while (sut->size() < words.size())
         {
         std::string str = words[dist(gen)];
         sut->cInsert(str);

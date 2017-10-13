@@ -98,6 +98,7 @@ int main(/*int argc,char *argv[]*/) {
                 }
             }
 
+
         // clean up
         print_message("The app is ending\n");
         kill_and_join_all_nodes(s_nodes);

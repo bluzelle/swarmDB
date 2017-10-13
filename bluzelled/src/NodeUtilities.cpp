@@ -59,3 +59,9 @@ void reaper(Nodes *nodes)
     join_dead_tasks(nodes);
     remove_dead_nodes(nodes);
 }
+
+void reaper(Nodes *nodes)
+{
+    join_dead_tasks(nodes);
+    remove_dead_nodes(nodes);
+}

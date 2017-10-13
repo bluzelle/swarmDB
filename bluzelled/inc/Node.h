@@ -21,7 +21,6 @@ class Node {
     boost::shared_ptr<Task> task_;
     boost::shared_ptr<boost::thread> thread_;
     std::weak_ptr<Listener> listener_;
-
 public:
     Node(std::shared_ptr<Listener> l, uint32_t lifespan = 20, double death_probablity = 0.05)
         : listener_(l)
@@ -135,6 +134,7 @@ public:
         auto f = boost::format("%d.%d.%d.%d") % ip[0] % ip[1] % ip[2] % ip[3];
         return boost::str(f);
     }
+
 
 private:
 

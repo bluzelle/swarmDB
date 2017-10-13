@@ -1,5 +1,4 @@
 #define BOOST_TEST_DYN_LINK
-#define BOOST_USE_VALGRIND
 
 #include "Node.h"
 #include "NodeUtilities.h"
