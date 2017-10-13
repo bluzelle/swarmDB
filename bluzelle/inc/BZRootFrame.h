@@ -100,7 +100,7 @@ private:
     BZVisualizationPanel *visualizationPanel;
 
     wxTimer m_timerIdle;
-
+    wxString ethereumAddress;
 
     static uint64_t s_loopCount;
 

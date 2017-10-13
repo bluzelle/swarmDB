@@ -58,12 +58,14 @@ set(SOURCE_FILES
         src/gui_components/BZStaticText.cpp
         src/gui_components/BZNodeListView.cpp
         src/gui_components/BZApplicationLogListView.cpp
-        )
+        src/gui_components/BZEthereumAddressDialog.cpp inc/gui_components/BZEthereumAddressDialog.h)
 
 add_executable(bluzelle ${SOURCE_FILES} ${INCLUDE_FILES})
 target_link_libraries(bluzelle ${wxWidgets_LIBRARIES})
 target_link_libraries(bluzelle ${Boost_LIBRARIES})
-
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    target_link_libraries(bluzelle rt)
+endif()
 
 
 ###############################################################################

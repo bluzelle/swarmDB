@@ -14,6 +14,9 @@
 
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
+#include <gui_components/BZEthereumAddressDialog.h>
+#include <gui_components/BZEthereumAddressDialog.h>
+
 #endif
 
 #define MAIN_WINDOW_TIMER_PERIOD_MILLISECONDS 1000
@@ -115,13 +118,11 @@ BZRootFrame::BZRootFrame()
 //    );
 //
 
-
-
-
-
-
-
-
+    // Ask user to provide ETH address to use on Ropsten network.
+    auto *addressDialog = new BZEthereumAddressDialog(wxT("Please provide ETH address to use on Ropsten network"));
+    addressDialog->ShowModal();
+    ethereumAddress = addressDialog->GetAddress();
+    addressDialog->Destroy();
 
     nodeListTitle = new BZStaticText(
             this,
