@@ -5,6 +5,9 @@ const glob = require('glob');
 
 const testFiles = glob.sync("**/*.spec.js").filter(filename => /node_modules/.test(filename) === false);
 
+const PROD = process.env.NODE_ENV === 'production';
+PROD && console.log('----------- Compiling for production ----------');
+
 module.exports = {
     entry: {
         index: './index.js',
@@ -14,7 +17,7 @@ module.exports = {
         path: path.resolve('../dist/generated/js'),
         filename: '[name].js'
     },
-    devtool: 'inline-source-map',
+    devtool: PROD ? '' : 'inline-source-map',
     module: {
         rules: [
             {
@@ -59,7 +62,8 @@ module.exports = {
             components: path.resolve('components'),
             services: path.resolve('services'),
             stores: path.resolve('stores'),
-            src: path.resolve('')
+            src: path.resolve(''),
+            constants: path.resolve('constants')
         }
     },
     plugins: [
@@ -83,7 +87,9 @@ module.exports = {
             autorun: ['mobx', 'autorun'],
             computed: ['mobx', 'computed'],
 
-            Session: [path.resolve('stores/SessionStore'), 'default']
+            Session: [path.resolve('stores/SessionStore'), 'default'],
+
+            sinon: 'sinon'
 
 
         }),

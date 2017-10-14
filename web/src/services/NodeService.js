@@ -1,5 +1,12 @@
+import remove from 'lodash/remove'
+
 const nodes = observable([]);
+
 export const getNodes = () => nodes;
+
+export const addNode = node => nodes.push(node);
+export const removeNodeByAddress = address => remove(nodes, n => n.address === address);
+export const clearNodes = () => remove(nodes);
 
 autorun(() => {
     Session.get('ready') &&
@@ -22,6 +29,6 @@ autorun(() => {
         {address: '0x0000016', messages: 20, nodeState: 'alive'},
         {address: '0x0000017', messages: 20, nodeState: 'dead'},
         {address: '0x0000018', messages: 20, nodeState: 'new'}
-    ].forEach((node, idx) => setTimeout(() => nodes.push(node), idx * 100));
+    ].forEach((node, idx) => setTimeout(() => addNode(node), idx * 100));
 });
 

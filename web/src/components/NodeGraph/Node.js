@@ -1,3 +1,5 @@
+import nodeColors from 'constants/nodeStatusColors'
+
 const Node = observer(({node, onMouseOver, selected}) => {
     const {address, nodeState, xAngle, yAngle} = node;
     const cx = 90 * xAngle + 100;
@@ -10,8 +12,3 @@ const Node = observer(({node, onMouseOver, selected}) => {
 
 export default Node
 
-const nodeColors = {
-    'new': 'red',
-    'alive': 'green',
-    'dead': 'blue'
-};

@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "prod-compile": "cd src; NODE_ENV=production webpack -p",
     "dev-compile": "cd src; webpack --watch --env.beep",
     "test": "mocha -r jsdom-global/register dist/runTests.js"
   },
@@ -40,6 +41,7 @@
     "react-test-renderer": "^16.0.0",
     "rewire-webpack": "https://github.com/dribba/rewire-webpack.git",
     "sinon": "^4.0.1",
+    "sinon-chai": "^2.14.0",
     "style-loader": "^0.19.0",
     "url-loader": "^0.6.2",
     "webpack": "^3.6.0",

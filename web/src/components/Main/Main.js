@@ -1,5 +1,6 @@
 import Tabs from './MainTabs'
 import NodeGraph from 'components/NodeGraph'
+import NodeListView from 'components/NodeListView'
 import LogComponent from 'components/LogComponent'
 import logo from './logo-color.png'
 
@@ -21,6 +22,7 @@ export default class Main extends Component {
                 <Flex style={{overflow: 'auto'}}>
                     <Switch>
                         <Route path="/node-graph" component={NodeGraph}/>
+                        <Route path="/node-list" component={NodeListView} />
                         <Route component={LogComponent}/>
                     </Switch>
                 </Flex>
