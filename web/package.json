@@ -2,7 +2,8 @@
   "scripts": {
     "prod-compile": "cd src; NODE_ENV=production webpack -p",
     "dev-compile": "cd src; webpack --watch --env.beep",
-    "test": "mocha -r jsdom-global/register dist/runTests.js"
+    "test": "mocha -r jsdom-global/register dist/runTests.js",
+    "start": "ws --spa index.html -d dist"
   },
   "dependencies": {
     "babel-core": "^6.26.0",
