@@ -7,31 +7,46 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/chrono.hpp>
-
+#include <iostream>
 
 using namespace boost::chrono;
 
 #define RAND() ((double)rand() / RAND_MAX )
 
-
-class Task {
+class Task
+{
 public:
-    enum  State { initializing, alive, dying, dead};
+    enum State {
+        initializing, alive, dying, dead
+    };
+
+    std::string state_string(State s)
+    {
+        return (const char*[]){"initializing", "alive", "dying", "dead"}[s];
+    }
 
 private:
-    boost::thread::id           _id;
-    thread_clock::time_point    _birth;
-    State                       _state;
-    CSet<boost::thread::id>*    _friends;
+    double                      death_probability_;
+    thread_clock::duration      lifespan_;
+    thread_clock::time_point    birth_;
+    State                       state_;
+    CSet<boost::thread::id>     *peers_;
+    system_clock::time_point    state_changed_;
 
 public:
+    Task(uint32_t lifespan = 20, double death_prob = 0.05)
+    {
+        lifespan_ = boost::chrono::seconds(lifespan);
+        death_probability_ = death_prob;
+    }
+
     ~Task()
     {
-        if(_friends != nullptr)
+        if (peers_ != nullptr)
             {
-            _friends->clear();
-            delete _friends;
-            _friends = nullptr;
+            peers_->clear();
+            delete peers_;
+            peers_ = nullptr;
             }
     }
 
@@ -47,9 +62,9 @@ public:
         run();
     }
 
-    void ping(const boost::thread::id& src_id)
+    void ping(const boost::thread::id &src_id)
     {
-        (void)src_id;
+        (void) src_id;
 
 //        std::stringstream s;
 //        s << "[" << get_id() << "]" << src_id << " pinged me!\n";
@@ -80,62 +95,63 @@ public:
 //        print_message(s.str().c_str());
     }
 
-    boost::thread::id get_id()
-    {
-        return _id;
-    }
-
     State state()
     {
-        return _state;
+        return state_;
     }
 
     void kill()
     {
-        _state=dying;
+        state_ = dying;
     }
 
-    unsigned long friendCount() { return _friends != nullptr ? _friends->size() : 0 ;}
+    system_clock::time_point get_last_change()
+    {
+        return state_changed_;
+    }
+
+    unsigned long peer_count()
+    { return peers_ != nullptr ? peers_->size() : 0; }
 
 private:
     void setup()
     {
-        _birth = thread_clock::now();
+        birth_ = thread_clock::now();
+        state_changed_ = system_clock::now();
         srand(time(0));
-
-        _state = initializing;
-        //print_message("startup begin\n");
-        //boost::this_thread::yield();
-        _id = boost::this_thread::get_id();
-        _friends = new CSet<boost::thread::id>();
-        //print_message("startup end\n");
+        state_ = initializing;
+        peers_ = new CSet<boost::thread::id>();
     }
 
     void life()
     {
-        _state = alive;
-        //print_message("life\n");
-        while( state() == alive )
+        state_changed_ = system_clock::now();
+        state_ = alive;
+        while (state() == alive)
             {
-            thread_clock::duration age = thread_clock::now().time_since_epoch() - _birth.time_since_epoch();
-            if(age > boost::chrono::seconds(20))
-                {
-                if(RAND() < 0.25)
-                    {
-                    _state = Task::dying;
-                    }
-                }
-            boost::this_thread::yield();
+            state_ = (check_for_natural_death() ? Task::dying : state_);
+
+
+
             }
     }
 
     void death()
     {
-//        std::stringstream ss;
-//        ss << "I'm dying with " << friendCount() << " friends!\n";
-//        print_message(ss.str());
-        _state = dead;
+        state_ = dead;
+        state_changed_ = system_clock::now();
     }
+
+
+    ///////////////////////////////////////
+    bool check_for_natural_death()
+    {
+        thread_clock::duration age = thread_clock::now().time_since_epoch() - birth_.time_since_epoch();
+        bool lifespan_end = (age > lifespan_);
+        bool death_p = (RAND() < death_probability_);
+        return lifespan_end && death_p;
+    }
+
 
     //
     void interact()

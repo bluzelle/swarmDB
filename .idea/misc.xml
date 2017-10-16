@@ -10,4 +10,9 @@
       <file path="$PROJECT_DIR$/cmake-build-debug/CMakeFiles" />
     </excludeRoots>
   </component>
+<<<<<<< Updated upstream
+  <component name="IdProvider" IDEtalkID="FAA30F36323B9B3E0B1DAA84A17333A3" />
+=======
+  <component name="IdProvider" IDEtalkID="3EF196C22941CE54C6102C988DBC7BE4" />
+>>>>>>> Stashed changes
 </project>

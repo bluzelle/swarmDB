@@ -1,6 +1,6 @@
 #ifndef KEPLER_CSET_H
 #define KEPLER_CSET_H
-
+#define BOOST_USE_VALGRIND
 #include <set>
 #include <boost/thread.hpp>
 

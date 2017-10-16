@@ -45,7 +45,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 cmake-build-debug
-
+cmake-build-release
 build
 
 # CLion Ignore
@@ -62,8 +62,13 @@ build
 .idea/**/sqlDataSources.xml
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
+/bluzelle/bluzelle.cbp
 
 # Scott
 workspace.xml
-/web/dist/generated
+/client/web/dist/generated
 node_modules
+.nyc_output
+coverage
+.DS_Store
+client/desktop/dist/

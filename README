@@ -7,6 +7,8 @@ Project Layout
     |- bluzellePOC <- original proof of concept
 
 
+
+
 BUILD INSTRUCTIONS
 From the command line:
 - clone the project
@@ -25,6 +27,7 @@ From the command line:
 Linux Specifics:
 http://codelite.org/LiteEditor/WxWidgets31Binaries#toc2
 http://www.boost.org/doc/libs/1_61_0/more/getting_started/unix-variants.html
+
 
 
 

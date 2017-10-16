@@ -3,8 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../bluzelled/bluzelled.iml" filepath="$PROJECT_DIR$/../bluzelled/bluzelled.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../client/client.iml" filepath="$PROJECT_DIR$/../client/client.iml" />
       <module fileurl="file://$PROJECT_DIR$/../dev-ops/dev-ops.iml" filepath="$PROJECT_DIR$/../dev-ops/dev-ops.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../web/web.iml" filepath="$PROJECT_DIR$/../web/web.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../qa/qa.iml" filepath="$PROJECT_DIR$/../qa/qa.iml" />
     </modules>
   </component>
 </project>

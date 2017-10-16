@@ -1,0 +1,12 @@
+
+input {
+    background-color: #ccc !important;
+}
+
+body {
+    color: #bbb;
+}
+
+.btn:hover {
+    border-color: white;
+}

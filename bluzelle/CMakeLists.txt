@@ -15,9 +15,19 @@ set(wxWidgets_CONFIGURATION mswu)
 find_package(wxWidgets COMPONENTS core base REQUIRED)
 include(${wxWidgets_USE_FILE})
 
+find_package(Boost 1.65.0 COMPONENTS system filesystem locale REQUIRED)
+
+#The Boost C++ Libraries were successfully built!
+
+#The following directory should be added to compiler include paths:
+
+#/Volumes/Development/Clients/Bluzelle/gitRepos/kepler/boost
+
+#The following directory should be added to linker library paths:
+
+#/Volumes/Development/Clients/Bluzelle/gitRepos/kepler/boost/stage/lib
 
 
-find_package(Boost 1.62.0 COMPONENTS system filesystem locale REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
@@ -80,6 +90,8 @@ set(SOURCE_FILES
         src/test.cpp
         src/sim/ThreadData.tests.cpp
         src/containers/BZSyncMapWrapper.tests.cpp
-        src/containers/BZSyncSetWrapper.tests.cpp inc/containers/CQueue.h src/containers/BZSyncQueue.tests.cpp)
+        src/containers/BZSyncSetWrapper.tests.cpp
+        inc/containers/CQueue.h
+        src/containers/BZSyncQueue.tests.cpp)
 add_executable(bluzelle_test ${SOURCE_FILES})
 target_link_libraries(bluzelle_test ${Boost_LIBRARIES})
