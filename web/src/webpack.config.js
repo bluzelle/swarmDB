@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const BeepPlugin = require('webpack-beep-plugin');
 const glob = require('glob');
-
+const WebpackShellPlugin = require('webpack-shell-plugin');
 const testFiles = glob.sync("**/*.spec.js").filter(filename => /node_modules/.test(filename) === false);
 
 const PROD = process.env.NODE_ENV === 'production';
@@ -67,6 +67,9 @@ module.exports = {
         }
     },
     plugins: [
+        new WebpackShellPlugin({
+            onBuildEnd:['./copy-to-daemon.sh']
+        }),
         new webpack.ProvidePlugin({
             React: 'react',
 
