@@ -12,6 +12,4 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-#add_subdirectory(bluzelle)  # The GUI application
 add_subdirectory(bluzelled) # The daemon/console application
-#add_subdirectory(bluzellePoc) # the poc

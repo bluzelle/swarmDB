@@ -7,9 +7,11 @@
 #include "services/GetMaxNodes.h"
 #include "services/GetMinNodes.h"
 #include "services/SetMaxNodes.h"
+#include "web_sockets/Listener.h"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/foreach.hpp>
+#include <boost/asio.hpp>
 #include <random>
 
 namespace pt = boost::property_tree;
@@ -34,6 +36,9 @@ public:
         return json_string;
     }
 };
+
+// Listener mock for Node
+
 
 // --run_test=websocket_services_tests
 BOOST_FIXTURE_TEST_SUITE(websocket_services_tests, F)
@@ -139,32 +144,69 @@ BOOST_FIXTURE_TEST_SUITE(websocket_services_tests, F)
     //--run_test=websocket_services_tests/test_count_nodes_service
     BOOST_AUTO_TEST_CASE(test_count_nodes_service)
     {
-        Nodes nodes;
-        CountNodes sut(&nodes);
-        std::string cmd(R"({"cmd":"countNodes","seq":345})");
-        std::string accepted(R"({"cmd": "nodeCount","count": 0,"seq":345})");
+        std::shared_ptr<NodeManager> node_manager = std::make_shared<NodeManager>();
+
+        CountNodes sut(node_manager);
+
+        long seq = random() % 1000000;
+        std::stringstream ss;
+        ss << R"({"cmd":"countNodes","seq":)"
+           << seq
+           << "}";
+        std::string cmd(ss.str());
+        ss.str("");
+        ss << R"({"cmd":"nodeCount","count":0,"seq":)"
+           << seq
+           << "}";
+        std::string accepted(ss.str());
         std::string actual(sut(cmd));
         BOOST_CHECK(string_to_ptree(accepted) == string_to_ptree(actual));
+
+        boost::asio::io_service ios;
+        boost::asio::ip::tcp::endpoint endpoint;
+        Listener listener(ios, endpoint, node_manager);
+        std::shared_ptr<Listener> shared_listener;
+
+
+        node_manager->nodes().emplace_back(new Node(shared_listener));
+        node_manager->nodes().emplace_back(new Node(shared_listener));
+        node_manager->nodes().emplace_back(new Node(shared_listener));
+        node_manager->nodes().emplace_back(new Node(shared_listener));
+
+        ss << R"({"cmd":"countNodes","seq":)"
+           << seq
+           << "}";
+        cmd = ss.str();
+        ss.str("");
+
+
+        //std::string accepted(R"({"cmd": "nodeCount","count": 4,"seq":345})");
+
+
+
+
+
+
     }
 
     //--run_test=websocket_services_tests/test_get_max_nodes_service
-//    BOOST_AUTO_TEST_CASE(test_get_max_nodes_service)
-//    {
-//        GetMaxNodes sut;
-//        std::string actual = sut("{\"cmd\":\"getMaxNodes\",\"seq\":222}");
-//        std::cout << actual << "\n";
-//        BOOST_CHECK_EQUAL
-//        (
-//                "{\"cmd\":\“updateMaxNodes\", \“data\": 42, \"seq\": 222}",
-//                actual
-//        );
-//    }
+    BOOST_AUTO_TEST_CASE(test_get_max_nodes_service)
+    {
+        std::shared_ptr<NodeManager> node_manager = std::make_shared<NodeManager>();
+        GetMaxNodes sut(node_manager);
+        std::string actual;
+        actual = sut(R"({"cmd":"getMaxNodes","seq":222})");
+        BOOST_CHECK_EQUAL
+        (
+                R"({"getMaxNodes": 25, "seq": 222})",
+                actual
+        );
+    }
 
 BOOST_AUTO_TEST_SUITE_END()
 
 
 // utiity
-
 pt::ptree string_to_ptree(const std::string &json_string) {
     pt::ptree tree;
     std::stringstream ss;

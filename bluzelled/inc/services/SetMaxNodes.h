@@ -2,7 +2,7 @@
 #define KEPLER_SETMAXNODES_H
 
 #include "services/Service.h"
-#include "Node.h"
+#include "NodeManager.h"
 
 #include <sstream>
 #include <boost/property_tree/ptree.hpp>
@@ -10,15 +10,22 @@
 
 namespace pt = boost::property_tree;
 
-void set_max_nodes(unsigned long max);
-
 class SetMaxNodes : public Service {
+    std::weak_ptr<NodeManager> wk_node_manager_;
 
     pt::ptree nodes_to_tree(long seq, long new_max_nodes)
     {
         pt::ptree out_tree;
-        set_max_nodes(new_max_nodes);
-        out_tree.put<long>("newMaxNodes",new_max_nodes);
+        std::shared_ptr<NodeManager> node_manager = wk_node_manager_.lock();
+        try
+            {
+            node_manager->set_max_nodes(new_max_nodes);
+            out_tree.put<long>("newMaxNodes",new_max_nodes);
+            }
+        catch(std::runtime_error &e)
+            {
+            std::cerr << "SetMaxNodes runtime error:" << e.what() << std::endl;
+            }
         out_tree.put<long>("seq", seq);
         return out_tree;
     }
@@ -32,6 +39,9 @@ class SetMaxNodes : public Service {
     }
 
 public:
+
+    SetMaxNodes(const std::shared_ptr<NodeManager>& node_manager) : wk_node_manager_(node_manager)
+    {}
 
     std::string operator()(const std::string& request) override
     {

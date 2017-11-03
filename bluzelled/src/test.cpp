@@ -51,7 +51,6 @@ BOOST_AUTO_TEST_CASE(test_number_of_nodes_to_create)
     BOOST_CHECK_EQUAL(actual, 0);
 }
 
-
 BOOST_AUTO_TEST_CASE(cset_concurrent_insert)
 {
     std::vector<std::string> words = ReadWords(WORDS_FILENAME, MAX_WORDS);
@@ -113,41 +112,15 @@ BOOST_AUTO_TEST_CASE(cset_remove)
     BOOST_CHECK(0 == sut.size());
 }
 
-//BOOST_AUTO_TEST_CASE(test_all_nodes_alive)
-//{
-//    Nodes nodes;
-//    Node node0;
-//    Node node1;
-//    Node node2;
-//
-//    BOOST_CHECK(!all_nodes_alive(nodes));
-//
-//    nodes.emplace_back(&node0);
-//    nodes.emplace_back(&node1);
-//    nodes.emplace_back(&node2);
-//
-//    // NOTE: the assumption here is that 100ms is long enough for 3 nodes to
-//    // get initialized and running in the alive state.
-//    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-//
-//    BOOST_CHECK(all_nodes_alive(nodes));
-//    node0.kill();
-//    BOOST_CHECK(!all_nodes_alive(nodes));
-//    node0.join();
-//    BOOST_CHECK(!all_nodes_alive(nodes));
-//
-//    node1.kill();
-//    node1.join();
-//
-//    node2.kill();
-//    node2.join();
-//}
-
-
-BOOST_AUTO_TEST_CASE(test_wait_for_all_nodes_to_start) {
+// --run_test=test_wait_for_all_nodes_to_start
+BOOST_AUTO_TEST_CASE(test_wait_for_all_nodes_to_start)
+{
     const int kTEST_NODE_COUNT = 3;
     Nodes *nodes;
     nodes = create_test_nodes(kTEST_NODE_COUNT);
+
+    BOOST_CHECK_EQUAL(nodes->size(), kTEST_NODE_COUNT);
+
     wait_for_all_nodes_to_start(*nodes);
 
     // NOTE: remember that wait_for_all_nodes_to_start calls all_nodes_alive.

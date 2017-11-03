@@ -3,7 +3,6 @@
 
 #include "services/Services.h"
 
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/beast/core.hpp>
@@ -23,7 +22,8 @@ using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
 namespace pt = boost::property_tree;
 
-enum class SessionState {
+enum class SessionState
+{
     Unknown,
     Starting,
     Started,
@@ -34,7 +34,10 @@ enum class SessionState {
 void
 fail(boost::system::error_code ec, char const *what);
 
-class Session : public std::enable_shared_from_this<Session> {
+class NodeManager;
+
+class Session : public std::enable_shared_from_this<Session>
+{
     websocket::stream<tcp::socket> ws_;
     boost::asio::io_service::strand strand_;
     boost::beast::multi_buffer buffer_;
@@ -47,7 +50,7 @@ class Session : public std::enable_shared_from_this<Session> {
 
 public:
     explicit
-    Session(tcp::socket socket); // Take ownership of the socket
+    Session(tcp::socket socket, std::shared_ptr<NodeManager> &sh_node_manager); // Take ownership of the socket
 
     void
     run();
@@ -91,11 +94,11 @@ public:
 
     void
     send_message(
-            const std::string &from, const std::string &to, const std::string& message);
+            const std::string &from, const std::string &to, const std::string &message);
 
     void
     send_log(
-            const std::string &name, int timer, int entry, const std::string& log);
+            const std::string &name, int timer, int entry, const std::string &log);
 
     std::string
     timestamp();

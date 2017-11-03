@@ -1,4 +1,6 @@
-#include <Node.h>
+#include "Node.h"
+
+#include <string>
 
 // TODO: Consider enapsulating these functions into a Node Manager.
 bool all_nodes_alive(const Nodes& nodes);

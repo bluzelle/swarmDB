@@ -1,7 +1,4 @@
 #include "web_sockets/Session.h"
-
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include "services/Ping.h"
 #include "services/GetAllNodes.h"
 #include "services/CountNodes.h"
@@ -10,34 +7,40 @@
 #include "services/GetMinNodes.h"
 #include "services/UpdateNodes.h"
 #include "services/RemoveNodes.h"
+#include "NodeManager.h"
 
-Nodes *get_all_nodes();
 
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 // Report a failure
 void
-fail(boost::system::error_code ec, char const *what) {
+fail(boost::system::error_code ec, char const *what)
+{
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
-Session::Session(tcp::socket socket)
-        : ws_(std::move(socket)), strand_(ws_.get_io_service()) {
-    auto nodes = get_all_nodes();
+Session::Session
+        (
+                tcp::socket socket,
+                std::shared_ptr<NodeManager> &sh_node_manager
+        )
+        : ws_(std::move(socket)), strand_(ws_.get_io_service())
+{
 
     services_.add_service("ping", new Ping());
-    services_.add_service("getAllNodes", new GetAllNodes(nodes));
-    services_.add_service("countNodes", new CountNodes(nodes));
-    services_.add_service("setMaxNodes", new SetMaxNodes());
-    services_.add_service("getMaxNodes", new GetMaxNodes());
-    services_.add_service("getMinNodes", new GetMinNodes());
-    services_.add_service("updateNodes", new GetAllNodes(nodes));
+    services_.add_service("getAllNodes", new GetAllNodes(sh_node_manager));
+    services_.add_service("countNodes", new CountNodes(sh_node_manager));
+    services_.add_service("setMaxNodes", new SetMaxNodes(sh_node_manager));
+    services_.add_service("getMaxNodes", new GetMaxNodes(sh_node_manager));
+    services_.add_service("getMinNodes", new GetMinNodes(sh_node_manager));
+    services_.add_service("updateNodes", new GetAllNodes(sh_node_manager));
     ///services_.add_service("removeNodes", new RemoveNodes());
-
 }
 
 // Start the asynchronous operation
 void
-Session::run() {
+Session::run()
+{
     // Accept the websocket handshake
     ws_.async_accept(
             strand_.wrap(std::bind(
@@ -47,7 +50,8 @@ Session::run() {
 }
 
 void
-Session::on_accept(boost::system::error_code ec) {
+Session::on_accept(boost::system::error_code ec)
+{
     if (ec)
         return fail(ec, "accept");
 
@@ -56,7 +60,8 @@ Session::on_accept(boost::system::error_code ec) {
 }
 
 void
-Session::do_read() {
+Session::do_read()
+{
     // Read a message into our buffer
     ws_.async_read(
             buffer_,
@@ -70,7 +75,8 @@ Session::do_read() {
 void
 Session::on_read(
         boost::system::error_code ec,
-        std::size_t bytes_transferred) {
+        std::size_t bytes_transferred)
+{
     boost::ignore_unused(bytes_transferred);
 
     // This indicates that the session was closed
@@ -113,7 +119,8 @@ Session::on_read(
 void
 Session::on_write(
         boost::system::error_code ec,
-        std::size_t bytes_transferred) {
+        std::size_t bytes_transferred)
+{
     boost::ignore_unused(bytes_transferred);
 
     if (ec)
@@ -143,7 +150,8 @@ Session::on_write(
 
 SessionState
 Session::set_state(
-        const pt::ptree &request) {
+        const pt::ptree &request)
+{
     if (request.get<std::string>("cmd") == "getMaxNodes")
         return SessionState::Starting;
 
@@ -154,7 +162,8 @@ Session::set_state(
 }
 
 void
-Session::write_async(boost::asio::const_buffers_1 b) {
+Session::write_async(boost::asio::const_buffers_1 b)
+{
     ws_.async_write(
             b,
             std::bind(
@@ -167,7 +176,8 @@ Session::write_async(boost::asio::const_buffers_1 b) {
 void
 Session::on_write_async(
         boost::system::error_code ec,
-        std::size_t bytes_transferred) {
+        std::size_t bytes_transferred)
+{
     boost::ignore_unused(bytes_transferred);
 
     if (ec)
@@ -178,7 +188,8 @@ Session::on_write_async(
 
 void
 Session::send_remove_nodes(
-        const std::string &name) {
+        const std::string &name)
+{
 
     // {"cmd":"removeNodes","data":["0x07"]}
     auto f = boost::format("{\"cmd\":\"removeNodes\", \"data\":[\"%s\"]}") % name;
@@ -192,7 +203,8 @@ Session::send_remove_nodes(
 
 void
 Session::send_update_nodes(
-        const std::string &name) {
+        const std::string &name)
+{
 
     // {"cmd":"updateNodes","data":[{"address":"0x0e"}]}
     auto f = boost::format("{\"cmd\":\"updateNodes\",\"data\":[{\"address\":\"%s\"}]}") % name;
@@ -207,9 +219,11 @@ Session::send_update_nodes(
 
 void
 Session::send_message(
-        const std::string &from, const std::string &to, const std::string &message) {
+        const std::string &from, const std::string &to, const std::string &message)
+{
 
-    auto f = boost::format("{\"cmd\":\"messages\",\"data\":[{\"srcAddr\":\"%s\", \"dstAddr\":\"%s\", \"timestamp\":\"%s\", \"body\":%s}]}")
+    auto f = boost::format(
+            "{\"cmd\":\"messages\",\"data\":[{\"srcAddr\":\"%s\", \"dstAddr\":\"%s\", \"timestamp\":\"%s\", \"body\":%s}]}")
              % from % to % timestamp() % message;
 
     std::string response = boost::str(f);
@@ -220,9 +234,11 @@ Session::send_message(
 
 void
 Session::send_log(
-        const std::string &name, int timer, int entry, const std::string& log) {
+        const std::string &name, int timer, int entry, const std::string &log)
+{
 
-    auto f = boost::format("{\"cmd\":\"log\",\"data\":[{\"timer_no\":%d, \"entry_no\":%d, \"timestamp\":\"%s\", \"message\":\"%s\"}]}")
+    auto f = boost::format(
+            "{\"cmd\":\"log\",\"data\":[{\"timer_no\":%d, \"entry_no\":%d, \"timestamp\":\"%s\", \"message\":\"%s\"}]}")
              % timer % entry % timestamp() % log;
 
     std::string response = boost::str(f);
@@ -232,7 +248,8 @@ Session::send_log(
 }
 
 std::string
-Session::timestamp() {
+Session::timestamp()
+{
     static std::locale loc(
             std::wcout.getloc(),
             new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%sZ"));

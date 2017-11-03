@@ -21,19 +21,27 @@ using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 void
 fail(boost::system::error_code ec, char const *what);
 
+class NodeManager;
+
 // Accepts incoming connections and launches the sessions
-class Listener : public std::enable_shared_from_this<Listener> {
+class Listener : public std::enable_shared_from_this<Listener>
+{
     tcp::acceptor acceptor_;
     tcp::socket socket_;
+    std::weak_ptr<NodeManager> wk_node_manager_;
 
 public:
     std::vector<std::weak_ptr<Session>> sessions_;
 
 public:
-    Listener(
+    Listener
+            (
             boost::asio::io_service &ios,
-            tcp::endpoint endpoint)
-            : acceptor_(ios), socket_(ios) {
+            tcp::endpoint endpoint,
+            const std::shared_ptr<NodeManager> &node_manager
+            )
+            : acceptor_(ios), socket_(ios), wk_node_manager_(node_manager)
+    {
         boost::system::error_code ec;
 
         // Open the acceptor
@@ -64,14 +72,16 @@ public:
 
     // Start accepting incoming connections
     void
-    run() {
+    run()
+    {
         if (!acceptor_.is_open())
             return;
         do_accept();
     }
 
     void
-    do_accept() {
+    do_accept()
+    {
         acceptor_.async_accept(
                 socket_,
                 std::bind(
@@ -81,7 +91,8 @@ public:
     }
 
     void
-    on_accept(boost::system::error_code ec) {
+    on_accept(boost::system::error_code ec)
+    {
         if (ec)
             {
             fail(ec, "accept");
@@ -89,7 +100,8 @@ public:
         else
             {
             // Create the session and run it
-            auto s = std::make_shared<Session>(std::move(socket_));
+            std::shared_ptr<NodeManager> node_manager = wk_node_manager_.lock();
+            auto s = std::make_shared<Session>(std::move(socket_), node_manager);
             s->run();
             sessions_.push_back(s);
             }

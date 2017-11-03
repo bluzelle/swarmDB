@@ -2,7 +2,7 @@
 #define KEPLER_GETMINNODES_H
 
 #include "services/Service.h"
-#include "Node.h"
+#include "NodeManager.h"
 
 #include <sstream>
 #include <boost/property_tree/ptree.hpp>
@@ -10,20 +10,30 @@
 
 namespace pt = boost::property_tree;
 
-void set_max_nodes(unsigned long max);
-
-class GetMinNodes : public Service {
+class GetMinNodes : public Service
+{
+    std::weak_ptr<NodeManager> wk_node_manager;
 
     pt::ptree nodes_to_tree(long seq, unsigned long new_min_nodes)
     {
         pt::ptree out_tree;
-        set_max_nodes(new_min_nodes);
-        out_tree.put<long>("getMinNodes",new_min_nodes);
+        try
+            {
+            std::shared_ptr<NodeManager> node_manager = wk_node_manager.lock();
+            node_manager->set_min_nodes(new_min_nodes);
+            out_tree.put<long>("getMinNodes", new_min_nodes);
+            }
+        catch (std::runtime_error &e)
+            {
+            out_tree.put("error", e.what());
+            std::cerr << e.what();
+            }
+
         out_tree.put<long>("seq", seq);
         return out_tree;
     }
 
-    std::string tree_to_response(const pt::ptree& out_tree)
+    std::string tree_to_response(const pt::ptree &out_tree)
     {
         auto r = boost::format("{\"getMinNodes\": %d, \"seq\": %d}")
                  % out_tree.get<long>("getMinNodes") % out_tree.get<long>("seq");
@@ -33,20 +43,24 @@ class GetMinNodes : public Service {
 
 public:
 
-    std::string operator()(const std::string& request) override
+    GetMinNodes(const std::shared_ptr<NodeManager> &node_manager) : wk_node_manager(node_manager)
+    {}
+
+    std::string operator()(const std::string &request) override
     {
+        // getMinNodes -> setMinNodes
         pt::ptree out_tree;
+        pt::ptree in_tree;
         try
-        {
-            pt::ptree in_tree;
+            {
             in_tree = parse_input(request);
             out_tree = nodes_to_tree(in_tree.get<long>("seq"), 0);
-        }
-        catch(std::exception& e)
-        {
+            }
+        catch (std::exception &e)
+            {
             out_tree.put("error", e.what());
             std::cerr << e.what();
-        }
+            }
         return tree_to_response(out_tree);
     }
 };

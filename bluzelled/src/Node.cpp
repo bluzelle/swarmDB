@@ -1,9 +1,10 @@
 #include "Node.h"
 #include "NodeUtilities.h"
+#include "web_sockets/Listener.h"
 
 void thread_function(Task *t, boost::exception_ptr &error);
 
-Node::Node(std::shared_ptr<Listener> l, uint32_t lifespan, double death_probablity)
+Node::Node(std::shared_ptr<Listener> l, uint32_t lifespan, double death_probability)
         : listener_(l) {
     auto thread_function = [this]
             (
@@ -14,7 +15,7 @@ Node::Node(std::shared_ptr<Listener> l, uint32_t lifespan, double death_probabli
         on_death();
         };
 
-    task_.reset(new Task(lifespan, death_probablity));
+    task_.reset(new Task(lifespan, death_probability));
     thread_.reset(new boost::thread
                           (
                                   thread_function,
@@ -41,7 +42,7 @@ Task::State Node::state() {
     return task_->state();
 }
 
-std::string Node::name() {
+const std::string &Node::name() {
     return name_;
 }
 
