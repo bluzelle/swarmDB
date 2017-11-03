@@ -1,7 +1,9 @@
 #include "BZRootFrame.h"
 #include "bluzelleLogo.xpm.h"
 #include "BZApplicationLogListView.h"
+#include "BZEthereumAddressDialog.h"
 #include "BZTask.h"
+#include "EthereumApi.h"
 
 #include <iostream>
 #include <wx/wxprec.h>
@@ -10,7 +12,9 @@
 #include <array>
 #include <string>
 #include <sstream>
+
 #include <boost/algorithm/string.hpp>
+#include <boost/format.hpp>
 
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
@@ -115,12 +119,34 @@ BZRootFrame::BZRootFrame()
 //    );
 //
 
+    // Ask user to provide ETH address to use on Ropsten network.
+    auto addressDialog = make_unique<BZEthereumAddressDialog>(wxT("Please provide ETH address to use on Ropsten network"));
+    addressDialog->ShowModal();
+    ethereumAddress = addressDialog->GetAddress();
+    addressDialog->Destroy();
 
+    //ethereumAddress = "0x006eae72077449caca91078ef78552c0cd9bce8f";
 
+    auto api = make_unique<EthereumApi>(ethereumAddress);
+    double balance = 0.0;
+    {
+        wxBusyCursor wait;
+        balance = api->tokenBalance(tokenAddress);
+    }
 
+    if (balance < 0.0) { // API error. api.etherscan.io is down?
+        auto message = boost::format("Unable to retrieve BLZ token balance for address %s") % tokenAddress;
+        wxMessageBox(boost::str(message), "Token Balance", wxOK | wxICON_ERROR, this);
+        Close(true);
+        return;
+    }
 
-
-
+    if (balance / tokenDenomination < expectedTokenBalance) {
+        auto message = boost::format("Your (%s) BLZ balance is %d\r\nwhich is lower than expected %d.\r\nPlease update your balance before running Kepler.") % tokenAddress % balance % expectedTokenBalance;
+        wxMessageBox(boost::str(message), "Insufficient Token Balance", wxOK | wxICON_ERROR, this);
+        Close(true);
+        return;
+    }
 
 
     nodeListTitle = new BZStaticText(

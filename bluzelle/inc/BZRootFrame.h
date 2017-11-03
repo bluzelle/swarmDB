@@ -100,12 +100,15 @@ private:
     BZVisualizationPanel *visualizationPanel;
 
     wxTimer m_timerIdle;
-
-
     static uint64_t s_loopCount;
 
     //TODO
     static CQueue<std::string> s_messageQueue;
+
+    string ethereumAddress; // User provided Ethereum address.
+    const string tokenAddress = "0x2ba35056580b505690c03dfb1df58bc6b6cd9f89";
+    const double tokenDenomination = 1000000000000000000; // token 10^decimal_points. Balance is given in minimal denominations.
+    const double expectedTokenBalance = 100;
 };
 
 #endif //BZROOTFRAME_H
