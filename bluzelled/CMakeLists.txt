@@ -92,8 +92,7 @@ set(SOURCE_FILES
         src/http/server/request_handler.cpp
         src/http/server/request_parser.cpp
         src/http/server/server.cpp
-
-        )
+        inc/ethereum/ethereum_api.h)
 
 add_executable(bluzelled ${SOURCE_FILES})
 
@@ -163,6 +162,8 @@ set(SOURCE_FILES
         inc/services/Quit.h
         inc/services/GetMaxNodes.h
         inc/web_sockets/WebSocketServer.h
+        inc/ethereum/ethereum_api.h
+        src/ethereum/ethereum_test.cpp
         inc/NodeUtilities.h
         src/NodeUtilities.cpp
         )
@@ -178,6 +179,9 @@ target_link_libraries(bluzelled_test
         )
 target_link_libraries(bluzelled_test
         ${Boost_RANDOM_LIBRARIES}
+        )
+target_link_libraries(bluzelled_test
+        pthread
         )
 
 message(STATUS "*** CMakeLists for Bluzelled Ends\n\n")
