@@ -98,8 +98,7 @@ public:
             }
     }
 
-    void on_death()
-    {
+    void on_death() {
         auto lp = listener_.lock();
         if (lp !=  nullptr) {
             for (auto s : lp->sessions_)
@@ -134,7 +133,6 @@ public:
         auto f = boost::format("%d.%d.%d.%d") % ip[0] % ip[1] % ip[2] % ip[3];
         return boost::str(f);
     }
-
 
 private:
 
