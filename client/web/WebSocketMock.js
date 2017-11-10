@@ -93,7 +93,7 @@ const chooseNewLeader = () => {
 setInterval(updateMessages, 1000);
 setInterval(killANode, 6137);
 setInterval(createNodes, 10285);
-setInterval(chooseNewLeader, 2000);
+setInterval(chooseNewLeader, 10000);
 
 
 const commandProcessors = {
