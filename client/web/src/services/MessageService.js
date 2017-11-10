@@ -7,7 +7,7 @@ const messages = observable.shallowArray([]);
 addCommandProcessor('messages', action('messages', arr => arr.forEach(m => messages.push(m))));
 
 (function() {
-    let lastReceivedMessageIdx;
+    let lastReceivedMessageIdx = 0;
     setInterval(() => {
         const newMessages = takeRight(messages, messages.length - lastReceivedMessageIdx);
         lastReceivedMessageIdx = messages.length;
