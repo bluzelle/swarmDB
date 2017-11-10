@@ -10,7 +10,7 @@ const App = () => {
     const component = socketState.get() === 'open' ? Main : DaemonSelector;
     return (
         <div style={{height: '100%'}}>
-            {/*<DevTools/>*/}
+            <DevTools/>
             <HashRouter>
                 <Route component={component}/>
             </HashRouter>

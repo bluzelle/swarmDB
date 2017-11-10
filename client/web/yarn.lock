@@ -4628,9 +4628,9 @@ react-bootstrap@^0.31.3:
     uncontrollable "^4.1.0"
     warning "^3.0.0"
 
-react-data-grid@^2.0.60:
-  version "2.0.73"
-  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-2.0.73.tgz#8c718b2cc5f3c2f7e34485d55b08e7bdcabfbb20"
+react-data-grid@2.0.73-am-fix-defaultprops-warnings3202:
+  version "2.0.73-am-fix-defaultprops-warnings3202"
+  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-2.0.73-am-fix-defaultprops-warnings3202.tgz#78814fe01afd1e11133c05d3d20f2bfbbaba81a7"
 
 react-dom@^0.14.0:
   version "0.14.9"

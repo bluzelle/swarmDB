@@ -1,9 +1,11 @@
-import {getNodes} from 'services/NodeService'
+import {getNodes, getNodeByAddress} from 'services/NodeService'
 import RowSelectDataGrid from 'components/RowSelectDataGrid'
 import {strafeObject} from 'src/Utils'
 import NodeInfo from 'components/tabs/NodeInfo'
 import StatusFormatter from 'components/tabs/StatusFormatter'
 import NodeMessagesBtn from 'components/tabs/NodeMessagesBtn'
+import pipe from 'lodash/fp/pipe'
+import getProp from 'lodash/fp/get'
 
 @observer
 export default class NodeListTabBody extends Component {
@@ -27,18 +29,18 @@ export default class NodeListTabBody extends Component {
         return (
             <Layout type="">
                 <Flex>
-            <RowSelectDataGrid
-                selectByKey="address"
-                columns={columns}
-                rowGetter={this.rowGetter.bind(this)}
-                rowsCount={this.nodes.length}
-                minColumnWidth={80}
-                onRowSelect={this.onRowSelect.bind(this)}
-            />
+                    <RowSelectDataGrid
+                        selectByKey="address"
+                        columns={columns}
+                        rowGetter={this.rowGetter.bind(this)}
+                        rowsCount={this.nodes.length}
+                        minColumnWidth={80}
+                        onRowSelect={this.onRowSelect.bind(this)}
+                    />
                 </Flex>
                 <Flex>
                     <div style={{padding: 10}}>
-                        {this.state.selectedNode && <NodeInfo node={this.state.selectedNode} />}
+                        {this.state.selectedNode && <NodeInfo node={this.state.selectedNode}/>}
                     </div>
                 </Flex>
             </Layout>
@@ -47,9 +49,15 @@ export default class NodeListTabBody extends Component {
 }
 
 
+const ActionFormatter = ({value: address}) => (
+    <NodeMessagesBtn address={address}/>
+);
 
-const ActionFormatter = ({value:address}) => (
-    <NodeMessagesBtn address={address} />
+
+const AddressFormatter = pipe(
+    getProp('value'),
+    getNodeByAddress,
+    node => `${node.address} ${node.isLeader ? '(L)' : ''}`
 );
 
 const columns = [{
@@ -57,12 +65,13 @@ const columns = [{
     name: 'Address',
     resizable: true,
     width: 150,
+    formatter: AddressFormatter
 }, {
     key: 'nodeState',
     name: 'Status',
     resizable: true,
     width: 100,
-    formatter: StatusFormatter,
+    formatter: StatusFormatter
 }, {
     key: 'actionAddress',
     name: 'Actions',

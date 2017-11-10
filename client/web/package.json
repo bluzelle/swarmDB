@@ -53,7 +53,7 @@
     "prop-types": "^15.6.0",
     "react": "^16.0.0",
     "react-bootstrap": "^0.31.3",
-    "react-data-grid": "^2.0.60",
+    "react-data-grid": "2.0.73-am-fix-defaultprops-warnings3202",
     "react-dom": "^16.0.0",
     "react-layout-pane": "^0.1.16",
     "react-router": "^4.2.0",

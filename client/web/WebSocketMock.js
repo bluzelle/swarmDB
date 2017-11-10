@@ -1,4 +1,6 @@
 const _ = require('lodash');
+const fp = require('lodash/fp');
+const {Maybe} = require('monet');
 
 const DELAY = 500;
 let sockets = [];
@@ -17,8 +19,8 @@ module.exports = SocketBase => class Socket extends SocketBase {
             ws.on('message', req => {
                 req = JSON.parse(req);
                 setTimeout(() =>
-                    commandProcessors[req.cmd](req.data)
-                , DELAY);
+                        commandProcessors[req.cmd](req.data)
+                    , DELAY);
             });
 
             ws.on('close', () => {
@@ -31,24 +33,22 @@ module.exports = SocketBase => class Socket extends SocketBase {
 
 const createNodes = () => {
     let i = 0;
-    while(nodes.length < maxNodes) {
+    while (nodes.length < maxNodes) {
         const node = {
             address: `0x${_.padStart((baseAddress++).toString(16), 2, '0')}`
         };
         nodes.push(node);
         setTimeout(() => {
             sendToClients('updateNodes', [node]);
-        },(i++) * 600)
+        }, (i++) * 600)
         log(`node ${node.address} has connected`);
     }
 };
 
 const sendToClients = (cmd, data) => sockets.forEach(socket => socket.send(JSON.stringify({cmd: cmd, data: data})));
 
-const getRandomNode = () => nodes[Math.floor(Math.random() * nodes.length)];
-
 const updateMessages = () => {
-    if(nodes.length) {
+    if (nodes.length) {
         sendToClients('messages', _.times(10, () => (
             {srcAddr: getRandomNode().address, dstAddr: getRandomNode().address, timestamp: new Date().toISOString(), body: {something: `sent - ${_.uniqueId()}`}}
         )));
@@ -64,9 +64,11 @@ const log = (message) => {
     }]);
 };
 
+const getRandomNode = () => nodes[Math.floor(Math.random() * nodes.length)];
+
 const killANode = () => {
-    if(nodes.length) {
-        const node = nodes[Math.floor(Math.random() * nodes.length)];
+    if (nodes.length) {
+        const node = getRandomNode();
         _.remove(nodes, node);
         sendToClients('removeNodes', [node.address]);
         log(`node ${node.address} has died`);
@@ -74,9 +76,24 @@ const killANode = () => {
 };
 
 
+const chooseNewLeader = () => {
+    Maybe.fromNull(nodes.find(n => n.isLeader))
+        .flatMap(node => {
+            node.isLeader = false;
+            sendToClients('updateNodes', [node]);
+        });
+
+    setTimeout(() => Maybe.fromNull(getRandomNode())
+        .flatMap(node => {
+                node.isLeader = true;
+                sendToClients('updateNodes', [node]);
+            }), 1000);
+};
+
 setInterval(updateMessages, 1000);
 setInterval(killANode, 6137);
 setInterval(createNodes, 10285);
+setInterval(chooseNewLeader, 2000);
 
 
 const commandProcessors = {
