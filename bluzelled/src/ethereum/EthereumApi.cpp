@@ -7,7 +7,7 @@ EthereumApi::token_balance(const EthereumToken& t) {
 
     write_request(
             boost::str(boost::format(get_token_balance_by_token_contract_address_format) %
-                       t.address_ %
+                       t.get_address() %
                        address_));
 
     auto body = read_response();
@@ -20,7 +20,7 @@ EthereumApi::token_balance(const EthereumToken& t) {
             tuple,
             "result");
 
-    balance /= std::pow(10, t.decimal_points_); // Balance is stored in minimal denomination.
+    balance /= std::pow(10, t.get_decimal_points()); // Balance is stored in minimal denomination.
 
     return balance;
 }

@@ -27,7 +27,6 @@ namespace http = boost::beast::http;
 
 
 class EthereumApi {
-protected:
     const string host_ = "ropsten.etherscan.io";
 
     const string get_token_balance_by_token_contract_address_format =
