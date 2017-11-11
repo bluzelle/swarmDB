@@ -15,7 +15,7 @@ const Node = ({node, onMouseOver, selected}) => {
             </radialGradient>
             <circle fill={`url(#gradient-${address})`} key={`circle-${address}`}  cx={cx} cy={cy} r={r}/>
             {selected && <circle fill='white' key={`circle-border=${address}`} cx={cx} cy={cy} r="2"/>}
-            {node.isLeader && <Star cx={cx} cy={cy} r={r} />}
+            {node.isLeader && <Star {...{cx, cy, r}} />}
         </g>
     )
 };
