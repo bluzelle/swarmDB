@@ -58,6 +58,29 @@ BOOST_AUTO_TEST_CASE( test_node_death )
 }
 
 
+//  --run_test=test_generate_ip_address
+BOOST_AUTO_TEST_CASE( test_generate_ip_address ) {
+    boost::system::error_code ec;
+
+    std::vector<std::string>ip;
+
+    for (int i = 0; i < 100; ++ i)
+        {
+        auto s = generate_ip_address();
+        ip.push_back(s);
+        }
+
+    // Check uniqueness.
+    auto it = std::unique(ip.begin(), ip.end());
+    BOOST_CHECK(it == ip.end());
+
+    for (auto& s : ip)
+        {
+        boost::asio::ip::address::from_string(s, ec); // Validates IPv4 and IPv6 addresses.
+        BOOST_CHECK(ec == boost::system::errc::errc_t::success);
+        }
+}
+
 //  --run_test=test_reaper
 //BOOST_AUTO_TEST_CASE( test_reaper )
 //{

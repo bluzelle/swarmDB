@@ -59,3 +59,17 @@ void reaper(Nodes *nodes)
     join_dead_tasks(nodes);
     remove_dead_nodes(nodes);
 }
+
+std::string generate_ip_address() {
+    static boost::random::mt19937 rng(time(0));
+
+    boost::random::uniform_int_distribution<> two_two_five(0,255);
+
+    int ip[4] = {0};
+    for (auto& addr : ip) {
+        addr = two_two_five(rng);
+        }
+
+    auto f = boost::format("%d.%d.%d.%d") % ip[0] % ip[1] % ip[2] % ip[3];
+    return boost::str(f);
+}

@@ -161,6 +161,8 @@ set(SOURCE_FILES
         src/services/service_tests.cpp
         inc/services/CountNodes.h
         inc/services/SetMaxNodes.h
+        src/Node.cpp
+        src/NodeUtilities.cpp
         src/NodeManager.cpp
         inc/NodeManager.h
         inc/services/Quit.h
