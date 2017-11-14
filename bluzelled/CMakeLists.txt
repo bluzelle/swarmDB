@@ -163,6 +163,8 @@ set(SOURCE_FILES
         inc/services/Quit.h
         inc/services/GetMaxNodes.h
         inc/web_sockets/WebSocketServer.h
+        inc/NodeUtilities.h
+        src/NodeUtilities.cpp
         )
 
 file(COPY assets/words.txt DESTINATION ${CMAKE_BINARY_DIR})
