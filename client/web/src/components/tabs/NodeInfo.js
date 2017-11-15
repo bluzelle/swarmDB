@@ -19,6 +19,14 @@ const NodeInfo = ({node: selectedNode}) => {
                 <th style={styles.tableCell}>Status</th>
                 <td style={styles.tableCell}><StatusFormatter value={node.nodeState}/></td>
             </tr>
+            <tr>
+                <th style={styles.tableCell}>Available Space</th>
+                <td style={styles.tableCell}>{node.available} MB</td>
+            </tr>
+            <tr>
+                <th style={styles.tableCell}>Used</th>
+                <td style={styles.tableCell}>{node.used} MB</td>
+            </tr>
             </tbody>
         </table>
     ) : <div></div>

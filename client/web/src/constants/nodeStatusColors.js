@@ -1,6 +1,6 @@
 const colors = {
-    alive: 'green',
-    'new': 'blue',
+    alive: '#00bc8c',
+    'new': '#2b8bcc',
     'dead': 'red'
 };
 

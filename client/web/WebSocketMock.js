@@ -35,8 +35,12 @@ const createNodes = () => {
     let i = 0;
     while (nodes.length < maxNodes) {
         const node = {
-            address: `0x${_.padStart((baseAddress++).toString(16), 2, '0')}`
+            address: `0x${_.padStart((baseAddress++).toString(16), 2, '0')}`,
+            available: 1000,
+            used: 512,
         };
+        node.updateStorageUsed = updateStorageUsed(node);
+
         nodes.push(node);
         setTimeout(() => {
             sendToClients('updateNodes', [node]);
@@ -45,12 +49,29 @@ const createNodes = () => {
     }
 };
 
+
+
+const updateStorageUsed = (node) => {
+    let direction = 10;
+    return () => {
+        direction = node.used < 400 ? 10 : direction;
+        direction = node.used > 700 ? -10 : direction;
+        node.used += direction;
+        return node;
+    }
+};
+
 const sendToClients = (cmd, data) => sockets.forEach(socket => socket.send(JSON.stringify({cmd: cmd, data: data})));
 
 const updateMessages = () => {
     if (nodes.length) {
         sendToClients('messages', _.times(10, () => (
-            {srcAddr: getRandomNode().address, dstAddr: getRandomNode().address, timestamp: new Date().toISOString(), body: {something: `sent - ${_.uniqueId()}`}}
+            {
+                srcAddr: getRandomNode().address,
+                dstAddr: getRandomNode().address,
+                timestamp: new Date().toISOString(),
+                body: {something: `sent - ${_.uniqueId()}`}
+            }
         )));
     }
 };
@@ -85,15 +106,18 @@ const chooseNewLeader = () => {
 
     setTimeout(() => Maybe.fromNull(getRandomNode())
         .flatMap(node => {
-                node.isLeader = true;
-                sendToClients('updateNodes', [node]);
-            }), 1000);
+            node.isLeader = true;
+            sendToClients('updateNodes', [node]);
+        }), 1000);
 };
 
 setInterval(updateMessages, 1000);
 setInterval(killANode, 6137);
 setInterval(createNodes, 10285);
 setInterval(chooseNewLeader, 10000);
+setInterval(() => sendToClients('updateNodes', nodes.map(node => node.updateStorageUsed())), 10000);
+
+
 
 
 const commandProcessors = {
