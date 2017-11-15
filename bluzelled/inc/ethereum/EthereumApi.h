@@ -43,28 +43,21 @@ public:
               resolver_(ios), sock_(ios) {
     }
 
-    double
-    token_balance(const EthereumToken& t);
+    double token_balance(const EthereumToken& t);
 
-protected:
-    void
-    connect_socket();
+private:
+    void connect_socket();
 
-    void
-    write_request(const string &target);
+    void write_request(const string &target);
 
-    string
-    read_response();
+    string read_response();
 
-    void
-    close_socket();
+    void close_socket();
 
-    boost::property_tree::ptree
-    parse_response(const string &body) const;
+    boost::property_tree::ptree parse_response(const string &body) const;
 
-    template<typename T> T
-    get_field(const boost::property_tree::ptree &tuple,
-              const string &name) const;
+    template<typename T> T get_field(const boost::property_tree::ptree &tuple,
+                                     const string &name) const;
 };
 
 
