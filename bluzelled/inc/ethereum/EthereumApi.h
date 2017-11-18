@@ -28,9 +28,10 @@ namespace http = boost::beast::http;
 
 class EthereumApi {
     const string host_ = "ropsten.etherscan.io";
+    const string token = "UK282CWFFISMIPUMTXJNCTVCBZTJ2TPPRN";
 
     const string get_token_balance_by_token_contract_address_format =
-            "/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=YourApiKeyToken";
+            "/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=%s";
 
     string address_;
     tcp::resolver resolver_;

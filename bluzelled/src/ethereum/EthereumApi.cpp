@@ -8,7 +8,7 @@ EthereumApi::token_balance(const EthereumToken& t) {
     write_request(
             boost::str(boost::format(get_token_balance_by_token_contract_address_format) %
                        t.get_address() %
-                       address_));
+                       address_ % token));
 
     auto body = read_response();
 
