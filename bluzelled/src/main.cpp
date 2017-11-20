@@ -12,13 +12,13 @@ void initialize
         std::shared_ptr<Listener> &listener,
         std::shared_ptr<NodeManager> &node_manager,
         std::shared_ptr<boost::thread> &websocket_thread,
-        std::shared_ptr<http::server::ServiceManager> &http_manager
+        std::shared_ptr<ServiceManager> &http_manager
         )
 {
     node_manager = std::make_shared<NodeManager>(1);
     // TODO: get websocket and service manager args from command line args.
     websocket_thread = std::make_shared<boost::thread>(WebSocketServer("127.0.0.1", 3000, 1, node_manager, listener));
-    http_manager = std::make_shared<http::server::ServiceManager>("127.0.0.1", "2999", "../web/");
+    http_manager = std::make_shared<ServiceManager>("127.0.0.1", "2999", "../web/");
     http_manager->run_async();
     node_manager->create_and_add_nodes(listener, 1);
     wait_for_all_nodes_to_start(node_manager->nodes());
@@ -64,7 +64,7 @@ int main(/*int argc,char *argv[]*/) {
         std::shared_ptr<Listener> listener;
         std::shared_ptr<NodeManager> node_manager;
         std::shared_ptr<boost::thread> websocket_thread;
-        std::shared_ptr<http::server::ServiceManager> http_manager;
+        std::shared_ptr<ServiceManager> http_manager;
 
         initialize(listener, node_manager, websocket_thread, http_manager);
 
