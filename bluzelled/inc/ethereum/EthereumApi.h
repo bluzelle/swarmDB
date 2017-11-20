@@ -22,10 +22,6 @@
 
 using std::string;
 
-using tcp = boost::asio::ip::tcp;
-namespace http = boost::beast::http;
-
-
 class EthereumApi {
     const string host_ = "ropsten.etherscan.io";
 
@@ -33,8 +29,8 @@ class EthereumApi {
             "/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=YourApiKeyToken";
 
     string address_;
-    tcp::resolver resolver_;
-    tcp::socket sock_;
+    boost::asio::ip::tcp::resolver resolver_;
+    boost::asio::ip::tcp::socket sock_;
 
 public:
     EthereumApi(string str_addr,

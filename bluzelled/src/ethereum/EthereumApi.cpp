@@ -1,8 +1,10 @@
 #include "ethereum/EthereumApi.h"
 
+using tcp = boost::asio::ip::tcp;
+namespace http = boost::beast::http;
 
 double
-EthereumApi::token_balance(const EthereumToken& t) {
+EthereumApi::token_balance(const EthereumToken &t) {
     connect_socket();
 
     write_request(
@@ -86,9 +88,10 @@ EthereumApi::parse_response(const string &body) const {
     throw std::runtime_error("Failed to parse response: " + body);
 }
 
-template<typename T> T
+template<typename T>
+T
 EthereumApi::get_field(const boost::property_tree::ptree &tuple,
-            const string &name) const {
+                       const string &name) const {
     auto message_s = tuple.get<string>("message");
 
     if (message_s == "OK")

@@ -5,6 +5,7 @@
 #include "CSet.h"
 #include "Node.h"
 #include "NodeUtilities.h"
+#include "CommandLineUtilities.h"
 #include "NodeManager.h"
 
 #include <vector>
@@ -15,11 +16,13 @@
 #include <boost/chrono.hpp>
 #include <fstream>
 
+
 unsigned long hash(const char *str);
 std::vector<std::string> ReadWords(const std::string &fileName, const uint16_t n = 1000);
 void cmapInsertThreadFunction(std::vector<std::string> &words, CMap<unsigned long, std::string> *sut);
 void csetInsertThreadFunction(std::vector<std::string> &words, CSet<std::string> *sut);
 void csetRemoveThreadFunction(std::vector<std::string> &words, CSet<std::string> *sut);
+
 Nodes* create_test_nodes(int n);
 
 boost::mutex mutex;
@@ -111,6 +114,30 @@ BOOST_AUTO_TEST_CASE(cset_remove)
     thread->join();
     delete thread;
     BOOST_CHECK(0 == sut.size());
+}
+
+// --run_test=command_line_options
+BOOST_AUTO_TEST_CASE(command_line_options) {
+    boost::program_options::variables_map vm;
+    const char* argv[] = {"c:\\non_existing_dir\\non_existing.exe", "--address", "0x2ba35056580b505690c03dfb1df58bc6b6cd9f89"};
+
+    BOOST_CHECK(true == handle_command_line(3, argv, vm));
+}
+
+// --run_test=command_line_options_missing
+BOOST_AUTO_TEST_CASE(command_line_options_missing) {
+    boost::program_options::variables_map vm;
+    const char* argv[] = {"c:\\non_existing_dir\\non_existing.exe", "--some_option", "hello"};
+
+    BOOST_CHECK(false == handle_command_line(3, argv, vm));
+}
+
+// --run_test=command_line_options_invalid
+BOOST_AUTO_TEST_CASE(command_line_options_invalid) {
+    boost::program_options::variables_map vm;
+    const char* argv[] = {"c:\\non_existing_dir\\non_existing.exe", "--address", "abcdefghijklmnop"};
+
+    BOOST_CHECK(false == handle_command_line(3, argv, vm));
 }
 
 //BOOST_AUTO_TEST_CASE(test_all_nodes_alive)
@@ -236,5 +263,6 @@ std::vector<std::string> ReadWords(const std::string &fileName, const uint16_t n
         }
     return words;
 }
+
 
 

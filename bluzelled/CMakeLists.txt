@@ -26,7 +26,7 @@ elseif(APPLE)
 endif()
 
 
-find_package(Boost 1.65.0 REQUIRED COMPONENTS system coroutine thread regex chrono random REQUIRED)
+find_package(Boost 1.65.0 REQUIRED COMPONENTS system coroutine thread regex chrono random program_options REQUIRED)
 if(Boost_FOUND)
     message(STATUS "**** ${Boost_INCLUDE_DIRS} ****")
     #if(NOT EXISTS "${ROOT}/configuration/${customer}/configuration.${project_name}.xml")
@@ -94,7 +94,9 @@ set(SOURCE_FILES
         src/http/server/server.cpp
         inc/ethereum/EthereumApi.h
         inc/ethereum/EthereumToken.h
-        src/ethereum/EthereumApi.cpp)
+        src/ethereum/EthereumApi.cpp
+        inc/CommandLineUtilities.h
+        src/CommandLineUtilities.cpp)
 
 add_executable(bluzelled ${SOURCE_FILES})
 
@@ -131,7 +133,7 @@ else(APPLE)
 endif()
 
 
-find_package(Boost 1.64.0 COMPONENTS unit_test_framework thread system timer regex chrono random REQUIRED)
+find_package(Boost 1.64.0 COMPONENTS unit_test_framework thread system timer regex chrono random program_options REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
@@ -173,7 +175,8 @@ set(SOURCE_FILES
         src/ethereum/EthereumApi.cpp
         inc/NodeUtilities.h
         src/NodeUtilities.cpp
-        )
+        inc/CommandLineUtilities.h
+        src/CommandLineUtilities.cpp)
 
 file(COPY assets/words.txt DESTINATION ${CMAKE_BINARY_DIR})
 add_executable(bluzelled_test ${SOURCE_FILES})
