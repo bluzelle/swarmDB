@@ -2,7 +2,17 @@
 #define BOOST_TEST_MODULE "BaseClassModule"
 #include <boost/test/unit_test.hpp>
 
-BOOST_AUTO_TEST_CASE(first)
+struct F
 {
-    BOOST_CHECK(false);
-}
+    F() = default;
+
+    ~F() = default;
+};
+
+
+BOOST_FIXTURE_TEST_SUITE(base_suite, F)
+    BOOST_AUTO_TEST_CASE(first)
+    {
+        BOOST_CHECK(false);
+    }
+BOOST_AUTO_TEST_SUITE_END()
