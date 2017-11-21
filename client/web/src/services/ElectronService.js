@@ -1,7 +1,7 @@
-import {socketState, daemonUrl} from "./CommunicationService";
+import {socketState, entryPointUrl} from "./CommunicationService";
 
 setTimeout(() => {
-    global.electron || daemonUrl.set(window.location.host);
+    global.electron || entryPointUrl.set(window.location.host);
 
     if(global.electron) {
         setupIpc();

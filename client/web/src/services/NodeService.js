@@ -2,42 +2,33 @@ import {sendCommand, addCommandProcessor} from 'services/CommunicationService'
 import {socketState} from 'services/CommunicationService'
 import {transactionBundler} from "../Utils"
 
-global.observable = observable;
-global.autorun = autorun;
-global.observer = observer;
-global.extendObservable = extendObservable;
-
 const nodes = observable.map({});
 
 global.nodes = nodes;
+setTimeout(() => {
+    addCommandProcessor('updateNodes', (newNodes) => newNodes.forEach(updateNode));
+    addCommandProcessor('removeNodes', (addresses) => addresses.forEach(removeNodeByAddress));
+});
 
-addCommandProcessor('updateNodes', (newNodes) => newNodes.forEach(updateNode));
-addCommandProcessor('removeNodes', (addresses) => addresses.forEach(removeNodeByAddress));
-
-autorun(() => socketState.get() === 'open' && untracked(resetNodes));
-
-const resetNodes = () => {
-    sendCommand("getAllNodes", undefined);
-    clearNodes();
-};
 
 export const getNodes = () => nodes.values();
 export const getNodeByAddress = address => nodes.get(address);
+export const getNodeByName = name => node.get(name);
 
 export const updateNode = transactionBundler('updateNode', node => {
-    const foundNode = nodes.get(node.address);
+    const foundNode = nodes.get(`${node.ip}:${node.port}`);
     foundNode ? extendObservable(foundNode, node) : addNewNode(node);
 });
 
-const markNodeAlive = transactionBundler('markNodeAlive', address => {
-    Maybe.fromNull(nodes.get(address))
+const markNodeAlive = transactionBundler('markNodeAlive', name => {
+    Maybe.fromNull(nodes.get(name))
         .map(n => n.nodeState = 'alive');
 });
 
 const addNewNode = node => {
     const newNode = {nodeState: 'new', ...node};
-    nodes.set(node.address, newNode);
-    setTimeout(() => markNodeAlive(newNode.address) ,3000);
+    nodes.set(`${node.ip}:${node.port}`, newNode);
+    setTimeout(() => markNodeAlive(`${node.ip}:${node.port}`) ,3000);
 };
 
 export const removeNodeByAddress = action(address => {

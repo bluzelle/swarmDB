@@ -5,14 +5,14 @@ import {socketState} from 'services/CommunicationService'
 import Main from 'components/Main'
 import DaemonSelector from 'components/DaemonSelector'
 import DevTools from 'mobx-react-devtools';
+import {getNodes} from 'services/NodeService'
 
 const App = () => {
-    const component = socketState.get() === 'open' ? Main : DaemonSelector;
     return (
         <div style={{height: '100%'}}>
             {/dev-tools/.test(window.location.href) && <DevTools/>}
             <HashRouter>
-                <Route component={component}/>
+                <Route component={getNodes().length ? Main : DaemonSelector} />
             </HashRouter>
         </div>
     )
