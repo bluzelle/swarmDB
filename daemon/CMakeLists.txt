@@ -66,5 +66,4 @@ message(STATUS "*** CMakeLists for bluzelled_test")
 
 set(SOURCE_FILES test.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
-
-
+target_link_libraries(the_db_test ${Boost_LIBRARIES})
