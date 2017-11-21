@@ -17,8 +17,9 @@ endif()
 # TODO can we move this to the root CMakeLists.txt?
 find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random REQUIRED)
 if(Boost_FOUND)
+    message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
     check_asio_version()
-    check_boost_version()
+    check_beast_version()
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 

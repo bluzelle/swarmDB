@@ -2,8 +2,8 @@ CODE LAYOUT
 ===========
 - folders are features (no src/inc)
 
-MVP
-===
+Minimum Viable Product
+======================
 - DONE - KEP-??? - executable (Dmitry,Rich) called the_db 
 - KEP-99 - parameters etherium address, port, (--addr=<addr> --port=<port>) (Dmitry)  
 - KEP-?? - ws (Rich) bring in listener, session
