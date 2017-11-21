@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(the_db)
-
 set(CMAKE_CXX_STANDARD 17)
 set(REQUIRED_BOOST "1.65.0")
-
 
 if(MSVC)
     message(STATUS "*** compiling for Windows")
@@ -25,7 +22,9 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-
+###############################################################################
+# Primary project for the_db
+project(the_db)
 set(SOURCE_FILES main.cpp)
 add_executable(the_db ${SOURCE_FILES})
 

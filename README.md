@@ -4,11 +4,11 @@ CODE LAYOUT
 
 MVP
 ===
-- executable (Dmitry,Rich) called the_db
-- parameters etherium address, port, (--addr=<addr> --port=<port>) (Dmitry)
-- ws (Rich)
-- push model:someone connects to the node, the node pushes messages (Dmitry)
-- services: node info daemon sends this to gui on ws connection
+- DONE - KEP-??? - executable (Dmitry,Rich) called the_db 
+- KEP-99 - parameters etherium address, port, (--addr=<addr> --port=<port>) (Dmitry)  
+- KEP-?? - ws (Rich) bring in listener, session
+- KEP-?? - push model:someone connects to the node, the node pushes messages (Dmitry)
+    - services: node info daemon sends this to gui on ws connection
 { 
     "cmd":"updateNodes", 
     "seq":123, 
@@ -21,11 +21,20 @@ MVP
        "used":228
        }]
 }
-- nodes know about each other via ini files: ini file in ~/.bluzelle/.keplerrc (Mehdi)
+- nodes have ini files: ini file (Mehdi)
+    - each instance of daemon should have it's own ini
+    - optional command line parameter --ini="name" 
+    - ~/.bluzelle/.kepler<id>rc 
+    - id could be port or (port and address) or (name)
+
+ARCHITECHTURE
+=============
+- node 
+    - has ini file
+    - client connects
+    
 
 
-QUESTIONS
-=========
 
 
 LATER
