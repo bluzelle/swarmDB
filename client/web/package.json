@@ -9,7 +9,8 @@
     "test-compile-watch": "cd src; webpack --watch --env.beep --config webpack-test.config.js",
     "test-watch": "mocha -r jsdom-global/register dist/runTests.js --watch",
     "test": "mocha -r jsdom-global/register dist/runTests.js --exit",
-    "start": "ws --spa index.html -d dist --websocket ./WebSocketMock --port 3000",
+    "start-old": "ws --spa index.html -d dist --websocket ./WebSocketMock --port 3000",
+    "start": "node SwarmEmulator",
     "start-functional": "ws --spa index.html -d dist --websocket ./WebSocketFunctional --rewrite '/functional/* -> http://localhost:3003/$1' --port 3002",
     "coverage": "nyc --instrument=false --reporter=cobertura  --report-dir=coverage yarn test",
     "coverage-text": "nyc --instrument=false yarn test"
@@ -66,7 +67,8 @@
     "url-loader": "^0.6.2",
     "webpack": "^3.6.0",
     "webpack-beep-plugin": "^1.0.0",
-    "webpack-shell-plugin": "^0.5.0"
+    "webpack-shell-plugin": "^0.5.0",
+    "websocket": "^1.0.25"
   },
   "license": "UNLICENSED",
   "private": true
