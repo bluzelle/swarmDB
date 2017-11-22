@@ -30,6 +30,8 @@ set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
         main.cpp)
+include_directories(websockets)
+set(SOURCE_FILES main.cpp  websockets/Listener.h websockets/Session.cpp websockets/Session.h)
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db
         ${Boost_LIBRARIES}
@@ -44,5 +46,7 @@ set(SOURCE_FILES
         command_line_options/CommandLineOptions.cpp
         command_line_options/command_line_options_test.cpp
         test.cpp)
+include_directories(websockets)
+set(SOURCE_FILES test.cpp websockets/Listener.h websockets/Session.cpp websockets/Session.h)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
