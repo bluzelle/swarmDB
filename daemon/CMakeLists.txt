@@ -26,7 +26,8 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
-set(SOURCE_FILES main.cpp)
+include_directories(websockets)
+set(SOURCE_FILES main.cpp  websockets/Listener.h websockets/Session.cpp websockets/Session.h)
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
 
@@ -34,6 +35,7 @@ target_link_libraries(the_db ${Boost_LIBRARIES})
 # Unit tests
 message(STATUS "*** CMakeLists for bluzelled_test")
 
-set(SOURCE_FILES test.cpp)
+include_directories(websockets)
+set(SOURCE_FILES test.cpp websockets/Listener.h websockets/Session.cpp websockets/Session.h)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
