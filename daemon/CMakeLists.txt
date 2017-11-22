@@ -15,7 +15,7 @@ elseif(APPLE)
 endif()
 
 # TODO can we move this to the root CMakeLists.txt?
-find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random REQUIRED)
+find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS  system coroutine thread regex chrono random unit_test_framework REQUIRED)
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
     check_asio_version()
