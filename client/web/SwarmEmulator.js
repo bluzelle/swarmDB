@@ -69,7 +69,17 @@ function Node(port) {
 
     const sendNodesInfo = (connection) => {
         sendToClient(connection, 'updateNodes', [me, ...peers]);
-    }
+    };
+
+    (function updateStorageUsed(direction = 1) {
+        me.used += direction;
+        sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used')]);
+
+        let newDirection = direction;
+        me.used < 40  && (newDirection = 1);
+        me.used > 70 && (newDirection = -1);
+        setTimeout(() => updateStorageUsed(newDirection), 1000);
+    }());
 }
 
 
