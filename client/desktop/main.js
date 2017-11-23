@@ -3,9 +3,19 @@ const path = require('path');
 const url = require('url');
 require('./ApplicationMenu');
 
+
+const commandLineArgs = require('command-line-args');
+
+const optionDefinitions = [
+    { name: 'debug', alias: 'd', type: Boolean }
+];
+
+const options = commandLineArgs(optionDefinitions);
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win, splash
+
 
 function createWindow () {
     splash = new BrowserWindow({
@@ -25,8 +35,8 @@ function createWindow () {
 
 
     win = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: options.debug ? 1200 : 800,
+        height: options.debug ? 800 : 600,
         icon: __dirname + '/bluzelle.png',
         show: false
     });
@@ -43,7 +53,7 @@ function createWindow () {
     });
 
     // Open the DevTools.
-//    win.webContents.openDevTools()
+    options.debug && win.webContents.openDevTools();
 
     // Emitted when the window is closed.
     win.on('closed', () => {

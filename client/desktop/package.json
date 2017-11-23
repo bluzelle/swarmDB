@@ -4,12 +4,14 @@
   "version": "1.0.0",
   "main": "main.js",
   "dependencies": {
+    "command-line-args": "^4.0.7",
     "electron": "^1.7.9",
     "electron-packager": "^9.1.0",
     "mobx": "^3.3.1"
   },
   "scripts": {
-    "start": "electron ./src/index.html",
+    "start": "electron ./main.js",
+    "start-debug": "electron ./main.js --debug",
     "package-mac": "electron-packager . --out=dist --platform=darwin --arch=x64 --icon=bluzelle.icns --overwrite --package-manager=yarn --asar",
     "package-linux": "electron-packager . --out=dist --platform=linux --arch=x64 --overwrite --package-manager=yarn",
     "package-windows": "electron-packager . --out=dist --platform=win32 --arch=x64 --overwrite --package-manager=yarn"

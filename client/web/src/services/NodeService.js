@@ -4,7 +4,6 @@ import {transactionBundler} from "../Utils"
 
 const nodes = observable.map({});
 
-global.nodes = nodes;
 setTimeout(() => {
     addCommandProcessor('updateNodes', (newNodes) => newNodes.forEach(updateNode));
 //    addCommandProcessor('removeNodes', (addresses) => addresses.forEach(removeNodeByAddress));

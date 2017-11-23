@@ -34,16 +34,12 @@ export default class DaemonSelector extends Component {
                                 <input type="text" tabIndex="1" ref={r => this.address = r} style={{width: '80%'}} placeholder="address" defaultValue="127.0.0.1"/>
                             </div>
                             <div style={{marginTop: 10}}>
-                                {socketState.get() === 'closed' ? (
                                     <Button onClick={this.go.bind(this)} tabIndex="3">Go</Button>
-                                ) : (
-                                    <Button onClick={disconnect}>Cancel</Button>
-                                )}
                             </div>
                         </div>
                     </Panel>
                     <div style={{height: 20}}>
-                        {closeCode.get() && closeCode.get() !== 1000 && <span style={{color: 'red'}}>Error: {closeCode.get()}</span>}
+                        {/*closeCode.get() && closeCode.get() !== 1000 && <span style={{color: 'red'}}>Error: {closeCode.get()}</span>*/}
                     </div>
                 </div>
             </CenterMiddle>

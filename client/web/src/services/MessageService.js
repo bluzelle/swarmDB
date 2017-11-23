@@ -3,8 +3,9 @@ import takeRight from 'lodash/takeRight'
 import {updateNode} from "./NodeService";
 
 const messages = observable.shallowArray([]);
+global.messages = messages
 
-addCommandProcessor('messages', action('messages', arr => arr.forEach(m => messages.push(m))));
+addCommandProcessor('messages', action('messages', (arr, node) => arr.forEach(m => messages.push({...m, node: node}))));
 
 (function() {
     let lastReceivedMessageIdx = 0;

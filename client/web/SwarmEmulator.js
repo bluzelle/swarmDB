@@ -6,6 +6,7 @@ const WebSocketServer = require('websocket').server;
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const fp = require('lodash/fp');
 
 _.range(8100, 8100 + TOTAL_NODES).forEach((port) => setTimeout(() => Node(port)));
 
@@ -18,7 +19,7 @@ const addNode = (node) => {
 
 function Node(port) {
     const peers = [];
-    let  alive = true;
+    let alive = true;
 
     const me = {
         address: `127.0.0.1:${port}`,
@@ -41,8 +42,7 @@ function Node(port) {
     const connections = [];
 
 
-
-    const server = http.createServer(function(request, response) {
+    const server = http.createServer(function (request, response) {
         const filename = path.resolve(`./dist/${request.url}`);
         fs.existsSync(filename) && fs.lstatSync(filename).isFile() ? sendFile(filename) : sendFile(path.resolve('./dist/index.html'));
 
@@ -82,23 +82,43 @@ function Node(port) {
         sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
 
         let newDirection = direction;
-        me.used < 40  && (newDirection = _.random(1,2));
+        me.used < 40 && (newDirection = _.random(1, 2));
         me.used > 70 && (newDirection = _.random(-1, -2));
         setTimeout(() => updateStorageUsed(newDirection), 1000);
     }());
+
+    // (function sendMessage() {
+    //     setTimeout(() => {
+    //         sendToClients('messages', [
+    //             {
+    //                 srcAddr: getOtherRandomNode().address,
+    //                 timestamp: new Date().getTime(),
+    //                 body: {something: `sent - ${_.uniqueId()}`}
+    //             }
+    //         ]);
+    //         sendMessage();
+    //     }, _.random(2000, 5000));
+    // }());
 }
+
+const getRandomNode = fp.pipe(
+    () => _.random(Object.keys(nodes).length - 1),
+    idx => nodes[Object.keys(nodes)[idx]],
+);
+
+const getOtherRandomNode = node => {
+    const n = getRandomNode();
+    return n === node ? getOtherRandomNode() : n;
+};
 
 
 (function killANode() {
-   setTimeout(() => {
-       const keys = Object.keys(nodes);
-       const idx = _.random(keys.length - 1);
-       const key = keys[idx];
-       nodes[key].die();
-       killANode();
-   },_.random(10000, 5000));
-
+    setTimeout(() => {
+        getRandomNode().die();
+        killANode();
+    }, _.random(10000, 5000));
 }());
+
 
 
 
