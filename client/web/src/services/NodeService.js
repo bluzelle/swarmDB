@@ -15,9 +15,11 @@ export const getNodes = () => nodes.values();
 export const getNodeByAddress = address => nodes.get(address);
 export const getNodeByName = name => node.get(name);
 
-export const updateNode = transactionBundler('updateNode', node => {
-    const foundNode = nodes.get(`${node.ip}:${node.port}`);
-    foundNode ? extendObservable(foundNode, node) : addNewNode(node);
+export const updateNode = transactionBundler('updateNode', nodeInfo => {
+    const foundNode = nodes.get(`${nodeInfo.ip}:${nodeInfo.port}`);
+    nodeInfo.lastUpdate = new Date().getTime();
+    foundNode && foundNode.nodeState === 'new' && new Date().getTime() - foundNode.createdAt > 3000 && (nodeInfo.nodeState = 'alive');
+    foundNode ? extendObservable(foundNode, nodeInfo) : addNewNode(nodeInfo);
 });
 
 const markNodeAlive = transactionBundler('markNodeAlive', name => {
@@ -26,9 +28,8 @@ const markNodeAlive = transactionBundler('markNodeAlive', name => {
 });
 
 const addNewNode = node => {
-    const newNode = {nodeState: 'new', ...node};
+    const newNode = {nodeState: 'new', createdAt: new Date().getTime(), ...node};
     nodes.set(`${node.ip}:${node.port}`, newNode);
-    setTimeout(() => markNodeAlive(`${node.ip}:${node.port}`) ,3000);
 };
 
 export const removeNodeByAddress = action(address => {
@@ -41,3 +42,9 @@ export const removeNodeByAddress = action(address => {
 
 export const clearNodes = () => nodes.clear();
 
+const isNodeAlive = node => new Date().getTime() - node.lastUpdate < 5000;
+
+(function checkForDeadNodes() {
+    nodes.values().forEach(node =>  isNodeAlive(node) || removeNodeByAddress(node.address));
+    setTimeout(checkForDeadNodes, 1000);
+}());
