@@ -1,6 +1,7 @@
 import curry from 'lodash/fp/curry'
 import {getNodes} from 'services/NodeService'
 import groupBy from 'lodash/groupBy'
+import {tick} from 'services/tickService'
 
 const commandProcessors = [];
 const MIN_CONNECTED_NODES = 3000;
@@ -21,6 +22,7 @@ autorun(function checkConnectedToNode() {
 });
 
 autorun(function checkNeedToConnectToNode() {
+    tick.get();
         const nodes = getNodes();
         const groups = Object.assign(
             {connected: [], notConnected: []},

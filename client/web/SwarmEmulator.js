@@ -96,7 +96,7 @@ function Node(port) {
        const key = keys[idx];
        nodes[key].die();
        killANode();
-   },_.random(5000, 20000));
+   },_.random(10000, 5000));
 
 }());
 
