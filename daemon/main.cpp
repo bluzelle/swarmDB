@@ -1,4 +1,8 @@
+ // TODO: move this to the correct module
+
 #include <iostream>
+#include <boost/thread.hpp>
+
 
 #include "command_line_options/CommandLineOptions.h"
 

@@ -21,14 +21,12 @@ using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 void
 fail(boost::system::error_code ec, char const *what);
 
-class NodeManager;
 
 // Accepts incoming connections and launches the sessions
 class Listener : public std::enable_shared_from_this<Listener>
 {
     tcp::acceptor acceptor_;
     tcp::socket socket_;
-    std::weak_ptr<NodeManager> wk_node_manager_;
 
 public:
     std::vector<std::weak_ptr<Session>> sessions_;
@@ -37,10 +35,9 @@ public:
     Listener
             (
                     boost::asio::io_service &ios,
-                    tcp::endpoint endpoint,
-                    const std::shared_ptr<NodeManager> &node_manager
+                    tcp::endpoint endpoint
             )
-            : acceptor_(ios), socket_(ios), wk_node_manager_(node_manager)
+            : acceptor_(ios), socket_(ios)
     {
         boost::system::error_code ec;
 
@@ -100,8 +97,7 @@ public:
         else
             {
             // Create the session and run it
-            std::shared_ptr<NodeManager> node_manager = wk_node_manager_.lock();
-            auto s = std::make_shared<Session>(std::move(socket_), node_manager);
+            auto s = std::make_shared<Session>(std::move(socket_));
             s->run();
             sessions_.push_back(s);
             }
