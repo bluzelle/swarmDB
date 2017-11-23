@@ -5,7 +5,7 @@ import {updateNode} from "./NodeService";
 const messages = observable.shallowArray([]);
 global.messages = messages
 
-addCommandProcessor('messages', action('messages', (arr, node) => arr.forEach(m => messages.push({...m, node: node}))));
+addCommandProcessor('messages', action('messages', (arr, node) => arr.forEach(m => messages.push({...m, node, dstAddr: node.address}))));
 
 (function() {
     let lastReceivedMessageIdx = 0;
@@ -13,11 +13,10 @@ addCommandProcessor('messages', action('messages', (arr, node) => arr.forEach(m 
         const newMessages = takeRight(messages, messages.length - lastReceivedMessageIdx);
         lastReceivedMessageIdx = messages.length;
         newMessages.reduce((result, message) => {
-            result.add(message.srcAddr);
-            result.add(message.dstAddr);
+            result.add(message.node);
             return result;
         }, new Set())
-            .forEach(address => updateNode({address: address, lastMessageReceived: new Date().getTime()}));
+            .forEach(node => updateNode({...node, lastMessageReceived: new Date().getTime()}));
     }, 700);
 }());
 

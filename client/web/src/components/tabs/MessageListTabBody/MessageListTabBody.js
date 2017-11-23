@@ -11,7 +11,7 @@ class MessageListTabBody extends Component {
         return defaults({body: JSON.stringify(message.body)}, message)
     }
 
-    addressFormatter({value, dependentValue}) {
+    addressFormatter({value}) {
         return this.props.address === value ? (
             <span style={{color: 'white'}}>{value}</span>
         ) : (

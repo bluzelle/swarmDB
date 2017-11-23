@@ -87,18 +87,18 @@ function Node(port) {
         setTimeout(() => updateStorageUsed(newDirection), 1000);
     }());
 
-    // (function sendMessage() {
-    //     setTimeout(() => {
-    //         sendToClients('messages', [
-    //             {
-    //                 srcAddr: getOtherRandomNode().address,
-    //                 timestamp: new Date().getTime(),
-    //                 body: {something: `sent - ${_.uniqueId()}`}
-    //             }
-    //         ]);
-    //         sendMessage();
-    //     }, _.random(2000, 5000));
-    // }());
+    (function sendMessage() {
+        setTimeout(() => {
+            sendToClients('messages', [
+                {
+                    srcAddr: getOtherRandomNode().address,
+                    timestamp: new Date().getTime(),
+                    body: {something: `sent - ${_.uniqueId()}`}
+                }
+            ]);
+            sendMessage();
+        }, _.random(2000, 5000));
+    }());
 }
 
 const getRandomNode = fp.pipe(
