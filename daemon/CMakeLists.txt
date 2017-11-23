@@ -15,7 +15,7 @@ elseif(APPLE)
 endif()
 
 # TODO can we move this to the root CMakeLists.txt?
-find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random REQUIRED)
+find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random program_options REQUIRED)
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
     check_asio_version()
@@ -26,13 +26,24 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES
+        command_line_options/CommandLineOptions.h
+        command_line_options/CommandLineOptions.cpp
+        main.cpp)
 add_executable(the_db ${SOURCE_FILES})
+target_link_libraries(the_db
+        ${Boost_LIBRARIES}
+        )
 
 ###############################################################################
 # Unit tests
 message(STATUS "*** CMakeLists for bluzelled_test")
 
-set(SOURCE_FILES test.cpp)
+set(SOURCE_FILES
+        command_line_options/CommandLineOptions.h
+        command_line_options/CommandLineOptions.cpp
+        command_line_options/command_line_options_test.cpp
+        test.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
+
