@@ -54,15 +54,16 @@ include_directories(
         command_line_options
 )
 set(SOURCE_FILES
+        test.cpp
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
         command_line_options/command_line_options_test.cpp
-        test.cpp
         websockets/Listener.h
         websockets/Session.cpp
         websockets/Session.h
         websockets/WebSocketServer.h
-        websockets/WebSocketServer_tests.cpp)
+        websockets/WebSocketServer_tests.cpp
+        )
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)
