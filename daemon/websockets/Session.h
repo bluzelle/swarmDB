@@ -42,7 +42,6 @@ class Session : public std::enable_shared_from_this<Session>
     websocket::stream<tcp::socket> ws_;
     boost::asio::io_service::strand strand_;
     boost::beast::multi_buffer buffer_;
-    //Services services_;
 
     SessionState state_ = SessionState::Unknown;
     size_t seq = 0;
@@ -84,22 +83,6 @@ public:
     SessionState
     set_state(
             const pt::ptree &request);
-
-    void
-    send_remove_nodes(
-            const std::string &name);
-
-    void
-    send_update_nodes(
-            const std::string &name);
-
-    void
-    send_message(
-            const std::string &from, const std::string &to, const std::string &message);
-
-    void
-    send_log(
-            const std::string &name, int timer, int entry, const std::string &log);
 
     std::string
     timestamp();

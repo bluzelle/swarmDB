@@ -78,7 +78,26 @@ Session::on_read(
     std::ostringstream oss;
     pt::write_json(oss,request);
 
+
+    std::string command = request.get<std::string>("cmd");
+
+    // TODO replace with map
+    if(command == "quit")
+        {
+        std::cout << "*** command [" << command << "]" << std::endl;
+        boost::beast::websocket::close_reason cr;
+        cr.code = 0;
+        cr.reason = "Command was quit.";
+        ws_.close(cr);
+        this->ws_.get_io_service().stop();
+        }
+
+
+
     std::string response = oss.str();
+
+
+
 
     ///////////////////////////////////////////////////////////////////////////
     ws_.async_write(
@@ -164,63 +183,6 @@ Session::on_write_async(
     buffer_.consume(buffer_.size());
 }
 
-void
-Session::send_remove_nodes(
-        const std::string &name)
-{
-
-    // {"cmd":"removeNodes","data":["0x07"]}
-    auto f = boost::format("{\"cmd\":\"removeNodes\", \"data\":[\"%s\"]}") % name;
-    std::string response = boost::str(f);
-
-    if (response.length() > 0) // Send removed nodes.
-        {
-        write_async(boost::asio::buffer(response));
-        }
-}
-
-void
-Session::send_update_nodes(
-        const std::string &name)
-{
-
-    // {"cmd":"updateNodes","data":[{"address":"0x0e"}]}
-    auto f = boost::format("{\"cmd\":\"updateNodes\",\"data\":[{\"address\":\"%s\"}]}") % name;
-    std::string response = boost::str(f);
-
-    if (response.length() > 0)
-        {
-        std::cout << " ******* " << std::endl << response << std::endl;
-        write_async(boost::asio::buffer(response));
-        }
-}
-
-void
-Session::send_message(
-        const std::string &from, const std::string &to, const std::string &message)
-{
-
-    auto f = boost::format(
-            R"({"cmd":"messages","data":[{"srcAddr":"%s", "dstAddr":"%s", "timestamp":"%s", "body":%s}]})")
-             % from % to % timestamp() % message;
-
-    std::string response = boost::str(f);
-
-    std::cout << " ******* " << std::endl << response << std::endl;
-    write_async(boost::asio::buffer(response));
-}
-
-void
-Session::send_log(
-        const std::string &name, int timer, int entry, const std::string &log)
-{
-
-    auto f = boost::format(
-            R"({"cmd":"log","data":[{"name":%d, "timer_no":%d, "entry_no":%d, "timestamp":"%s", "message":"%s"}]})")
-             % name % timer % entry % timestamp() % log;
-    std::string response = boost::str(f);
-    write_async(boost::asio::buffer(response));
-}
 
 std::string
 Session::timestamp()
