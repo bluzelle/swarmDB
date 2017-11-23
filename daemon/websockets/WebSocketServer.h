@@ -8,9 +8,10 @@
 class WebSocketServer
 {
     boost::asio::ip::address address_;
-    std::shared_ptr<Listener> listener_;
     unsigned short port_;
+    std::shared_ptr<Listener> listener_;
     size_t threads_;
+    bool is_running_ = false;
 
 public:
     WebSocketServer
@@ -25,6 +26,7 @@ public:
               listener_(listener),
               threads_(threads)
     {
+
     }
 
     void operator()()
@@ -46,7 +48,10 @@ public:
                         ios.run();
                         });
         ios.run();
+        is_running_ = false;
     }
+
+    const bool &is_running() { return is_running_; }
 };
 
 #endif //BLUZELLE_WEBSOCKETSERVER_H
