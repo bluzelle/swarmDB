@@ -79,7 +79,7 @@ function Node(port) {
 
     (function updateStorageUsed(direction = 1) {
         me.used += direction;
-        sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used')]);
+        sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
 
         let newDirection = direction;
         me.used < 40  && (newDirection = _.random(1,2));
