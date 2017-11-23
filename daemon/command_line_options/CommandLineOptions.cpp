@@ -13,8 +13,6 @@ const string CommandLineOptions::s_address_option_name = "address";
 const string CommandLineOptions::s_config_option_name = "config";
 const string CommandLineOptions::s_port_option_name = "port";
 
-// https://stackoverflow.com/questions/5395503/required-and-optional-arguments-using-boost-library-program-options
-
 CommandLineOptions::CommandLineOptions()
         : desc_("Allowed options") {
 
