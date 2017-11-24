@@ -53,6 +53,9 @@ module.exports = () => ({
             }
         ]
     },
+    externals:{
+        fs:    "commonjs fs",
+    },
     resolve: {
         alias: {
             components: path.resolve('components'),

@@ -10,7 +10,7 @@ export const entryPointUrl = observable(undefined);
 const entryPointSocket = observable(undefined);
 
 autorun(function checkConnectToEntryPoint() {
-    if(entryPointUrl.get()) {
+    if (entryPointUrl.get()) {
         const [ip, port] = entryPointUrl.get().split(':');
         connectToEntryPoint(ip, port);
     }
@@ -22,16 +22,18 @@ autorun(function checkConnectedToNode() {
 });
 
 autorun(function checkNeedToConnectToNode() {
-    tick.get();
-        const nodes = getNodes();
-        const groups = Object.assign(
-            {connected: [], notConnected: []},
-            groupBy(nodes, node => node.socket ? 'connected' : 'notConnected')
-        );
-        if(groups.connected.length < MIN_CONNECTED_NODES && groups.notConnected.length) {
-            connectToNode(groups.notConnected[0]);
-            setTimeout(checkNeedToConnectToNode());
-        }
+        tick.get();
+        untracked(() => {
+            const nodes = getNodes();
+            const groups = Object.assign(
+                {connected: [], notConnected: []},
+                groupBy(nodes, node => node.socket ? 'connected' : 'notConnected')
+            );
+            if (groups.connected.length < MIN_CONNECTED_NODES && groups.notConnected.length) {
+                connectToNode(groups.notConnected[0]);
+//                setTimeout(checkNeedToConnectToNode, 1000);
+            }
+        });
     }
 );
 
@@ -46,7 +48,7 @@ const connectToEntryPoint = (ip, port) => {
     socket.onclose = () => entryPointSocket.set(undefined);
 };
 
-export const connectToNode = (node) => {
+const connectToNode = (node) => {
     const socket = new WebSocket(`ws://${node.ip}:${node.port}`);
     node.socket = socket;
     setSocketState();
@@ -60,7 +62,7 @@ export const connectToNode = (node) => {
 
     function setSocketState() {
         node.socketState ? node.socketState = socketStates[socket.readyState] :
-        extendObservable(node, {socketState: socketStates[socket.readyState]});
+            extendObservable(node, {socketState: socketStates[socket.readyState]});
     }
 };
 

@@ -18,6 +18,10 @@ export default class DaemonSelector extends Component {
         this.address.focus();
     }
 
+    startEmulator() {
+        electron.remote.require('./emulator/Emulator').start();
+    }
+
     render() {
         return (
             <CenterMiddle>
@@ -35,6 +39,7 @@ export default class DaemonSelector extends Component {
                             </div>
                             <div style={{marginTop: 10}}>
                                     <Button onClick={this.go.bind(this)} tabIndex="3">Go</Button>
+                                {global.electron && <Button style={{marginLeft: 10}} onClick={this.startEmulator.bind(this)}>Start Emulator</Button>}
                             </div>
                         </div>
                     </Panel>

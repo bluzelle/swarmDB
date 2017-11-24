@@ -18,10 +18,8 @@ class MainTabs extends Component {
                 <NavItem eventKey="/message-list" active={this.isActive('/message-list')}>Message List</NavItem>
                 <NavItem eventKey="/node-list" active={this.isActive('/node-list')}>Node List</NavItem>
                 <NavItem eventKey="/node-graph"  active={this.isActive('/node-graph')}>Node Graph</NavItem>
-                <NavItem eventKey="/settings" active={this.isActive('/settings')}>Settings</NavItem>
-                {
-                    global.electron && <NavItem eventKey="/manage-daemons" active={this.isActive('/manage-daemons')}>Daemon Manager</NavItem>
-                }
+                {global.electron && <NavItem eventKey="/emulator" active={this.isActive('/emulator')}>Emulator</NavItem>}
+                {global.electron && <NavItem eventKey="/manage-daemons" active={this.isActive('/manage-daemons')}>Daemon Manager</NavItem>}
             </Nav>
         )
     }

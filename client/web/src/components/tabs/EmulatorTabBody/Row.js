@@ -4,17 +4,11 @@ import invoke from 'lodash/invoke'
 @observer
 export default class Row extends Component {
     @observable editing;
-    @observable waitingForUpdateValue;
 
     setValue() {
         const value = this.props.type === 'number' ? parseInt(this.input.value) : this.input.value;
         this.editing = false;
-        this.waitingForUpdateValue = value;
         invoke(this.props, 'setFn', value);
-    }
-
-    componentWillReceiveProps(newProps) {
-        this.waitingForUpdateValue && newProps.value === this.waitingForUpdateValue && (this.waitingForUpdateValue = undefined);
     }
 
     render() {
@@ -29,11 +23,9 @@ export default class Row extends Component {
                         <Flex>
                             {this.editing ? (
                                 <input style={{lineHeight: '20px'}} type={type} ref={r => this.input = r} defaultValue={value}/>
-                            ) : this.waitingForUpdateValue ? (
-                                <span style={{color: '#aaa'}}>{this.waitingForUpdateValue} (saving)</span>
-                            ) : (
+                            ) :
                                 value
-                            )}
+                            }
                         </Flex>
                         <Fixed style={{width: 200}}>
                             {this.editing ? (

@@ -3,7 +3,7 @@ import NodeGraph from 'components/tabs/NodeGraph'
 import MessageListTabBody from 'components/tabs/MessageListTabBody'
 import NodeListTabBody from 'components/tabs/NodeListTabBody'
 import LogTabBody from 'components/tabs/LogTabBody'
-import SettingsTabBody from 'components/tabs/SettingsTabBody'
+import EmulatorTabBody from 'components/tabs/EmulatorTabBody'
 import Header from './Header'
 
 export default class Main extends Component {
@@ -30,7 +30,7 @@ export default class Main extends Component {
                         <Route path="/message-list" component={MessageListTabBody} />
                         <Route path="/node-graph" component={NodeGraph}/>
                         <Route path="/node-list" component={NodeListTabBody}/>
-                        <Route path="/settings" component={SettingsTabBody}/>
+                        <Route path="/emulator" component={EmulatorTabBody}/>
                         <Route component={LogTabBody}/>
                     </Switch>
                 </Flex>

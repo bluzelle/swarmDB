@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-const TOTAL_NODES = 15;
 
 const _ = require('lodash');
 const WebSocketServer = require('websocket').server;
@@ -8,14 +7,51 @@ const fs = require('fs');
 const path = require('path');
 const fp = require('lodash/fp');
 
-_.range(8100, 8100 + TOTAL_NODES).forEach((port) => setTimeout(() => Node(port)));
-
 const nodes = {};
+
+let maxNodes = 15;
+let lastPort = 8100;
+
+
+module.exports = {
+    getNodes: () => nodes,
+    setMaxNodes: num => maxNodes = num,
+    getMaxNodes: () => maxNodes,
+    shutdown: () => _.forEach(nodes, node => node.shutdown()),
+    start: _.once(start)
+};
+
 
 const addNode = (node) => {
     _.map(nodes, n => n.nodeAdded(_.pick(node, 'address', 'ip', 'port')));
     nodes[node.port] = node;
 };
+
+
+function start() {
+    module.exports.wasStarted = true;
+    (function checkNeedMoreNodes() {
+        _.size(nodes) < maxNodes && Node(lastPort++);
+        setTimeout(checkNeedMoreNodes, 500);
+    }());
+
+    (function checkNeedLessNodes() {
+        _.size(nodes) > maxNodes && getRandomNode().shutdown();
+        setTimeout(checkNeedLessNodes, 500);
+    }());
+
+    (function killANode() {
+        setTimeout(() => {
+            getRandomNode().die();
+            killANode();
+        }, _.random(10000, 5000));
+    }());
+
+    (function loop() {
+        console.log()
+    }());
+}
+
 
 function Node(port) {
     const peers = [];
@@ -34,6 +70,16 @@ function Node(port) {
         nodeAdded: (node) => {
             sendToClients('updateNodes', [node]);
             peers.push(node);
+        },
+        shutdown: () => {
+            alive = true;
+            me.isShutdown = true;
+            delete nodes[port];
+            sendToClients('removeNodes', [me.address]);
+            setTimeout(() => {
+                me.getWsServer().shutDown();
+                me.getHttpServer().close();
+            }, 200);
         }
     };
 
@@ -42,7 +88,7 @@ function Node(port) {
     const connections = [];
 
 
-    const server = http.createServer(function (request, response) {
+    me.getHttpServer = _.memoize(() => http.createServer(function (request, response) {
         const filename = path.resolve(`./dist/${request.url}`);
         fs.existsSync(filename) && fs.lstatSync(filename).isFile() ? sendFile(filename) : sendFile(path.resolve('./dist/index.html'));
 
@@ -50,18 +96,18 @@ function Node(port) {
             response.writeHead(200);
             response.end(fs.readFileSync(filename));
         }
-    });
+    }));
 
-    server.listen(port, () => {
+    me.getHttpServer().listen(port, () => {
         console.log(`Node is listening on port ${port}`);
     });
 
-    wsServer = new WebSocketServer({
-        httpServer: server,
+    me.getWsServer = _.memoize(() => new WebSocketServer({
+        httpServer: me.getHttpServer(),
         autoAcceptConnections: true
-    });
+    }));
 
-    wsServer.on('connect', connection => {
+    me.getWsServer().on('connect', connection => {
         connections.push(connection);
         sendNodesInfo(connection);
     });
@@ -71,7 +117,7 @@ function Node(port) {
     );
 
     const sendToClient = (connection, cmd, data) =>
-        alive && setTimeout(() => connection.send(JSON.stringify({cmd: cmd, data: data})), 500);
+        alive && connection.send(JSON.stringify({cmd: cmd, data: data}));
 
     const sendNodesInfo = (connection) => {
         sendToClient(connection, 'updateNodes', [me, ...peers]);
@@ -84,25 +130,25 @@ function Node(port) {
         let newDirection = direction;
         me.used < 40 && (newDirection = _.random(1, 2));
         me.used > 70 && (newDirection = _.random(-1, -2));
-        setTimeout(() => updateStorageUsed(newDirection), 1000);
+        setTimeout(() => me.isShutdown || updateStorageUsed(newDirection), 1000);
     }());
 
     (function sendMessage() {
         setTimeout(() => {
-            sendToClients('messages', [
+            me.isShutdown || sendToClients('messages', [
                 {
                     srcAddr: getOtherRandomNode().address,
                     timestamp: new Date().getTime(),
                     body: {something: `sent - ${_.uniqueId()}`}
                 }
             ]);
-            sendMessage();
+            me.isShutdown || sendMessage();
         }, _.random(5000, 10000));
     }());
 }
 
 const getRandomNode = fp.pipe(
-    () => _.random(Object.keys(nodes).length - 1),
+    () => _.random(_.size(nodes) - 1),
     idx => nodes[Object.keys(nodes)[idx]],
 );
 
@@ -112,12 +158,6 @@ const getOtherRandomNode = node => {
 };
 
 
-(function killANode() {
-    setTimeout(() => {
-        getRandomNode().die();
-        killANode();
-    }, _.random(10000, 5000));
-}());
 
 
 
