@@ -26,6 +26,7 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
+include_directories(websockets)
 include_directories(
         websockets
 )
