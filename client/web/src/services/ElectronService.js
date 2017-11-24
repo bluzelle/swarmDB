@@ -9,7 +9,7 @@ setTimeout(() => {
 });
 
 const setupIpc = () => {
-    autorun(() => send('setConnectionStatus', socketState.get()));
+//    autorun(() => send('setConnectionStatus', socketState.get()));
 };
 
 const send = (cmd, data) => electron.ipcRenderer.send(JSON.stringify({cmd: cmd, data: data}));

@@ -2,7 +2,7 @@ const {app, BrowserWindow} = require('electron');
 const path = require('path');
 const url = require('url');
 require('./ApplicationMenu');
-
+require('./emulator/Emulator');
 
 const commandLineArgs = require('command-line-args');
 

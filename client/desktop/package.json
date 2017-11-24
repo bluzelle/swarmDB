@@ -7,7 +7,9 @@
     "command-line-args": "^4.0.7",
     "electron": "^1.7.9",
     "electron-packager": "^9.1.0",
-    "mobx": "^3.3.1"
+    "lodash": "^4.17.4",
+    "mobx": "^3.3.1",
+    "websocket": "^1.0.25"
   },
   "scripts": {
     "start": "electron ./main.js",
