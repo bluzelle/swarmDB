@@ -36,7 +36,9 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
-include_directories(websockets)
+include_directories(
+        websockets
+)
 set(SOURCE_FILES
         main.cpp
         websockets/Listener.h
@@ -52,7 +54,9 @@ target_link_libraries(the_db ${Boost_LIBRARIES})
 message(STATUS "*** CMakeLists for bluzelled_test")
 enable_testing()
 
-include_directories(websockets)
+include_directories(
+        websockets
+)
 set(SOURCE_FILES
         test.cpp
         websockets/Listener.h

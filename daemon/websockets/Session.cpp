@@ -1,5 +1,6 @@
 #include "Session.h"
 
+#include <sstream>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // Report a failure
@@ -31,7 +32,8 @@ Session::run()
 }
 
 void
-Session::on_accept(boost::system::error_code ec)
+Session::on_accept(
+        boost::system::error_code ec)
 {
     if (ec)
         return fail(ec, "accept");
@@ -67,50 +69,19 @@ Session::on_read(
     if (ec)
         fail(ec, "read");
 
-    std::stringstream ss;
-    ss << boost::beast::buffers(buffer_.data());
-
-    pt::ptree request;
-    pt::read_json(ss, request);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // TODO: this is where requests are transformed
-    std::ostringstream oss;
-    pt::write_json(oss,request);
-
-
-    std::string command = request.get<std::string>("cmd");
-
-    // TODO replace with map
-    if(command == "quit")
+    std::string response;
+    if(buffer_.size() > 0)
         {
-        std::cout << "*** command [" << command << "]" << std::endl;
-        boost::beast::websocket::close_reason cr;
-        cr.code = 0;
-        cr.reason = "Command was quit.";
-        ws_.close(cr);
-        this->ws_.get_io_service().stop();
+        response = process_json_string(buffer_);
         }
-
-
-
-    std::string response = oss.str();
-
-
-
-
-    ///////////////////////////////////////////////////////////////////////////
+    auto b = boost::asio::buffer(fix_json_numbers(response));
     ws_.async_write(
-            boost::asio::buffer(response),
+            b,
             std::bind(
                     &Session::on_write,
                     shared_from_this(),
                     std::placeholders::_1,
                     std::placeholders::_2));
-
-
-    state_ = set_state(request);
-    seq = request.get<int>("seq");
 }
 
 void
@@ -145,45 +116,6 @@ Session::on_write(
     do_read();
 }
 
-SessionState
-Session::set_state(
-        const pt::ptree &request)
-{
-    if (request.get<std::string>("cmd") == "getMaxNodes")
-        return SessionState::Starting;
-
-    if (request.get<std::string>("cmd") == "getMinNodes")
-        return SessionState::Started;
-
-    return state_;
-}
-
-void
-Session::write_async(boost::asio::const_buffers_1 b)
-{
-    ws_.async_write(
-            b,
-            std::bind(
-                    &Session::on_write_async,
-                    shared_from_this(),
-                    std::placeholders::_1,
-                    std::placeholders::_2));
-}
-
-void
-Session::on_write_async(
-        boost::system::error_code ec,
-        std::size_t bytes_transferred)
-{
-    boost::ignore_unused(bytes_transferred);
-
-    if (ec)
-        return fail(ec, "write");
-
-    buffer_.consume(buffer_.size());
-}
-
-
 std::string
 Session::timestamp()
 {
@@ -197,4 +129,41 @@ Session::timestamp()
     ss << boost::posix_time::microsec_clock::universal_time();
 
     return ss.str();
+}
+
+std::string
+Session::process_json_string(
+        const boost::beast::multi_buffer &buffer
+)
+{
+    std::string response;
+    try
+        {
+        std::stringstream ss;
+        ss << boost::beast::buffers(buffer.data());
+        pt::ptree request;
+        pt::read_json( ss, request);
+        auto command = request.get<std::string>("cmd");
+        seq_ = request.get<size_t>("seq");
+        // TODO: When we start building the services we need to replace this with
+        // the command strategy pattern
+        if("ping" == command)
+            {
+            request.put( "cmd", "pong");
+            }
+        else
+            {
+            request.put( "cmd", "error");
+            request.put( "data", "Command not found.");
+            }
+
+        ss.str("");
+        pt::write_json(ss, request);
+        response = ss.str();
+        }
+    catch(const std::exception &e)
+        {
+        std::cerr << "Error processing command: [" << e.what() << "]" << std::endl;
+        }
+    return response;
 }
