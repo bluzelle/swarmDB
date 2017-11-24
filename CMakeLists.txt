@@ -33,5 +33,5 @@ function(check_beast_version)
     ENDIF()
 endfunction()
 
-
+message(STATUS "*** adding daemon subdirectory")
 add_subdirectory(daemon)

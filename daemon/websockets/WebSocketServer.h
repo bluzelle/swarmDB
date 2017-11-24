@@ -26,7 +26,6 @@ public:
               listener_(listener),
               threads_(threads)
     {
-
     }
 
     void operator()()

@@ -26,12 +26,12 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
+include_directories(
+        websockets
+)
 set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
-        main.cpp)
-include_directories(websockets)
-set(SOURCE_FILES
         main.cpp
         websockets/Listener.h
         websockets/Session.cpp
@@ -48,13 +48,11 @@ target_link_libraries(the_db
 message(STATUS "*** CMakeLists for bluzelled_test")
 enable_testing()
 
+include_directories(websockets)
 set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
         command_line_options/command_line_options_test.cpp
-        test.cpp)
-include_directories(websockets)
-set(SOURCE_FILES
         test.cpp
         websockets/Listener.h
         websockets/Session.cpp
