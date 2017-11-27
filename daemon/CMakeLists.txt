@@ -15,7 +15,18 @@ elseif(APPLE)
 endif()
 
 # TODO can we move this to the root CMakeLists.txt?
-find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random program_options REQUIRED)
+find_package(
+        Boost ${REQUIRED_BOOST}
+        REQUIRED COMPONENTS
+        system
+        coroutine
+        thread
+        regex
+        chrono
+        random
+        program_options
+        unit_test_framework REQUIRED)
+
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
     check_asio_version()
@@ -26,7 +37,16 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
+include_directories(
+        websockets
+        command_line_options
+)
 set(SOURCE_FILES
+        main.cpp
+        websockets/Listener.h
+        websockets/Session.cpp
+        websockets/Session.h
+        websockets/WebSocketServer.h
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
         main.cpp)
@@ -36,11 +56,21 @@ target_link_libraries(the_db ${Boost_LIBRARIES})
 ###############################################################################
 # Unit tests
 message(STATUS "*** CMakeLists for bluzelled_test")
+enable_testing()
 
+include_directories(
+        websockets
+        command_line_options
+)
 set(SOURCE_FILES
+        test.cpp
+        websockets/Listener.h
+        websockets/Session.cpp
+        websockets/Session.h
+        websockets/WebSocketServer.h
+        websockets/WebSocketServer_tests.cpp
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
-        command_line_options/command_line_options_test.cpp
-        test.cpp)
+        command_line_options/command_line_options_test.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
