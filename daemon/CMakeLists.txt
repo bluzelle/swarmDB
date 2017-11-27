@@ -52,6 +52,9 @@ set(SOURCE_FILES
         main.cpp)
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(the_db pthread)
+endif()
 
 ###############################################################################
 # Unit tests
@@ -74,3 +77,6 @@ set(SOURCE_FILES
         command_line_options/command_line_options_test.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(the_db_test pthread)
+endif()
