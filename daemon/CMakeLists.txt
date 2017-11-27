@@ -39,9 +39,10 @@ set(SOURCE_FILES
         websockets/WebSocketServer.h
         )
 add_executable(the_db ${SOURCE_FILES})
-target_link_libraries(the_db
-        ${Boost_LIBRARIES}
-        )
+target_link_libraries(the_db ${Boost_LIBRARIES})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(the_db pthread)
+endif()
 
 ###############################################################################
 # Unit tests
@@ -61,3 +62,6 @@ set(SOURCE_FILES
         websockets/WebSocketServer_tests.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(the_db_test pthread)
+endif()
