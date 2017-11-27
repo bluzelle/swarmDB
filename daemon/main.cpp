@@ -11,7 +11,10 @@ int main(int argc, char *argv[]) {
     CommandLineOptions options;
 
     if (!options.parse(argc, argv))
+        {
+        std::cout << options.get_last_error() << std::endl;
         return 1;
+        }
 
     string address = options.get_address();
     if (!CommandLineOptions::is_valid_ethereum_address(address))

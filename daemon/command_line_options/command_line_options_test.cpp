@@ -99,4 +99,25 @@ BOOST_AUTO_TEST_CASE(test_options_missing_config) {
         }
 }
 
+//  --run_test=test_options_address_validation
+BOOST_AUTO_TEST_CASE(test_options_address_validation) {
+    CommandLineOptions op;
+
+    bool valid = op.is_valid_ethereum_address("0x2ba35056580b505690c03dfb1df58bc6b6cd9f89");
+    BOOST_CHECK_EQUAL(valid, true);
+
+    valid = op.is_valid_ethereum_address("0X2ba35056580b505690c03dfb1df58bc6b6cd9f89");
+    BOOST_CHECK_EQUAL(valid, true);
+}
+
+//  --run_test=test_options_address_validation_fail
+BOOST_AUTO_TEST_CASE(test_options_address_validation_fail) {
+    CommandLineOptions op;
+
+    bool valid = op.is_valid_ethereum_address("hello, world"); // Invalid characters.
+    BOOST_CHECK_EQUAL(valid, false);
+
+    valid = op.is_valid_ethereum_address("0X2ba35056580b505690c03dfb1d"); // Invalid size.
+    BOOST_CHECK_EQUAL(valid, false);
+}
 

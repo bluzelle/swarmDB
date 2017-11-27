@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 
 #include <boost/algorithm/hex.hpp>
 
@@ -32,7 +33,9 @@ bool CommandLineOptions::parse(int argc, char *argv[]) {
 
         if ((vm_.count(s_help_option_name) != 0) || (argc == 1))
             {
-            std::cout << desc_ << std::endl;
+            std::stringstream ss;
+            ss << desc_;
+            error_ = ss.str();
             return false;
             }
 
@@ -40,11 +43,15 @@ bool CommandLineOptions::parse(int argc, char *argv[]) {
         }
     catch (error &err)
         {
-        std::cout << err.what() << std::endl;
+        error_ =  err.what();
         return false;
         }
 
     return true;
+}
+
+string CommandLineOptions::get_last_error() const {
+    return error_;
 }
 
 options_description CommandLineOptions::get_description() const {
@@ -53,8 +60,8 @@ options_description CommandLineOptions::get_description() const {
 
 bool CommandLineOptions::is_valid_ethereum_address(const string &addr) {
     if ((addr.length() == s_address_size) &&
-        (addr.substr(0, 2) == "0x") ||
-        (addr.substr(0, 2) == "0X"))
+            ((addr.substr(0, 2) == "0x") ||
+                    (addr.substr(0, 2) == "0X")))
         {
         try
             {
