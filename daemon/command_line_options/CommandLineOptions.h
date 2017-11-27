@@ -23,6 +23,7 @@ private:
     ushort port_;
     string address_;
     string config_;
+    string error_;
 
     template<typename T>
     T get_option(const string &name) const {
@@ -35,6 +36,8 @@ public:
     CommandLineOptions();
 
     bool parse(int argc, char *argv[]);
+
+    string get_last_error() const;
 
     boost::program_options::options_description get_description() const;
 
