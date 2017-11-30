@@ -38,8 +38,16 @@ Session::on_accept(
     if (ec)
         return fail(ec, "accept");
 
-    // Read a message
-    do_read();
+    auto b = boost::asio::buffer(update_nodes());
+    ws_.async_write(
+            b,
+            strand_.wrap(std::bind(
+                    &Session::on_write,
+                    shared_from_this(),
+                    std::placeholders::_1,
+                    std::placeholders::_2)));
+
+    // Read scheduled in on_write().
 }
 
 void
@@ -166,4 +174,27 @@ Session::process_json_string(
         std::cerr << "Error processing command: [" << e.what() << "]" << std::endl;
         }
     return response;
+}
+
+std::string
+Session::update_nodes() {
+    auto &socket = ws_.next_layer();
+    std::string name = boost::lexical_cast<std::string>(socket.local_endpoint()); // Host:port.
+
+    pt::ptree out_tree, array, child1;
+    out_tree.put("cmd", "updateNodes");
+    child1.put("address", name);
+    child1.put<long>("available", 100);
+    child1.put<long>("used", 58);
+    //child1.put<bool>("isLeader", false);
+    array.push_back(std::make_pair("", child1));
+    out_tree.add_child("data", array);
+    //out_tree.put("seq", seq);
+
+    std::stringstream ss;
+    ss.str("");
+    auto d = out_tree.get_child("data.");
+    pt::write_json(ss, out_tree);
+
+    return fix_json_numbers(ss.str());
 }

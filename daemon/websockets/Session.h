@@ -43,6 +43,9 @@ class Session : public std::enable_shared_from_this<Session>
             const boost::beast::multi_buffer &buffer
     );
 
+    std::string
+    update_nodes();
+
 public:
     explicit
     Session(tcp::socket socket); // Take ownership of the socket

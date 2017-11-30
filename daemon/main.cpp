@@ -1,10 +1,11 @@
  // TODO: move this to the correct module
 
 #include <iostream>
-#include <boost/thread.hpp>
+#include <thread>
 
-
-#include "command_line_options/CommandLineOptions.h"
+#include "CommandLineOptions.h"
+#include "Listener.h"
+#include "WebSocketServer.h"
 
 
 int main(int argc, char *argv[]) {
@@ -33,6 +34,13 @@ int main(int argc, char *argv[]) {
     std::cout << "Running node: " << options.get_address() << std::endl
               << "     on port: " << options.get_port() << std::endl
               << " config path: " << options.get_config() << std::endl;
+
+    std::shared_ptr<Listener> listener;
+    boost::thread websocket_thread(WebSocketServer("127.0.0.1", port, listener, 1));
+
+    std::cout << "Press any key to stop" << std::endl;
+    getchar();
+    std::cout << "Stopping..." << std::endl;
 
     return 0;
 }
