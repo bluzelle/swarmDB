@@ -2,7 +2,7 @@ import Button from 'react-bootstrap/lib/Button'
 import invoke from 'lodash/invoke'
 
 @observer
-export default class Row extends Component {
+export default class InputRow extends Component {
     @observable editing;
 
     setValue() {
@@ -15,15 +15,15 @@ export default class Row extends Component {
         const {label, type, id, value} = this.props;
 
         return (
-            <Fixed style={{height: 43, lineHeight: '42px', marginBottom: 5, width: 500, borderBottomWidth: 1, borderBottomStyle: 'solid'}}>
+                <Fixed style={{height: 43, lineHeight: '42px', marginBottom: 5, width: 500, borderBottomWidth: 1, borderBottomStyle: 'solid'}}>
                     <Layout type="">
-                        <Fixed style={{width: 100}}>
+                        <Fixed style={{width: 200}}>
                             <label>{label}</label>
                         </Fixed>
                         <Flex>
                             {this.editing ? (
-                                <input style={{lineHeight: '20px'}} type={type} ref={r => this.input = r} defaultValue={value}/>
-                            ) :
+                                    <input style={{lineHeight: '20px'}} type={type} ref={r => this.input = r} defaultValue={value}/>
+                                ) :
                                 value
                             }
                         </Flex>
@@ -38,7 +38,7 @@ export default class Row extends Component {
                             )}
                         </Fixed>
                     </Layout>
-            </Fixed>
+                </Fixed>
         )
     }
 }

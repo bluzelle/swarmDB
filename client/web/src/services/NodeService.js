@@ -54,7 +54,7 @@ export const clearNodes = () => nodes.clear();
 
 
 (function checkForDeadNodes() {
-    nodes.values().forEach(node =>  node.nodeState !== 'dead' && (node.socket || markNodeDead(node)));
+    nodes.values().forEach(node =>  new Date().getTime() - node.createdAt > 3000 && node.nodeState !== 'dead' && (node.socket || markNodeDead(node)));
     setTimeout(checkForDeadNodes, 1000);
 }());
 

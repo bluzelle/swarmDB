@@ -1,34 +1,41 @@
 #!/usr/bin/env node
+const _ = require('lodash');
 const Node = require('./Node');
 const fp = require('lodash/fp');
+const {maxNodes, behaveRandomly} = require('./Values');
+const CommandProcessors = require('./CommandProcessors');
 
 require.main === module && setTimeout(start);
 
 
-const {observable} = require('mobx');
-
-const _ = require('lodash');
-
 const nodes = require('./NodesService').nodes;
-const maxNodes = observable(5);
-let lastPort = 8100;
+let lastPort;
+let randomBehavior = false;
 
 module.exports = {
     getNodes: () => nodes.values(),
-    setMaxNodes: num => maxNodes.set(num),
+    setMaxNodes: CommandProcessors.setMaxNodes,
     getMaxNodes: () => maxNodes.get(),
     shutdown: () => nodes.values().map(node => node.shutdown()),
-    start: _.once(start)
+    start: _.once(start),
+    behaveRandomly: (v) => behaveRandomly.set(v),
+    isRandom: () => behaveRandomly.get()
 };
 
 
 
 
-function start() {
+function start(startPort = 8100) {
+    require('./Network').start(startPort - 1);
+
+    lastPort = startPort;
     module.exports.wasStarted = true;
 
     (function checkNeedMoreNodes() {
-        nodes.size < maxNodes.get() && Node(lastPort++);
+        if(nodes.size < maxNodes.get()) {
+            const node = Node(lastPort++);
+            randomBehavior && node.behaveRandomly();
+        }
         setTimeout(checkNeedMoreNodes, 250);
     }());
 

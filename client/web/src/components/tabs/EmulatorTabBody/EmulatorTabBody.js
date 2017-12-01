@@ -1,4 +1,5 @@
-import Row from './Row'
+import InputRow from './InputRow'
+import ToggleRow from './ToggleRow'
 
 @observer
 export default class EmulatorTabBody extends Component {
@@ -17,11 +18,13 @@ export default class EmulatorTabBody extends Component {
     render() {
         const {maxNodes} = this.state;
         return (
-                <Layout type="column" style={{padding: 20}}>
-                    <Row id="max-nodes-setting" label="Max Nodes" setFn={this.setMaxNodes.bind(this)} type="number" value={maxNodes}/>
-                </Layout>
+            <Layout type="column" style={{padding: 20}}>
+                <InputRow id="max-nodes-setting" label="Max Nodes" setFn={this.setMaxNodes.bind(this)} type="number" value={maxNodes}/>
+                <ToggleRow id="toggle-random" label="Random behavior" setFn={this.emulator.behaveRandomly} value={this.emulator.isRandom()} />
+            </Layout>
         )
     }
 }
+
 
 

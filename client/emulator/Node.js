@@ -5,6 +5,7 @@ const path = require('path');
 const _ = require('lodash');
 const fp = require('lodash/fp');
 const nodes = require('./NodesService').nodes;
+const {behaveRandomly} = require('./Values');
 
 module.exports = function Node(port) {
     let alive = true;
@@ -37,8 +38,7 @@ module.exports = function Node(port) {
 
     const connections = [];
 
-
-    const DIST_DIR = path.resolve('../web/dist');
+    const DIST_DIR = path.resolve(__dirname, '../web/dist');
     me.getHttpServer = _.memoize(() => http.createServer(function (request, response) {
 
         const filename = path.resolve(`${DIST_DIR}/${request.url}`);
@@ -81,28 +81,31 @@ module.exports = function Node(port) {
 
 
 
-    (function updateStorageUsed(direction = 1) {
-        me.used += direction;
-        sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
+        (function updateStorageUsed(direction = 1) {
+            if(behaveRandomly.get()) {
+                me.used += direction;
+                sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'used', 'available')]);
 
-        let newDirection = direction;
-        me.used < 40 && (newDirection = _.random(1, 2));
-        me.used > 70 && (newDirection = _.random(-1, -2));
-        setTimeout(() => me.isShutdown || updateStorageUsed(newDirection), 1000);
-    }());
+                me.used < 40 && (direction = _.random(1, 2));
+                me.used > 70 && (direction = _.random(-1, -2));
+            }
+            setTimeout(() => me.isShutdown || updateStorageUsed(direction), 1000);
+        }());
 
-    (function sendMessage() {
-        setTimeout(() => {
-            me.isShutdown || sendToClients('messages', [
-                {
-                    srcAddr: getOtherRandomNode().address,
-                    timestamp: new Date().getTime(),
-                    body: {something: `sent - ${_.uniqueId()}`}
+        (function sendMessage() {
+            setTimeout(() => {
+                if(behaveRandomly.get()) {
+                    me.isShutdown || sendToClients('messages', [
+                        {
+                            srcAddr: getOtherRandomNode().address,
+                            timestamp: new Date().getTime(),
+                            body: {something: `sent - ${_.uniqueId()}`}
+                        }
+                    ]);
                 }
-            ]);
-            me.isShutdown || sendMessage();
-        }, _.random(5000, 10000));
-    }());
+                me.isShutdown || sendMessage();
+            }, _.random(5000, 10000));
+        }());
 
     function getPeerInfo(node) {
         return nodes.values().filter(peer => peer.address !== node.address).map(n => _.pick(n, 'address', 'ip', 'port'));
@@ -117,4 +120,5 @@ module.exports = function Node(port) {
         () => _.random(nodes.size - 1),
         idx => nodes.values()[idx],
     );
+    return me;
 };

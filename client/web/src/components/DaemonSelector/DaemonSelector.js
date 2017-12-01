@@ -19,7 +19,9 @@ export default class DaemonSelector extends Component {
     }
 
     componentWillMount() {
-        this.setState({emulatorStarted: electron.remote.require('./emulator/Emulator').wasStarted});
+        this.setState({
+            emulatorStarted: global.electron && electron.remote.require('./emulator/Emulator').wasStarted
+        });
     }
 
 

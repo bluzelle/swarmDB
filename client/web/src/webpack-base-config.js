@@ -68,6 +68,7 @@ module.exports = () => ({
     plugins: [
         new webpack.ProvidePlugin({
             React: 'react',
+            Fragment: ['react', 'Fragment'],
 
             Component: 'components/Component',
 

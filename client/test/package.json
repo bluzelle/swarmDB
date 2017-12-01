@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "web-functional-tests": "chimp web-functional/chimp.js --mocha",
+    "web-functional-tests-watch": "chimp web-functional/chimp.js --mocha --watch",
+    "web-functional-ci": "cd web-functional; ../node_modules/.bin/chimp --browser=phantomjs --mocha"
+  },
+  "dependencies": {
+    "async-wait-until": "^1.1.5",
+    "chai": "^4.1.2",
+    "chimp": "^0.50.2",
+    "exit": "^0.1.2",
+    "freeport": "^1.0.5",
+    "mobx": "^3.4.0",
+    "mocha": "^4.0.1",
+    "websocket": "^1.0.25"
+  }
+}

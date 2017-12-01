@@ -10,7 +10,7 @@ const Node = ({node, onMouseOver, selected}) => {
     const circumference = r * 3.14;
     const percent = node.used / node.available;
     return (
-        <g id={`node-${address}`} onMouseOver={onMouseOver}>
+        <g data-test={`node-${address.replace(':', '-')}`} onMouseOver={onMouseOver}>
             <circle  cx={cx} cy={cy} r={r + 1} fill="#444" style={{
                 stroke: '#666',
                 strokeWidth: 1
@@ -32,5 +32,5 @@ const Node = ({node, onMouseOver, selected}) => {
     )
 };
 
-export default Node
+export default observer(Node);
 
