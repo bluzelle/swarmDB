@@ -11,7 +11,6 @@ const LogTabBody = () => {
             columns={columns}
             rowGetter={i => logEntries[i]}
             rowsCount={logEntries.length}
-            minColumnWidth={120}
         />
     )
 };

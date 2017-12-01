@@ -6,12 +6,13 @@
   "dependencies": {
     "command-line-args": "^4.0.7",
     "electron": "^1.7.9",
-    "electron-packager": "^9.1.0",
+    "electron-packager": "^10.1.0",
     "lodash": "^4.17.4",
     "mobx": "^3.3.1",
     "websocket": "^1.0.25"
   },
   "scripts": {
+    "emulator": "./emulator/Emulator.js",
     "start": "electron ./main.js",
     "start-debug": "electron ./main.js --debug",
     "package-mac": "electron-packager . --out=dist --platform=darwin --arch=x64 --icon=bluzelle.icns --overwrite --package-manager=yarn --asar",

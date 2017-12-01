@@ -18,12 +18,21 @@ export default class DaemonSelector extends Component {
         this.address.focus();
     }
 
-    startEmulator() {
-        electron.remote.require('./emulator/Emulator').start();
+    componentWillMount() {
+        this.setState({emulatorStarted: electron.remote.require('./emulator/Emulator').wasStarted});
     }
 
+
+    startEmulator() {
+        electron.remote.require('./emulator/Emulator').start();
+        this.setState({emulatorStarted: true});
+    }
+
+
+
     render() {
-        return (
+        const {emulatorStarted} = this.state;
+         return (
             <CenterMiddle>
                 <div onKeyUp={this.checkEnterKey.bind(this)}>
                     <Header/>
@@ -39,7 +48,7 @@ export default class DaemonSelector extends Component {
                             </div>
                             <div style={{marginTop: 10}}>
                                     <Button onClick={this.go.bind(this)} tabIndex="3">Go</Button>
-                                {global.electron && <Button style={{marginLeft: 10}} onClick={this.startEmulator.bind(this)}>Start Emulator</Button>}
+                                {global.electron && <Button style={{marginLeft: 10}} disabled={emulatorStarted} onClick={this.startEmulator.bind(this)}>Start Emulator</Button>}
                             </div>
                         </div>
                     </Panel>

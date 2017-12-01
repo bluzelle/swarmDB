@@ -18,24 +18,21 @@ autorun(function checkConnectToEntryPoint() {
 
 autorun(function checkConnectedToNode() {
     const nodeOpen = getNodes().some(node => node.socketState === 'open');
-    entryPointSocket.get() && nodeOpen && entryPointSocket.get().close()
+    entryPointSocket.get() && nodeOpen && entryPointSocket.get().close();
 });
 
-autorun(function checkNeedToConnectToNode() {
-        tick.get();
-        untracked(() => {
-            const nodes = getNodes();
-            const groups = Object.assign(
-                {connected: [], notConnected: []},
-                groupBy(nodes, node => node.socket ? 'connected' : 'notConnected')
-            );
-            if (groups.connected.length < MIN_CONNECTED_NODES && groups.notConnected.length) {
-                connectToNode(groups.notConnected[0]);
-//                setTimeout(checkNeedToConnectToNode, 1000);
-            }
-        });
+(function checkConnectToNode() {
+    const nodes = getNodes();
+    const groups = Object.assign(
+        {connected: [], notConnected: []},
+        groupBy(nodes, node => node.socket ? 'connected' : 'notConnected')
+    );
+    if (groups.connected.length < MIN_CONNECTED_NODES && groups.notConnected.length) {
+        connectToNode(groups.notConnected[0]);
     }
-);
+    setTimeout(checkConnectToNode, 250);
+}());
+
 
 const connectToEntryPoint = (ip, port) => {
     const socket = new WebSocket(`ws://${ip}:${port}`);
@@ -48,7 +45,7 @@ const connectToEntryPoint = (ip, port) => {
     socket.onclose = () => entryPointSocket.set(undefined);
 };
 
-const connectToNode = (node) => {
+function connectToNode(node) {
     const socket = new WebSocket(`ws://${node.ip}:${node.port}`);
     node.socket = socket;
     setSocketState();
@@ -58,11 +55,14 @@ const connectToNode = (node) => {
         setSocketState();
         node.socket = undefined;
     };
-    socket.onerror = () => socket.close();
+    socket.onerror = () => {
+        socket.close();
+        setSocketState();
+        node.socket = undefined;
+    };
 
     function setSocketState() {
-        node.socketState ? node.socketState = socketStates[socket.readyState] :
-            extendObservable(node, {socketState: socketStates[socket.readyState]});
+        extendObservable(node, {socketState: socketStates[socket.readyState]});
     }
 };
 
