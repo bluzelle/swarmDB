@@ -26,9 +26,9 @@ endif()
 ###############################################################################
 # Primary project for the_db
 project(the_db)
-include_directories(websockets)
 include_directories(
         websockets
+        command_line_options
 )
 set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
