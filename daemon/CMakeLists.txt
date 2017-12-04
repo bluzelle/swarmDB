@@ -49,7 +49,10 @@ endif()
 message(STATUS "*** CMakeLists for bluzelled_test")
 enable_testing()
 
-include_directories(websockets)
+include_directories(
+        websockets
+        command_line_options
+)
 set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
         command_line_options/CommandLineOptions.cpp
