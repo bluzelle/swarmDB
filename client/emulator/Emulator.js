@@ -8,7 +8,7 @@ const CommandProcessors = require('./CommandProcessors');
 require.main === module && setTimeout(start);
 
 
-const nodes = require('./NodesService').nodes;
+const nodes = require('./NodeStore').nodes;
 let lastPort;
 let randomBehavior = false;
 

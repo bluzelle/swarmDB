@@ -4,18 +4,19 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 const fp = require('lodash/fp');
-const nodes = require('./NodesService').nodes;
+const nodes = require('./NodeStore').nodes;
 const {behaveRandomly} = require('./Values');
 
 module.exports = function Node(port) {
     let alive = true;
 
-    const me = {
+    nodes.set(port, {
         address: `127.0.0.1:${port}`,
         ip: '127.0.0.1',
         port: port,
         available: 100,
         used: _.random(40, 70),
+        isLeader: false,
         die: () => {
             alive = false;
             setTimeout(() => alive = true, _.random(10000, 20000));
@@ -32,9 +33,10 @@ module.exports = function Node(port) {
                 me.getHttpServer().close();
             }, 200);
         }
-    };
+    });
 
-    nodes.set(me.port, me);
+    const me = nodes.get(port);
+
 
     const connections = [];
 
@@ -79,7 +81,30 @@ module.exports = function Node(port) {
         alive && connections.forEach(sendNodesInfo);
     });
 
+    (function becomeOrDropLeader() {
+       if(behaveRandomly.get()) {
+           me.isLeader === true ? dropLeader() : (noLeaderExists() && becomeLeader());
 
+           function dropLeader() {
+               me.isLeader = false;
+               sendIsLeaderToClients();
+           }
+
+           function becomeLeader() {
+               me.isLeader = true;
+               sendIsLeaderToClients();
+           }
+
+           function noLeaderExists() {
+               return nodes.values().some(n => n.isLeader) === false;
+           }
+       }
+       setTimeout(becomeOrDropLeader, me.isLeader ? 10000 : 2000);
+
+        function sendIsLeaderToClients() {
+           sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'isLeader')])
+        }
+    }());
 
         (function updateStorageUsed(direction = 1) {
             if(behaveRandomly.get()) {

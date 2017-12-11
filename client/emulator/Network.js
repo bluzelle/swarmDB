@@ -1,6 +1,6 @@
 const WebSocketServer = require('websocket').server;
 const http = require('http');
-const nodes = require('./NodesService').nodes;
+const nodes = require('./NodeStore').nodes;
 const {observable} = require('mobx');
 const connections = [];
 const CommandProcessors = require('./CommandProcessors');
