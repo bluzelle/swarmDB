@@ -119,7 +119,7 @@ module.exports = function Node(port) {
 
         (function sendMessage() {
             setTimeout(() => {
-                if(behaveRandomly.get()) {
+                if(behaveRandomly.get() && nodes.size > 1) {
                     me.isShutdown || sendToClients('messages', [
                         {
                             srcAddr: getOtherRandomNode().address,
@@ -138,7 +138,7 @@ module.exports = function Node(port) {
 
     const getOtherRandomNode = () => {
         const n = getRandomNode();
-        return n === me ? getOtherRandomNode() : n;
+        return n.address === me.address ? getOtherRandomNode() : n;
     };
 
     const getRandomNode = fp.pipe(
