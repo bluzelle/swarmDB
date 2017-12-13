@@ -1,12 +1,9 @@
- // TODO: move this to the correct module
-
-#include <iostream>
-#include <thread>
-
 #include "CommandLineOptions.h"
 #include "Listener.h"
 #include "WebSocketServer.h"
 
+#include <iostream>
+#include <boost/thread.hpp>
 
 int main(int argc, char *argv[]) {
     CommandLineOptions options;
