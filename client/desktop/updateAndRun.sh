@@ -12,4 +12,4 @@ yarn dev-compile
 cd ..
 cd desktop
 yarn
-yarn start
+yarn package-linux
