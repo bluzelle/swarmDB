@@ -100,9 +100,15 @@ connect_send_and_receive(
 
     stream<boost::asio::ip::tcp::socket &> ws(sock);
     ws.handshake(host, "/");
-    ws.write(boost::asio::buffer(message));
+    boost::asio::streambuf sb0;
+    ws.read(sb0);
 
+    ws.write(boost::asio::buffer(message));
     boost::asio::streambuf sb;
     ws.read(sb);
+
+    char close_reason[256] = {0};
+    ws.close(close_reason);
+
     return std::string((std::istreambuf_iterator<char>(&sb)), std::istreambuf_iterator<char>());
 }

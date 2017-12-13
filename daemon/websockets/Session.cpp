@@ -105,21 +105,6 @@ Session::on_write(
     // Clear the buffer
     buffer_.consume(buffer_.size());
 
-//    if (state_ == SessionState::Started)
-//        {
-//        auto request = boost::format("{\"seq\": %d}") % ++seq;
-//        std::string response = services_("getAllNodes", boost::str(request));
-//
-//        if (response.length() > 0) // Send updated nodes status.
-//            {
-//            std::cout << " ******* " << std::endl << response << std::endl;
-//            ws_.write(boost::asio::buffer(response));
-//            state_ = SessionState::Started; // Send all nodes once.
-//            }
-//        }
-
-    buffer_.consume(buffer_.size());
-
     // Do another read
     do_read();
 }
