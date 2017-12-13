@@ -54,6 +54,8 @@ build
 .idea/**/tasks.xml
 .idea/dictionaries
 .idea/codeStyleSettings.xml
+.idea/codeStyles/Project.xml
+.idea/codeStyles/
 .idea/codeStyles/codeStyleConfig.xml
 
 # Sensitive or high-churn files:

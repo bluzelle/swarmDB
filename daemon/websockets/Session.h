@@ -24,6 +24,8 @@ namespace pt = boost::property_tree;
 void
 fail(boost::system::error_code ec, char const *what);
 
+
+
 class Session : public std::enable_shared_from_this<Session>
 {
     websocket::stream<tcp::socket> ws_;
@@ -45,6 +47,12 @@ class Session : public std::enable_shared_from_this<Session>
 
     std::string
     update_nodes();
+    //Services services_;
+
+    //SessionState state_ = SessionState::Unknown;
+    //size_t seq = 0;
+
+    //const unsigned int send_interval_millisecs_ = 2000;
 
 public:
     explicit

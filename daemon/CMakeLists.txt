@@ -15,7 +15,7 @@ elseif(APPLE)
 endif()
 
 # TODO can we move this to the root CMakeLists.txt?
-find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS unit_test_framework system coroutine thread regex chrono random program_options REQUIRED)
+find_package(Boost ${REQUIRED_BOOST} REQUIRED COMPONENTS serialization filesystem unit_test_framework system coroutine thread regex chrono random program_options REQUIRED)
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
     check_asio_version()
@@ -38,6 +38,8 @@ set(SOURCE_FILES
         websockets/Session.cpp
         websockets/Session.h
         websockets/WebSocketServer.h
+        storage/Storage.h
+        storage/Storage.cpp
         )
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
@@ -64,6 +66,9 @@ set(SOURCE_FILES
         websockets/Session.h
         websockets/WebSocketServer.h
         websockets/WebSocketServer_tests.cpp
+        storage/Storage.h
+        storage/Storage.cpp
+        storage/storage_test.cpp
         )
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
