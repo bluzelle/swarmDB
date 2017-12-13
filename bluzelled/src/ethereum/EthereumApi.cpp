@@ -3,12 +3,14 @@
 
 double
 EthereumApi::token_balance(const EthereumToken& t) {
+    check_token(); // Throws of API token envar is not set.
+
     connect_socket();
 
     write_request(
             boost::str(boost::format(get_token_balance_by_token_contract_address_format) %
                        t.get_address() %
-                       address_));
+                       address_ % token_));
 
     auto body = read_response();
 
@@ -98,5 +100,13 @@ EthereumApi::get_field(const boost::property_tree::ptree &tuple,
         }
 
     throw std::runtime_error(string("Faied to extract field '") + name + "'" + string(" from property tree"));
+}
+
+void
+EthereumApi::check_token() {
+    if (token_.empty())
+        throw std::runtime_error(
+                string("Environment variable " +
+                               etherscan_io_token_environment_variable_name + " is not set."));
 }
 
