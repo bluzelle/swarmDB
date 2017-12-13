@@ -7,4 +7,5 @@ yarn
 yarn dev-compile
 cd ..
 cd desktop
+yarn
 yarn start
