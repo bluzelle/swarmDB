@@ -7,7 +7,7 @@ const nodes = observable.map({});
 global.nodes = nodes;
 
 setTimeout(() => {
-    addCommandProcessor('updateNodes', (newNodes) => newNodes.forEach(updateNode));
+    addCommandProcessor('updateNodes', (nodeInfoBlocks) => nodeInfoBlocks.forEach(updateNode));
     addCommandProcessor('removeNodes', (addresses) => addresses.forEach(removeNodeByAddress));
 });
 
@@ -54,7 +54,7 @@ export const clearNodes = () => nodes.clear();
 
 
 (function checkForDeadNodes() {
-    nodes.values().forEach(node =>  new Date().getTime() - node.createdAt > 3000 && node.nodeState !== 'dead' && (node.socket || markNodeDead(node)));
+    nodes.values().forEach(node =>  new Date().getTime() - node.createdAt > 15000 && node.nodeState !== 'dead' && (node.socket || markNodeDead(node)));
     setTimeout(checkForDeadNodes, 1000);
 }());
 

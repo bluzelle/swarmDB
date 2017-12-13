@@ -8,7 +8,6 @@ const nodes = require('./NodeStore').nodes;
 const {behaveRandomly} = require('./Values');
 
 module.exports = function Node(port) {
-    let alive = true;
 
     nodes.set(port, {
         address: `127.0.0.1:${port}`,
@@ -17,8 +16,9 @@ module.exports = function Node(port) {
         available: 100,
         used: _.random(40, 70),
         isLeader: false,
+        alive: true,
         die: () => {
-            alive = false;
+            me.alive = false;
             setTimeout(() => alive = true, _.random(10000, 20000));
         },
         nodeAdded: (node) => {
@@ -27,7 +27,7 @@ module.exports = function Node(port) {
         shutdown: () => {
             nodes.delete(port);
             sendToClients('removeNodes', [me.address]);
-            alive = false;
+            me.alive = false;
             setTimeout(() => {
                 me.getWsServer().shutDown();
                 me.getHttpServer().close();
@@ -71,14 +71,14 @@ module.exports = function Node(port) {
     );
 
     const sendToClient = (connection, cmd, data) =>
-        alive && connection.send(JSON.stringify({cmd: cmd, data: data}));
+        me.alive && connection.send(JSON.stringify({cmd: cmd, data: data}));
 
     const sendNodesInfo = (connection) => {
-        alive && sendToClient(connection, 'updateNodes', [me, ...getPeerInfo(me)]);
+        me.alive && sendToClient(connection, 'updateNodes', [me, ...getPeerInfo(me)]);
     };
 
     nodes.observe(() => {
-        alive && connections.forEach(sendNodesInfo);
+        me.alive && connections.forEach(sendNodesInfo);
     });
 
     (function becomeOrDropLeader() {
@@ -99,7 +99,7 @@ module.exports = function Node(port) {
                return nodes.values().some(n => n.isLeader) === false;
            }
        }
-       setTimeout(becomeOrDropLeader, me.isLeader ? 10000 : 2000);
+       setTimeout(becomeOrDropLeader, me.isLeader ? _.random(8000, 10000) : _.random(500, 1000));
 
         function sendIsLeaderToClients() {
            sendToClients('updateNodes', [_.pick(me, 'ip', 'port', 'address', 'isLeader')])
