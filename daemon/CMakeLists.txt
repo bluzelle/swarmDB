@@ -32,8 +32,8 @@ find_package(
 
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
-    check_asio_version()
-    check_beast_version()
+    #check_asio_version()
+    #check_beast_version()
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 

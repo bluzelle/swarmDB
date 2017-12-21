@@ -2,10 +2,10 @@
 #define BLUZELLE_PEERLISTENER_H
 
 #include <string>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/io_service.hpp>
 
 using std::string;
-
-#include <boost/asio/ip/tcp.hpp>
 
 class PeerListener : public std::enable_shared_from_this<PeerListener>
 {

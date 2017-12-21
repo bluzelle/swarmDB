@@ -7,6 +7,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/io_service.hpp>
 #include <algorithm>
 #include <cstdlib>
 #include <functional>

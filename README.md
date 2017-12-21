@@ -2,6 +2,39 @@ BUILD INSTRUCTIONS
 ==================
 
 
+
+macOS Install 
+-------------
+
+With Boost 1.65.0
+./bootstrap.sh 
+./b2 toolset=darwin install
+
+wget https://sourceforge.net/projects/boost/files/boost/1.65.0/boost_1_65_1.tar.gz/download
+
+
+??? with Boost 1.66.0
+
+
+wget https://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.gz/download
+tar -xzvf download
+rm download
+cd boost_1_66_0
+./bootstrap.sh --with-toolset=clang --with-icu --with-python=python
+./b2 toolset=clang install
+
+
+*nix Install
+------------
+
+
+
+Windows Install
+---------------
+
+
+ 
+
 EXECUTION
 =========
 

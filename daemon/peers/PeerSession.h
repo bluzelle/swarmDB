@@ -8,6 +8,7 @@ using std::string;
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/asio/io_service.hpp>
 
 
 

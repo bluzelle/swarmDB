@@ -3,7 +3,7 @@
 void fail(boost::system::error_code ec, char const *what);
 
 PeerSession::PeerSession(boost::beast::websocket::stream<boost::asio::ip::tcp::socket> ws)
-        : ws_(std::move(ws)), strand_(ws_.get_io_service()) {
+        : ws_(std::move(ws)), strand_(ws_.get_executor().context()) {
 }
 
 void PeerSession::run() {

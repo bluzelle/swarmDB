@@ -31,10 +31,17 @@ public:
     void operator()()
     {
         // The io_service is required for all I/O
-        boost::asio::io_service ios{threads_};
+        boost::asio::io_service ios
+                {
+                        static_cast<int>( threads_ )
+                };
 
         // Create and launch a listening port
-        listener_ = std::make_shared<Listener>(ios, tcp::endpoint{address_, port_});
+        listener_ = std::make_shared<Listener>
+                (
+                        ios,
+                        tcp::endpoint{address_, port_}
+                );
         listener_->run();
 
         // Run the I/O service on the requested number of threads

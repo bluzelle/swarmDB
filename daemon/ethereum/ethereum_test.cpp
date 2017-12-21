@@ -1,14 +1,11 @@
 #define BOOST_TEST_DYN_LINK
+#include "EthereumApi.h"
 
 #include <iostream>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/asio.hpp>
 
-#include "EthereumApi.h"
-
 constexpr char s_etherscan_api_token_envar_name[] = "ETHERSCAN_IO_API_TOKEN";
-
 
 // --run_test=test_token_balance
 BOOST_AUTO_TEST_CASE( test_token_balance ) {

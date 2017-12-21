@@ -14,8 +14,10 @@ Session::Session
         (
                 tcp::socket socket
         )
-        : ws_(std::move(socket)), strand_(ws_.get_io_service())
+        : ws_(std::move(socket)),
+          strand_(ws_.get_executor().context())
 {
+
 
 }
 

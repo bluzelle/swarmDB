@@ -7,6 +7,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/io_service.hpp>
 #include <boost/regex.hpp>
 #include <algorithm>
 #include <cstdlib>
@@ -22,7 +23,11 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 namespace pt = boost::property_tree;
 
 void
-fail(boost::system::error_code ec, char const *what);
+fail
+        (
+                boost::system::error_code ec,
+                char const *what
+        );
 
 class Session : public std::enable_shared_from_this<Session>
 {
@@ -34,8 +39,11 @@ class Session : public std::enable_shared_from_this<Session>
     std::string
     fix_json_numbers(const std::string &json_str)
     {
-        boost::regex re(R"(\"([0-9]+\.{0,1}[0-9]*)\")");
-        return  boost::regex_replace(json_str, re, "$1");
+        // TODO: find out how to do a regex_replace in boost 1.66.0
+        //const boost::regex re(R"(\"([0-9]+\.{0,1}[0-9]*)\")");
+        //return  boost::regex_replace(json_str, re, "$1", boost::match_default | boost::format_all);
+        return json_str;
+
     };
 
     std::string
