@@ -32,8 +32,14 @@ and the include files in
 
 *nix BOOST Installation
 -
-TBD
-
+```
+wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
+tar jxf boost_1_66_0.tar.bz2
+cd boost_1_66
+sudo ./bootstrap.sh --prefix=/usr/local/
+./b2
+sudo ./b2 install 
+```
 
 
 Windows BOOST Installation
@@ -77,11 +83,13 @@ RUNNING THE APPLICATIONS
 -
 - Change to the directory where the_db file is located and open 6 terminal sessions (or tabs).
 - In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001```
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002```
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58003```
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004```
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005```
+```
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58003
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005
+```
 - Then in remaining tab run the_db in leader mode i.e. with port ending with 0. The leader will start sending heartbeats to followers.
 ```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58000```
 - Open _another_terminal window. This window will emulate API. Type 
