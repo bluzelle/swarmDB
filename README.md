@@ -67,9 +67,36 @@ make
 The executables ```the_db``` and ```the_db_test```  will be in the `daemon` folder.
 
 
-RUNNING THE APPLICATIONS
+SETTING ENVIRONMENT
 =
 - get wscat ```npm install wscat -g```
-- https://etherscan.io and get an ETHERSCAN_IO_API_TOKEN
-...
-TODO: Dmitry, please wrtie the instructions for running the demo here.
+- Go to https://etherscan.io and create an account. In your accout profile go to My API Keys section and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
+- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are differnt ways to do that depending on which system you are using)
+
+RUNNING THE APPLICATIONS
+=
+- Change to the directory where the_db file is located and open 6 terminal sessions (or tabs).
+- In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001```
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002```
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58003```
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004```
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005```
+- Then in remaining tab run the_db in leader mode i.e. with port ending with 0. The leader will start sending heartbeats to followers.
+```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58000```
+- Open _another_terminal window. This window will emulate API. Type 
+```'wscat -c localhost:58000'```
+It will create websocket connection to the leader node (running on port 58000)
+- Paste following JSON to wscat and press Enter:
+```{"bzn-api":"create", "transaction-id":"123", "data":{"key":"key_222", "value":"value_222"}}```
+It will send command to leader to create an entry in database with key ```key_222``` and value ```value_222``` (feel free to use any key/values).
+- Press Ctrl-C to disconnect from leader node.
+Run wscat again and connect to one of the followers nodes (running on ports 58001 to 58005).
+```wscat -c localhost:58004```
+- Paste following JSON and press Enter.
+```{"bzn-api":"read", "transaction-id":"123", "data":{"key":"key_222"}}```
+This will send request to the node to retrieve value for key ```key_222```. You should get JSON back wit result ```value_222```.
+- You can disconnect and connect to another follower node and send same JSON, correct value will be returned.
+
+This means that data was successfully propagated from leader to followers nodes.
+
