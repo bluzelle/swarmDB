@@ -91,16 +91,22 @@ RUNNING THE APPLICATIONS
 ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005
 ```
 - Then in remaining tab run the_db in leader mode i.e. with port ending with 0. The leader will start sending heartbeats to followers.
-```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58000```
+```
+./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58000
+```
 - Open _another_terminal window. This window will emulate API. Type 
-```'wscat -c localhost:58000'```
+```
+wscat -c localhost:58000
+```
 It will create websocket connection to the leader node (running on port 58000)
 - Paste following JSON to wscat and press Enter:
 ```{"bzn-api":"create", "transaction-id":"123", "data":{"key":"key_222", "value":"value_222"}}```
 It will send command to leader to create an entry in database with key ```key_222``` and value ```value_222``` (feel free to use any key/values).
 - Press Ctrl-C to disconnect from leader node.
 Run wscat again and connect to one of the followers nodes (running on ports 58001 to 58005).
-```wscat -c localhost:58004```
+```
+wscat -c localhost:58004
+```
 - Paste following JSON and press Enter.
 ```{"bzn-api":"read", "transaction-id":"123", "data":{"key":"key_222"}}```
 This will send request to the node to retrieve value for key ```key_222```. You should get JSON back with result ```value_222```.
