@@ -71,7 +71,7 @@ SETTING ENVIRONMENT
 -
 - get wscat ```npm install wscat -g```
 - Go to https://etherscan.io and create an account. In your accout profile go to My API Keys section and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
-- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are differnt ways to do that depending on which system you are using)
+- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are different ways to do that depending on system you are using).
 
 RUNNING THE APPLICATIONS
 -
@@ -95,7 +95,7 @@ Run wscat again and connect to one of the followers nodes (running on ports 5800
 ```wscat -c localhost:58004```
 - Paste following JSON and press Enter.
 ```{"bzn-api":"read", "transaction-id":"123", "data":{"key":"key_222"}}```
-This will send request to the node to retrieve value for key ```key_222```. You should get JSON back wit result ```value_222```.
+This will send request to the node to retrieve value for key ```key_222```. You should get JSON back with result ```value_222```.
 - You can disconnect and connect to another follower node and send same JSON, correct value will be returned.
 
 This means that data was successfully propagated from leader to followers nodes.
