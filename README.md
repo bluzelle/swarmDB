@@ -81,7 +81,7 @@ SETTING ENVIRONMENT
 
 RUNNING THE APPLICATIONS
 -
-- Change to the directory where the_db file is located and open 6 terminal sessions (or tabs).
+- Change to the directory where the_db file is located and open 6 terminal sessions (or tabs). Currently the_db supports only 5 follower nodes. The follower nodes are expected on the same machine on ports following the leader (i.e if leader runs on port 58000, the_db expects followers on ports 58001 to 58005 inclusive on the same machine)
 - In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
 ```
 ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
