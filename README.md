@@ -94,7 +94,7 @@ RUNNING THE APPLICATION
 ```
 ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58000
 ```
-- Open _another_terminal window. This window will emulate API. Type 
+- Open _another_ terminal window. This window will emulate API. Type 
 ```
 wscat -c localhost:58000
 ```
