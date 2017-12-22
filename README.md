@@ -79,7 +79,7 @@ SETTING ENVIRONMENT
 - Go to https://etherscan.io and create an account. In your accout profile go to My API Keys section and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
 - Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are different ways to do that depending on system you are using).
 
-RUNNING THE APPLICATIONS
+RUNNING THE APPLICATION
 -
 - Change to the directory where the_db file is located and open 6 terminal sessions (or tabs). Currently the_db supports only 5 follower nodes. The follower nodes are expected on the same machine on ports following the leader (i.e if leader runs on port 58000, the_db expects followers on ports 58001 to 58005 inclusive on the same machine)
 - In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
@@ -100,7 +100,9 @@ wscat -c localhost:58000
 ```
 It will create websocket connection to the leader node (running on port 58000)
 - Paste following JSON to wscat and press Enter:
-```{"bzn-api":"create", "transaction-id":"123", "data":{"key":"key_222", "value":"value_222"}}```
+```
+{"bzn-api":"create", "transaction-id":"123", "data":{"key":"key_222", "value":"value_222"}}
+```
 It will send command to leader to create an entry in database with key ```key_222``` and value ```value_222``` (feel free to use any key/values).
 - Press Ctrl-C to disconnect from leader node.
 Run wscat again and connect to one of the followers nodes (running on ports 58001 to 58005).
@@ -108,7 +110,9 @@ Run wscat again and connect to one of the followers nodes (running on ports 5800
 wscat -c localhost:58004
 ```
 - Paste following JSON and press Enter.
-```{"bzn-api":"read", "transaction-id":"123", "data":{"key":"key_222"}}```
+```
+{"bzn-api":"read", "transaction-id":"123", "data":{"key":"key_222"}}
+```
 This will send request to the node to retrieve value for key ```key_222```. You should get JSON back with result ```value_222```.
 - You can disconnect and connect to another follower node and send same JSON, correct value will be returned.
 
