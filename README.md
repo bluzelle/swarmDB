@@ -68,13 +68,13 @@ The executables ```the_db``` and ```the_db_test```  will be in the `daemon` fold
 
 
 SETTING ENVIRONMENT
-=
+-
 - get wscat ```npm install wscat -g```
 - Go to https://etherscan.io and create an account. In your accout profile go to My API Keys section and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
 - Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are differnt ways to do that depending on which system you are using)
 
 RUNNING THE APPLICATIONS
-=
+-
 - Change to the directory where the_db file is located and open 6 terminal sessions (or tabs).
 - In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
 ```./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001```
