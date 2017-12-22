@@ -1,99 +1,75 @@
 BUILD INSTRUCTIONS
 ==================
 
+macOS BOOST Installation 
+-
+Bluzelle daemon uses the boost libraries, notably the Beast Library by Vinnie Falco, so we require Boost version 1.66.0, 
+released on December 18th, 2017.    
 
+NOTE: This will overwrite an existing Boost installation if it exists, if you have installed Boost with 
+brew or some other package manager, you may wish to uninstall the older version of Boost first.
 
-macOS Install 
--------------
-
-With Boost 1.65.0
-./bootstrap.sh 
-./b2 toolset=darwin install
-
-wget https://sourceforge.net/projects/boost/files/boost/1.65.0/boost_1_65_1.tar.gz/download
-
-
-??? with Boost 1.66.0
-
-
-wget https://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.gz/download
+So open up a console and get started by downloading boost and building:
+```
+wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2/download
 tar -xzvf download
 rm download
 cd boost_1_66_0
-./bootstrap.sh --with-toolset=clang --with-icu --with-python=python
-./b2 toolset=clang install
-
-
-*nix Install
-------------
-
-
-
-Windows Install
----------------
-
-
- 
-
-EXECUTION
-=========
-
-
-
-
-
-CODE LAYOUT
-===========
-- folders are features (no src/inc)
-
-Minimum Viable Product
-======================
-* DONE - KEP-??? - executable (Dmitry,Rich) called the_db
-* DONE - KEP-99 - parameters etherium address, port, (--addr=<addr> --port=<port>) (Dmitry)
-* DONE KEP-100 - ws (Rich) bring in listener, session
-* KEP-?? - push model:someone connects to the node, the node pushes messages (Dmitry)
-    * services: node info daemon sends this to gui on ws connection
-
-   ```
-    {
-        "cmd":"updateNodes",
-        "seq":123,
-        "data":[
-        {
-            "address":"123.22.22.22",
-            "name":"fluffy_kitty",
-            "isLeader":true,
-            "available":2128,
-            "used":228
-        }]
-    }
-    ```
-
-* nodes have ini files: ini file (Mehdi)
-    * each instance of daemon should have it's own ini
-    * optional command line parameter --ini="name"
-    * ~/.bluzelle/.kepler<id>rc
-    * id could be port or (port and address) or (name)
-
-ARCHITECHTURE
-=============
-* node
-    * has ini file
-    * client connects
-
-
-LATER
-=====
-
-* wss
-* https
-* nodes can discover friends of nodes and add those addresses to their ini.
-* nodes will connect
-* nodes will do raft
-* update nodes for the nodes the node knows about
-* get peers
+./bootstrap.sh 
+./b2 toolset=darwin install
 ```
-{"cmd":"getPeers", "seq":132}
-{"response":"getPeers", "peers": [{"123.22.33.33", "fluffy_bunny"},{"232.22.33.22", "fluffy_puppy"}], "seq":132}
+
+Feel free to use the "-j" option with b2 to speed things up a bit. 
+
+Now you will have the Boost 1.66.0 libraries installed in 
+
+```/usr/local/lib```
+
+and the include files in 
+
+```/usr/local/include/boost```
+
+
+*nix BOOST Installation
+-
+TBD
+
+
+
+Windows BOOST Installation
+-
+TBD
+
+CLONING THE REPO (All OS's)
+-
+We keep the project on github, so just clone the repo in a convienient folder:
+
+git clone https://github.com/bluzelle/bluzelle.git
+
+BUILDING THE DAEMON
+-
+If you have cLion, open the folder that you have just cloned otherwise you can build from the commandline. 
+
+We use cmake (http://cmake.org) to generate the make files that build the project. Make sure that you have at least cmake 
+version 3.10.0(the Bluzelle dev team uses that one).
+
+Here are the steps to build the daemon and unit test application from the command line:
+
 ```
-* update nodes
+git checkout devel
+cd bluzelle
+mkdir build
+cd build
+cmake ..
+make
+````
+
+The executables ```the_db``` and ```the_db_test```  will be in the `daemon` folder.
+
+
+RUNNING THE APPLICATIONS
+=
+- get wscat ```npm install wscat -g```
+- https://etherscan.io and get an ETHERSCAN_IO_API_TOKEN
+...
+TODO: Dmitry, please wrtie the instructions for running the demo here.

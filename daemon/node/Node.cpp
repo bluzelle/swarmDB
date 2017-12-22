@@ -25,6 +25,8 @@ Node::Node
                                 )
                 )
 {
+    // TODO: can we remove ios_ from this class?
+    std::cerr << "ios_ [" << &ios_ << "] is not used in Node." << std::endl;
 }
 
 void Node::run() {

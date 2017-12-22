@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_CXX_STANDARD 17)
-set(REQUIRED_BOOST "1.65.0")
+set(REQUIRED_BOOST "1.66.0")
 
 if(MSVC)
     message(STATUS "*** building make for Windows")
@@ -32,8 +32,6 @@ find_package(
 
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
-    #check_asio_version()
-    #check_beast_version()
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
