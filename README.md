@@ -40,21 +40,36 @@ sudo ./bootstrap.sh --prefix=/usr/local/
 ./b2
 sudo ./b2 install 
 ```
-
+If you are getting errors that some Python headers are missing you need to install python-dev with
+```
+apt-get install python-dev
+```
 
 Windows BOOST Installation
 -
 TBD
 
 CMake Installation
+-
 If you dont have CMake version 3.10 or above you have to install it. Please download it from https://cmake.org/download/
-On Linux you can build CMake with
+On Linux you can build CMake with (use -j option to build on multiple CPUs)
 ```
 ./bootstrap
 make
 sudo make install
 ```
 Pre-built binaries also available for MacOS and Windows
+
+NPM and WSCAT installation
+-
+Install npm if you don't have it with
+```
+sudo npm install npm@latest -g
+```
+Install wscat 
+```
+sudo npm install wscat -g
+```
 
 CLONING THE REPO (All OS's)
 -
