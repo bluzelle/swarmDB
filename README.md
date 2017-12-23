@@ -100,7 +100,7 @@ SETTING ENVIRONMENT
 ```
 ETHERSCAN_IO_API_TOKEN=TOKEN_GOES_HERE ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
 ```
-- API token is used to make a calls to Ethereum network. In order to run a node miner supposed to have at least 100 tokens in his/her account. The account address is provided as a parameter on command line. For the purpose of demo we use address (0x006eae72077449caca91078ef78552c0cd9bce8f) that has more than required amount. Currently the_db checks for MK_13 token.
+- API token is used to make a calls to Ethereum network. In order to run a node miner supposed to have at least 100 tokens in his/her account. The account address is provided as a parameter on command line. For the purpose of demo we use address 0x006eae72077449caca91078ef78552c0cd9bce8f that has required amount. Currently the_db checks for MK_13 token balance.
 
 RUNNING THE APPLICATION
 -
