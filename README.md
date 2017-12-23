@@ -40,7 +40,7 @@ sudo ./bootstrap.sh --prefix=/usr/local/
 ./b2
 sudo ./b2 install 
 ```
-If you are getting errors that some Python headers are missing you need to install python-dev with
+If you are getting errors that some Python headers are missing you need to install python-dev with and re-run b2 again
 ```
 apt-get install python-dev
 ```
@@ -73,19 +73,14 @@ sudo npm install wscat -g
 
 CLONING THE REPO (All OS's)
 -
-We keep the project on github, so just clone the repo in a convienient folder:
+We keep the project on github, so just clone the repo in a convenient folder:
 
 git clone https://github.com/bluzelle/bluzelle.git
 
 BUILDING THE DAEMON
 -
-If you have cLion, open the folder that you have just cloned otherwise you can build from the commandline. 
-
-We use cmake (http://cmake.org) to generate the make files that build the project. Make sure that you have at least cmake 
-version 3.10.0(the Bluzelle dev team uses that one).
-
+If you have cLion, open the folder that you have just cloned otherwise you can build from the command line. 
 Here are the steps to build the daemon and unit test application from the command line:
-
 ```
 git checkout devel
 cd bluzelle
@@ -100,14 +95,17 @@ The executables ```the_db``` and ```the_db_test```  will be in the `daemon` fold
 
 SETTING ENVIRONMENT
 -
-- get wscat ```npm install wscat -g```
-- Go to https://etherscan.io and create an account. In your accout profile go to My API Keys section and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
-- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are different ways to do that depending on system you are using).
+- Go to https://etherscan.io/login?cmd=last and login (create an account if necessary). Click API-KEYs and then Create API Key and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
+- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are different ways to do that depending on system you are using). You can add it to your shell profile. Alternatively you can prepend application you about to run with environment variable i.e.
+```
+ETHERSCAN_IO_API_TOKEN=TOKEN_GOES_HERE ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
+```
+- API token is used to make a calls to Ethereum network. In order to run a node miner supposed to have at least 100 tokens in his/her account. The account address is provided as a parameter on command line. For the purpose of demo we use address (0x006eae72077449caca91078ef78552c0cd9bce8f) that has more than required amount. Currently the_db checks for MK_13 token.
 
 RUNNING THE APPLICATION
 -
-- Change to the directory where the_db file is located and open 6 terminal sessions (or tabs). Currently the_db supports only 5 follower nodes. The follower nodes are expected on the same machine on ports following the leader (i.e if leader runs on port 58000, the_db expects followers on ports 58001 to 58005 inclusive on the same machine)
-- In first 5 tabs run the_db in "follower" mode i.e. using port number that doesn't start with 0. for example:
+- Change to the directory where the_db file is located and open 6 terminal sessions (or tabs). Currently the_db supports only 5 follower nodes. The follower nodes are expected on the same machine on ports following the leader (i.e if leader runs on port 58000, the_db expects followers on ports 58001 to 58005 inclusive on the same machine). Port must be in range 49152 - 65535.
+- In first 5 tabs run the_db in "follower" mode i.e. using port number that does not start with 0. for example:
 ```
 ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
 ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002
@@ -128,7 +126,7 @@ It will create websocket connection to the leader node (running on port 58000)
 ```
 {"bzn-api":"create", "transaction-id":"123", "data":{"key":"key_222", "value":"value_222"}}
 ```
-It will send command to leader to create an entry in database with key ```key_222``` and value ```value_222``` (feel free to use any key/values).
+It will send command to leader to create an entry in database with key ```key_222``` and value ```value_222``` (feel free to use any key/values). Transaction ID is arbitrary for now.
 - Press Ctrl-C to disconnect from leader node.
 Run wscat again and connect to one of the followers nodes (running on ports 58001 to 58005).
 ```
