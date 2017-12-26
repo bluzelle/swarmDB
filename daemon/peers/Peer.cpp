@@ -10,49 +10,50 @@
 using std::shared_ptr;
 
 
-string Peer::send_request(const string& req) {
-    if (session_ == nullptr) // Check if we don't have a session.
+void Peer::send_request(const string& req,
+                        std::function<string(const string&)> h,
+                        bool schedule_read)
+{
+    shared_ptr<PeerSession> session;
+    try
         {
-        try
-            {
-            boost::asio::ip::tcp::resolver resolver(ios_);
-            boost::beast::websocket::stream<boost::asio::ip::tcp::socket> ws{ios_};
+        boost::asio::ip::tcp::resolver resolver(ios_);
+        boost::beast::websocket::stream<boost::asio::ip::tcp::socket> ws{ios_};
 
-            // Resolve, connect, handshake.
+        // Resolve, connect, handshake.
+        auto lookup = resolver.resolve(
+                {
+                        info_.get_value<std::string>("host"),
+                        info_.get_value<string>("port")
+                }
+        );
+        boost::asio::connect(ws.next_layer(), lookup);
+        ws.handshake(info_.get_value<string>("host"), "/");
 
-            auto lookup = resolver.resolve(
-                    {
-                            info_.get_value<std::string>("host"),
-                            info_.get_value<string>("port")
-                    }
-            );
-            boost::asio::connect(ws.next_layer(), lookup);
-            ws.handshake(info_.get_value<string>("host"), "/");
+        session = std::make_shared<PeerSession>(std::move(ws)); // Store it for future use.
 
-
-            session_ = std::make_shared<PeerSession>(std::move(ws)); // Store it for future use.
-            }
-        catch (std::exception& ex)
-            {
-            std::cout << "Cannot connect to "
-                      << info_.get_value<string>("host") << ":"
-                      << info_.get_value<string>("port") << " '"
-                      << ex.what() << "'" << std::endl;
-            }
-        catch (...)
-            {
-            std::cout << "Unhandled exception." << std::endl;
-            }
+        session->set_request_handler(h);
+        session->schedule_read_ = schedule_read;
+        }
+    catch (std::exception& ex)
+        {
+        std::cout << "Cannot connect to "
+                  << info_.get_value<string>("host") << ":"
+                  << info_.get_value<string>("port") << " '"
+                  << ex.what() << "'" << std::endl;
+        }
+    catch (...)
+        {
+        std::cout << "Unhandled exception." << std::endl;
         }
 
-    if (session_ != nullptr) // Check again in case we just created a session.
+    if (session != nullptr)
         {
-        session_->write_async(req);
+        session->schedule_read_ = schedule_read;
+        session->write_async(req);
         }
     else
         {
         std::cout << "No session to send request to" << std::endl;
         }
-
-    return string();
 }

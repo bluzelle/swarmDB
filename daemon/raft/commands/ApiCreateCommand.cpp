@@ -38,7 +38,7 @@ boost::property_tree::ptree ApiCreateCommand::operator()() {
 
         queue_.push(std::make_pair<string,string>(
                 pt_.get<string>("transaction-id"),
-                std::move(resp)/*pt_to_json_string(pt_)*/));
+                std::move(resp)));
 
         std::cout << "api-create" << std::endl;
 

@@ -3,18 +3,19 @@
 
 #include <string>
 #include <map>
-#include <vector>
-#include <boost/lexical_cast.hpp>
 #include <iostream>
-#include <raft/CommandFactory.h>
+
+#include <boost/lexical_cast.hpp>
 
 using std::string;
-using std::vector;
 using std::map;
 using boost::lexical_cast;
 
+
+
 class NodeInfo {
     map<string, string> values_;
+
 public:
     NodeInfo(NodeInfo const &) = default;
     NodeInfo() = default;

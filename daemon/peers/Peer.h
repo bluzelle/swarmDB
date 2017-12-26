@@ -10,9 +10,10 @@ using std::shared_ptr;
 
 class Peer
 {
+private:
     boost::asio::io_service& ios_;
     NodeInfo info_; // This node info.
-    shared_ptr<PeerSession> session_; // Corresponding session.
+
 public:
 
     Peer(
@@ -23,7 +24,8 @@ public:
     {
     }
 
-    string send_request(const string& req);
+    void send_request(const string& req,
+                      std::function<string(const string&)> h, bool schedule_read);
 };
 
 #endif //BLUZELLE_PEER_H

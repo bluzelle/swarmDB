@@ -1,16 +1,20 @@
-#include "Raft.h"
-#include "JsonTools.h"
-#include "DaemonInfo.h"
-
 #include <iostream>
 #include <utility>
 #include <thread>
 #include <sstream>
+#include <utility>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/nil_generator.hpp>
+
+#include "Raft.h"
+#include "JsonTools.h"
+#include "DaemonInfo.h"
+#include "RaftCandidateState.h"
+#include "RaftLeaderState.h"
+#include "RaftFollowerState.h"
 
 static boost::uuids::uuid s_transaction_id;
 
@@ -19,107 +23,54 @@ DaemonInfo& daemon_info = DaemonInfo::get_instance();
 Raft::Raft(boost::asio::io_service &ios)
         : ios_(ios),
           peers_(ios_),
-          storage_("./storage_" + daemon_info.get_value<std::string>("name") + ".txt"), // TODO: using the wrong info..
+          storage_("./storage_" + daemon_info.get_value<std::string>("name") + ".txt"),
           command_factory_(
                   storage_,
-                  peer_queue_),
-          heartbeat_timer_(ios_,
-                           boost::posix_time::milliseconds(raft_default_heartbeat_interval_milliseconds))
+                  peer_queue_)
 {
-    daemon_info.set_value("state", State::undetermined);
     static boost::uuids::nil_generator nil_uuid_gen;
     s_transaction_id = nil_uuid_gen();
 }
 
-
-void Raft::start_heartbeat()
+void Raft::run()
 {
-    heartbeat_timer_.async_wait
-            (
-                    boost::bind
-                            (
-                                    &Raft::heartbeat,
-                                    this
-                            )
-            );
+    raft_state_ = std::make_unique<RaftCandidateState>(ios_,
+                                                       storage_,
+                                                       command_factory_,
+                                                       peer_queue_,
+                                                       peers_,
+                                                       std::bind(&Raft::handle_request,
+                                                              this,
+                                                              std::placeholders::_1),
+                                                       raft_next_state_);
 }
 
-void Raft::announce_follower()
+string Raft::handle_request(const string &req)
 {
-    std::cout << "\n\tI am follower" << std::endl;
-}
-
-
-
-void Raft::run() {
-    // Leader is hardcoded: node with port ending with '0' is always a leader.
-    daemon_info.set_value<int>("state", (daemon_info.get_value<int>("port") % 10 == 0 ? State::leader : State::follower));
-    (State)daemon_info.get_value<int>("state") == State::leader ? start_heartbeat() : announce_follower();
-
-    // How CRUD works? Am I writing to any node and it sends it to leader or I can write to leader only.
-    // All goes through leader. Leader receives log entry and writes it locally, its state is uncommited.
-    // Then leader sends the entry to all followers and waits for confirmation. When confirmation received
-    // from majority the state changed to 'committed'. Then leader notify followers that entry is committed.
-}
-
-//void Raft::start_leader_election() {
-/*
- * If node haven't heard from leader it can start election.
- * Change state to State::candidate and request votes
-*/
-    // Election_Timeout -> time to wait before starting new election (become a candidate)
-    // Random in 150-300 ms interval
-
-    // After Election_Timeout follower becomes candidate and start election term, votes for itself and sends
-    // Request_Vote messages to other nodes.
-    // If node hasn't voted for itself or didn't reply to others node Request_Vote it votes "YES" otherwise "NO"
-    // An resets election timeout (won't start new election).
-    // When candidate received majority of votes it sets itself as leader.
-    // The leader sends Append_Entry messages to followers in Heartbeat_Timeout intervals. Followers respond
-    // If follower don't receive Append_Entry in time alotted new election term starts.
-    // Handle Split_Vote
-//}
-
-void Raft::heartbeat() {
-    if (peer_queue_.empty())
-        {
-        std::cout << "♥ ";
-        for (auto &p : peers_)
+    // State transition can be a result of timer (Follower->Candidate) or command execution.
+    // First check if there is a pending state transition caused by timer:
+    {
+        std::lock_guard<mutex> lock(raft_next_state_mutex_);
+        if (raft_next_state_ != nullptr)
             {
-            p.send_request(s_heartbeat_message);
-            std::cout << ".";
+            std::lock_guard<mutex> lock(raft_state_mutex_);
+            raft_state_.reset(raft_next_state_.release()); // Current state becomes next state.
             }
-        }
-    else
-        {
-        std::cout << "❥ ";
-        auto m = peer_queue_.front();
-        for (auto &p : peers_)
-            {
-            p.send_request(m.second);
-            std::cout << ".";
-            }
-        peer_queue_.pop();
-        }
-    std::cout << std::endl;
+    }
 
-    // Re-arm timer.
-    heartbeat_timer_.expires_at(
-            heartbeat_timer_.expires_at() +
-            boost::posix_time::milliseconds(raft_default_heartbeat_interval_milliseconds));
-    heartbeat_timer_.async_wait(
-            boost::bind(&Raft::heartbeat,
-                        this));
+
+    std::lock_guard<mutex> lock(raft_state_mutex_); // Requests come from multiple peers. Handle one at a time. Potential bottleneck.
+
+    string resp;
+    unique_ptr<RaftState> next_state = raft_state_->handle_request(req, resp); // request handled by current state.
+
+    // Check if there is state transtion followed by command execution.
+    if (next_state != nullptr)
+        raft_state_.reset(next_state.get());
+
+    return resp;
 }
 
-string Raft::handle_request(const string &req) {
-    auto pt = pt_from_json_string(req);
-
-    unique_ptr<Command> command = command_factory_.get_command(pt);
-    string response = pt_to_json_string(command->operator()());
-
-    return response;
-}
 
 
 

@@ -45,8 +45,10 @@ include_directories(
         node
         peers
         raft
+        raft/commands
         storage
         websockets
+        ./commands
 )
 
 set(SOURCE_FILES
@@ -73,31 +75,42 @@ set(SOURCE_FILES
         peers/PeerSession.cpp
         peers/PeerSession.h
         raft/ApiCommandQueue.h
-        raft/ApiCreateCommand.cpp
-        raft/ApiCreateCommand.cpp
-        raft/ApiCreateCommand.h
-        raft/ApiReadCommand.cpp
-        raft/ApiReadCommand.h
-        raft/Command.hpp
-        raft/CommandFactory.cpp
-        raft/CommandFactory.h
-        raft/CrudCreateCommand.cpp
-        raft/CrudCreateCommand.h
-        raft/CrudReadCommand.cpp
-        raft/CrudReadCommand.h
+        raft/commands/ApiCreateCommand.cpp
+        raft/commands/ApiCreateCommand.cpp
+        raft/commands/ApiCreateCommand.h
+        raft/commands/ApiReadCommand.cpp
+        raft/commands/ApiReadCommand.h
+        raft/commands/Command.hpp
+        raft/commands/CommandFactory.cpp
+        raft/commands/CommandFactory.h
+        raft/commands/CrudCreateCommand.cpp
+        raft/commands/CrudCreateCommand.h
+        raft/commands/CrudReadCommand.cpp
+        raft/commands/CrudReadCommand.h
         raft/JsonTools.cpp
         raft/JsonTools.h
         raft/Raft.cpp
         raft/Raft.h
-        raft/RaftHeartbeatCommand.cpp
-        raft/RaftHeartbeatCommand.h
         storage/Storage.cpp
         storage/Storage.h
         websockets/Listener.h
         websockets/Session.cpp
         websockets/Session.h
         websockets/WebSocketServer.h
-        )
+        raft/RaftLeaderState.h
+        raft/RaftFollowerState.h
+        raft/RaftCandidateState.h
+        raft/RaftState.h
+        raft/RaftLeaderState.cpp
+        raft/RaftCandidateState.cpp
+        raft/RaftFollowerState.cpp
+        raft/commands/RaftVoteCommand.h
+        raft/commands/RaftVoteCommand.cpp
+        raft/commands/RaftCountVotesCommand.h
+        raft/commands/RaftCountVotesCommand.cpp
+        raft/commands/RaftHeartbeatCommand.h
+        raft/commands/RaftHeartbeatCommand.cpp
+        raft/RaftState.cpp)
 
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})

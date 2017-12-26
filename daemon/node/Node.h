@@ -9,11 +9,11 @@
 #include <vector>
 #include <string>
 
+using std::vector;
 using std::string;
 
 class Node {
 private:
-    boost::asio::io_service& ios_;
     Raft raft_; // RAFT protocol state machine.
     PeerServer server_; // Serves inbound connections.
 
@@ -22,9 +22,9 @@ public:
 
     void run();
 
-    std::vector<NodeInfo> get_peers() const; // returns list of all known peers connected or not.
+    vector<NodeInfo> get_peers() const; // returns list of all known peers connected or not.
 
-    std::vector<MessageInfo> get_messages() const; // returns list of messages sent by this node, since timestamp.
+    vector<MessageInfo> get_messages() const; // returns list of messages sent by this node, since timestamp.
 };
 
 #endif //BLUZELLE_NODE_H
