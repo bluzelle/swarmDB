@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_SUITE(websockets, F)
             boost::asio::ip::tcp::socket sock(ios);
 
             std::string message = R"({"cmd":"ping","seq":1234})";
-            std::string accepted_response = R"({"cmd":"pong","seq":1234})";
+            std::string accepted_response = R"({"cmd":"pong","seq":"1234"})";
             std::string response = connect_send_and_receive(sock, host, port, message);
             remove_whitespace(response);
 
