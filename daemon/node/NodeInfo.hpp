@@ -23,14 +23,7 @@ public:
     const T
     get_value(const string &key)
     {
-        try {
-            return lexical_cast<T>(values_[key]);
-            }
-        catch(const std::exception& e)
-            {
-            std::cerr << e.what() << std::endl;
-            }
-        return T{0};
+        return lexical_cast<T>(values_[key]);
     }
 
     template <typename T>

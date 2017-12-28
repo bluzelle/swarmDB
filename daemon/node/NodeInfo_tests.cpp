@@ -1,6 +1,7 @@
 // See KEP-87
 #include "node/NodeInfo.hpp"
 
+#include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -59,13 +60,14 @@ BOOST_FIXTURE_TEST_SUITE(node_info, F)
         BOOST_CHECK(sut.get_value<std::string>("node_id") == actual_node_id_str);
     }
 
+    // --run_test=node_info/test_missing_value
     BOOST_AUTO_TEST_CASE(test_missing_value)
     {
         NodeInfo sut;
         const string key = "MissingKey";
         unsigned long value = 22;
         BOOST_CHECK_THROW(value = sut.get_value<unsigned long>(key), std::exception);
-        BOOST_CHECK( value == 0);
+        BOOST_CHECK( 22 == value);
     }
 
 BOOST_AUTO_TEST_SUITE_END()
