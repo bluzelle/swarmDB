@@ -133,12 +133,13 @@ BOOST_FIXTURE_TEST_SUITE(storage, F)
         BOOST_CHECK(x_record.transaction_id_.is_nil());
     }
 
+    // --run_test=storage/test_create_with_strings
     BOOST_AUTO_TEST_CASE( test_create_with_strings )
     {
         Storage sut;
         const std::string accepted_key{"Fluffy"};
         std::string accepted_value = "this is a string that should come back to us.";
-        VEC_BIN_t accepted_blob_value{0};
+        VEC_BIN_t accepted_blob_value;
         accepted_blob_value.reserve(accepted_value.size());
         for(auto c : accepted_value)
             {
@@ -157,12 +158,12 @@ BOOST_FIXTURE_TEST_SUITE(storage, F)
 
 
     // TODO: Mehdi
-    BOOST_AUTO_TEST_CASE( test_storage_persistence )
-    {
-        std::string filename{"/tmp/bluzelle/persistence.txt"};
-        Storage sut(filename);
-
-    }
+//    BOOST_AUTO_TEST_CASE( test_storage_persistence )
+//    {
+//        std::string filename{"/tmp/bluzelle/persistence.txt"};
+//        Storage sut(filename);
+//
+//    }
 
 
 BOOST_AUTO_TEST_SUITE_END()
