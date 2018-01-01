@@ -35,7 +35,7 @@ and the include files in
 ```
 wget -c http://sourceforge.net/projects/boost/files/boost/1.66.0/boost_1_66_0.tar.bz2
 tar jxf boost_1_66_0.tar.bz2
-cd boost_1_66
+cd boost_1_66_0
 sudo ./bootstrap.sh --prefix=/usr/local/
 ./b2
 sudo ./b2 install 
@@ -58,6 +58,17 @@ On Linux you can build CMake with (use -j option to build on multiple CPUs)
 make
 sudo make install
 ```
+
+Alternatively 
+```
+wget https://cmake.org/files/v3.10/cmake-3.10.1.tar.gz
+tar -xzf cmake-3.10.1.tar.gz
+cd cmake-3.10.1
+./configure
+make
+sudo make install
+```
+
 Pre-built binaries also available for MacOS and Windows
 
 NPM and WSCAT installation
@@ -69,6 +80,10 @@ sudo npm install npm@latest -g
 Install wscat 
 ```
 sudo npm install wscat -g
+```
+WSCAT installation without NPM
+```
+sudo apt-get install node-ws
 ```
 
 CLONING THE REPO (All OS's)
@@ -95,12 +110,12 @@ The executables ```the_db``` and ```the_db_test```  will be in the `daemon` fold
 
 SETTING ENVIRONMENT
 -
-- Go to https://etherscan.io/login?cmd=last and login (create an account if necessary). Click API-KEYs and then Create API Key and create a new token, this token will be used to make calls to Ethereum Ropsten network. 
-- Create environment variable named ETHERSCAN_IO_API_TOKEN with newly created key as value (there are different ways to do that depending on system you are using). You can add it to your shell profile. Alternatively you can prepend application you about to run with environment variable i.e.
+- Go to https://etherscan.io/login?cmd=last and login (create an account if necessary). Click API-KEYs and then Create API Key and create a new token, this token will be used to make calls to Ethereum Ropsten network. Naming the token is optinal.
+- Create an environment variable named ETHERSCAN_IO_API_TOKEN with the newly created key as value (there are different ways to do that depending on system you are using). You can add it to your shell profile. Alternatively you can prepend the application you about to run with environment variable i.e.
 ```
 ETHERSCAN_IO_API_TOKEN=TOKEN_GOES_HERE ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001
 ```
-- API token is used to make a calls to Ethereum network. In order to run a node miner supposed to have at least 100 tokens in his/her account. The account address is provided as a parameter on command line. For the purpose of demo we use address 0x006eae72077449caca91078ef78552c0cd9bce8f that has required amount. Currently the_db checks for MK_13 token balance.
+- The API token is used to make a calls to the Ethereum network. In order to run a node the farmer is supposed to have at least 100 tokens in his/her account. The account address is provided as a parameter on command line. For the purpose of this demo we use the address 0x006eae72077449caca91078ef78552c0cd9bce8f that has the required amount. Currently the_db checks for the MK_13 token balance.
 
 RUNNING THE APPLICATION
 -
