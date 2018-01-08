@@ -80,6 +80,10 @@ NPM and WSCAT installation
 -
 Install npm if you don't have it with
 ```
+sudo apt-get install npm
+```
+Update npm to the latest
+```
 sudo npm install npm@latest -g
 ```
 Install wscat 
