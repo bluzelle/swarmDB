@@ -103,7 +103,9 @@ git clone https://github.com/bluzelle/bluzelle.git
 
 BUILDING THE DAEMON
 -
-If you have cLion, open the folder that you have just cloned otherwise you can build from the command line. 
+If you have cLion, open the folder that you have just cloned and build and execute from there.
+
+Otherwise, from most CLIs (OSX, Linux, etc), you can build from the command line. 
 Here are the steps to build the daemon and unit test application from the command line:
 ```
 git checkout devel
