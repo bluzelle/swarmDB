@@ -3,6 +3,7 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/crud/desktop" />
       <excludeFolder url="file://$MODULE_DIR$/desktop/emulator" />
       <excludeFolder url="file://$MODULE_DIR$/desktop/node_modules" />
       <excludeFolder url="file://$MODULE_DIR$/desktop/web" />

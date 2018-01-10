@@ -68,7 +68,8 @@ build
 
 # Scott
 workspace.xml
-/client/web/dist/generated
+/client/admin/web/dist/generated
+/client/crud/web/dist/generated
 node_modules
 .nyc_output
 coverage
@@ -77,3 +78,5 @@ client/desktop/dist/
 /bluzelled/assets/web
 
 /bluzelle/bluzelle.cbp
+
+yarn-error.log
