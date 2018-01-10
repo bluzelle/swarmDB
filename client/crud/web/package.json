@@ -1,0 +1,32 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prod-compile": "cd src; NODE_ENV=production webpack -p",
+    "dev-compile": "cd src; webpack --env.beep",
+    "dev-compile-watch": "cd src; webpack --watch --env.beep",
+    "test-compile": "cd src; webpack --env.beep --config webpack-test.config.js",
+    "test-compile-watch": "cd src; webpack --watch --env.beep --config webpack-test.config.js",
+    "test-watch": "mocha -r jsdom-global/register dist/runTests.js --source-maps --watch",
+    "test": "mocha -r jsdom-global/register dist/runTests.js --exit",
+    "test-server": "ws -d dist --spa test.html ",
+    "coverage": "nyc --instrument=false --reporter=cobertura  --report-dir=coverage yarn test",
+    "coverage-text": "nyc --instrument=false yarn test"
+  },
+  "dependencies": {
+    "istanbul-instrumenter-loader": "^3.0.0",
+    "jsdom": "^11.5.1",
+    "jsdom-global": "^3.0.2",
+    "local-web-server": "^2.3.1",
+    "mobx-react": "^4.3.5",
+    "mobx-react-devtools": "^4.2.15",
+    "mocha": "^5.0.0",
+    "source-map-support": "0.5.0",
+    "text-encoding": "^0.6.4",
+    "webpack": "^3.10.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

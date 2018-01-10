@@ -40,7 +40,7 @@ module.exports = function Node(port) {
 
     const connections = [];
 
-    const DIST_DIR = path.resolve(__dirname, '../web/dist');
+    const DIST_DIR = path.resolve(__dirname, '../admin/web/dist');
     me.getHttpServer = _.memoize(() => http.createServer(function (request, response) {
 
         const filename = path.resolve(`${DIST_DIR}/${request.url}`);
