@@ -4,15 +4,12 @@
 #include "TokenBalance.hpp"
 #include "node/Singleton.h"
 #include "node/DaemonInfo.h"
-#include "CommandLineOptions.h"
 #include "Node.h"
+#include "ParseUtils.h"
 
-#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
-
-
-#include <iostream>
-#include <boost/thread.hpp>
+//#include <iostream>
+//#include <boost/thread.hpp>
 
 constexpr int s_uint_minimum_required_token_balance = 100;
 constexpr char s_etherscan_api_token_envar_name[] = "ETHERSCAN_IO_API_TOKEN";
@@ -26,38 +23,6 @@ void initialize_daemon()
     boost::uuids::basic_random_generator<boost::mt19937> gen;
     const boost::uuids::uuid node_id{gen()};
     DaemonInfo::get_instance().set_value("node_id", boost::lexical_cast<std::string>(node_id));
-}
-
-int parse_command_line(
-        int argc,
-        char *argv[]
-)
-{
-    CommandLineOptions options;
-
-    if (!options.parse(argc, argv))
-        {
-        std::cout << options.get_last_error() << std::endl;
-        return 1;
-        }
-
-    string address = options.get_address();
-    if (!CommandLineOptions::is_valid_ethereum_address(address))
-        {
-        std::cout << address << " is not a valid Ethereum address." << std::endl;
-        return 1;
-        }
-    DaemonInfo::get_instance().set_value( "ethereum_address", address);
-
-    uint port = options.get_port();
-    if (!CommandLineOptions::is_valid_port(port))
-        {
-        std::cout << port << " is not a valid port. Please pick a port in 49152 - 65535 range" << std::endl;
-        return 1;
-        }
-    DaemonInfo::get_instance().set_value("port",port);
-    DaemonInfo::get_instance().set_value("name", "Node_running_on_port_" + std::to_string(port));
-    return 0;
 }
 
 void display_daemon_info()
@@ -96,7 +61,7 @@ int check_token_balance()
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
     initialize_daemon();
 
