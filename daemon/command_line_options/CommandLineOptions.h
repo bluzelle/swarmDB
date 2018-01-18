@@ -16,6 +16,8 @@ private:
     static const string s_address_option_name;
     static const string s_config_option_name;
     static const string s_port_option_name;
+    static const string s_simulated_delay_lower_option_name;
+    static const string s_simulated_delay_upper_option_name;
 
     boost::program_options::variables_map vm_;
     boost::program_options::options_description desc_;
@@ -24,6 +26,8 @@ private:
     string address_;
     string config_;
     string error_;
+    uint16_t simulated_delay_lower_;
+    uint16_t simulated_delay_upper_;
 
     template<typename T>
     T get_option(const string &name) const {
@@ -35,21 +39,44 @@ private:
 public:
     CommandLineOptions();
 
-    bool parse(int argc, char *argv[]);
+    bool
+    parse(
+        int argc,
+        const char *argv[]);
 
-    string get_last_error() const;
+    string
+    get_last_error() const;
 
-    boost::program_options::options_description get_description() const;
+    boost::program_options::options_description
+    get_description() const;
 
-    ushort get_port() const;
+    ushort
+    get_port()
+    const;
 
-    string get_address() const;
+    string
+    get_address() const;
 
-    string get_config() const;
+    string
+    get_config() const;
 
-    static bool is_valid_ethereum_address(const string &addr);
+    static bool
+    is_valid_ethereum_address(const string &addr);
 
-    static bool is_valid_port(ushort p);
+    static bool
+    is_valid_port(ushort p);
+
+    uint16_t
+    get_simulated_delay_lower() const
+    {
+        return simulated_delay_lower_;
+    }
+
+    uint16_t
+    get_simulated_delay_upper() const
+    {
+        return simulated_delay_upper_;
+    }
 };
 
 #endif //BLUZELLE_COMMANDLINEOPTIONS_H

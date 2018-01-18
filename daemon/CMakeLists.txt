@@ -55,34 +55,17 @@ set(SOURCE_FILES
         command_line_options/CommandLineOptions.cpp
         command_line_options/CommandLineOptions.h
         ethereum/EthereumApi.cpp
-        ethereum/EthereumApi.h
-        ethereum/EthereumToken.h
         main.cpp
-        MessageInfo.hpp
-        node/DaemonInfo.h
         node/Node.cpp
-        node/Node.h
-        node/NodeInfo.hpp
-        node/Singleton.h
         peers/Peer.cpp
-        peers/Peer.h
         peers/PeerList.cpp
-        peers/PeerList.h
         peers/PeerListener.cpp
-        peers/PeerListener.h
         peers/PeerServer.cpp
-        peers/PeerServer.h
         peers/PeerSession.cpp
-        peers/PeerSession.h
-        raft/ApiCommandQueue.h
         raft/commands/ApiCreateCommand.cpp
         raft/commands/ApiCreateCommand.cpp
-        raft/commands/ApiCreateCommand.h
         raft/commands/ApiReadCommand.cpp
-        raft/commands/ApiReadCommand.h
-        raft/commands/Command.hpp
         raft/commands/CommandFactory.cpp
-        raft/commands/CommandFactory.h
         raft/commands/CrudCreateCommand.cpp
         raft/commands/CrudCreateCommand.h
         raft/commands/CrudReadCommand.cpp
@@ -110,7 +93,10 @@ set(SOURCE_FILES
         raft/commands/RaftCountVotesCommand.cpp
         raft/commands/RaftHeartbeatCommand.h
         raft/commands/RaftHeartbeatCommand.cpp
-        raft/RaftState.cpp)
+        raft/RaftState.cpp
+        command_line_options/ParseUtils.h
+        command_line_options/ParseUtils.cpp
+        )
 
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
@@ -149,7 +135,7 @@ set(SOURCE_FILES
         websockets/Session.h
         websockets/WebSocketServer.h
         websockets/WebSocketServer_tests.cpp
-        )
+        command_line_options/ParseUtils.h command_line_options/ParseUtils.cpp)
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)
