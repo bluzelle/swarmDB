@@ -39,7 +39,7 @@ void RaftLeaderState::heartbeat(const boost::system::error_code& e)
     if (peer_queue_.empty())
         {
         std::cout << "♥ ";
-        for (auto &p : peers_)
+        for (auto &p : peers_.peers())
             {
             p.send_request(s_heartbeat_message, handler_, false);
             std::cout << ".";
@@ -49,7 +49,7 @@ void RaftLeaderState::heartbeat(const boost::system::error_code& e)
         {
         std::cout << "❥ ";
         auto m = peer_queue_.front();
-        for (auto &p : peers_)
+        for (auto &p : peers_.peers())
             {
             p.send_request(m.second, handler_, false);
             std::cout << ".";

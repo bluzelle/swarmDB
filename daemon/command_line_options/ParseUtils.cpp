@@ -18,7 +18,6 @@ simulated_delay_values_set(
     );
 }
 
-
 bool
 lower_ok(const CommandLineOptions& options)
 {
@@ -64,16 +63,16 @@ parse_command_line(
         std::cout << address << " is not a valid Ethereum address." << std::endl;
         return 1;
         }
-    DaemonInfo::get_instance().set_value( "ethereum_address", address);
+    DaemonInfo::get_instance().ethereum_address() = address ;
 
-    uint port = options.get_port();
+    uint16_t port = options.get_port();
     if (!CommandLineOptions::is_valid_port(port))
         {
         std::cout << port << " is not a valid port. Please pick a port in 49152 - 65535 range" << std::endl;
         return 1;
         }
-    DaemonInfo::get_instance().set_value("port",port);
-    DaemonInfo::get_instance().set_value("name", "Node_running_on_port_" + std::to_string(port));
+    DaemonInfo::get_instance().host_port() = port;
+    DaemonInfo::get_instance().host_name() = "Node_running_on_port_" + std::to_string(port);
 
     if(simulated_delay_values_set(options))
         {

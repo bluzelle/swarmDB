@@ -4,7 +4,10 @@ using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
 
 double
-EthereumApi::token_balance(const EthereumToken &t) {
+EthereumApi::token_balance(
+    const EthereumToken &t
+)
+{
     connect_socket();
 
     write_request(

@@ -6,14 +6,13 @@
 
 #include <memory>
 
-using std::shared_ptr;
+using namespace std;
 
 class Peer
 {
 private:
     boost::asio::io_service& ios_;
     NodeInfo info_; // This node info.
-
 public:
 
     Peer(
@@ -24,8 +23,10 @@ public:
     {
     }
 
-    void send_request(const string& req,
-                      std::function<string(const string&)> h, bool schedule_read);
+    void send_request(
+        const string& req,
+        function<string(const string&)> h,
+        bool schedule_read);
 };
 
 #endif //BLUZELLE_PEER_H

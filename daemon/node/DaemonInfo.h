@@ -4,23 +4,67 @@
 #include "node/NodeInfo.hpp"
 #include "node/Singleton.h"
 
-class DaemonInfo final : public Singleton<DaemonInfo>
+#include <vector>
+#include <sstream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/uuid/uuid.hpp>
+
+namespace pt = boost::property_tree;
+
+class
+DaemonInfo final : public Singleton<DaemonInfo>
 {
-    NodeInfo node_info_;
+    NodeInfo            node_info_;
+
+    std::string         ethereum_address_;
+
+    boost::uuids::uuid  id_;
+
+    uint64_t            ropsten_token_balance_;
+
     friend class Singleton<DaemonInfo>;
+
+    DaemonInfo() = default;
+
 public:
-    template <typename T>
-    const T
-    get_value(const string &key)
+
+    boost::uuids::uuid&
+    id()
     {
-        return node_info_.get_value<T>(key);
+        return id_;
     }
 
-    template <typename T>
-    void set_value(const string &key, const T &value)
+    std::string&
+    host_name()
     {
-        node_info_.set_value(key, value);
+        return node_info_.name();
     }
+
+    std::string&
+    host_ip()
+    {
+        return node_info_.host();
+    }
+
+    uint16_t&
+    host_port()
+    {
+        return node_info_.port();
+    }
+
+    std::string&
+    ethereum_address()
+    {
+        return ethereum_address_;
+    };
+
+    uint64_t&
+    ropsten_token_balance()
+    {
+        return ropsten_token_balance_;
+    }
+
 };
 
 #endif //BLUZELLE_DAEMONINFO_H
