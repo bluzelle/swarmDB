@@ -32,7 +32,7 @@ find_package(
 
 if(Boost_FOUND)
     message(STATUS "Your boost is here: ${Boost_INCLUDE_DIRS}")
-    include_directories(${Boost_INCLUDE_DIRS})
+    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
 ###############################################################################
@@ -41,6 +41,7 @@ project(the_db)
 include_directories(
         .
         command_line_options
+        commands
         ethereum
         node
         peers
@@ -48,7 +49,6 @@ include_directories(
         raft/commands
         storage
         websockets
-        ./commands
 )
 
 set(SOURCE_FILES
@@ -58,13 +58,16 @@ set(SOURCE_FILES
         command_line_options/ParseUtils.h
         ethereum/EthereumApi.cpp
         main.cpp
+        MessageInfo.hpp
+        node/Daemon.cpp
+        node/Daemon.h
+        node/DaemonInfo.h
         node/Node.cpp
         peers/Peer.cpp
         peers/PeerList.cpp
         peers/PeerListener.cpp
         peers/PeerServer.cpp
         peers/PeerSession.cpp
-        raft/commands/ApiCreateCommand.cpp
         raft/commands/ApiCreateCommand.cpp
         raft/commands/ApiReadCommand.cpp
         raft/commands/CommandFactory.cpp
@@ -104,6 +107,14 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(the_db pthread)
 endif()
 
+
+add_custom_command(
+        TARGET the_db POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/daemon/resources/peers
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 ###############################################################################
 # Unit tests
 message(STATUS "*** CMakeLists for bluzelled_test")
@@ -121,10 +132,20 @@ set(SOURCE_FILES
         command_line_options/CommandLineOptions.h
         command_line_options/ParseUtils.cpp
         command_line_options/ParseUtils.h
-        ethereum/ethereum_test.cpp ethereum/TokenBalance.hpp
+        ethereum/ethereum_test.cpp
+        ethereum/TokenBalance.hpp
+        command_line_options/ParseUtils.cpp
+        command_line_options/ParseUtils.h
+        ethereum/ethereum_test.cpp
+        ethereum/TokenBalance.hpp
         ethereum/EthereumApi.cpp
         ethereum/EthereumApi.h
         ethereum/EthereumToken.h
+        ethereum/TokenBalance.hpp
+        node/Daemon.cpp
+        node/Daemon.h
+        node/Daemon_tests.cpp
+        node/DaemonInfo_tests.cpp
         node/NodeInfo.hpp
         node/NodeInfo_tests.cpp
         node/Singleton.h

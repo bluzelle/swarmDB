@@ -37,24 +37,32 @@ public:
 protected:
     boost::asio::io_service& ios_;
 
-    PeerList& peers_;
-    ApiCommandQueue& peer_queue_;
     Storage& storage_;
+
     CommandFactory& command_factory_;
 
+    ApiCommandQueue& peer_queue_;
+
+    PeerList& peers_;
+
     function<string(const string&)> handler_;
+
     unique_ptr<RaftState>& next_state_;
 
 public:
-    virtual unique_ptr<RaftState> handle_request(const string& request, string& response) = 0;
+    virtual unique_ptr<RaftState>
+    handle_request(
+        const string& request,
+        string& response) = 0;
 
-    RaftState(boost::asio::io_service& ios,
-              Storage& s,
-              CommandFactory& cf,
-              ApiCommandQueue& pq,
-              PeerList& ps,
-              function<string(const string&)> rh,
-              unique_ptr<RaftState>& ns)
+    RaftState(
+        boost::asio::io_service& ios,
+        Storage& s,
+        CommandFactory& cf,
+        ApiCommandQueue& pq,
+        PeerList& ps,
+        function<string(const string&)> rh,
+        unique_ptr<RaftState>& ns)
     : ios_(ios),
       storage_(s),
       command_factory_(cf),
@@ -63,16 +71,19 @@ public:
       handler_(rh),
       next_state_(ns)
     {
-
     }
 
-    virtual RaftStateType get_type() const = 0;
+    virtual
+    RaftStateType get_type() const = 0;
 
-    void set_next_state_follower();
+    void
+    set_next_state_follower();
 
-    void set_next_state_leader();
+    void
+    set_next_state_leader();
 
-    void set_next_state_candidate();
+    void
+    set_next_state_candidate();
 };
 
 #endif //BLUZELLE_RAFTSTATE_H

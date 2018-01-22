@@ -42,6 +42,8 @@ CommandFactory::get_command(const boost::property_tree::ptree& pt,
 
     if (has_key(pt, "raft"))
         return make_raft_command(pt, st);
+
+    return nullptr;
 }
 
 bool CommandFactory::has_key(const boost::property_tree::ptree& pt, const string& k) const
@@ -75,8 +77,11 @@ CommandFactory::make_raft_command(const boost::property_tree::ptree& pt,
 }
 
 unique_ptr<Command>
-CommandFactory::make_crud_command(const boost::property_tree::ptree& pt,
-                                  RaftState& st) const {
+CommandFactory::make_crud_command(
+    const boost::property_tree::ptree& pt,
+    RaftState& st) const
+{
+    std::cerr << "RaftState " << &st << " is unused in make_crud_command.\n";
     auto cmd = pt.get<string>("crud");
     auto dat = get_data(pt);
 
@@ -90,8 +95,11 @@ CommandFactory::make_crud_command(const boost::property_tree::ptree& pt,
 }
 
 unique_ptr<Command>
-CommandFactory::make_api_command(const boost::property_tree::ptree& pt,
-                                 RaftState& st) const {
+CommandFactory::make_api_command(
+    const boost::property_tree::ptree& pt,
+    RaftState& st) const
+{
+    std::cerr << "RaftState " << &st << " is unused in make_api_command.\n";
     auto cmd = pt.get<string>("bzn-api");
     auto dat = get_data(pt);
 

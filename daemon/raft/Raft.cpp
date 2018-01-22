@@ -23,7 +23,7 @@ DaemonInfo& daemon_info = DaemonInfo::get_instance();
 Raft::Raft(boost::asio::io_service &ios)
         : ios_(ios),
           peers_(ios_),
-          storage_("./storage_" + daemon_info.get_value<std::string>("name") + ".txt"),
+          storage_("./storage_" + daemon_info.host_name() + ".txt"),
           command_factory_(
                   storage_,
                   peer_queue_)

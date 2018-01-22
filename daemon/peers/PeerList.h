@@ -6,19 +6,20 @@
 
 #include <vector>
 
-using std::vector;
+using namespace std;
 
-
-
-class PeerList : public vector<Peer>{
+class PeerList {
+    vector<Peer> peers_;
 public:
-    PeerList(boost::asio::io_service& ios);
+    PeerList(
+        boost::asio::io_service& ios
+    );
 
-    /*NodeInfo& find_by_endpoint() const;
-
-    NodeInfo& find_by_address() const;
-
-    NodeInfo& find_by_name() const;*/
+    vector<Peer>&
+    peers()
+    {
+        return peers_;
+    }
 };
 
 #endif //BLUZELLE_PEERLIST_H

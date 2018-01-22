@@ -23,7 +23,8 @@ protected:
     virtual ~Singleton() {}
 
 public:
-    static T& get_instance()
+    static T&
+    get_instance()
     {
         static MemoryGuard g;
         if (!m_instance)

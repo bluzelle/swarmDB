@@ -2,35 +2,38 @@
 #define BLUZELLE_NODEINFO_H
 
 #include <string>
-#include <map>
-#include <iostream>
-
 #include <boost/lexical_cast.hpp>
 
-using std::string;
-using std::map;
-using boost::lexical_cast;
-
-
+using namespace std;
 
 class NodeInfo {
-    map<string, string> values_;
+    string name_;
+    string host_;
+    uint16_t    port_;
 
 public:
-    NodeInfo(NodeInfo const &) = default;
+    NodeInfo(
+        NodeInfo const &
+    ) = default;
+
     NodeInfo() = default;
 
-    template <typename T>
-    const T
-    get_value(const string &key)
+    string&
+    name()
     {
-        return lexical_cast<T>(values_[key]);
+        return name_;
     }
 
-    template <typename T>
-    void set_value(const string &key, const T &value)
+    string&
+    host()
     {
-        values_[key] = boost::lexical_cast<std::string>(value);
+        return host_;
+    }
+
+    uint16_t&
+    port()
+    {
+        return port_;
     }
 };
 
