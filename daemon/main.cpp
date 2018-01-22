@@ -8,8 +8,6 @@
 #include "ParseUtils.h"
 
 #include <boost/uuid/uuid_generators.hpp>
-//#include <iostream>
-//#include <boost/thread.hpp>
 
 constexpr int s_uint_minimum_required_token_balance = 100;
 constexpr char s_etherscan_api_token_envar_name[] = "ETHERSCAN_IO_API_TOKEN";
