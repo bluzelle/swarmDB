@@ -54,6 +54,8 @@ include_directories(
 set(SOURCE_FILES
         command_line_options/CommandLineOptions.cpp
         command_line_options/CommandLineOptions.h
+        command_line_options/ParseUtils.cpp
+        command_line_options/ParseUtils.h
         ethereum/EthereumApi.cpp
         main.cpp
         node/Node.cpp
@@ -70,32 +72,30 @@ set(SOURCE_FILES
         raft/commands/CrudCreateCommand.h
         raft/commands/CrudReadCommand.cpp
         raft/commands/CrudReadCommand.h
+        raft/commands/RaftCountVotesCommand.cpp
+        raft/commands/RaftCountVotesCommand.h
+        raft/commands/RaftHeartbeatCommand.cpp
+        raft/commands/RaftHeartbeatCommand.h
+        raft/commands/RaftVoteCommand.cpp
+        raft/commands/RaftVoteCommand.h
         raft/JsonTools.cpp
         raft/JsonTools.h
         raft/Raft.cpp
         raft/Raft.h
+        raft/RaftCandidateState.cpp
+        raft/RaftCandidateState.h
+        raft/RaftFollowerState.cpp
+        raft/RaftFollowerState.h
+        raft/RaftLeaderState.cpp
+        raft/RaftLeaderState.h
+        raft/RaftState.cpp
+        raft/RaftState.h
         storage/Storage.cpp
         storage/Storage.h
         websockets/Listener.h
         websockets/Session.cpp
         websockets/Session.h
         websockets/WebSocketServer.h
-        raft/RaftLeaderState.h
-        raft/RaftFollowerState.h
-        raft/RaftCandidateState.h
-        raft/RaftState.h
-        raft/RaftLeaderState.cpp
-        raft/RaftCandidateState.cpp
-        raft/RaftFollowerState.cpp
-        raft/commands/RaftVoteCommand.h
-        raft/commands/RaftVoteCommand.cpp
-        raft/commands/RaftCountVotesCommand.h
-        raft/commands/RaftCountVotesCommand.cpp
-        raft/commands/RaftHeartbeatCommand.h
-        raft/commands/RaftHeartbeatCommand.cpp
-        raft/RaftState.cpp
-        command_line_options/ParseUtils.h
-        command_line_options/ParseUtils.cpp
         )
 
 add_executable(the_db ${SOURCE_FILES})
@@ -119,6 +119,8 @@ set(SOURCE_FILES
         command_line_options/command_line_options_test.cpp
         command_line_options/CommandLineOptions.cpp
         command_line_options/CommandLineOptions.h
+        command_line_options/ParseUtils.cpp
+        command_line_options/ParseUtils.h
         ethereum/ethereum_test.cpp ethereum/TokenBalance.hpp
         ethereum/EthereumApi.cpp
         ethereum/EthereumApi.h
@@ -135,7 +137,7 @@ set(SOURCE_FILES
         websockets/Session.h
         websockets/WebSocketServer.h
         websockets/WebSocketServer_tests.cpp
-        command_line_options/ParseUtils.h command_line_options/ParseUtils.cpp)
+        )
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)
