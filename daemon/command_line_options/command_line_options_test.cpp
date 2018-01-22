@@ -225,6 +225,39 @@ BOOST_FIXTURE_TEST_SUITE(command_line_options, F)
             }
     }
 
+
+    BOOST_AUTO_TEST_CASE(test_sim_delay_setters)
+    {
+        const char *argv[] =
+            {
+                (char *) "~/bluzelle/test",
+                (char *) "--address",
+                (char *) "0x2ba35056580b505690c03dfb1df58bc6b6cd9f89",
+                (char *) "--port",
+                (char *) "58000",
+                (char *) "-l",
+                (char *) "10",
+                (char *) "-u",
+                (char *) "2000"
+            };
+
+
+        try
+            {
+            CommandLineOptions sut;
+            bool r = sut.parse(9,argv);
+            BOOST_CHECK(r);
+            BOOST_CHECK_EQUAL(sut.get_simulated_delay_lower(),10);
+            BOOST_CHECK_EQUAL(sut.get_simulated_delay_upper(),2000);
+            }
+        catch(const std::exception& e)
+            {
+            std::cerr << "Exception:[" << e.what() << "]\n";
+            BOOST_CHECK(false);
+            }
+    }
+
+
     //  --run_test=websockets/test_options_all
     BOOST_AUTO_TEST_CASE(test_options_all)
     {
