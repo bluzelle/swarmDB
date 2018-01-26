@@ -1,11 +1,8 @@
 #include "Peer.h"
+#include "PeerSession.h"
 #include "DaemonInfo.h"
 
 #include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/lexical_cast.hpp>
-
-#include <boost/beast/websocket.hpp>
 
 using namespace std;
 
@@ -15,7 +12,7 @@ Peer::send_request(
     function<string(const string&)> h,
     bool schedule_read)
 {
-    shared_ptr<PeerSession> session;
+    std::shared_ptr<PeerSession> session;
     try
         {
         boost::asio::ip::tcp::resolver resolver(ios_);
@@ -34,15 +31,15 @@ Peer::send_request(
             "/");
 
         session = make_shared<PeerSession>(
-            move(ws)
+            std::move(ws)
         ); // Store it for future use.
 
         session->set_request_handler(h);
-        session->schedule_read_ = schedule_read;
+        session->needs_read(schedule_read);
         }
     catch
         (
-            exception& ex
+            const std::exception& ex
         )
         {
         cout << "Cannot connect to "
@@ -57,7 +54,7 @@ Peer::send_request(
 
     if (session != nullptr)
         {
-        session->schedule_read_ = schedule_read;
+        session->needs_read(schedule_read);
         session->write_async(req);
         }
     else

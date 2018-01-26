@@ -2,12 +2,15 @@
 #define BLUZELLE_COMMAND_H
 
 #include "Storage.h"
+#include "JsonTools.h"
+
 #include <boost/property_tree/ptree.hpp>
 #include <string>
 
 using std::string;
 
 class Command {
+
 public:
     virtual boost::property_tree::ptree operator()() = 0;
 

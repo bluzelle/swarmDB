@@ -1,35 +1,47 @@
 #include "JsonTools.h"
 
-boost::property_tree::ptree pt_from_json_string(const string &s) {
-    std::stringstream ss;
+#include <iostream>
+#include <sstream>
+
+using namespace std;
+namespace bpt = boost::property_tree;
+
+bpt::ptree
+pt_from_json_string(
+    const string &s
+)
+{
+    stringstream ss;
     ss << s;
 
     try
         {
-        boost::property_tree::ptree json;
-        boost::property_tree::read_json(ss, json);
+        bpt::ptree json;
+        bpt::read_json(ss, json);
         return json;
         }
-    catch (boost::property_tree::json_parser_error &ex)
+    catch (bpt::json_parser_error &ex)
         {
-        std::cout << "Raft::from_json_string() threw '" << ex.what() << "' parsing " << std::endl;
-        std::cout << s << std::endl;
+        cerr << "Raft::from_json_string() threw '" << ex.what() << "' parsing " << std::endl;
+        cerr << s << std::endl;
         }
-
-    return boost::property_tree::ptree();
+    return bpt::ptree();
 }
 
-string pt_to_json_string(boost::property_tree::ptree pt) {
+string
+pt_to_json_string(
+    bpt::ptree pt
+)
+{
     try
         {
-        std::stringstream ss;
-        boost::property_tree::write_json(ss, pt);
+        stringstream ss;
+        bpt::write_json(ss, pt);
         return ss.str();
         }
-    catch (boost::property_tree::json_parser_error &ex)
+    catch (bpt::json_parser_error &ex)
         {
-        std::cout << "Raft::to_json_string() threw '" << ex.what() << std::endl;
+        cerr << "Raft::to_json_string() threw '" << ex.what() << std::endl;
         }
-
     return string();
 }

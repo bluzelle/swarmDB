@@ -1,59 +1,79 @@
 #include "CommandFactory.h"
-
 #include "RaftHeartbeatCommand.h"
 #include "CrudCreateCommand.h"
 #include "CrudReadCommand.h"
 #include "ApiCreateCommand.h"
 #include "ApiReadCommand.h"
-#include "ErrorCommand.hpp"
+//#include "ErrorCommand.hpp"
 #include "RaftVoteCommand.h"
 #include "RaftCountVotesCommand.h"
 
+using namespace std;
 
-CommandFactory::CommandFactory(Storage& st, ApiCommandQueue& q)
-    : storage_(st), queue_(q) {
+CommandFactory::CommandFactory
+    (
+        Storage& st,
+        ApiCommandQueue& q
+    )
+    : storage_(st), queue_(q)
+{
 
 }
 
-std::pair<string,string>
-CommandFactory::get_data(const boost::property_tree::ptree& pt) const {
+pair<string,string>
+CommandFactory::get_data
+    (
+        const boost::property_tree::ptree& pt
+    ) const
+{
     auto data  = pt.get_child("data.");
 
-    string key;
-    if (data.count("key") > 0)
-        key = data.get<string>("key");
+    string key = ( data.count("key") > 0 ? data.get<string>("key") : "" );
 
-    string val;
-    if (data.count("value") > 0)
-        val = data.get<string>("value");
+    string val = ( data.count("value") > 0 ? data.get<string>("value") : "");
 
-    return std::make_pair<string,string>(std::move(key), std::move(val));
+    return make_pair<string,string>(std::move(key), std::move(val));
 }
 
 unique_ptr<Command>
-CommandFactory::get_command(const boost::property_tree::ptree& pt,
-                      RaftState& st) const
+CommandFactory::get_command(
+    const boost::property_tree::ptree& pt,
+    RaftState& st) const
 {
     if (has_key(pt, "bzn-api"))
+        {
         return make_api_command(pt, st);
+        }
 
     if (has_key(pt, "crud"))
+        {
         return make_crud_command(pt, st);
+        }
 
     if (has_key(pt, "raft"))
+        {
         return make_raft_command(pt, st);
+        }
 
+    if (has_key(pt, "cmd"))
+        {
+        return make_command(pt, st);
+        }
     return nullptr;
 }
 
-bool CommandFactory::has_key(const boost::property_tree::ptree& pt, const string& k) const
+bool
+CommandFactory::has_key(
+    const boost::property_tree::ptree& pt, const string& k
+) const
 {
     return pt.find(k) != pt.not_found();
 }
 
 unique_ptr<Command>
-CommandFactory::make_raft_command(const boost::property_tree::ptree& pt,
-                                  RaftState& st) const
+CommandFactory::make_raft_command(
+    const boost::property_tree::ptree& pt,
+    RaftState& st) const
 {
     auto cmd = pt.get<string>("raft");
 
@@ -112,3 +132,33 @@ CommandFactory::make_api_command(
     return nullptr;
 }
 
+unique_ptr<Command>
+CommandFactory::make_command(
+    const boost::property_tree::ptree& pt,
+    RaftState& st
+) const
+{
+    auto cmd = pt.get<string>("cmd");
+    static std::map<std::string, std::function<void()>> commands;
+
+    cerr << "st [" << &st << "] should be used\n";
+
+    if(commands.size()==0)
+        {
+        commands["ping"] = [](){
+            std::cout << "ping\n";
+            return 1;
+        };
+        commands["request-vote"] = []()
+        {
+            std::cout << "request-vote\n";
+            return 2;
+        };
+        commands["vote"] = [](){
+            std::cout << "request-vote\n";
+            return 3;
+        };
+        }
+
+    return nullptr;
+}

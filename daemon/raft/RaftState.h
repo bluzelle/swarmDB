@@ -5,9 +5,7 @@
 #include <memory>
 #include <functional>
 
-using std::string;
-using std::unique_ptr;
-using std::function;
+using namespace std;
 
 #include <boost/asio/io_service.hpp>
 
@@ -37,13 +35,13 @@ public:
 protected:
     boost::asio::io_service& ios_;
 
-    Storage& storage_;
-
-    CommandFactory& command_factory_;
+    PeerList& peers_;
 
     ApiCommandQueue& peer_queue_;
 
-    PeerList& peers_;
+    Storage& storage_;
+
+    CommandFactory& command_factory_;
 
     function<string(const string&)> handler_;
 
@@ -62,19 +60,20 @@ public:
         ApiCommandQueue& pq,
         PeerList& ps,
         function<string(const string&)> rh,
-        unique_ptr<RaftState>& ns)
+        unique_ptr<RaftState>& ns
+    )
     : ios_(ios),
+      peers_(ps),
+      peer_queue_(pq),
       storage_(s),
       command_factory_(cf),
-      peer_queue_(pq),
-      peers_(ps),
       handler_(rh),
       next_state_(ns)
     {
     }
 
-    virtual
-    RaftStateType get_type() const = 0;
+    virtual RaftStateType
+    get_type() const = 0;
 
     void
     set_next_state_follower();

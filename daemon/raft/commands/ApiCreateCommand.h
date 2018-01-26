@@ -5,14 +5,20 @@
 #include "ApiCommandQueue.h"
 #include "Storage.h"
 
-class ApiCreateCommand : public Command {
-public:
+class ApiCreateCommand : public Command
+{
     ApiCommandQueue& queue_;
     Storage& storage_;
     boost::property_tree::ptree pt_;
 
 public:
-    ApiCreateCommand(ApiCommandQueue& q, Storage& s, boost::property_tree::ptree pt);
+    ApiCreateCommand
+        (
+            ApiCommandQueue& q,
+            Storage& s,
+            boost::property_tree::ptree pt
+        );
+
     virtual boost::property_tree::ptree operator()();
 };
 

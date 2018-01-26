@@ -27,24 +27,34 @@ private:
     boost::asio::io_service& ios_;
 
     PeerList peers_;                    // List of known peers.
+
     ApiCommandQueue peer_queue_;        // Keeps data to be sent to peers.
+
     Storage storage_;                   // Where the RAFTs log is replicated.
+
     CommandFactory command_factory_;
 
     mutex raft_state_mutex_;
+
     unique_ptr<RaftState> raft_state_; // There are 3 RAFT states: Candidate, Follower and Leader.
 
     mutex raft_next_state_mutex_;
+
     unique_ptr<RaftState> raft_next_state_; // State to transition to.
 
 public:
+
+    explicit
     Raft(boost::asio::io_service& ios);
 
     void run();
 
-    string handle_request(const string& req);
+    string
+    handle_request(const string& req);
 
-    void rearm_heartbeat_timer();
+    void
+    rearm_heartbeat_timer();
+
 };
 
 #endif //BLUZELLE_RAFT_H

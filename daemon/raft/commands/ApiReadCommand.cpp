@@ -11,8 +11,9 @@ ApiReadCommand::ApiReadCommand(
         Storage& s,
         boost::property_tree::ptree pt
 )
-        : queue_(q), storage_(s), pt_(std::move(pt))
+        : queue_(q), storage_(s), pt_(pt)
 {
+    cerr << "Where is ApiCommandQueue [" << &queue_ << "] used?\n";
 
 }
 
@@ -44,9 +45,6 @@ boost::property_tree::ptree ApiReadCommand::operator()()
                     return (char)c;
                     }
         );
-
-        std::cout << "api-read" << std::endl;
-
         return result(val_str);
         }
 

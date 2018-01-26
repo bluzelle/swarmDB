@@ -1,20 +1,17 @@
-#include <iostream>
-#include <utility>
-#include <thread>
-#include <sstream>
-#include <utility>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/nil_generator.hpp>
-
 #include "Raft.h"
 #include "JsonTools.h"
 #include "DaemonInfo.h"
 #include "RaftCandidateState.h"
 #include "RaftLeaderState.h"
 #include "RaftFollowerState.h"
+
+#include <iostream>
+#include <thread>
+#include <sstream>
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/nil_generator.hpp>
 
 static boost::uuids::uuid s_transaction_id;
 

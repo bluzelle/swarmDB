@@ -5,19 +5,17 @@
 #include "node/Singleton.h"
 
 #include <vector>
-#include <sstream>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/uuid/uuid.hpp>
 
-namespace pt = boost::property_tree;
+using namespace std;
 
 class
-DaemonInfo final : public Singleton<DaemonInfo>
+DaemonInfo final :
+    public Singleton<DaemonInfo>
 {
     NodeInfo            node_info_;
 
-    std::string         ethereum_address_;
+    string              ethereum_address_;
 
     boost::uuids::uuid  id_;
 
@@ -30,41 +28,22 @@ DaemonInfo final : public Singleton<DaemonInfo>
 public:
 
     boost::uuids::uuid&
-    id()
-    {
-        return id_;
-    }
+    id();
 
-    std::string&
-    host_name()
-    {
-        return node_info_.name();
-    }
+    string&
+    host_name();
 
-    std::string&
-    host_ip()
-    {
-        return node_info_.host();
-    }
+    string&
+    host_ip();
 
     uint16_t&
-    host_port()
-    {
-        return node_info_.port();
-    }
+    host_port();
 
-    std::string&
-    ethereum_address()
-    {
-        return ethereum_address_;
-    };
+    string&
+    ethereum_address();
 
     uint64_t&
-    ropsten_token_balance()
-    {
-        return ropsten_token_balance_;
-    }
-
+    ropsten_token_balance();
 };
 
 #endif //BLUZELLE_DAEMONINFO_H

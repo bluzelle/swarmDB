@@ -9,7 +9,8 @@ using std::queue;
 using std::pair;
 using std::string;
 
-class ApiCommandQueue : public queue<pair<string,string>> {
+class ApiCommandQueue : public queue<pair<string,string>>
+{
 public:
 
 };
