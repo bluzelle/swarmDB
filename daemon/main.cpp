@@ -98,6 +98,8 @@ void load_peers()
             std::string port = (values.size()==2 ? values[1] : values[2]); // node_2=192.168.0.12:62001
             }
         }
+
+
 }
 
 // TODO: Move initialize_daemon out of main

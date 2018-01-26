@@ -2,9 +2,9 @@
 #define BLUZELLE_PEER_H
 
 #include "NodeInfo.hpp"
-#include "PeerSession.h"
 
 #include <memory>
+#include <boost/asio/io_service.hpp>
 
 using namespace std;
 
@@ -26,7 +26,8 @@ public:
     void send_request(
         const string& req,
         function<string(const string&)> h,
-        bool schedule_read);
+        bool schedule_read
+    );
 };
 
 #endif //BLUZELLE_PEER_H

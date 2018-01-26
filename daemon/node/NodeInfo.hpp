@@ -16,7 +16,10 @@ public:
         NodeInfo const &
     ) = default;
 
-    NodeInfo() = default;
+    NodeInfo() : name_{""}, host_{""}, port_{0}
+    {
+    }
+
 
     string&
     name()

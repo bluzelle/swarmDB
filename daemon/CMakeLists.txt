@@ -61,6 +61,7 @@ set(SOURCE_FILES
         MessageInfo.hpp
         node/Daemon.cpp
         node/Daemon.h
+        node/DaemonInfo.cpp
         node/DaemonInfo.h
         node/Node.cpp
         peers/Peer.cpp
@@ -68,13 +69,16 @@ set(SOURCE_FILES
         peers/PeerListener.cpp
         peers/PeerServer.cpp
         peers/PeerSession.cpp
+        raft/ApiCommandQueue.h
         raft/commands/ApiCreateCommand.cpp
         raft/commands/ApiReadCommand.cpp
+        raft/commands/Command.hpp
         raft/commands/CommandFactory.cpp
         raft/commands/CrudCreateCommand.cpp
         raft/commands/CrudCreateCommand.h
         raft/commands/CrudReadCommand.cpp
         raft/commands/CrudReadCommand.h
+        raft/commands/ErrorCommand.hpp
         raft/commands/RaftCountVotesCommand.cpp
         raft/commands/RaftCountVotesCommand.h
         raft/commands/RaftHeartbeatCommand.cpp
@@ -99,7 +103,7 @@ set(SOURCE_FILES
         websockets/Session.cpp
         websockets/Session.h
         websockets/WebSocketServer.h
-        )
+        raft/commands/ApiUpdateNodesCommand.cpp raft/commands/ApiUpdateNodesCommand.h node/DaemonInfo.cpp)
 
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
@@ -133,11 +137,6 @@ set(SOURCE_FILES
         command_line_options/ParseUtils.cpp
         command_line_options/ParseUtils.h
         ethereum/ethereum_test.cpp
-        ethereum/TokenBalance.hpp
-        command_line_options/ParseUtils.cpp
-        command_line_options/ParseUtils.h
-        ethereum/ethereum_test.cpp
-        ethereum/TokenBalance.hpp
         ethereum/EthereumApi.cpp
         ethereum/EthereumApi.h
         ethereum/EthereumToken.h
@@ -145,10 +144,83 @@ set(SOURCE_FILES
         node/Daemon.cpp
         node/Daemon.h
         node/Daemon_tests.cpp
+        node/DaemonInfo.cpp
         node/DaemonInfo_tests.cpp
         node/NodeInfo.hpp
         node/NodeInfo_tests.cpp
         node/Singleton.h
+        peers/Peer.cpp
+        peers/Peer.h
+        peers/PeerList.cpp
+        peers/PeerList.h
+        peers/PeerListener.cpp
+        peers/PeerListener.h
+        peers/PeerServer.cpp
+        peers/PeerServer.h
+        peers/PeerSession.cpp
+        peers/PeerSession.h
+        raft/ApiCommandQueue.h
+        raft/commands/ApiCreateCommand.cpp
+        raft/commands/ApiCreateCommand.h
+        raft/commands/ApiReadCommand.cpp
+        raft/commands/ApiReadCommand.h
+        raft/commands/Command.hpp
+        raft/commands/CommandFactory.cpp
+        raft/commands/CommandFactory_tests.cpp
+        raft/commands/CommandFactory.h
+        raft/commands/CrudCreateCommand.cpp
+        raft/commands/CrudCreateCommand.h
+        raft/commands/CrudReadCommand.cpp
+        raft/commands/CrudReadCommand.h
+        raft/commands/RaftCountVotesCommand.cpp
+        raft/commands/RaftCountVotesCommand.h
+        raft/commands/RaftHeartbeatCommand.cpp
+        raft/commands/RaftHeartbeatCommand.h
+        raft/commands/RaftVoteCommand.cpp
+        raft/commands/RaftVoteCommand.h
+        raft/JsonTools.cpp
+        raft/JsonTools.h
+        raft/RaftCandidateState.cpp
+        raft/RaftCandidateState.h
+        raft/RaftFollowerState.cpp
+        raft/RaftFollowerState.h
+        raft/RaftLeaderState.cpp
+        raft/RaftLeaderState.h
+        raft/RaftState.cpp
+        raft/RaftState.h
+        peers/Peer.cpp
+        peers/PeerList.cpp
+        peers/PeerListener.cpp
+        peers/PeerServer.cpp
+        peers/PeerSession.cpp
+        raft/ApiCommandQueue.h
+        raft/commands/ApiCreateCommand.cpp
+        raft/commands/ApiReadCommand.cpp
+        raft/commands/Command.hpp
+        raft/commands/CommandFactory.cpp
+        raft/commands/CrudCreateCommand.cpp
+        raft/commands/CrudCreateCommand.h
+        raft/commands/CrudReadCommand.cpp
+        raft/commands/CrudReadCommand.h
+        raft/commands/ErrorCommand.hpp
+        raft/commands/RaftCountVotesCommand.cpp
+        raft/commands/RaftCountVotesCommand.h
+        raft/commands/RaftHeartbeatCommand.cpp
+        raft/commands/RaftHeartbeatCommand.h
+        raft/commands/RaftVoteCommand.cpp
+        raft/commands/RaftVoteCommand.h
+        raft/JsonTools.cpp
+        raft/JsonTools.h
+        raft/Raft.cpp
+        raft/Raft.h
+        raft/RaftCandidateState.cpp
+        raft/RaftCandidateState.h
+        raft/RaftFollowerState.cpp
+        raft/RaftFollowerState.h
+        raft/RaftLeaderState.cpp
+        raft/RaftLeaderState.h
+        raft/RaftState.cpp
+        raft/RaftState.h
         storage/Storage.cpp
         storage/Storage.h
         storage/storage_test.cpp
@@ -158,7 +230,12 @@ set(SOURCE_FILES
         websockets/Session.h
         websockets/WebSocketServer.h
         websockets/WebSocketServer_tests.cpp
-        )
+        raft/commands/command_factory_tests.cpp
+        raft/commands/ApiUpdateNodesCommand.cpp
+        raft/commands/ApiUpdateNodesCommand.h
+        raft/commands/command_tests.cpp
+        node/DaemonInfo.cpp)
+
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)

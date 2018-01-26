@@ -24,13 +24,13 @@ BOOST_FIXTURE_TEST_SUITE(daemon_suite, F)
         Daemon sut0;
         auto node_id0 = sut0.node_id();
         BOOST_CHECK(
-            true == boost::regex_match(
+            boost::regex_match(
                 node_id0,
                 ms_guid_expr));
 
         Daemon sut1;
         BOOST_CHECK(
-            true == boost::regex_match(
+            boost::regex_match(
                 sut1.node_id(),
                 ms_guid_expr));
 

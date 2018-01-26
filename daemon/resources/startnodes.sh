@@ -12,3 +12,5 @@ for port in "${ports[@]}"
 do
    echo "./the_db --address ${ROPSTEN_ADDR} --port ${port}"
 done
+
+

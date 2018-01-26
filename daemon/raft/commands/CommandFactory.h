@@ -11,7 +11,8 @@
 
 using std::unique_ptr;
 
-class CommandFactory {
+class CommandFactory
+{
 private:
     Storage& storage_; // Also can be accessed from RaftState.
     ApiCommandQueue& queue_;
@@ -20,7 +21,12 @@ private:
                  const string& k) const;
 
     unique_ptr<Command>
-    make_raft_command(const boost::property_tree::ptree& s,
+    make_command(
+        const boost::property_tree::ptree& pt,
+        RaftState& st) const;
+
+    unique_ptr<Command>
+    make_raft_command(const boost::property_tree::ptree& pt,
             RaftState& st) const;
 
     unique_ptr<Command>
@@ -35,12 +41,19 @@ private:
     get_data(const boost::property_tree::ptree& pt) const;
 
 public:
-    CommandFactory(Storage& st,
-            ApiCommandQueue& queue);
+
+    CommandFactory
+        (
+            Storage& st,
+            ApiCommandQueue& queue
+        );
 
     unique_ptr<Command>
-    get_command(const boost::property_tree::ptree& pt,
-                          RaftState& st) const;
+    get_command
+        (
+            const boost::property_tree::ptree& pt,
+            RaftState& st
+        ) const;
 };
 
 #endif //BLUZELLE_COMMANDPROCESSOR_H

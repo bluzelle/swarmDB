@@ -163,7 +163,8 @@ Session::process_json_string(
 }
 
 std::string
-Session::update_nodes() {
+Session::update_nodes()
+{
     auto &socket = ws_.next_layer();
     std::string name = boost::lexical_cast<std::string>(socket.local_endpoint()); // Host:port.
 

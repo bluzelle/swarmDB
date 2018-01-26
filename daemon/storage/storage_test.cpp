@@ -5,9 +5,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/test/unit_test.hpp>
-#include <string>
-#include <cstdlib>
-#include <climits>
+#include <algorithm>
 
 struct F
 {
@@ -44,7 +42,6 @@ BOOST_FIXTURE_TEST_SUITE(storage, F)
         std::string     key{"fluffy"};
         const VEC_BIN_t accepted_value = create_random_value(1024);
         const UUID_t    accepted_tx_id = create_random_uuid();
-
         sut.create(
                 key,
                 accepted_value,
@@ -156,14 +153,20 @@ BOOST_FIXTURE_TEST_SUITE(storage, F)
         BOOST_CHECK( accepted_tx_id == record.transaction_id_ );
     }
 
-
-    // TODO: Mehdi
-//    BOOST_AUTO_TEST_CASE( test_storage_persistence )
-//    {
-//        std::string filename{"/tmp/bluzelle/persistence.txt"};
-//        Storage sut(filename);
+    BOOST_AUTO_TEST_CASE( test_record_value )
+    {
+        Record sut;
+        const string accepted{"This is a very nice value. 1234"};
+        VEC_BIN_t bin_val(accepted.size());
+        transform(
+            accepted.begin(),
+            accepted.end(),
+            bin_val.begin(),
+            [](auto&  c)-> unsigned  char { return (unsigned char) c;}
+        );
 //
-//    }
+//        BOOST_CHECK_EQUAL(sut.value(),accepted);
+    }
 
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -176,10 +179,15 @@ const UUID_t create_random_uuid()
 const VEC_BIN_t create_random_value(const size_t &sz)
 {
     VEC_BIN_t value;
-    for(size_t i=0; i<sz ; ++i )
-    {
-        unsigned char x = random_unsigned_char(ran);
-        value.emplace_back(x);
-    }
+    value.resize(sz);
+    transform(
+        value.begin(),
+        value.end(),
+        value.begin(),
+        []( const auto&)
+        {
+            return random_unsigned_char(ran);
+        }
+    );
     return value;
 }

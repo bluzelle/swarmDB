@@ -18,7 +18,7 @@ PeerList::PeerList(
     string peer_info; // name=Host:port [todo] Pick a format for node info storage.
     while (getline(file, peer_info))
         {
-        if (peer_info.front() != ';') // Skip commented lines.
+        if (peer_info.front() != ';' && !peer_info.empty() ) // Skip commented lines.
             {
             NodeInfo n;
             n.name() = peer_info.substr(0, peer_info.find('='));

@@ -4,8 +4,6 @@
 template<typename T>
 class Singleton
 {
-    Singleton(const Singleton&) = delete;
-    Singleton& operator= (const Singleton&) = delete;
     /*inline*/ static T * m_instance;
 
     class MemoryGuard
@@ -23,6 +21,8 @@ protected:
     virtual ~Singleton() {}
 
 public:
+    Singleton(const Singleton&) = delete;
+    Singleton& operator= (const Singleton&) = delete;
     static T&
     get_instance()
     {

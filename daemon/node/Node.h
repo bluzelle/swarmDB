@@ -17,6 +17,7 @@ private:
     PeerServer  server_; // Serves inbound connections.
 
 public:
+    explicit
     Node(boost::asio::io_service& ios);
 
     void

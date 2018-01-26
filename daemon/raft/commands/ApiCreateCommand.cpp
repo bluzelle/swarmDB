@@ -4,12 +4,16 @@
 #include "ApiCreateCommand.h"
 #include "JsonTools.h"
 
-ApiCreateCommand::ApiCreateCommand(ApiCommandQueue& q, Storage& s, boost::property_tree::ptree pt)
-        : queue_(q), storage_(s), pt_(pt) {
-
+ApiCreateCommand::ApiCreateCommand(
+    ApiCommandQueue& q,
+    Storage& s,
+    boost::property_tree::ptree pt)
+        : queue_(q), storage_(s), pt_(pt)
+{
 }
 
-boost::property_tree::ptree ApiCreateCommand::operator()() {
+boost::property_tree::ptree ApiCreateCommand::operator()()
+{
     auto data  = pt_.get_child("data.");
 
     string key;
@@ -36,15 +40,15 @@ boost::property_tree::ptree ApiCreateCommand::operator()() {
         string resp = pt_to_json_string(pt_);
         resp.replace(resp.find("bzn-api"), 7, "crud");
 
-        queue_.push(std::make_pair<string,string>(
+        queue_.push(
+            std::make_pair<string,string>(
                 pt_.get<string>("transaction-id"),
-                std::move(resp)));
-
-        std::cout << "api-create" << std::endl;
+                std::move(resp)
+            )
+        );
 
         return success();
         }
-
 
     return error("key is missing");
 }
