@@ -37,17 +37,18 @@ start_websocket_server();
 void
 start_node();
 
-int
+int 
 main(const int argc,
      const char *argv[])
-{
-    initialize_daemon();
-    validate_node(argc, argv);
-    display_daemon_info();
-    start_websocket_server();
-    start_node();
-    return 0;
-}
+	{
+    	initialize_daemon();
+    	validate_node(argc, argv);
+    	display_daemon_info();
+    	start_websocket_server();
+    	start_node();
+    
+	return 0;
+	}
 
 void
 get_primary_ip(char *buffer,
