@@ -19,11 +19,11 @@ RaftCandidateState::RaftCandidateState(boost::asio::io_service& ios,
                                        function<string(const string&)> rh,
                                        unique_ptr<RaftState>& ns)
         : RaftState(ios, s, cf, pq, ps, rh, ns),
+          election_timeout_timer_(ios_, boost::posix_time::milliseconds(
+                  raft_election_timeout_interval_min_milliseconds)),
           nominated_for_leader_(false),
           voted_yes_(0),
-          voted_no_(0),
-          election_timeout_timer_(ios_, boost::posix_time::milliseconds(
-                  raft_election_timeout_interval_min_milliseconds))
+          voted_no_(0)
 {
     std::cout << "          I am Candidate" << std::endl;
 

@@ -56,10 +56,10 @@ public:
               function<string(const string&)> rh,
               unique_ptr<RaftState>& ns)
     : ios_(ios),
+      peers_(ps),
+      peer_queue_(pq),
       storage_(s),
       command_factory_(cf),
-      peer_queue_(pq),
-      peers_(ps),
       handler_(rh),
       next_state_(ns)
     {
