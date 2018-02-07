@@ -8,9 +8,9 @@ import chaiEnzyme from 'chai-enzyme'
 import sinonChai from 'sinon-chai'
 
 import Adapter from 'enzyme-adapter-react-16';
-import {Maybe} from 'monet'
+import {Maybe} from 'simple-monads';
 
-import {clearNodes} from "./services/NodeService";
+import {clearNodes} from "bluzelle-client-common/services/NodeService";
 
 Enzyme.configure({ adapter: new Adapter() });
 chai.use(chaiEnzyme());
@@ -31,16 +31,13 @@ testsContext.keys().forEach(testsContext);
 const  componentsContext = require.context('./components', true, /\/.js$/);
 componentsContext.keys().forEach(componentsContext);
 
-const servicesContext = require.context('./services', true, /\/.js$/);
-servicesContext.keys().forEach(servicesContext);
-
 
 //Mock WebSocket
 global.WebSocket = function() {
     return {}
 };
 
-beforeEach(() => Maybe.fromNull(document.querySelector('#show'))
+beforeEach(() => Maybe.of(document.querySelector('#show'))
     .map(el => el.innerHTML = '')
 );
 

@@ -1,23 +1,15 @@
 import {Editor} from "./Editor";
-import {getSwarmData} from '../services/DataService';
+import {getLocalDataStore} from '../services/DataService';
 import {selectedKey, KeyList} from "./KeyList";
 import {Header} from "./Header/Header";
 import 'bootstrap/dist/css/bootstrap.css';
-import {QueueEditor} from "./QueueEditor";
+import {CommandControls} from "./CommandControls";
 
 @observer
 export class Main extends Component {
-    constructor(props) {
-        super(props);
-
-        const obj = getSwarmData();
-
-        this.state = {obj};
-    }
-
     render() {
 
-        const {obj} = this.state;
+        const obj = getLocalDataStore();
 
         return (
             <ReflexContainer style={{height: '100%'}}>
@@ -28,7 +20,7 @@ export class Main extends Component {
                 <ReflexElement flex={1}>
                     <ReflexContainer orientation='vertical'>
                         <ReflexElement flex={0.4}>
-                            <QueueEditor/>
+                            <CommandControls/>
 
                             <hr/>
 
@@ -36,7 +28,7 @@ export class Main extends Component {
                         </ReflexElement>
                         <ReflexSplitter/>
                         <ReflexElement>
-                            {selectedKey.get() !== null && <Editor obj={obj}/>}
+                            {obj.has(selectedKey.get()) && <Editor obj={obj}/>}
                         </ReflexElement>
                     </ReflexContainer>
                 </ReflexElement>

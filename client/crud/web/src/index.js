@@ -1,10 +1,25 @@
 import ReactDom from 'react-dom'
 import {App} from "./components/App"
 import 'react-reflex/styles.css'
+import {addHooks} from "react-functional-test";
+
+const root = ReactDom.render(<App />, document.querySelector('#app-container'));
 
 
-ReactDom.render(<App />, document.querySelector('#app-container'));
 
-// Load files in /services
-// const testsContext = require.context('./services', true, /Service.js$/);
-// testsContext.keys().forEach(testsContext);
+if(window.location.href.includes('test')) {
+
+    const components = {};
+
+    const context = require.context('./components', true, /\.js/);
+    context.keys().forEach(path =>
+
+        // Do not include test files
+        path.includes('specs') ||
+
+        Object.assign(components, context(path)));
+
+
+    addHooks({ root, components });
+
+}

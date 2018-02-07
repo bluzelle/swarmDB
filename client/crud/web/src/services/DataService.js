@@ -1,27 +1,29 @@
-import {objectToKeyData} from '../components/JSONEditor/JSONEditor';
-import {textToKeyData} from "../components/PlainTextEditor";
-import {observableMapRecursive} from "../util/mobXUtils";
+import {addCommandProcessor} from "bluzelle-client-common/services/CommandService";
+import {mapValues} from 'lodash';
+import {removePreviousHistory, updateHistoryMessage} from './CommandQueueService';
 
-const data = observableMapRecursive({
+const data = observable.map({});
 
-    key1: objectToKeyData({
-        array: [1, 2, 3, 4]
-    }),
+export const getLocalDataStore = () => data;
 
-    anotherKey: objectToKeyData({
-        fieldA: 1.23,
-        fieldB: 4.56,
-        bool: true,
-        crazyObject: {
-            "true": false
-        }
-    }),
+export const touch = key =>
+    data.has(key) ? data.get(key).set('mostRecentTimestamp', new Date().getTime())
+                  : data.set(key, observable.map({ mostRecentTimestamp: new Date().getTime() }));
 
-    complexObject: objectToKeyData({
-        arrays: [1, 2, [{field: "feild"}, []], 3, ["apples", ["and", ["oranges"]]]]
-    }),
+addCommandProcessor('keyListUpdate', keys => keys.forEach(touch));
+addCommandProcessor('keyListDelete', keys => {
+    keys.forEach(key => data.delete(key));
 
-    someText: textToKeyData("Hello world, this is some plain text.")
+    removePreviousHistory();
+    updateHistoryMessage(<span>Deleted keys <code key={1}>{JSON.stringify(keys)}</code> from node.</span>);
+
 });
 
-export const getSwarmData = () => data;
+addCommandProcessor('bytearrayUpdate', ({key, bytearray}) => {
+    touch(key);
+    data.get(key).set('bytearray', new Uint8Array(bytearray));
+
+    removePreviousHistory();
+    updateHistoryMessage(<span>Updated <code key={1}>{key}</code> from node.</span>);
+
+});

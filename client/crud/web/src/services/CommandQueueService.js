@@ -1,5 +1,4 @@
-import {isObservableArray} from "mobx/lib/mobx";
-import {extend} from 'lodash';
+import {isObservableArray} from "mobx";
 import PropTypes from 'prop-types';
 
 export const commandQueue = observable([]);
@@ -12,13 +11,13 @@ const revert = targetPosition => {
         const prev = commandQueue[cp-1];
 
         commandQueue[cp].undoIt(prev);
-        currentPosition.set(cp - 1)
+        currentPosition.set(cp - 1);
         revert(targetPosition);
     }
 
     if (cp < targetPosition) {
         commandQueue[cp + 1].doIt();
-        currentPosition.set(cp + 1)
+        currentPosition.set(cp + 1);
         revert(targetPosition);
     }
 };
@@ -42,9 +41,10 @@ export const redo = () =>
     canRedo() && revert(currentPosition.get() + 1);
 
 
-// Caution: the consecutive execution of undoIt and doIt
-// must keep track of the original child object, or else subsequent redos
-// will not be bound correctly.
+// Caution: the consecutive execution of undoIt and doIt should cancel
+// each other out exactly. If the action is to, for instance, create a new
+// object, the object should have the same identity as it had before
+// undoing and redoing.
 
 export const execute = ({ doIt, undoIt, onSave = () => {}, message }) => {
     doIt();
@@ -61,12 +61,12 @@ export const execute = ({ doIt, undoIt, onSave = () => {}, message }) => {
     });
 };
 
-export const executeContext = f => {
+export const enableExecution = f => {
     f.contextTypes = { execute: PropTypes.func };
     return f;
 };
 
-export const setExecuteContext = f => {
+export const enableExecutionForChildren = f => {
     f.childContextTypes = { execute: PropTypes.func };
     return f;
 };
@@ -74,6 +74,14 @@ export const setExecuteContext = f => {
 
 const deleteFuture = () =>
     (currentPosition.get() >= 0) && (commandQueue.length = currentPosition.get());
+
+export const removePreviousHistory = () => {
+    commandQueue.replace(commandQueue.slice(currentPosition.get()));
+    currentPosition.set(0);
+};
+
+export const updateHistoryMessage = message =>
+    commandQueue[currentPosition.get()].message = message;
 
 
 export const del = (execute, obj, propName) => {
@@ -92,15 +100,4 @@ export const del = (execute, obj, propName) => {
             undoIt: () => obj.set(propName, old),
             message: <span>Deleted key <code key={1}>{propName}</code>.</span>});
     }
-};
-
-
-export const save = () => {
-    const newKeys = {};
-
-    commandQueue.map(command => {
-        extend(newKeys, command.onSave(newKeys));
-    });
-
-    return newKeys;
 };

@@ -6,6 +6,7 @@ const _ = require('lodash');
 const fp = require('lodash/fp');
 const nodes = require('./NodeStore').nodes;
 const {behaveRandomly} = require('./Values');
+const CommandProcessors = require('./CommandProcessors');
 
 module.exports = function Node(port) {
 
@@ -32,7 +33,8 @@ module.exports = function Node(port) {
                 me.getWsServer().shutDown();
                 me.getHttpServer().close();
             }, 200);
-        }
+        },
+        sendToClients: ({cmd, data}) => sendToClients(cmd, data)
     });
 
     const me = nodes.get(port);
@@ -63,6 +65,10 @@ module.exports = function Node(port) {
 
     me.getWsServer().on('connect', connection => {
         connections.push(connection);
+        connection.on('message', ({utf8Data: message}) => {
+            const command = JSON.parse(message);
+            CommandProcessors[command.cmd](command.data, connection);
+        });
         sendNodesInfo(connection);
     });
 

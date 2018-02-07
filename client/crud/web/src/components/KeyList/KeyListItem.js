@@ -1,9 +1,10 @@
 import {ObjIcon} from "../ObjIcon";
-import {executeContext} from "../../services/CommandQueueService";
+import {enableExecution} from "../../services/CommandQueueService";
 import {EditableField} from "../EditableField";
 import {selectedKey} from "./KeyList";
+import {RefreshButton} from "./RefreshButton";
 
-@executeContext
+@enableExecution
 @observer
 export class KeyListItem extends Component {
 
@@ -13,7 +14,6 @@ export class KeyListItem extends Component {
         this.context.execute({
             doIt: () => selectedKey.set(target),
             undoIt: () => selectedKey.set(oldVal),
-            onSave: () => {},
             message: <span>Selected <code key={1}>{target}</code>.</span>
         });
     }
@@ -21,6 +21,13 @@ export class KeyListItem extends Component {
     rename(newKey) {
 
         const {obj, keyname: keyName} = this.props;
+
+
+        // TODO: this should be better, but may require large changes to the existing system of how renaming works.
+        if(!obj.get(keyName).has('bytearray')) {
+            alert('Must download object to rename.');
+            return;
+        }
 
         selectedKey.get() === keyName ? changeCurrentSelection.call(this) : changeNoncurrentSelection.call(this);
 
@@ -78,11 +85,21 @@ export class KeyListItem extends Component {
         return (
             <BS.ListGroupItem
                 onClick={() => selectedKey.get() === keyname ? this.select(null) : this.select(keyname)}
-                active={selectedKey.get() === keyname}>
+                active={selectedKey.get() === keyname}
+
+                // TODO: fix this error
+                // This line gives error?
+                bsStyle={hasMoreRecentVersion(obj.get(keyname)) ? 'info' : null}
+                >
 
                 <span style={{display: 'inline-block', width: 25}}>
                     <ObjIcon keyData={obj.get(keyname)}/>
                 </span>
+
+                {
+                    hasMoreRecentVersion(obj.get(keyname))
+                        && <RefreshButton keyData={obj.get(keyname)}/>
+                }
 
                 <EditableField
                     val={keyname}
@@ -98,3 +115,8 @@ export class KeyListItem extends Component {
             </BS.ListGroupItem>);
     }
 }
+
+const hasMoreRecentVersion = keyData =>
+    keyData.has('mostRecentTimestamp')
+    && keyData.has('beginEditingTimestamp')
+    && keyData.get('mostRecentTimestamp') > keyData.get('beginEditingTimestamp');

@@ -1,10 +1,27 @@
-import PropTypes from 'prop-types';
 import {HashRouter, Route} from 'react-router-dom'
 import {Main} from 'components/Main'
-import {execute, setExecuteContext} from "../services/CommandQueueService";
+import {execute, enableExecutionForChildren} from "../services/CommandQueueService";
 import DevTools from 'mobx-react-devtools';
+import {getNodes} from 'bluzelle-client-common/services/NodeService'
+import 'bluzelle-client-common/services/CommunicationService';
+import DaemonSelector from 'bluzelle-client-common/components/DaemonSelector'
 
-@setExecuteContext
+// Debugging
+// import {configureDevtool} from 'mobx-react-devtools';
+// configureDevtool({logEnabled: true});
+
+
+import {sendToNodes} from "bluzelle-client-common/services/CommunicationService";
+import {when} from 'mobx';
+
+const socketOpen = () => getNodes().some(node => node.socketState === 'open');
+const getKeyList = () => sendToNodes('requestKeyList');
+
+when(socketOpen, getKeyList);
+
+
+@observer
+@enableExecutionForChildren
 export class App extends Component {
     getChildContext() {
         return {execute};
@@ -13,9 +30,9 @@ export class App extends Component {
     render() {
         return (
             <div style={{height: '100%'}}>
-                <DevTools/>
+                {/dev-tools/.test(window.location.href) && <DevTools/>}
                 <HashRouter>
-                    <Route component={Main} />
+                    <Route component={getNodes().length ? Main : DaemonSelector} />
                 </HashRouter>
             </div>
         );

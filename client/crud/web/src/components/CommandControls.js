@@ -1,7 +1,8 @@
-import {commandQueue, undo, redo, canUndo, canRedo, save, currentPosition} from "../services/CommandQueueService";
+import {commandQueue, undo, redo, canUndo, canRedo, currentPosition} from "../services/CommandQueueService";
+import {save} from "../services/SaveService";
 
 @observer
-export class QueueEditor extends Component {
+export class CommandControls extends Component {
     constructor(props) {
         super(props);
 
@@ -27,7 +28,7 @@ export class QueueEditor extends Component {
             <BS.ButtonGroup style={{marginRight: 10}}>
                 {undoButton}
                 {redoButton}
-            </BS.ButtonGroup>
+            </BS.ButtonGroup>;
 
         const historyButton =
             <BS.OverlayTrigger placement="bottom" overlay={
@@ -44,7 +45,7 @@ export class QueueEditor extends Component {
                 <BS.Tooltip id="save-tooltip">Save</BS.Tooltip>
             }>
                 <BS.Button style={{color: 'green'}}
-                           onClick={() => console.log(save())}>
+                           onClick={save}>
                     <BS.Glyphicon glyph='floppy-save'/>
                 </BS.Button>
             </BS.OverlayTrigger>;
@@ -54,6 +55,7 @@ export class QueueEditor extends Component {
                        onClick={() => this.setState({show: false})}>
                 <BS.Glyphicon glyph='remove'/>
             </BS.Button>;
+
 
         const historyList =
             commandQueue.map(({revert, message}, index) =>

@@ -1,5 +1,5 @@
 import Node from './Node'
-import {getNodes} from 'services/NodeService'
+import {getNodes} from 'bluzelle-client-common/services/NodeService'
 import NodeInfo from 'components/tabs/NodeInfo'
 
 @observer

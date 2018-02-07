@@ -4,9 +4,9 @@ import {Plus, Edit, Delete} from "../Buttons";
 import {Hoverable} from "../Hoverable";
 import {get} from '../../../util/mobXUtils';
 import {NewField} from "./NewField";
-import {del, executeContext} from "../../../services/CommandQueueService";
+import {del, enableExecution} from "../../../services/CommandQueueService";
 
-@executeContext
+@enableExecution
 @observer
 export class RenderArray extends Component {
     constructor(props) {

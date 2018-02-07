@@ -1,7 +1,4 @@
 {
   "dependencies": {
-    "lodash": "^4.17.4",
-    "mobx": "^3.3.2",
-    "websocket": "^1.0.25"
   }
 }

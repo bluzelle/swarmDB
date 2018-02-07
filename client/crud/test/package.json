@@ -1,9 +1,10 @@
 {
   "scripts": {
-    "web-functional-tests": "chimp web-functional/chimp.js --mocha",
-    "web-functional-tests-watch": "chimp web-functional/chimp.js --mocha --watch"
+    "test": "chimp web-functional/chimp.js --mocha",
+    "test-watch": "chimp web-functional/chimp.js --mocha --watch",
+    "test-debug": "chimp web-functional/chimp.js --inspectMocha --mocha"
   },
   "dependencies": {
-    "chimp": "^0.50.2"
+    "chimp": "^0.51.0"
   }
 }

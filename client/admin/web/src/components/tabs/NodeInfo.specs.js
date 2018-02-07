@@ -1,5 +1,5 @@
 import NodeInfo from './NodeInfo'
-import {updateNode, clearNodes, getNodeByAddress} from "../../services/NodeService";
+import {updateNode, clearNodes, getNodeByAddress} from "bluzelle-client-common/services/NodeService";
 import {MemoryRouter} from 'react-router-dom'
 
 describe('components/tabs/NodeInfo', () => {
@@ -36,7 +36,7 @@ describe('components/tabs/NodeInfo', () => {
         await waitFor(() => wrapper.html().includes('60 MB'))
     });
 
-    it.only('should show node space used in MB or GB and as a percentage', async () => {
+    it('should show node space used in MB or GB and as a percentage', async () => {
         expectTDWith(wrapper, '10 MB.*(.*20%.*)');
         updateNode({ip: '1.2.3', port: 1, used: 2175});
 

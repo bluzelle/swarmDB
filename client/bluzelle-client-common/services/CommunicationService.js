@@ -1,10 +1,9 @@
-import curry from 'lodash/fp/curry'
-import {getNodes} from 'services/NodeService'
+import {getNodes} from './NodeService'
 import groupBy from 'lodash/groupBy'
-import {tick} from 'services/TickService'
+import {receiveMessage} from './CommandService'
 
-const commandProcessors = [];
 const MIN_CONNECTED_NODES = 3000;
+
 
 export const entryPointUrl = observable(undefined);
 const entryPointSocket = observable(undefined);
@@ -64,16 +63,15 @@ function connectToNode(node) {
     function setSocketState() {
         extendObservable(node, {socketState: socketStates[socket.readyState]});
     }
-};
-
-export const receiveMessage = (data, node) => {
-    const msg = JSON.parse(data);
-    commandProcessors[msg.cmd] ? commandProcessors[msg.cmd](msg.data, node) : console.error(`${msg.cmd} has no command processor`)
-};
+}
 
 
-export const addCommandProcessor = (name, fn) => commandProcessors[name] = fn;
+export const sendToNodes = (cmd, data) => getNodes().forEach(node =>
+    sendToNode(node, cmd, data));
+
+export const sendToNode = (node, cmd, data) =>
+    node.socketState === 'open' && node.socket.send(JSON.stringify({cmd, data}));
+
+
 
 const socketStates = ['opening', 'open', 'closing', 'closed'];
-
-

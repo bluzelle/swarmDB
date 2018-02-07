@@ -1,10 +1,10 @@
 import {get, observableMapRecursive} from "../../../util/mobXUtils";
 import {EditableField} from "../../EditableField";
 import {Delete} from "../Buttons";
-import {del, executeContext} from "../../../services/CommandQueueService";
+import {del, enableExecution} from "../../../services/CommandQueueService";
 
 export const RenderField =
-    executeContext(({obj, propName, preamble, editing, onChange, hovering}, context) => (
+    enableExecution(({obj, propName, preamble, editing, onChange, hovering}, context) => (
 
         <div>
             {preamble && <span style={{marginRight: 5}}>{preamble}:</span>}

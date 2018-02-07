@@ -1,11 +1,11 @@
-import {executeContext} from "../../services/CommandQueueService";
+import {enableExecution} from "../../services/CommandQueueService";
 import {KeyListItem} from "./KeyListItem";
 import {RemoveButton} from "./RemoveButton";
-import {NewKeyField} from "./NewKeyField";
+import {NewKeyField} from "./NewKey/NewKeyField";
 
 export const selectedKey = observable(null);
 
-@executeContext
+@enableExecution
 @observer
 export class KeyList extends Component {
     constructor(props) {

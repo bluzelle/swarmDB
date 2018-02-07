@@ -1,4 +1,4 @@
-import {getLogEntries} from 'services/LogService'
+import {getLogEntries} from 'bluzelle-client-common/services/LogService'
 import 'src/ReactPre16Support'
 import DataGrid from 'components/DataGrid';
 import pipe from 'lodash/fp/pipe'
