@@ -42,6 +42,8 @@ CommandFactory::get_command(const boost::property_tree::ptree& pt,
 
     if (has_key(pt, "raft"))
         return make_raft_command(pt, st);
+
+    return nullptr;
 }
 
 bool CommandFactory::has_key(const boost::property_tree::ptree& pt, const string& k) const
