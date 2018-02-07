@@ -3,15 +3,12 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(REQUIRED_BOOST "1.66.0")
 
-if(MSVC)
-    message(STATUS "*** building make for Windows")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wall)
+    add_compile_options(-Wextra)
+    add_compile_options(-Wpedantic)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     add_compile_options(/W4)
-elseif(UNIX AND NOT APPLE)
-    message(STATUS "*** building make for Unix")
-    add_compile_options(-lrt)
-elseif(APPLE)
-    message(STATUS "*** building make for MacOS")
-    add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 # TODO can we move this to the root CMakeLists.txt?
@@ -115,7 +112,7 @@ set(SOURCE_FILES
 add_executable(the_db ${SOURCE_FILES})
 target_link_libraries(the_db ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)
-    target_link_libraries(the_db pthread)
+    target_link_libraries(the_db pthread rt)
 endif()
 
 ###############################################################################
@@ -153,5 +150,5 @@ set(SOURCE_FILES
 add_executable(the_db_test ${SOURCE_FILES})
 target_link_libraries(the_db_test ${Boost_LIBRARIES})
 if(UNIX AND NOT APPLE)
-    target_link_libraries(the_db_test pthread)
+    target_link_libraries(the_db_test pthread rt)
 endif()
