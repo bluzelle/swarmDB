@@ -77,8 +77,7 @@ bool CommandLineOptions::is_valid_ethereum_address(const string &addr) {
 }
 
 bool CommandLineOptions::is_valid_port(ushort p) {
-    return (p >= 49152) &&
-           (p <= 65535); // As per IANA https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
+    return (p >= 49152); // As per IANA https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
 }
 
 ushort CommandLineOptions::get_port() const {
