@@ -23,7 +23,7 @@ module.exports.start = (port = 8099) => {
         connections.push(conn);
         conn.on('message', ({utf8Data: message}) => {
             const command = JSON.parse(message);
-            CommandProcessors[command.cmd](command.data);
+            CommandProcessors[command.cmd](command.data, conn);
         })
     });
 };

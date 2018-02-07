@@ -1,4 +1,4 @@
-import {getNodeByAddress, getNodes} from 'services/NodeService'
+import {getNodeByAddress, getNodes} from 'bluzelle-client-common/services/NodeService'
 import RowSelectDataGrid from 'components/RowSelectDataGrid'
 import {strafeObject} from 'src/Utils'
 import NodeInfo from 'components/tabs/NodeInfo'

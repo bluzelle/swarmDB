@@ -68,13 +68,10 @@ build
 
 # Scott
 workspace.xml
-/client/admin/web/dist/generated
-/client/crud/web/dist/generated
 node_modules
 .nyc_output
 coverage
 .DS_Store
-client/desktop/dist/
 /bluzelled/assets/web
 
 /bluzelle/bluzelle.cbp

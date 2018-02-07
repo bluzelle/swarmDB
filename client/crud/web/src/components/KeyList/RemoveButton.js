@@ -1,7 +1,7 @@
 import {selectedKey} from "./KeyList";
-import {executeContext} from "../../services/CommandQueueService";
+import {enableExecution} from "../../services/CommandQueueService";
 
-@executeContext
+@enableExecution
 export class RemoveButton extends Component {
 
     onRemove() {

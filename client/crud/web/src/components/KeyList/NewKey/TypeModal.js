@@ -1,23 +1,21 @@
-import {defaultKeyData as jsonDefault} from "../JSONEditor";
-import {defaultKeyData as textDefault} from "../PlainTextEditor";
-import {ObjIcon} from "../ObjIcon";
-import {executeContext} from "../../services/CommandQueueService";
-import {selectedKey} from "./KeyList";
+import {defaultKeyData as jsonDefault} from "../../JSONEditor";
+import {defaultKeyData as textDefault} from "../../PlainTextEditor";
+import {ObjIcon} from "../../ObjIcon";
+import {enableExecution} from "../../../services/CommandQueueService";
+import {selectedKey} from "../KeyList";
 
-@executeContext
-export class NewKeyTypeModal extends Component {
+@enableExecution
+export class TypeModal extends Component {
 
     chooseJSON() {
-
-        // TODO: have observable.map by default on these defaults
-        this.addNewKey(observable.map(jsonDefault), 'JSON');
+        this.addNewKey(jsonDefault, jsonDefault.get('bytearray'), 'JSON');
     }
 
     chooseText() {
-        this.addNewKey(observable.map(textDefault), 'plain text');
+        this.addNewKey(textDefault, textDefault.get('bytearray'), 'plain text');
     }
 
-    addNewKey(keyData, typeName) {
+    addNewKey(keyData, serial, typeName) {
         const {obj, keyField} = this.props;
         const oldSelection = selectedKey.get();
 
@@ -30,6 +28,9 @@ export class NewKeyTypeModal extends Component {
                 selectedKey.set(oldSelection);
                 obj.delete(keyField)
             },
+            onSave: () => ({
+                [keyField]: serial
+            }),
             message: <span>Created <code key={1}>{keyField}</code> as {typeName}.</span>
         });
 
@@ -48,11 +49,11 @@ export class NewKeyTypeModal extends Component {
                 <BS.Modal.Body>
                     <BS.ListGroup>
                         <BS.ListGroupItem onClick={this.chooseJSON.bind(this)}>
-                            <ObjIcon keyData={observable.map(jsonDefault)}/>
+                            <ObjIcon keyData={jsonDefault}/>
                             JSON Data
                         </BS.ListGroupItem>
                         <BS.ListGroupItem onClick={this.chooseText.bind(this)}>
-                            <ObjIcon keyData={observable.map(textDefault)}/>
+                            <ObjIcon keyData={textDefault}/>
                             Plain Text
                         </BS.ListGroupItem>
                     </BS.ListGroup>

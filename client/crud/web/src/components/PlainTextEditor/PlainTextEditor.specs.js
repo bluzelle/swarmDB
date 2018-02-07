@@ -1,7 +1,6 @@
 import {observableMapRecursive as omr} from "../../util/mobXUtils";
 import {PlainTextEditor, textToKeyData, interpret} from "./PlainTextEditor";
 import {SimpleExecute, UndoRedoTest} from "../../services/CommandQueueService.specs";
-import PropTypes from 'prop-types';
 
 describe('Plain text editor', () => {
     it('should have a textToKeyData and an interpret function that cancel each other out', () => {

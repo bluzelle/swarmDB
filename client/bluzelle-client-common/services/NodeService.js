@@ -1,18 +1,19 @@
-import {sendCommand, addCommandProcessor} from 'services/CommunicationService'
-import {socketState} from 'services/CommunicationService'
-import {transactionBundler} from "../Utils"
+import {addCommandProcessor} from './CommandService'
+import {transactionBundler} from "../utils/transactionBundler"
+import {Maybe} from 'simple-monads';
 
 const nodes = observable.map({});
+
+export const getNodes = () => nodes.values();
+export const getNodeByAddress = address => nodes.get(address);
+export const getNodeByName = name => node.get(name);
+
 
 setTimeout(() => {
     addCommandProcessor('updateNodes', (nodeInfoBlocks) => nodeInfoBlocks.forEach(updateNode));
     addCommandProcessor('removeNodes', (addresses) => addresses.forEach(removeNodeByAddress));
 });
 
-
-export const getNodes = () => nodes.values();
-export const getNodeByAddress = address => nodes.get(address);
-export const getNodeByName = name => node.get(name);
 
 export const updateNode = transactionBundler('updateNode', nodeInfo => {
     const foundNode = nodes.get(`${nodeInfo.ip}:${nodeInfo.port}`);
@@ -35,7 +36,7 @@ export const removeNodeByAddress = transactionBundler('removeNodeByAddress', add
 }());
 
 const markNodeAlive = transactionBundler('markNodeAlive', name => {
-    Maybe.fromNull(nodes.get(name))
+    Maybe.of(nodes.get(name))
         .map(n => n.nodeState = 'alive');
 });
 

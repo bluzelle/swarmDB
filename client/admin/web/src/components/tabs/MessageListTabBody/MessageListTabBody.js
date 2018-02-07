@@ -1,4 +1,4 @@
-import {getMessages} from 'services/MessageService'
+import {getMessages} from 'bluzelle-client-common/services/MessageService'
 import DataGrid from 'components/DataGrid'
 import clone from 'lodash/clone'
 import defaults from 'lodash/defaults'

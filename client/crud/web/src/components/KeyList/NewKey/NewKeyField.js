@@ -1,5 +1,5 @@
-import {NewKeyTypeModal} from "./NewKeyTypeModal";
-import {EditableField} from "../EditableField";
+import {TypeModal} from "./TypeModal";
+import {EditableField} from "../../EditableField";
 
 export class NewKeyField extends Component {
 
@@ -46,7 +46,7 @@ export class NewKeyField extends Component {
                 </BS.ListGroupItem>
 
                 {this.state.showModal &&
-                    <NewKeyTypeModal
+                    <TypeModal
                         onHide={this.exit.bind(this)}
                         obj={obj}
                         keyField={this.state.keyField}/>}

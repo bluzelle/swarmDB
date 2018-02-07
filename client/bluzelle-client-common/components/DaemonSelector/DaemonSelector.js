@@ -1,8 +1,8 @@
-import CenterMiddle from 'components/CenterMiddle'
+import CenterMiddle from './CenterMiddle'
 import Panel from 'react-bootstrap/lib/Panel'
 import Button from 'react-bootstrap/lib/Button'
-import { socketState, entryPointUrl, closeCode, disconnect} from "../../services/CommunicationService";
-import Header from 'components/Main/Header'
+import { entryPointUrl, closeCode, disconnect} from "../../services/CommunicationService";
+import Header from '../Header'
 
 @observer
 export default class DaemonSelector extends Component {
@@ -36,8 +36,8 @@ export default class DaemonSelector extends Component {
         const {emulatorStarted} = this.state;
          return (
             <CenterMiddle>
+                <Header/>
                 <div onKeyUp={this.checkEnterKey.bind(this)}>
-                    <Header/>
                     <Panel style={{marginTop: 20}} header={<h3>Choose a Bluzelle node</h3>}>
                         <div style={{width: 400}}>
                             <div style={{float: 'right', width: '15%'}}>

@@ -1,11 +1,10 @@
 import {HashRouter, Route} from 'react-router-dom'
 import './bootstrap/css/darkly.css'
 import './style.css'
-import {socketState} from 'services/CommunicationService'
 import Main from 'components/Main'
-import DaemonSelector from 'components/DaemonSelector'
+import DaemonSelector from 'bluzelle-client-common/components/DaemonSelector'
 import DevTools from 'mobx-react-devtools';
-import {getNodes} from 'services/NodeService'
+import {getNodes} from 'bluzelle-client-common/services/NodeService'
 
 const App = () => {
     return (

@@ -1,9 +1,9 @@
 import {EditableField} from "../../EditableField";
 import {RenderTree} from "../Trees/RenderTree";
-import {executeContext} from "../../../services/CommandQueueService";
+import {enableExecution} from "../../../services/CommandQueueService";
 
 export const RenderTreeWithEditableKey =
-    executeContext(({obj, propName, ...props}, context) => {
+    enableExecution(({obj, propName, ...props}, context) => {
         const preamble =
             <EditableField
                 val={propName}

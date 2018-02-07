@@ -4,6 +4,7 @@ const Node = require('./Node');
 const fp = require('lodash/fp');
 const {maxNodes, behaveRandomly} = require('./Values');
 const CommandProcessors = require('./CommandProcessors');
+const {getData, setData} = require('./DataStore.js');
 
 require.main === module && setTimeout(start);
 
@@ -18,6 +19,8 @@ module.exports = {
     getMaxNodes: () => maxNodes.get(),
     shutdown: () => nodes.values().map(node => node.shutdown()),
     start: _.once(start),
+    getData: getData,
+    setData: setData,
     behaveRandomly: (v) => behaveRandomly.set(v),
     isRandom: () => behaveRandomly.get()
 };

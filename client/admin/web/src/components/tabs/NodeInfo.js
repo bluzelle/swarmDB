@@ -1,5 +1,5 @@
 import StatusFormatter from 'components/tabs/StatusFormatter'
-import {getNodeByAddress} from "../../services/NodeService";
+import {getNodeByAddress} from "bluzelle-client-common/services/NodeService";
 import NodeMessagesBtn from './NodeMessagesBtn'
 import StorageDisplay from './StorageDisplay'
 import PercentageDisplay from "./PercentageDisplay";

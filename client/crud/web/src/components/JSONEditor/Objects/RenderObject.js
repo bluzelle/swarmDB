@@ -4,9 +4,9 @@ import {Hoverable} from '../Hoverable.js';
 import {get} from '../../../util/mobXUtils';
 import {RenderTreeWithEditableKey} from "./RenderTreeWithEditableKey";
 import {NewField} from "./NewField";
-import {del, executeContext} from '../../../services/CommandQueueService';
+import {del, enableExecution} from '../../../services/CommandQueueService';
 
-@executeContext
+@enableExecution
 @observer
 export class RenderObject extends Component {
     constructor(props) {

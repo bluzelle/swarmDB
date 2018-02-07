@@ -5,6 +5,5 @@
   "main": "webpack-base-config.js",
   "author": "",
   "license": "ISC",
-  "dependencies": {
-  }
+  "dependencies": {}
 }

@@ -1,11 +1,11 @@
 import {getRaw, addPrefix} from "../keyData";
-import {byteArrayToStr, strToByteArray} from "../../util/encoding";
-import {executeContext} from "../../services/CommandQueueService";
+import {arrayToStr, strToArray} from "../../util/encoding";
+import {enableExecution} from "../../services/CommandQueueService";
 
 export const PREFIX = 1;
 
 @observer
-@executeContext
+@enableExecution
 export class PlainTextEditor extends Component {
 
     constructor(props) {
@@ -14,8 +14,10 @@ export class PlainTextEditor extends Component {
         const {keyData} = this.props;
 
         const val = keyData.has('localChanges') ? keyData.get('localChanges') : interpret(keyData);
+        keyData.has('localChanges') || keyData.set('beginEditingTimestamp', new Date().getTime());
 
         this.state = {val};
+
         keyData.set('localChanges', val);
     }
 
@@ -62,13 +64,13 @@ export class PlainTextEditor extends Component {
     }
 }
 
-export const textToKeyData = str => ({
+export const textToKeyData = str => observable.map({
     bytearray: serialize(str)
 });
 
-const serialize = str => addPrefix(strToByteArray(str), PREFIX);
+const serialize = str => addPrefix(strToArray(str), PREFIX);
 
 export const interpret = keyData =>
-    byteArrayToStr(getRaw(keyData));
+    arrayToStr(getRaw(keyData));
 
 export const defaultKeyData = textToKeyData('');

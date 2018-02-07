@@ -4,7 +4,7 @@ import MessageListTabBody from 'components/tabs/MessageListTabBody'
 import NodeListTabBody from 'components/tabs/NodeListTabBody'
 import LogTabBody from 'components/tabs/LogTabBody'
 import EmulatorTabBody from 'components/tabs/EmulatorTabBody'
-import Header from './Header'
+import Header from 'bluzelle-client-common/components/Header'
 
 export default class Main extends Component {
 
