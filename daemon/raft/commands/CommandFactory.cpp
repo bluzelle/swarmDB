@@ -78,7 +78,7 @@ CommandFactory::make_raft_command(const boost::property_tree::ptree& pt,
 
 unique_ptr<Command>
 CommandFactory::make_crud_command(const boost::property_tree::ptree& pt,
-                                  RaftState& st) const {
+                                  RaftState&) const {
     auto cmd = pt.get<string>("crud");
     auto dat = get_data(pt);
 
@@ -93,7 +93,7 @@ CommandFactory::make_crud_command(const boost::property_tree::ptree& pt,
 
 unique_ptr<Command>
 CommandFactory::make_api_command(const boost::property_tree::ptree& pt,
-                                 RaftState& st) const {
+                                 RaftState&) const {
     auto cmd = pt.get<string>("bzn-api");
     auto dat = get_data(pt);
 

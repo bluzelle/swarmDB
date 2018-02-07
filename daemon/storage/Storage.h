@@ -31,7 +31,7 @@ private:
 
 public:
     Storage() = default;
-    Storage(std::string filename)
+    Storage(std::string /*filename*/)
     {
         //std::cerr << "Storage does not save to: [" << filename << "] yet." << std::endl;
     }
