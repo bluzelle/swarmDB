@@ -1,6 +1,6 @@
 module.exports = (selector) => {
     beforeEach(() => {
-        browser.url('http://localhost:3002');
+        browser.url('http://localhost:8200');
     });
 
     return () => {
