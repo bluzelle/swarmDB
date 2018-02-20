@@ -16,7 +16,8 @@
     "coverage-text": "nyc --instrument=false yarn test"
   },
   "dependencies": {
-    "jsdom-global": "^3.0.2"
+    "jsdom-global": "^3.0.2",
+    "webpack": "3.10.0"
   },
   "license": "UNLICENSED",
   "private": true

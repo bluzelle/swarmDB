@@ -3,12 +3,13 @@
     "run-tests": "mocha --recursive --use_strict mocha-setup test",
     "run-web-functional-tests": "cd test/web-functional; ../../node_modules/.bin/chimp --mocha",
     "run-web-functional-tests-watch": "cd test/web-functional; ../../node_modules/.bin/chimp --mocha --watch",
-    "run-web-functional-ci": "cd test/web-functional; ../../node_modules/.bin/chimp --browser=phantomjs --mocha"
+    "run-web-functional-ci": "cd test/web-functional; ../../node_modules/.bin/chimp --browser=phantomjs --mocha",
+    "chimp-kill": "./tests/functional/kill-chimp.sh"
   },
   "dependencies": {
     "async-wait-until": "^1.1.5",
     "chai": "^4.1.2",
-    "chimp": "^0.50.2",
+    "chimp": "^0.51.0",
     "lodash": "^4.17.4",
     "mocha": "^4.0.1",
     "nyc": "^11.2.1",

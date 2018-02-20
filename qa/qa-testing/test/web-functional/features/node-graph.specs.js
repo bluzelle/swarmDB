@@ -1,28 +1,29 @@
-const _ = require('lodash');
-import {addNode, updateNode} from "../CommunicationService";
+const {clickTab} = require('../utils');
 
 describe('Node graph tab', () => {
-    require('../getBaseElement')('body');
 
-    beforeEach(() => {
-        browser.waitForExist('=Node Graph', 2000);
-        browser.click('=Node Graph');
+    beforeEach(() => clickTab('Node Graph'));
+
+    describe('multiple nodes', () => {
+        it('should show the number of nodes set by the emulator', () => {
+            const NUM_OF_NODES = 3;
+
+            emulator.setMaxNodes(NUM_OF_NODES);
+            browser.waitUntil(() => browser.elements('circle').value.length === NUM_OF_NODES * 2);
+        });
     });
 
     describe('individual nodes', () => {
-        _.each({green: 'alive', red: 'dead', blue: 'new'}, (state, color) => {
-            it(`should display specs when mouseover on ${color} node`, () => {
-                const nodeInfo = addNode({nodeState: state});
-                updateNode(nodeInfo.address, {nodeState: state});
-                checkInfoTable(nodeInfo.address, state);
-                checkInfoTable(nodeInfo.address, nodeInfo.address);
+        it('should display specs when mouseover on a node', () => {
+            const node = emulator.getNodes()[0];
+            browser.waitForExist(`g[data-test='node-${node.ip}-${node.port}']`);
+            browser.moveToObject(`g[data-test='node-${node.ip}-${node.port}']`);
+            browser.waitForExist(`td=${node.address}`);
+            browser.waitForExist(`span*=${node.available}`);
+            browser.waitForExist(`span*=${node.used}`);
+            ['new', 'alive'].forEach( status => {
+                browser.waitForExist(`div=${status}`);
             });
         });
     });
 });
-
-const checkInfoTable = (address, value) => {
-    browser.waitForExist(`g#node-${address}`, 2000);
-    browser.moveToObject(`g#node-${address}`);
-    browser.waitForExist(`td=${value}`, 2000);
-}

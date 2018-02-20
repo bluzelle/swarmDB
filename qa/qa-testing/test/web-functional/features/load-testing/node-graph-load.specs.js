@@ -1,17 +1,13 @@
-import {addNodes} from "../../CommunicationService";
+const {clickTab} = require('../../utils');
 
-describe('Node List load tests', () => {
-    const body = require('../../getBaseElement')('body');
+describe('Node graph load tests', () => {
 
-    beforeEach(() => {
-        browser.waitForExist('=Node Graph', 2000);
-        browser.click('=Node Graph');
-    });
+    beforeEach(() => clickTab('Node Graph'));
 
-    it('@watch should be able to handle 100 nodes quickly', () => {
-        addNodes(1000);
-        const start = new Date().getTime();
-        body().waitUntil(() =>  body().elements('circle').value.length === 1000, 5000);
-        expect(new Date().getTime() - start).to.be.at.most(2000);
+    it('should be able to handle a lot of nodes quickly', () => {
+        const NUM_OF_NODES = 10;
+
+        emulator.setMaxNodes(NUM_OF_NODES);
+        browser.waitUntil(() =>  browser.elements('circle').value.length === NUM_OF_NODES * 2, 15000);
     });
 });
