@@ -1,7 +1,6 @@
-describe('web page header', () => {
-    const header = require('../getBaseElement')('header');
+describe('Web page header', () => {
 
-    it('should exist', () => {
-        expect(header().getAttribute('div>img', 'src')).to.contain('data');
+    it('bluzelle logo should exist', () => {
+        expect(browser.getAttribute('div>img', 'src')).to.contain('data');
     });
 });

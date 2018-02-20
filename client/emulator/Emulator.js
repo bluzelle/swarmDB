@@ -10,6 +10,7 @@ require.main === module && setTimeout(start);
 
 
 const nodes = require('./NodeStore').nodes;
+let initialStartPort;
 let lastPort;
 let randomBehavior = false;
 
@@ -17,7 +18,11 @@ module.exports = {
     getNodes: () => nodes.values(),
     setMaxNodes: CommandProcessors.setMaxNodes,
     getMaxNodes: () => maxNodes.get(),
-    shutdown: () => nodes.values().map(node => node.shutdown()),
+    shutdown: () => {
+        maxNodes.set(0);
+        lastPort = initialStartPort;
+        return nodes.values().map(node => node.shutdown())
+    },
     start: _.once(start),
     getData: getData,
     setData: setData,
@@ -29,9 +34,7 @@ module.exports = {
 
 
 function start(startPort = 8100) {
-    require('./Network').start(startPort - 1);
-
-    lastPort = startPort;
+    initialStartPort = lastPort = startPort;
     module.exports.wasStarted = true;
 
     (function checkNeedMoreNodes() {
