@@ -4,12 +4,14 @@
 void fail(boost::system::error_code ec, char const *what); // In PeerSession.cpp
 
 PeerListener::PeerListener
-        (
-        boost::asio::io_service &ios,
-        boost::asio::ip::tcp::endpoint endpoint,
-        std::function<string(const string&)> handler
-        )
-        : acceptor_(ios), socket_(ios), request_handler_(handler)
+    (
+    boost::asio::io_service &ios,
+    boost::asio::ip::tcp::endpoint endpoint,
+    std::function<string(const string&)> handler
+    )
+    : acceptor_(ios)
+    , socket_(ios)
+    , request_handler_(handler)
 {
     boost::system::error_code ec;
 
@@ -26,7 +28,10 @@ PeerListener::PeerListener
     if (ec)
         {
         fail(ec, "PeerListener::bind");
-        return;
+
+        // This is a fatal error!
+        // todo: for now this will stop us from looping madly... peers needs to be more robust!
+        throw std::exception();
         }
 
     // Start listening for connections
@@ -39,23 +44,25 @@ PeerListener::PeerListener
         }
 }
 
+
 // Start accepting incoming connections
-void PeerListener::run() {
+void PeerListener::run()
+{
     if (!acceptor_.is_open())
         return;
     do_accept();
 }
 
-void PeerListener::do_accept() {
-    acceptor_.async_accept(
-            socket_,
-            std::bind(
-                    &PeerListener::on_accept,
-                    shared_from_this(),
-                    std::placeholders::_1));
+
+void PeerListener::do_accept()
+{
+    acceptor_.async_accept(socket_,
+        std::bind(&PeerListener::on_accept, shared_from_this(), std::placeholders::_1));
 }
 
-void PeerListener::on_accept(boost::system::error_code ec) {
+
+void PeerListener::on_accept(boost::system::error_code ec)
+{
     if (ec)
         {
         fail(ec, "PeerListener::on_accept");
@@ -63,8 +70,7 @@ void PeerListener::on_accept(boost::system::error_code ec) {
     else
         {
         // Create the session and run it
-        auto s = std::make_shared<PeerSession>(
-                boost::beast::websocket::stream<boost::asio::ip::tcp::socket>(std::move(socket_)));
+        auto s = std::make_shared<PeerSession>(boost::beast::websocket::stream<boost::asio::ip::tcp::socket>(std::move(socket_)));
         s->set_request_handler(request_handler_);
         s->run();
         //sessions_.push_back(s);

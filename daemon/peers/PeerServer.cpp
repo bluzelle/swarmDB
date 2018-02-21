@@ -1,33 +1,32 @@
 #include "PeerServer.h"
 
-#include <thread>
-#include <memory>
-#include <iostream>
 
 PeerServer::PeerServer(boost::asio::io_service& ios,
-                       const string &ip_address,
-                       unsigned short port,
-                       std::function<string(const string&)> request_handler)
-: ios_(ios),
-    ip_address_(boost::asio::ip::address::from_string(ip_address)),
-    port_(port),
-    request_handler_(request_handler)
+                       const std::string& ip_address,
+                       uint16_t port,
+                       request_handler_t request_handler)
+    : ios(ios)
+    , ip_address(boost::asio::ip::address::from_string(ip_address))
+    , port(port)
+    , request_handler(std::move(request_handler))
 {
-
 }
 
-void PeerServer::run()
+
+void
+PeerServer::run()
 {
-    auto listener = std::make_shared<PeerListener>(ios_,
-                                              boost::asio::ip::tcp::endpoint{ip_address_, port_},
-                                              request_handler_);
+    auto listener = std::make_shared<PeerListener>(
+            this->ios, boost::asio::ip::tcp::endpoint{this->ip_address, this->port}, this->request_handler);
+
     listener->run();
-    running_ = true;
+
+    this->running = true;
 }
 
-bool PeerServer::is_running() const
+
+bool
+PeerServer::is_running() const
 {
-    return running_;
+    return this->running;
 }
-
-
