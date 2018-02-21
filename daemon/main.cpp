@@ -41,8 +41,8 @@ int
 main(const int argc,
      const char *argv[])
 	{
+        validate_node(argc, argv);
     	initialize_daemon();
-    	validate_node(argc, argv);
     	display_daemon_info();
     	start_websocket_server();
     	start_node();
@@ -115,9 +115,12 @@ initialize_daemon()
     const boost::uuids::uuid node_id{gen()};
     DaemonInfo::get_instance().id() = node_id;
 
-    char buffer[1024]{0};
-    get_primary_ip(buffer, sizeof(buffer));
-    DaemonInfo::get_instance().host_ip() = std::string(buffer);
+    if (DaemonInfo::get_instance().host_ip().empty())
+    {
+        char buffer[1024]{0};
+        get_primary_ip(buffer, sizeof(buffer));
+        DaemonInfo::get_instance().host_ip() = std::string(buffer);
+    }
 
     // load peers
 
@@ -176,7 +179,7 @@ display_daemon_info()
     std::cout << "Running node with ID: " << daemon_info.id() << "\n"
               << " Ethereum Address ID: " << daemon_info.ethereum_address() << "\n"
               << "    Local IP Address: " << DaemonInfo::get_instance().host_ip() << "\n"
-              << "             on port: " << daemon_info.host_port() << "\n"
+              << "             On port: " << daemon_info.host_port() << "\n"
               << "       Token Balance: " << daemon_info.ropsten_token_balance() << " BLZ\n"
               << std::endl;
 }

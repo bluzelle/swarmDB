@@ -56,7 +56,7 @@ TBD
 
 CMake Installation
 -
-If you dont have CMake version 3.10 or above you have to install it. Please download it from https://cmake.org/download/
+If you dont have CMake version 3.11 or above you have to install it. Please download it from https://cmake.org/download/
 On Linux you can build CMake with (use -j option to build on multiple CPUs)
 ```
 ./bootstrap
@@ -75,6 +75,12 @@ sudo make install
 ```
 
 Pre-built binaries also available for MacOS and Windows
+
+
+**ccache**
+-
+If available, cmake will attempt to use ccache (https://ccache.samba.org) to *drastically* speed up comiplation. On macOS you can use brew to install it.
+
 
 NPM and WSCAT installation
 -

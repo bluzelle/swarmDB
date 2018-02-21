@@ -1,32 +1,43 @@
-#ifndef BLUZELLE_PEERSERVER_H
-#define BLUZELLE_PEERSERVER_H
-
-#include <string>
-
-using std::string;
-
-#include <boost/asio.hpp>
+#pragma once
 
 #include "PeerListener.h"
+#include <boost/asio.hpp>
+#include <string>
 
-class PeerServer {
-private:
-    boost::asio::io_service& ios_;
-    boost::asio::ip::address ip_address_;
-    unsigned short port_;
-    std::function<string(const string&)> request_handler_;
 
-    bool running_ = false;
-
+class PeerServer
+{
 public:
-    PeerServer(boost::asio::io_service& ios,
-               const string &ip_address,
-               unsigned short port,
-               std::function<string(const string&)> request_handler);
+    // todo: this should move to the listener?
+    using request_handler_t = std::function<std::string(const std::string&)>;
 
+    /**
+     * Constructor
+     * @param ios io service
+     * @param ip_address address to listen on
+     * @param port port to accept connections on
+     * @param request_handler request handler
+     */
+    PeerServer(boost::asio::io_service& ios,
+               const std::string& ip_address,
+               uint16_t port,
+               request_handler_t request_handler);
+
+    /**
+     * Start the server
+     */
     void run();
 
+    /**
+     * Server status
+     * @return return true if running
+     */
     bool is_running() const;
-};
 
-#endif //BLUZELLE_PEERSERVER_H
+private:
+    boost::asio::io_service& ios;
+    boost::asio::ip::address ip_address;
+    uint16_t port;
+    request_handler_t request_handler;
+    bool running = false;
+};
