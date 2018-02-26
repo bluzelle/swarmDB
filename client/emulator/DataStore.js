@@ -27,7 +27,7 @@ module.exports = {
                 data: data.keys()
             })),
 
-    sendChangesToNode: changes => forEach(changes, mergeAndDelete),
+    sendDataToNode: changes => forEach(changes, mergeAndDelete),
 
     getData: () => data,
     setData: obj => {

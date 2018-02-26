@@ -27,7 +27,7 @@ export const save = () => {
 
     clearEditingData();
 
-    sendToNodes('sendChangesToNode', changes);
+    sendToNodes('sendDataToNode', changes);
 
     removePreviousHistory();
     updateHistoryMessage(<span>Saved.</span>);

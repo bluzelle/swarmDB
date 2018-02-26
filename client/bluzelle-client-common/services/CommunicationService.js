@@ -6,7 +6,7 @@ const MIN_CONNECTED_NODES = 3000;
 
 
 export const entryPointUrl = observable(undefined);
-const entryPointSocket = observable(undefined);
+export const entryPointSocket = observable(undefined);
 
 autorun(function checkConnectToEntryPoint() {
     if (entryPointUrl.get()) {
