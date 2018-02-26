@@ -1,7 +1,7 @@
 import {start, close} from '../testServer';
-import {expect, assert} from 'chai';
+import {expect} from 'chai';
 
-import {findComponentsTest} from "../../react-webdriver";
+import {findComponentTest, findComponentsTest} from "../../react-webdriver";
 
 
 describe('React webdriver', () => {
@@ -19,31 +19,16 @@ describe('React webdriver', () => {
     });
 
 
-
     it('should find components', () => {
 
-        // Here we are calling findComponents in the chimp context:
-
-        const comps = findComponentsTest('SimpleComponent');
-
-        assert(comps.length === 1);
-        assert(comps[0].text === 'hello world');
+        const comp = findComponentTest('SimpleComponent');
+        expect(comp.props.text).to.equal('hello world');
 
 
-        // And here in the browser context:
-        // (Must access from window to avoid scoping errors in our test runner)
+        const props = browser.execute(() =>
+                findComponentsBrowser('SimpleComponent')[0].props).value;
 
-        browser.execute(() => {
-
-            const comp = findComponentsBrowser('SimpleComponent');
-            window.assert(() => comp[0].props.text === 'hello world');
-
-        });
-
-
-        // findComponentsBrowser() in the browser context returns an array of
-        // React components whereas findComponentsTest() returns
-        // an array of property objects, since other data is not serializable.
+        expect(props.text).to.equal('hello world');
 
     });
 

@@ -1,5 +1,6 @@
 import ReactDom from 'react-dom'
 import App from 'components/App'
+import './requestNodeInfo';
 
 
 ReactDom.render(<App />, document.querySelector('#app-container'));

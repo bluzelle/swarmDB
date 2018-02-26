@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 const fp = require('lodash/fp');
-const nodes = require('./NodeStore').nodes;
+const {nodes, getAllNodesInfo} = require('./NodeStore');
 const {behaveRandomly} = require('./Values');
 const CommandProcessors = require('./CommandProcessors');
 
@@ -69,7 +69,6 @@ module.exports = function Node(port) {
             const command = JSON.parse(message);
             CommandProcessors[command.cmd](command.data, connection);
         });
-        sendNodesInfo(connection);
     });
 
     const sendToClients = (cmd, data) => connections.forEach(connection =>
@@ -80,7 +79,7 @@ module.exports = function Node(port) {
         me.alive && connection.send(JSON.stringify({cmd: cmd, data: data}));
 
     const sendNodesInfo = (connection) => {
-        me.alive && sendToClient(connection, 'updateNodes', [me, ...getPeerInfo(me)]);
+        me.alive && sendToClient(connection, 'updateNodes', getAllNodesInfo());
     };
 
     nodes.observe(() => {
@@ -137,10 +136,6 @@ module.exports = function Node(port) {
                 me.isShutdown || sendMessage();
             }, _.random(5000, 10000));
         }());
-
-    function getPeerInfo(node) {
-        return nodes.values().filter(peer => peer.address !== node.address).map(n => _.pick(n, 'address', 'ip', 'port'));
-    }
 
     const getOtherRandomNode = () => {
         const n = getRandomNode();

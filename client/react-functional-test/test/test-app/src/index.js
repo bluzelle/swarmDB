@@ -17,4 +17,4 @@ const root = ReactDOM.render(
 
 
 window.location.href.includes('noHooks')
-    || addHooks({ root, components: { SimpleComponent } });
+    || addHooks(root, { SimpleComponent });
