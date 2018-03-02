@@ -57,7 +57,11 @@ module.exports = function Node(port) {
     }));
 
     me.getHttpServer().listen(port, () => {
-        console.log(`Node is listening on port ${port}`);
+
+        // Disable logging on chimp tests by default
+        // Can be overridden with 'emulatorVerbose'.
+        (process.env['chimp._'] || process.env['emulatorVerbose'])
+            || console.log(`Node is listening on port ${port}`);
     });
 
     me.getWsServer = _.memoize(() => new WebSocketServer({
