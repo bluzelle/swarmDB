@@ -16,8 +16,8 @@ describe('Basic WebDriverIO functionality', () => {
 
 
         // Tab IDs valid
-        expect(firstWindow.length > 10);
-        expect(secondWindow.length > 10);
+        expect(firstWindow.length > 10).to.be.true;
+        expect(secondWindow.length > 10).to.be.true;
 
         browser.close();
 
