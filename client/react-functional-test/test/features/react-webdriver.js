@@ -38,4 +38,16 @@ describe('React webdriver', () => {
 
     });
 
+
+    // Returning arbitrary data through browser.execute() will result in a
+    // stack overflow error.
+
+    // We currently restrict props to "trivial" types: numbers and strings.
+    it('should filter non-trivial props', () => {
+
+        const comp = findComponentTest('SimpleComponent');
+        expect(comp.props.function).to.be.undefined;
+
+    });
+
 });

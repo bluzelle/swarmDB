@@ -11,7 +11,9 @@ class SimpleComponent extends React.Component {
 }
 
 const root = ReactDOM.render(
-    <SimpleComponent text='hello world'/>,
+    <SimpleComponent
+        text='hello world'
+        function={() => {}}/>,
     document.getElementById('react-root')
 );
 
