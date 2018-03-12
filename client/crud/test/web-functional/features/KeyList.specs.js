@@ -1,6 +1,7 @@
 import {start, setData} from "../emulator/Emulator";
 import {reset, checkUndo} from "../util";
 import {findComponentsTest} from "react-functional-test";
+import {newField, setJSON} from "../pageActions";
 
 describe('KeyList functionality', () => {
 
@@ -81,12 +82,9 @@ describe('KeyList functionality', () => {
 
         it('should be able to add a key with object type', () => {
 
-            browser.element('.glyphicon-plus').click();
+            browser.waitForExist('.glyphicon-plus');
 
-            browser.keys(['test', 'Enter']);
-
-            browser.waitForExist('button*=JSON Data');
-            browser.element('button*=JSON Data').click();
+            newField('test', 'JSON Data');
 
             checkUndo({
                 verifyDo: () =>
@@ -99,12 +97,9 @@ describe('KeyList functionality', () => {
 
         it('should be able to add a key with text type', () => {
 
-            browser.element('.glyphicon-plus').click();
+            browser.waitForExist('.glyphicon-plus');
 
-            browser.keys(['test', 'Enter']);
-
-            browser.waitForExist('button*=Text');
-            browser.element('button*=Text').click();
+            newField('test', 'Plain Text');
 
             checkUndo({
                 verifyDo: () =>
@@ -134,22 +129,6 @@ describe('KeyList functionality', () => {
         expect(browser.isExisting('.glyphicon-font')).to.be.true;
 
     });
-
-
-    // This fails because we want to refactor the communication system
-    // to permit renaming.
-    //
-    // it('should be able to rename a key without downloading', () => {
-    //
-    //     browser.waitForExist('span=textA');
-    //
-    //     browser.element('span=textA').click();
-    //
-    //     browser.keys(['newkey', 'Enter']);
-    //
-    //     browser.waitForExist('span=newkey');
-    //
-    // });
 
     it('should be able to rename a key after downloading', () => {
 
@@ -187,7 +166,7 @@ describe('KeyList functionality', () => {
 
 
     // Also fails under existing implementation.
-    //
+
     // it('should not be able to rename a key to another pre-existing keyname', () => {
     //
     //     browser.waitForExist('span*=textA');
@@ -197,6 +176,21 @@ describe('KeyList functionality', () => {
     //         browser.keys(['textB', 'Enter']);
     //
     //     expect(rename).to.throw();
+    //
+    // });
+
+
+    // Weird replication of old data for some reason.
+
+    // it('should be able to add and edit several new json keys', () => {
+    //
+    //     newField('json1', 'JSON Data');
+    //
+    //     setJSON('[1, 2, 3]');
+    //
+    //     newField('json2', 'JSON Data');
+    //
+    //     setJSON('{ "hello": "world" }');
     //
     // });
 
