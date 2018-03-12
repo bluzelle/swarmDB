@@ -23,7 +23,6 @@ export class KeyListItem extends Component {
         const {obj, keyname: keyName} = this.props;
 
 
-        // TODO: this should be better, but may require large changes to the existing system of how renaming works.
         if(!obj.get(keyName).has('bytearray')) {
             alert('Must download object to rename.');
             return;

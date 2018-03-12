@@ -1,5 +1,6 @@
 import {start, setData} from "../emulator/Emulator";
 import {reset, checkUndo} from "../util";
+import {newField, setJSON} from "../pageActions";
 
 describe('JSON Editor functionality.', () => {
 
@@ -17,23 +18,19 @@ describe('JSON Editor functionality.', () => {
 
         browser.waitForExist('.glyphicon-plus');
 
-        browser.element('.glyphicon-plus').click();
-        browser.keys(['json', 'Enter']);
-
-        browser.element('button*=JSON Data').click();
+        newField('json', 'JSON Data');
 
     });
 
     it('should be able to edit json directly', () => {
 
-        browser.moveToObject('span*=(0 entries)');
-        browser.element('.glyphicon-pencil').click();
-
-        browser.setValue('input', '[1, "crazy text", 3, 4]');
-        browser.submitForm('input');
+        setJSON('[1, "crazy text", 3, 4]');
 
         browser.waitForExist('span*=crazy text');
 
+        // Since we use nested spans in the styling, we want to click
+        // only the innermost one (i.e. the last one) to activate the
+        // input.
         const spans = browser.elements('span*=crazy text').value;
         const last = spans[spans.length - 1];
 

@@ -1,9 +1,10 @@
 import {nodes} from "./emulator/NodeStore";
-import {setMaxNodes, shutdown} from "./emulator/Emulator";
+import {setMaxNodes, shutdown, setData} from "./emulator/Emulator";
 
 export const reset = () => {
     wrapAsync(() => Promise.all(shutdown()))();
     setMaxNodes(1);
+    setData({});
     browser.waitUntil(() => nodes.keys().length);
 };
 
