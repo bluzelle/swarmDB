@@ -202,4 +202,41 @@ describe('Multi-client functionality.', () => {
 
     });
 
+
+    // Doesn't overwrite old file on save.
+
+
+    // it('should have a refresh button for file type', () => {
+    //
+    //     browser.waitForExist('.glyphicon-plus');
+    //
+    //     newField('file', 'File');
+    //
+    //     save();
+    //
+    //     browser.switchTab(secondWindow);
+    //
+    //     selectKey('file');
+    //
+    //     browser.switchTab(firstWindow);
+    //
+    //
+    //     const path = __dirname + '/testfile.txt';
+    //
+    //     browser.chooseFile('input[type=file]', path);
+    //
+    //     browser.element('input[type=submit]').click();
+    //
+    //     save();
+    //
+    //     browser.switchTab(secondWindow);
+    //
+    //     browser.waitForExist('.glyphicon-refresh');
+    //
+    //     browser.click('.glyphicon-refresh');
+    //
+    //     browser.waitForExist('div*=0 bytes', 500, true);
+    //
+    // });
+
 });

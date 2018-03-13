@@ -1,8 +1,11 @@
 import {defaultKeyData as jsonDefault} from "../../JSONEditor";
 import {defaultKeyData as textDefault} from "../../PlainTextEditor";
+import {defaultKeyData as fileDefault} from "../../FileEditor/FileEditor";
+
 import {ObjIcon} from "../../ObjIcon";
 import {enableExecution} from "../../../services/CommandQueueService";
 import {selectedKey} from "../KeyList";
+
 
 @enableExecution
 export class TypeModal extends Component {
@@ -13,6 +16,10 @@ export class TypeModal extends Component {
 
     chooseText() {
         this.addNewKey(textDefault, textDefault.get('bytearray'), 'plain text');
+    }
+
+    chooseFile() {
+        this.addNewKey(fileDefault, fileDefault.get('bytearray'), 'file');
     }
 
     addNewKey(keyData, serial, typeName) {
@@ -55,6 +62,10 @@ export class TypeModal extends Component {
                         <BS.ListGroupItem onClick={this.chooseText.bind(this)}>
                             <ObjIcon keyData={textDefault}/>
                             Plain Text
+                        </BS.ListGroupItem>
+                        <BS.ListGroupItem onClick={this.chooseFile.bind(this)}>
+                            <ObjIcon keyData={fileDefault}/>
+                            File
                         </BS.ListGroupItem>
                     </BS.ListGroup>
                 </BS.Modal.Body>

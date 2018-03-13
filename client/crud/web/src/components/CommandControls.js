@@ -47,6 +47,9 @@ export class CommandControls extends Component {
                 <BS.Button style={{color: 'green'}}
                            onClick={save}>
                     <BS.Glyphicon glyph='floppy-save'/>
+                    {
+                        commandQueue.length > 1 && <span>*</span>
+                    }
                 </BS.Button>
             </BS.OverlayTrigger>;
 
