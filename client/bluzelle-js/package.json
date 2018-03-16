@@ -1,0 +1,24 @@
+{
+  "name": "bluzelle",
+  "version": "0.0.1",
+  "description": "Bluzelle Database for JavaScript",
+  "main": "api.js",
+  "scripts": {
+    "test-node": "emulatorQuiet=true mocha test/*.js --exit",
+    "test-browser": "node browser-test/test",
+    "test": "emulatorQuiet=true mocha test/*.js --exit; node browser-test/test"
+  },
+  "devDependencies": {},
+  "author": "Monty Thibault, John Lam",
+  "license": "ISC",
+  "dependencies": {
+    "base64-arraybuffer": "^0.1.5",
+    "buffer": "^5.1.0",
+    "isomorphic-ws": "^4.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^5.0.4",
+    "webpack": "^4.3.0",
+    "webpack-cli": "^2.0.13"
+  }
+}

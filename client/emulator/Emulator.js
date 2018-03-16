@@ -30,6 +30,25 @@ module.exports = {
     isRandom: () => behaveRandomly.get()
 };
 
+module.exports.reset = async function() {
+
+    this.start();
+
+    await Promise.all(this.shutdown());
+
+    this.setMaxNodes(1);
+    setData({});
+
+    await new Promise(resolve => (function loop() {
+
+        nodes.keys().length 
+            ? resolve()
+            : setTimeout(loop, 0);
+
+    })());
+
+}.bind(module.exports);
+
 
 
 
