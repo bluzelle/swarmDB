@@ -7,40 +7,79 @@ const data = observable.map({});
 
 module.exports = {
 
-    requestKeyList: (obj, ws) => {
-        var response = [];
+    read: ({request_id, data:{key}}, ws) => {
 
-        data.keys().forEach( key =>
-            response.push({cmd: 'update', data: {key: key}})
-        );
+        if(data.has(key)) {
 
-        ws.send(JSON.stringify(
-            {
-                cmd: 'aggregate',
-                data: response
-            }
-        ))
+            ws.send(JSON.stringify(
+                {
+                    cmd: 'update',
+                    data:
+                        {
+                            key,
+                            value: data.get(key)
+                        },
+                    response_to: request_id
+                }
+            ));
+
+        } else {
+
+            ws.send(JSON.stringify(
+                {
+                    error: `Key "${key}" not in database.`,
+                    response_to: request_id
+                }
+            ));
+
+        }
     },
 
-    read: (obj, ws) => {
+    update: ({request_id, data:{key, value}}, ws) => {
+        data.set(key, value);
+
         ws.send(JSON.stringify(
             {
-                cmd: 'update',
-                data:
+                response_to: request_id
+            }
+        ));
+    },
+
+    has: ({request_id, data:{key}}, ws) => {
+        ws.send(JSON.stringify(
+            {
+                data: 
                     {
-                        key: obj.key,
-                        bytearray: data.get(obj.key)
-                    }
+                        value: data.has(key)
+                    },
+                response_to: request_id
             }
-        ))
+        ));
     },
 
-    update: obj => {
-        data.set(obj.key, obj.bytearray);
-    },
+    'delete': ({request_id, data:{key}}, ws) => {
 
-    destroy: obj => {
-        data.delete(obj.key);
+        if(data.has(key)) {
+
+            data.delete(key);
+
+            ws.send(JSON.stringify(
+                {
+                    response_to: request_id
+                }
+            ));
+
+        } else {
+
+            ws.send(JSON.stringify(
+                {
+                    error: `Key "${key}" not in database.`,
+                    response_to: request_id
+                }
+            ));
+
+        }
+
     },
 
     getData: () => data,
@@ -49,11 +88,3 @@ module.exports = {
         data.merge(obj);
     }
 };
-
-
-observe(data, (changes) => {
-    nodes.forEach(node => node.sendToClients({
-        cmd: changes.type === 'delete' ? 'delete' : 'update',
-        data: {key: changes.name}
-    }));
-});

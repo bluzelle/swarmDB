@@ -30,11 +30,12 @@ module.exports = function Node(port) {
             nodes.delete(port);
             sendToClients('removeNodes', [me.address]);
             me.alive = false;
+
             setTimeout(() => {
                 me.getWsServer().shutDown();
                 me.getHttpServer().close();
-                nodes.has(port) ? reject() : resolve();
-            }, 200);
+                resolve();
+            }, 0);
         }),
         sendToClients: ({cmd, data}) => sendToClients(cmd, data)
     });
@@ -57,10 +58,10 @@ module.exports = function Node(port) {
     }));
 
     me.getHttpServer().listen(port, () => {
-
         // Disable logging on chimp tests by default
         // Can be overridden with 'emulatorVerbose'.
-        (process.env['chimp._'] || process.env['emulatorVerbose'])
+        (process.env['chimp._'] || process.env['emulatorQuiet'])
+            || process.env['emulatorVerbose']
             || console.log(`Node is listening on port ${port}`);
     });
 
@@ -73,7 +74,7 @@ module.exports = function Node(port) {
         connections.push(connection);
         connection.on('message', ({utf8Data: message}) => {
             const command = JSON.parse(message);
-            CommandProcessors[command.cmd](command.data, connection);
+            CommandProcessors[command.cmd](command, connection);
         });
     });
 
