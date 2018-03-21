@@ -11,35 +11,22 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-
 #pragma once
 
-#include <options/options_base.hpp>
-#include <json/json.h>
-
+#include <bootstrap/peer_address.hpp>
+#include <bootstrap/bootstrap_peers_base.hpp>
 
 namespace bzn
 {
-    class options final : public bzn::options_base
+    class bootstrap_peers final : public bzn::bootstrap_peers_base
     {
     public:
-        bool parse_command_line(int argc, const char* argv[]);
-
-        boost::asio::ip::tcp::endpoint get_listener() const override;
-
-        std::string get_ethererum_address() const override;
-
-        std::string get_bootstrap_peers_file() const override;
-        std::string get_bootstrap_peers_url() const override;
+        bool fetch_peers_from_file(const std::string& filename) override;
+        bool fetch_peers_from_url(const std::string& url) override;
+        const std::unordered_set<peer_address, boost::hash<peer_address>>& get_peers() const override;
 
     private:
-        bool parse(int argc, const char* argv[]);
-
-        void load(const std::string& config_file);
-
-        bool validate();
-
-        Json::Value config_data;
+        std::unordered_set<peer_address, boost::hash<peer_address>> peer_addresses;
+        bool ingest_json(std::istream& peers);
     };
-
-} // bzn
+}

@@ -22,10 +22,12 @@ using namespace bzn;
 
 namespace
 {
-    const std::string DEFAULT_CONFIG_FILE  = "bluzelle.json";
-    const std::string LISTENER_ADDRESS_KEY = "listener_address";
-    const std::string LISTENER_PORT_KEY    = "listener_port";
-    const std::string ETHERERUM_KEY        = "ethereum";
+    const std::string DEFAULT_CONFIG_FILE        = "bluzelle.json";
+    const std::string LISTENER_ADDRESS_KEY       = "listener_address";
+    const std::string LISTENER_PORT_KEY          = "listener_port";
+    const std::string ETHERERUM_KEY              = "ethereum";
+    const std::string BOOTSTRAP_PEERS_FILE_KEY   = "bootstrap_file";
+    const std::string BOOTSTRAP_PEERS_URL_KEY    = "bootstrap_url";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -83,6 +85,17 @@ options::get_ethererum_address() const
     return this->config_data[ETHERERUM_KEY].asString();
 }
 
+std::string
+options::get_bootstrap_peers_file() const
+{
+    return this->config_data[BOOTSTRAP_PEERS_FILE_KEY].asString();
+}
+
+std::string
+options::get_bootstrap_peers_url() const
+{
+    return this->config_data[BOOTSTRAP_PEERS_URL_KEY].asString();
+}
 
 void
 options::load(const std::string& config_file)
@@ -165,6 +178,8 @@ options::parse(int argc, const char* argv[])
     std::string config_file;
     std::string ethereum;
     std::string listener_address;
+    std::string bootstrap_file;
+    std::string bootstrap_url;
     uint32_t listener_port{};
 
     desc.add_options()
@@ -173,6 +188,8 @@ options::parse(int argc, const char* argv[])
         ("address,a",          po::value<std::string>(&ethereum),        " Ethereum account address")
         ("listener_address,l", po::value<std::string>(&listener_address), "Listener IP address")
         ("listener_port,p",    po::value<uint32_t>(&listener_port),       "Listener port")
+        ("bootstrap_file,b",   po::value<std::string>(&bootstrap_file),   "Path to initial peers file")
+        ("bootstrap_url",      po::value<std::string>(&bootstrap_url),    "URL to fetch initial peers")
         ("config,c",           po::value<std::string>(&config_file),      "Path to configuration file");
 
     po::variables_map vm;
@@ -211,6 +228,8 @@ options::parse(int argc, const char* argv[])
         }
         this->config_data[LISTENER_PORT_KEY] = listener_port;
         this->config_data[ETHERERUM_KEY] = ethereum;
+        this->config_data[BOOTSTRAP_PEERS_FILE_KEY] = bootstrap_file;
+        this->config_data[BOOTSTRAP_PEERS_URL_KEY] = bootstrap_url;
     }
     catch(po::error& e)
     {
