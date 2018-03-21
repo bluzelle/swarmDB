@@ -73,4 +73,4 @@ const serialize = str => addPrefix(strToArray(str), PREFIX);
 export const interpret = keyData =>
     arrayToStr(getRaw(keyData));
 
-export const defaultKeyData = textToKeyData('');
+export const defaultKeyData = () => textToKeyData('');

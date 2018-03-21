@@ -11,20 +11,21 @@ import {selectedKey} from "../KeyList";
 export class TypeModal extends Component {
 
     chooseJSON() {
-        this.addNewKey(jsonDefault, jsonDefault.get('bytearray'), 'JSON');
+        this.addNewKey(jsonDefault(), 'JSON');
     }
 
     chooseText() {
-        this.addNewKey(textDefault, textDefault.get('bytearray'), 'plain text');
+        this.addNewKey(textDefault(), 'plain text');
     }
 
     chooseFile() {
-        this.addNewKey(fileDefault, fileDefault.get('bytearray'), 'file');
+        this.addNewKey(fileDefault(), 'file');
     }
 
-    addNewKey(keyData, serial, typeName) {
+    addNewKey(keyData, typeName) {
         const {obj, keyField} = this.props;
         const oldSelection = selectedKey.get();
+        const serial = keyData.get('bytearray').slice();
 
         this.context.execute({
             doIt: () => {
@@ -56,15 +57,15 @@ export class TypeModal extends Component {
                 <BS.Modal.Body>
                     <BS.ListGroup>
                         <BS.ListGroupItem onClick={this.chooseJSON.bind(this)}>
-                            <ObjIcon keyData={jsonDefault}/>
+                            <ObjIcon keyData={jsonDefault()}/>
                             JSON Data
                         </BS.ListGroupItem>
                         <BS.ListGroupItem onClick={this.chooseText.bind(this)}>
-                            <ObjIcon keyData={textDefault}/>
+                            <ObjIcon keyData={textDefault()}/>
                             Plain Text
                         </BS.ListGroupItem>
                         <BS.ListGroupItem onClick={this.chooseFile.bind(this)}>
-                            <ObjIcon keyData={fileDefault}/>
+                            <ObjIcon keyData={fileDefault()}/>
                             File
                         </BS.ListGroupItem>
                     </BS.ListGroup>

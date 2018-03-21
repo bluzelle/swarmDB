@@ -32,7 +32,7 @@ describe('File Editor', () => {
 
         browser.chooseFile('input[type=file]', path);
 
-        browser.element('input[type=submit]').click();
+        browser.element('button*=Submit').click();
 
         
         browser.waitForExist('div*=File size: 0 bytes', 500, true);
@@ -49,25 +49,25 @@ describe('File Editor', () => {
 
     });
 
-    //
-    // it.only('should be able to upload a file and hit the save button twice', () => {
-    //
-    //     browser.waitForExist('.glyphicon-plus');
-    //
-    //     newField('file', 'File');
-    //
-    //     const path = __dirname + '/testfile.txt';
-    //
-    //     browser.chooseFile('input[type=file]', path);
-    //
-    //     browser.element('input[type=submit]').click();
-    //
-    //     save();
-    //     save();
-    //
-    //     browser.waitForExist('div*=File size:');
-    //
-    // });
+
+    it('should be able to upload a file and hit the save button twice', () => {
+
+        browser.waitForExist('.glyphicon-plus');
+
+        newField('file', 'File');
+
+        const path = __dirname + '/testfile.txt';
+
+        browser.chooseFile('input[type=file]', path);
+
+        browser.element('button*=Submit').click();
+
+        save();
+        save();
+
+        browser.waitForExist('div*=File size:');
+
+    });
 
 
 
@@ -81,7 +81,7 @@ describe('File Editor', () => {
 
         browser.chooseFile('input[type=file]', path);
 
-        browser.element('input[type=submit]').click();
+        browser.element('button*=Submit').click();
 
         browser.element('.glyphicon-download').click();
 

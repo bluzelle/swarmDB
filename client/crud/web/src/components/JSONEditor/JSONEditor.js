@@ -7,6 +7,7 @@ import {enableExecution, enableExecutionForChildren} from "../../services/Comman
 
 export const PREFIX = 0;
 
+@observer
 @enableExecution
 @enableExecutionForChildren
 export class JSONEditor extends Component {
@@ -16,29 +17,35 @@ export class JSONEditor extends Component {
 
         return {
             execute: args => this.context.execute({
-                onSave: this.onSave.bind(this, keyData.get('interpreted')), ...args })
+                onSave: () => this.onSave(keyData.get('interpreted')), ...args })
         };
     }
 
     onSave(interpreted) {
         return {
-            [this.props.keyName]: addPrefix(serialize(interpreted), PREFIX)
+            [this.props.keyName]: addPrefix(serialize(interpreted), PREFIX).slice()
         };
     }
 
     interpret() {
-        const {keyData} = this.props;
+        setTimeout(() => {
+            const {keyData} = this.props;
 
-        if(!keyData.has('interpreted')) {
-            keyData.set('interpreted', omr(interpret(getRaw(keyData))));
-            keyData.set('beginEditingTimestamp', new Date().getTime());
-        }
+            if (!keyData.has('interpreted')) {
+                keyData.set('interpreted', omr(interpret(getRaw(keyData))));
+                keyData.set('beginEditingTimestamp', new Date().getTime());
+            }
+        });
     }
 
     render() {
         const {keyData} = this.props;
 
-        this.interpret();
+
+        if(!keyData.has('interpreted')) {
+            this.interpret();
+            return <div>Interpreting...</div>;
+        }
 
         return <RenderTree obj={keyData} propName='interpreted' isRoot={true}/>
     }
@@ -52,4 +59,4 @@ const serialize = pipe(JSON.stringify, strToArray);
 export const objectToKeyData = obj => observable.map({
     bytearray: addPrefix(serialize(obj), PREFIX)});
 
-export const defaultKeyData = objectToKeyData({});
+export const defaultKeyData = () => objectToKeyData({});

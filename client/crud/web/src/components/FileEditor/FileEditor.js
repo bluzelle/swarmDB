@@ -125,7 +125,7 @@ export class FileEditor extends Component {
 }
 
 
-export const defaultKeyData = observable.map({
+export const defaultKeyData = () => observable.map({
     bytearray: [PREFIX],
     filename: ''
 });

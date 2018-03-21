@@ -1,4 +1,4 @@
-import {start, setData} from "../emulator/Emulator";
+import {start, setData, getData} from "../emulator/Emulator";
 import {reset, checkUndo} from "../util";
 import {findComponentsTest} from "react-functional-test";
 import {hasKey, hasNoKey, newField, remove, save, selectKey, setJSON, refresh} from "../pageActions";
@@ -144,36 +144,33 @@ describe('Multi-client functionality.', () => {
         hasKey('sometext');
 
     });
+    
+    it('should have a refresh button for object type', () => {
 
+        newField('json', 'JSON Data');
 
-    // This fails but it shouldn't
+        setJSON('{}');
 
-    // it.only('should have a refresh button for object type', () => {
-    //
-    //     newField('json', 'JSON Data');
-    //
-    //     setJSON('{}');
-    //
-    //     save();
-    //
-    //     browser.switchTab(secondWindow);
-    //
-    //     hasKey('json');
-    //
-    //     selectKey('json');
-    //
-    //     setJSON('[ 1, 2, "crazy text"]');
-    //
-    //     save();
-    //
-    //     browser.switchTab(firstWindow);
-    //
-    //     refresh('json');
-    //
-    //     browser.waitForExist('span*=crazy text');
-    //
-    // });
-    //
+        save();
+
+        browser.switchTab(secondWindow);
+
+        hasKey('json');
+
+        selectKey('json');
+
+        setJSON('[ 1, 2, "crazy text"]');
+
+        save();
+
+        browser.switchTab(firstWindow);
+
+        refresh('json');
+
+        browser.waitForExist('span*=crazy text');
+
+    });
+
 
     it('should have a refresh button for text type', () => {
 
@@ -201,6 +198,33 @@ describe('Multi-client functionality.', () => {
         browser.waitForExist('textarea*=Testing text');
 
     });
+
+
+    it('should be able to delete two keys', () => {
+
+        newField('A', 'JSON');
+        newField('B', 'JSON');
+
+        save();
+
+        browser.switchTab(secondWindow);
+
+        hasKey('A');
+        hasKey('B');
+
+        remove('A');
+        remove('B');
+
+        save();
+
+        browser.switchTab(firstWindow);
+
+        browser.waitForExist('button*=A', 500, true);
+        browser.waitForExist('button*=B', 500, true);
+
+    });
+
+
 
 
     // Doesn't overwrite old file on save.

@@ -17,4 +17,4 @@ const server = http.createServer(function (request, response) {
     }
 });
 
-server.listen(8200);
+server.listen(8200) && console.log('Electron CRUD app is listening on port 8200');

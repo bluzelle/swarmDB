@@ -36,7 +36,7 @@ autorun(function checkConnectedToNode() {
 const connectToEntryPoint = (ip, port) => {
     const socket = new WebSocket(`ws://${ip}:${port}`);
     entryPointSocket.set(socket);
-    socket.onmessage = ev => receiveMessage(ev.data);
+    socket.onmessage = ev => receiveMessage(JSON.parse(ev.data), socket);
     socket.onerror = () => {
         entryPointSocket.get().close();
         entryPointSocket.set(undefined);
@@ -49,7 +49,7 @@ function connectToNode(node) {
     node.socket = socket;
     setSocketState();
     socket.onopen = setSocketState;
-    socket.onmessage = (ev) => receiveMessage(ev.data, node);
+    socket.onmessage = (ev) => receiveMessage(JSON.parse(ev.data), node);
     socket.onclose = () => {
         setSocketState();
         node.socket = undefined;
