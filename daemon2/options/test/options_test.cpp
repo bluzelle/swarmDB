@@ -27,6 +27,10 @@ namespace
 
     const char* VALID_ARGS[] = {"config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f"};
 
+    const char* VALID_ARGS_WITH_PEERS[] = {
+        "config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f",
+        "-b", "peers_from_cmd.json", "--bootstrap_url", "example.org/peers_from_cmd.json"};
+
     const char* INVALID_port_ARGS[] = {"config_tests",  "-l",  "0.0.0.0", "-p", "90000", "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f"};
 
     const char* INVALID_ethererum_ARGS[] = {"config_tests",  "-l",  "0.0.0.0", "-p", "50000", "-a", "0x006eae72077449Zcaca91078ef78552c0cd9bce8f"};
@@ -38,7 +42,9 @@ namespace
     const std::string DEFAULT_CONFIG_DATA = "{\n"
         "  \"listener_address\" : \"0.0.0.0\",\n"
         "  \"listener_port\" : 49152,\n"
-        "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\"\n"
+        "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\",\n"
+        "  \"bootstrap_file\" : \"peers.json\",\n"
+        "  \"bootstrap_url\"  : \"example.org/peers.json\"\n"
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
@@ -73,6 +79,8 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
 
     EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
+    //EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
+    //EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
 }
 
 
@@ -104,5 +112,15 @@ TEST(options, test_that_all_valid_invalid_params)
     {
         bzn::options options;
         ASSERT_FALSE(options.parse_command_line(5, INVALID_listener_ARGS));
+    }
+}
+
+TEST(options, test_that_bootstrap_config_read_from_cmd)
+{
+    {
+        bzn::options options;
+        ASSERT_TRUE(options.parse_command_line(11, VALID_ARGS_WITH_PEERS));
+        ASSERT_EQ("peers_from_cmd.json", options.get_bootstrap_peers_file());
+        ASSERT_EQ("example.org/peers_from_cmd.json", options.get_bootstrap_peers_url());
     }
 }

@@ -37,6 +37,19 @@ namespace bzn
          * @return address
          */
         virtual std::string get_ethererum_address() const = 0;
+
+        /**
+         * Get the url to fetch initial peers from
+         * @return url
+         */
+        virtual std::string get_bootstrap_peers_url() const = 0;
+
+        /**
+         * Get the file to fetch initial peers from
+         * @return filename
+         */
+        virtual std::string get_bootstrap_peers_file() const = 0;
+
     };
 
 } // bzn

@@ -1,0 +1,12 @@
+add_library(bootstrap STATIC
+  peer_address.hpp
+  peer_address.cpp
+  bootstrap_peers_base.hpp
+  bootstrap_peers.cpp
+  bootstrap_peers.hpp
+  )
+
+target_link_libraries(bootstrap)
+target_include_directories(bootstrap PRIVATE ${JSONCPP_INCLUDE_DIRS})
+
+add_subdirectory(test)
