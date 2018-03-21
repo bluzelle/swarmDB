@@ -992,9 +992,9 @@ chokidar@~1.6.0:
   optionalDependencies:
     fsevents "^1.0.0"
 
-chromedriver@~2.34:
-  version "2.34.1"
-  resolved "https://registry.yarnpkg.com/chromedriver/-/chromedriver-2.34.1.tgz#4ceff1b1ef785fb41bd75029167e94b50bd77844"
+chromedriver@^2.36.0, chromedriver@~2.34:
+  version "2.36.0"
+  resolved "https://registry.yarnpkg.com/chromedriver/-/chromedriver-2.36.0.tgz#6a9473e11b50e7181ef8cd6476680e7f167374cd"
   dependencies:
     del "^3.0.0"
     extract-zip "^1.6.5"
@@ -1162,7 +1162,7 @@ ctype@0.5.3:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/ctype/-/ctype-0.5.3.tgz#82c18c2461f74114ef16c135224ad0b9144ca12f"
 
-"cucumber@github:xolvio/cucumber-js#v1.3.0-chimp.6":
+cucumber@xolvio/cucumber-js#v1.3.0-chimp.6:
   version "1.3.0"
   resolved "https://codeload.github.com/xolvio/cucumber-js/tar.gz/cf953cb5b5de30dbcc279f59e4ebff3aa040071c"
   dependencies:
@@ -1609,7 +1609,7 @@ glob@7.1.2, glob@^7.0.0, glob@^7.0.3, glob@^7.0.5, glob@^7.0.6, glob@~7.1.1:
     once "^1.3.0"
     path-is-absolute "^1.0.0"
 
-"glob@github:lucetius/node-glob#chimp":
+glob@lucetius/node-glob#chimp:
   version "7.1.1"
   resolved "https://codeload.github.com/lucetius/node-glob/tar.gz/51c7ca6e69bfbd17db5f1ea710e3f2a7a457d9ce"
   dependencies:

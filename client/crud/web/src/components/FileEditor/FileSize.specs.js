@@ -1,6 +1,6 @@
 import {FileSize} from "./FileSize";
 
-describe.only('File Size', () => {
+describe('File Size', () => {
 
     it('should display bytes', () => {
 

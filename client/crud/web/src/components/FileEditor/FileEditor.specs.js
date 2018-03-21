@@ -1,7 +1,7 @@
 import {FileEditor, defaultKeyData} from "./FileEditor";
 import {SimpleExecute, UndoRedoTest} from "../../services/CommandQueueService.specs";
 
-describe.only('File editor', () => {
+describe('File editor', () => {
 
     it('should render the file name', () => {
 

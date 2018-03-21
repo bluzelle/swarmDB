@@ -14,8 +14,16 @@ export class KeyListItem extends Component {
         this.context.execute({
             doIt: () => selectedKey.set(target),
             undoIt: () => selectedKey.set(oldVal),
-            message: <span>Selected <code key={1}>{target}</code>.</span>
+            message: message()
         });
+
+        function message() {
+            if (target) {
+                return <span>Selected <code key={1}>{target}</code>.</span>;
+            } else {
+                return <span>Deselected <code key={1}>{oldVal}</code>.</span>;
+            }
+        }
     }
 
     rename(newKey) {

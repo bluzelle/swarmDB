@@ -3,6 +3,9 @@ import {commandQueue, currentPosition, removePreviousHistory, updateHistoryMessa
 import {sendToNodes} from "bluzelle-client-common/services/CommunicationService";
 import {mapValues, extend, reduce} from 'lodash';
 
+import {isObservableArray} from 'mobx';
+
+
 const toSerializable = v =>
     v === 'deleted' ? v : toPlainArray(v);
 
@@ -14,8 +17,34 @@ const commandsToSave = () =>
 const addChangesFromCommand = (changes, command) =>
     extend(changes, command.onSave(changes));
 
-const generateChanges = () =>
+const generateChanges = () => 
     reduce(commandsToSave(), addChangesFromCommand, {});
+
+const buildRequests = changes => {
+    const requests = [];
+
+    Object.keys(changes).forEach(key => {
+        if (changes[key] === 'deleted') {
+            requests.push({
+                cmd: 'destroy',
+                data:
+                    {
+                        key: key,
+                    }
+            });
+        } else {
+            requests.push({
+                cmd: 'update',
+                data:
+                    {
+                        key: key,
+                        bytearray: changes[key]
+                    }
+            });
+        }
+    });
+    return requests;
+};
 
 const clearEditingData = () => {
     const data = getLocalDataStore();
@@ -23,11 +52,14 @@ const clearEditingData = () => {
 };
 
 export const save = () => {
+
     const changes = generateChanges();
+
+    const requests = buildRequests(changes);
 
     clearEditingData();
 
-    sendToNodes('sendDataToNode', changes);
+    sendToNodes('aggregate', requests);
 
     removePreviousHistory();
     updateHistoryMessage(<span>Saved.</span>);

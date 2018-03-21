@@ -37,6 +37,7 @@ export const setJSON = json => {
 
     browser.moveToObject('span*=(0 entries)');
     browser.element('.glyphicon-pencil').click();
+    browser.waitForExist('input');
 
     browser.setValue('input', json);
     browser.submitForm('input');
@@ -44,5 +45,9 @@ export const setJSON = json => {
 };
 
 
-export const refresh = name =>
+export const refresh = name => {
+
+    browser.waitForExist('.glyphicon-refresh');
     browser.element('.glyphicon-refresh').click();
+
+};

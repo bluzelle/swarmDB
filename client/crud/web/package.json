@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "jsdom": "^11.5.1",
-    "jsdom-global": "^3.0.2"
+    "jsdom-global": "^3.0.2",
+    "webpack": "3.10.0"
   },
   "author": "",
   "license": "ISC"

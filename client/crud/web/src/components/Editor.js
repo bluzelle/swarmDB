@@ -14,7 +14,7 @@ export class Editor extends Component {
     }
 
     loadData() {
-        sendToNodes('requestBytearray', {key: selectedKey.get()});
+        sendToNodes('read', {key: selectedKey.get()});
     }
 
     render() {
@@ -44,7 +44,8 @@ const EditorSwitch = ({obj}) => {
 
     return (
         <React.Fragment>
-            {type === jsonPrefix && <JSONEditor keyData={keyData} keyName={selectedKey.get()}/>}
+            {type === jsonPrefix && 
+                <JSONEditor keyData={keyData} keyName={selectedKey.get()} key={selectedKey.get()}/>}
             {type === textPrefix &&
                 <PlainTextEditor keyData={keyData} keyName={selectedKey.get()} key={selectedKey.get()}/>}
             {type === filePrefix &&

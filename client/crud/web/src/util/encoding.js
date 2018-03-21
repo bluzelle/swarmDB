@@ -13,5 +13,5 @@ export const byteArrayToStr = arr => td.decode(arr);
 
 const toPlainArray = arr => Array.from(arr);
 
-export const strToArray = str => toPlainArray(strToByteArray(str));
-export const arrayToStr = arr => byteArrayToStr(new Uint8Array(arr));
+export const strToArray = str => str.split('');
+export const arrayToStr = arr => arr.join('');
