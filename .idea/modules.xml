@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/bluzelle.iml" filepath="$PROJECT_DIR$/.idea/bluzelle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/swarmDB.iml" filepath="$PROJECT_DIR$/swarmDB.iml" />
     </modules>
   </component>
 </project>

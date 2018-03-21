@@ -1,5 +1,5 @@
-global.emulator = require('../../../emulator/Emulator');
-const nodes = require('../../../emulator/NodeStore').nodes;
+global.emulator = require('../../../../../../client/emulator/Emulator');
+const nodes = require('../../../../../../client/emulator/NodeStore').nodes;
 
 emulator.start(8200);
 
