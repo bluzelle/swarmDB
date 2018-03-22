@@ -110,7 +110,7 @@ options::load(const std::string& config_file)
 bool
 options::validate()
 {
-    LOG(debug) << '\n' << this->config_data.toStyledString();
+    LOG(info) << '\n' << this->config_data.toStyledString();
 
     // validate listener...
     if (!this->config_data.isMember(LISTENER_ADDRESS_KEY))
