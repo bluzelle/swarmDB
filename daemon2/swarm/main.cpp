@@ -24,7 +24,7 @@
 
 void init_logging()
 {
-     namespace keywords = boost::log::keywords;
+    namespace keywords = boost::log::keywords;
 
     auto sink = boost::log::add_file_log
         (
@@ -57,12 +57,17 @@ void init_logging()
 
 void print_banner(const bzn::options& options)
 {
-    std::cout << "Running node with ID: " /*<< daemon_info.id() */<< "\n"
-              << " Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
-              << "    Local IP Address: " << options.get_listener().address().to_string() << "\n"
-              << "             On port: " << options.get_listener().port()    << "\n"
-              << "       Token Balance: " /*<< daemon_info.ropsten_token_balance() */<< " BLZ\n"
-              << std::endl;
+    std::stringstream ss;
+
+    ss  << "\nRunning node with ID: " /*<< daemon_info.id() */<< "\n"
+        << " Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
+        << "    Local IP Address: " << options.get_listener().address().to_string() << "\n"
+        << "             On port: " << options.get_listener().port()    << "\n"
+        << "       Token Balance: " /*<< daemon_info.ropsten_token_balance() */<< " BLZ\n"
+        << '\n';
+
+    LOG(info) << ss.str();
+    std::cout << ss.str();
 }
 
 

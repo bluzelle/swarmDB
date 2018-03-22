@@ -53,7 +53,7 @@ namespace bzn
 
 namespace bzn::utils
 {
-    constexpr std::string_view basename(const std::string_view path)
+    constexpr std::string_view basename(const std::string_view& path)
     {
         return path.substr(path.rfind('/') + 1);
     }
