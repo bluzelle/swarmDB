@@ -23,12 +23,10 @@ set(CMAKE_C_FLAGS   ${warnings})
 # find packages
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(cmake/add_gmock_test.cmake)
-include(cmake/FindGMock.cmake)
 
 set(REQUIRED_BOOST "1.66.0")
 set(Boost_USE_STATIC_LIBS on)
 
-find_package(GMock REQUIRED)
 find_package(
         Boost ${REQUIRED_BOOST}
         REQUIRED COMPONENTS
@@ -48,6 +46,8 @@ pkg_search_module(JSONCPP REQUIRED jsoncpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# googletest (todo: we may want to have a flag enabling/disabling tests?)
+include(cmake/googletest.cmake)
 enable_testing()
 
 add_subdirectory(swarm)
@@ -55,4 +55,3 @@ add_subdirectory(node)
 add_subdirectory(options)
 add_subdirectory(raft)
 #add_subdirectory(storage)
-
