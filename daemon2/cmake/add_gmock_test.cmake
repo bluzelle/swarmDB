@@ -1,5 +1,6 @@
 function(add_gmock_test target)
     add_executable(${target} ${test_srcs})
+    add_dependencies(${target} googletest)
     target_link_libraries(${target} ${test_libs} ${GMOCK_BOTH_LIBRARIES} ${Boost_LIBRARIES} ${JSONCPP_LIBRARIES} pthread)
     target_include_directories(${target} PRIVATE ${JSONCPP_INCLUDE_DIRS})
     add_test(${target} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target})
