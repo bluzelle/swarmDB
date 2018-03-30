@@ -6,7 +6,8 @@
     "run-web-functional-ci": "cd test/admin/web-functional; ../../../node_modules/.bin/chimp --browser=phantomjs --mocha",
     "run-daemon-tests": "cd test/daemon; ../../node_modules/.bin/chimp --browser=phantomjs --mocha",
     "run-daemon": "./tests/functional/run-daemon.sh",
-    "del-daemon-logs": "./tests/functional/del-daemon-logs.sh",
+    "daemon-setup": "cp -R ./test/daemon/setup-files/. ../../../daemon-build/daemon/", // path to where daemon was built
+    "daemon-logs-del": "./tests/functional/del-daemon-logs.sh",
     "daemon-kill": "pkill -2 swarm",
     "chimp-kill": "./tests/functional/kill-chimp.sh"
   },
