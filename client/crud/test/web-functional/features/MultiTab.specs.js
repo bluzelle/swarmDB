@@ -13,7 +13,7 @@ describe('Multi-client functionality.', () => {
 
         start();
 
-        browser.url('http://localhost:8200/?test');
+        browser.url('http://localhoast:8200/?test');
         browser.newWindow('http://localhost:8200/?test');
 
         browser.waitUntil(() => browser.getTabIds().length == 2);
@@ -34,8 +34,6 @@ describe('Multi-client functionality.', () => {
         browser.waitForExist('button=Go');
         browser.element('button=Go').click();
 
-        browser.waitUntil(() => findComponentsTest('KeyList').length, 2000);
-
 
         browser.switchTab(secondWindow);
         browser.url('http://localhost:8200/?test');
@@ -44,7 +42,6 @@ describe('Multi-client functionality.', () => {
         browser.waitForExist('button=Go');
         browser.element('button=Go').click();
 
-        browser.waitUntil(() => findComponentsTest('KeyList').length, 2000);
 
         browser.switchTab(firstWindow);
 
@@ -53,214 +50,45 @@ describe('Multi-client functionality.', () => {
 
     it('should be able to connect both clients', () => {});
 
-    it('update keys from emulator', () => {
 
-        setData({
-            myKey: [0, 1, 2, 3, 4]
-        });
-
-
-        hasKey('myKey');
-
-        browser.switchTab(secondWindow);
-
-        hasKey('myKey');
-
-        setData({});
+    const saveKey = () => {
 
         browser.switchTab(firstWindow);
 
-        hasNoKey('myKey');
+        newField('hello', 'JSON');
+
+        save();
 
         browser.switchTab(secondWindow);
 
-        hasNoKey('myKey');
+        refresh();
+
+        browser.waitForExist('button*=hello');
+
+    };
+
+    it('should be able to save a key on one client and load it on another', () => {
+
+       saveKey();
+
+    });
 
 
-        setData({
-            helloworld: [9, 8, 7, 6, 5]
-        });
+    it('should be able to delete a key on one client and load it on another', () => {
+
+        saveKey();
 
         browser.switchTab(firstWindow);
 
-        hasKey('helloworld');
+        selectKey('hello'); // This actually deselects the key
+        remove('hello'); // This selects it and then clicks remove
 
         browser.switchTab(secondWindow);
 
-        hasKey('helloworld');
+        refresh();
+
+        browser.waitForExist('button*=hello', 500, true);
 
     });
-
-
-    it('should send new keys from one client to the other', () => {
-
-        newField('newfield', 'JSON Data');
-        save();
-
-        browser.switchTab();
-
-        hasKey('newfield');
-
-    });
-
-
-    it('should communicate deletion of keys from one client to the other', () => {
-
-        setData({
-            removeMe: [9, 2, 3]
-        });
-
-
-        remove('removeMe');
-
-        save();
-
-        browser.switchTab();
-
-        hasNoKey('removeMe');
-
-    });
-
-
-    it('should communicate complex changes', () => {
-
-        setData({
-            hello: [9, 1, 2],
-            world: [8, 8, 8],
-            aKey: [9, 5, 3]
-        });
-
-        remove('hello');
-
-        newField('newfield', 'JSON Data');
-        newField('sometext', 'Plain Text');
-
-        save();
-
-        browser.switchTab();
-
-        hasNoKey('hello');
-        hasKey('newfield');
-        hasKey('sometext');
-
-    });
-    
-    it('should have a refresh button for object type', () => {
-
-        newField('json', 'JSON Data');
-
-        setJSON('{}');
-
-        save();
-
-        browser.switchTab(secondWindow);
-
-        hasKey('json');
-
-        selectKey('json');
-
-        setJSON('[ 1, 2, "crazy text"]');
-
-        save();
-
-        browser.switchTab(firstWindow);
-
-        refresh('json');
-
-        browser.waitForExist('span*=crazy text');
-
-    });
-
-
-    it('should have a refresh button for text type', () => {
-
-        newField('text', 'Plain Text');
-
-        save();
-
-        browser.switchTab(secondWindow);
-
-        hasKey('text');
-
-        selectKey('text');
-
-        browser.waitForExist('textarea');
-        browser.element('textarea').click();
-
-        browser.keys(['Testing text']);
-
-        save();
-
-        browser.switchTab(firstWindow);
-
-        refresh('text');
-
-        browser.waitForExist('textarea*=Testing text');
-
-    });
-
-
-    it('should be able to delete two keys', () => {
-
-        newField('A', 'JSON');
-        newField('B', 'JSON');
-
-        save();
-
-        browser.switchTab(secondWindow);
-
-        hasKey('A');
-        hasKey('B');
-
-        remove('A');
-        remove('B');
-
-        save();
-
-        browser.switchTab(firstWindow);
-
-        browser.waitForExist('button*=A', 500, true);
-        browser.waitForExist('button*=B', 500, true);
-
-    });
-
-
-
-
-    // Doesn't overwrite old file on save.
-
-
-    // it('should have a refresh button for file type', () => {
-    //
-    //     browser.waitForExist('.glyphicon-plus');
-    //
-    //     newField('file', 'File');
-    //
-    //     save();
-    //
-    //     browser.switchTab(secondWindow);
-    //
-    //     selectKey('file');
-    //
-    //     browser.switchTab(firstWindow);
-    //
-    //
-    //     const path = __dirname + '/testfile.txt';
-    //
-    //     browser.chooseFile('input[type=file]', path);
-    //
-    //     browser.element('input[type=submit]').click();
-    //
-    //     save();
-    //
-    //     browser.switchTab(secondWindow);
-    //
-    //     browser.waitForExist('.glyphicon-refresh');
-    //
-    //     browser.click('.glyphicon-refresh');
-    //
-    //     browser.waitForExist('div*=0 bytes', 500, true);
-    //
-    // });
 
 });

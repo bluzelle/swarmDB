@@ -1,21 +1,33 @@
-import {getPrefix} from "./keyData";
-import {PREFIX as textPrefix} from "./PlainTextEditor";
-import {PREFIX as jsonPrefix} from "./JSONEditor";
-import {PREFIX as filePrefix} from "./FileEditor/FileEditor";
+export const TextIcon = () => 
+	<BS.Glyphicon glyph='font'/>;
 
-export const ObjIcon = observer(({keyData}) => (
-    <span style={{display: 'inline-block', width: 25}}>
-        { getPrefix(keyData) === jsonPrefix &&
-            <span style={{
-                fontWeight: 'bold',
-                fontFamily: 'monospace'
-            }}>{'{}'}</span> }
+export const FileIcon = () => 
+	<BS.Glyphicon glyph='file'/>;
 
-        { getPrefix(keyData) === textPrefix &&
-            <BS.Glyphicon glyph='font'/> }
+export const JSONIcon = () =>
+    <span style={{
+        fontWeight: 'bold',
+        fontFamily: 'monospace'
+    }}>
+        {'{}'}
+    </span>;
 
 
-        { getPrefix(keyData) === filePrefix &&
-            <BS.Glyphicon glyph='file'/> }
-    </span>
-));
+export const ValIcon = ({val}) => {
+
+	if(typeof val === 'string') {
+
+		return <TextIcon/>;
+
+	}
+
+
+	if(typeof val === 'object') {
+
+		return <JSONIcon/>;
+
+	}
+
+	return <BS.Glyphicon glyph='question-sign'/>;
+
+};

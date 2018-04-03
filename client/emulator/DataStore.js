@@ -82,6 +82,19 @@ module.exports = {
 
     },
 
+    keys: ({request_id}, ws) => {
+
+        ws.send(JSON.stringify(
+            {
+                data: {
+                    value: data.keys()
+                },
+                response_to: request_id
+            }
+        ));
+
+    },
+
     getData: () => data,
     setData: obj => {
         data.clear();

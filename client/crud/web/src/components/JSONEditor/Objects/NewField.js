@@ -29,7 +29,7 @@ export class NewField extends Component {
                 validateJSON={true}
                 onChange={val => {
                     try {
-                        const obj = observableMapRecursive(JSON.parse(val));
+                        const obj = JSON.parse(val);
                         onChange(this.state.key, obj);
                     } catch(e) {
                         onError();

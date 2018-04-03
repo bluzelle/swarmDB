@@ -10,22 +10,28 @@ const revert = targetPosition => {
     if (cp > targetPosition) {
         const prev = commandQueue[cp-1];
 
-        commandQueue[cp].undoIt(prev);
-        currentPosition.set(cp - 1);
-        revert(targetPosition);
+        commandQueue[cp].undoIt(prev).then(() => {
+
+            currentPosition.set(cp - 1);
+            revert(targetPosition);
+
+        });
     }
 
     if (cp < targetPosition) {
-        commandQueue[cp + 1].doIt();
-        currentPosition.set(cp + 1);
-        revert(targetPosition);
+        
+        commandQueue[cp + 1].doIt().then(() => {
+
+            currentPosition.set(cp + 1);
+            revert(targetPosition);
+
+        });
     }
 };
 
 commandQueue.push({
     message: 'Initial state',
-    revert: revert.bind(this, 0),
-    onSave: () => {}
+    revert: revert.bind(this, 0)
 });
 
 
@@ -46,30 +52,21 @@ export const redo = () =>
 // object, the object should have the same identity as it had before
 // undoing and redoing.
 
-export const execute = ({ doIt, undoIt, onSave = () => {}, message }) => {
-    doIt();
+export const execute = ({ doIt, undoIt, message }) => 
+    new Promise(resolve => {
+
+    doIt().then(resolve);
 
     currentPosition.set(currentPosition.get() + 1);
     deleteFuture();
 
     commandQueue.push({
         revert: revert.bind(this, currentPosition.get()),
-        onSave,
         doIt,
         undoIt,
         message
     });
-};
-
-export const enableExecution = f => {
-    f.contextTypes = { execute: PropTypes.func };
-    return f;
-};
-
-export const enableExecutionForChildren = f => {
-    f.childContextTypes = { execute: PropTypes.func };
-    return f;
-};
+});
 
 
 const deleteFuture = () =>
@@ -82,22 +79,3 @@ export const removePreviousHistory = () => {
 
 export const updateHistoryMessage = message =>
     commandQueue[currentPosition.get()].message = message;
-
-
-export const del = (execute, obj, propName) => {
-    if(isObservableArray(obj)) {
-        const old = obj[propName];
-
-        execute({
-            doIt: () => obj.splice(propName, 1),
-            undoIt: () => obj.splice(propName, 0, old),
-            message: <span>Deleted index <code key={1}>{propName}</code>.</span>});
-    } else {
-        const old = obj.get(propName);
-
-        execute({
-            doIt: () => obj.delete(propName),
-            undoIt: () => obj.set(propName, old),
-            message: <span>Deleted key <code key={1}>{propName}</code>.</span>});
-    }
-};

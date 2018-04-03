@@ -16,32 +16,17 @@ if (typeof atob === 'undefined') {
 }
 
 
-const strPrefix = '0';
-
-const strToBase64 = btoa;
-const base64ToStr = atob;
-
-
-const numPrefix = '1';
-
-const numToBase64 = num => 
-	strToBase64(num.toString());
-
-const base64ToNum = base64 => 
-	Number(base64ToStr(base64));
-
-
-const objPrefix = '2';
+const objPrefix = '0';
 
 const objToBase64 = obj => 
-	strToBase64(JSON.stringify(obj));
+	btoa(JSON.stringify(obj));
 
 const base64ToObj = base64 => 
-	JSON.parse(base64ToStr(base64));
+	JSON.parse(atob(base64));
 
 
 // Bytearrays
-const baPrefix = '3';
+const baPrefix = '1';
 
 const baToBase64 = buffer => {
 
@@ -61,7 +46,6 @@ const baToBase64 = buffer => {
 const base64ToBa = decode;
 
 
-
 const valToBase64 = val => {
 
 	const type = typeof val;
@@ -73,23 +57,8 @@ const valToBase64 = val => {
 
 	}
 
-	if(type === 'string') {
 
-		return strPrefix + strToBase64(val);
-
-	}
-
-	if(type === 'number') {
-
-		return numPrefix + numToBase64(val);
-
-	}
-
-	if(type === 'object') {
-
-		return objPrefix + objToBase64(val);
-
-	}
+	return objPrefix + objToBase64(val);
 
 };
 
@@ -102,19 +71,6 @@ const base64ToVal = base64 => {
 	if(prefix === baPrefix) {
 
 		return base64ToBa(base64);
-
-	}
-
-
-	if(prefix === strPrefix) {
-
-		return base64ToStr(base64);
-
-	}
-
-	if(prefix === numPrefix) {
-
-		return base64ToNum(base64);
 
 	}
 

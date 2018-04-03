@@ -1,14 +1,13 @@
 import CenterMiddle from './CenterMiddle'
 import Panel from 'react-bootstrap/lib/Panel'
 import Button from 'react-bootstrap/lib/Button'
-import { entryPointUrl, closeCode, disconnect} from "../../services/CommunicationService";
 import Header from '../Header'
 
 @observer
 export default class DaemonSelector extends Component {
-    go() {
-        entryPointUrl.set(`${this.address.value}:${this.port.value}`);
-    }
+    // go() {
+    //     entryPointUrl.set(`${this.address.value}:${this.port.value}`);
+    // }
 
     checkEnterKey(ev) {
         ev.keyCode === 13 && this.go();
@@ -49,14 +48,11 @@ export default class DaemonSelector extends Component {
                                 <input type="text" tabIndex="1" ref={r => this.address = r} style={{width: '80%'}} placeholder="address" defaultValue="127.0.0.1"/>
                             </div>
                             <div style={{marginTop: 10}}>
-                                    <Button onClick={this.go.bind(this)} tabIndex="3">Go</Button>
+                                    <Button onClick={this.props.go} tabIndex="3">Go</Button>
                                 {global.electron && <Button style={{marginLeft: 10}} disabled={emulatorStarted} onClick={this.startEmulator.bind(this)}>Start Emulator</Button>}
                             </div>
                         </div>
                     </Panel>
-                    <div style={{height: 20}}>
-                        {/*closeCode.get() && closeCode.get() !== 1000 && <span style={{color: 'red'}}>Error: {closeCode.get()}</span>*/}
-                    </div>
                 </div>
             </CenterMiddle>
         );

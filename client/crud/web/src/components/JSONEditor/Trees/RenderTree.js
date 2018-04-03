@@ -1,26 +1,32 @@
 import {RenderArray} from "../Arrays/RenderArray";
 import {RenderObject} from "../Objects/RenderObject";
 import {RenderField} from "./RenderField";
-import {get} from '../../../util/mobXUtils';
 import {isObservableArray} from 'mobx';
 import {Hoverable} from "../Hoverable";
 
 @observer
 export class RenderTree extends Component {
+
     constructor(props) {
+
         super(props);
+
 
         this.state = {
             editing: false
         };
+
     }
 
+
     render() {
-        const {obj, propName} = this.props;
+
+        const {val} = this.props;
         let r;
 
+
         // If array
-        if (!this.state.editing && isObservableArray(get(obj, propName))) {
+        if (!this.state.editing && isObservableArray(val)) {
             r = (
                 <RenderArray
                     {...this.props}
@@ -28,7 +34,7 @@ export class RenderTree extends Component {
             );
 
         // If object
-        } else if (!this.state.editing && typeof get(obj, propName) === 'object') {
+        } else if (!this.state.editing && typeof val === 'object') {
             r = (
                 <RenderObject
                     {...this.props}
@@ -46,7 +52,7 @@ export class RenderTree extends Component {
         }
 
         return (
-            <span style={{ fontFamily: 'monospace ' }}>
+            <span style={{ fontFamily: 'monospace' }}>
                 <Hoverable>
                     {r}
                 </Hoverable>

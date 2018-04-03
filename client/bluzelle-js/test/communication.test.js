@@ -43,10 +43,10 @@ describe('bluzelle connection', () => {
 
     });
 
-    it('should be able to delete a key', async () => {
+    it('should be able to remove a key', async () => {
 
         await communication.update('myKey', 'abc');
-        await communication.delete('myKey');
+        await communication.remove('myKey');
         assert(!await communication.has('myKey'));
 
     });
@@ -57,9 +57,9 @@ describe('bluzelle connection', () => {
 
     });
 
-    it('should throw an error when trying to delete a non-existent key', done => {
+    it('should throw an error when trying to remove a non-existent key', done => {
 
-        communication.delete('something').catch(() => done());
+        communication.remove('something').catch(() => done());
 
     });
 

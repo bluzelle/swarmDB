@@ -5,7 +5,7 @@ describe('File editor', () => {
 
     it('should render the file name', () => {
 
-        const keyData = defaultKeyData;
+        const keyData = defaultKeyData();
 
         keyData.set('filename', 'hello.jpg');
 

@@ -1,5 +1,4 @@
 import {EditableField} from "../../EditableField";
-import {observableMapRecursive} from "../../../util/mobXUtils";
 
 export const NewField = ({ preamble, onChange, onError }) => (
     <div>
@@ -10,8 +9,8 @@ export const NewField = ({ preamble, onChange, onError }) => (
             val={''}
             validateJSON={true}
             onChange={val => {
-                try {
-                    const obj = observableMapRecursive(JSON.parse(val));
+            	try {
+                    const obj = JSON.parse(val);
                     onChange(obj);
                 } catch(e) {
                     onError();

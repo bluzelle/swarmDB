@@ -1,62 +1,93 @@
 import {RenderTree} from "./Trees/RenderTree";
-import {pipe} from 'lodash/fp';
-import {getRaw, addPrefix} from "../keyData";
-import {observableMapRecursive as omr} from "../../util/mobXUtils";
-import {arrayToStr, strToArray} from "../../util/encoding";
-import {enableExecution, enableExecutionForChildren} from "../../services/CommandQueueService";
+import {observe} from 'mobx';
+import {activeValue} from '../../services/CRUDService';
 
-export const PREFIX = 0;
+import {isObservableArray, isObservable, toJS} from 'mobx';
+import {isPlainObject, mapValues, extend} from 'lodash';
+
+import {execute} from '../../services/CommandQueueService';
+
+
+const activeObservableMap = observable();
+
+
+export const observableMapRecursive = obj => {
+
+    const omr = isPlainObject(obj) ? observable.map(mapValues(obj, observableMapRecursive)) :
+        Array.isArray(obj) ? observable.array(obj.map(observableMapRecursive)) : obj;
+
+    isObservable(omr) && observe(omr, () => onChange());
+
+    return omr;
+
+};
+
+
+// We update the underyling object of activeValue to mirror activeObservableMap;
+// the observers on activeValue are not called.
+
+const onChange = () => {
+
+    const v = activeValue.get();
+
+    for(let prop in v) { 
+        delete v[prop];
+    }
+
+    extend(v, toJS(activeObservableMap.get()));
+
+};
+
+
+
+observe(activeValue, ({newValue}) => {
+
+	if(typeof newValue === 'object' 
+        && !(newValue instanceof ArrayBuffer)) {
+
+		activeObservableMap.set(observableMapRecursive(newValue));
+
+	}
+
+});
+
+
 
 @observer
-@enableExecution
-@enableExecutionForChildren
 export class JSONEditor extends Component {
 
-    getChildContext() {
-        const {keyData} = this.props;
-
-        return {
-            execute: args => this.context.execute({
-                onSave: () => this.onSave(keyData.get('interpreted')), ...args })
-        };
-    }
-
-    onSave(interpreted) {
-        return {
-            [this.props.keyName]: addPrefix(serialize(interpreted), PREFIX).slice()
-        };
-    }
-
-    interpret() {
-        setTimeout(() => {
-            const {keyData} = this.props;
-
-            if (!keyData.has('interpreted')) {
-                keyData.set('interpreted', omr(interpret(getRaw(keyData))));
-                keyData.set('beginEditingTimestamp', new Date().getTime());
-            }
-        });
-    }
-
     render() {
-        const {keyData} = this.props;
 
+        if (activeObservableMap.get() === undefined) {
 
-        if(!keyData.has('interpreted')) {
-            this.interpret();
-            return <div>Interpreting...</div>;
+            return null;
+
         }
 
-        return <RenderTree obj={keyData} propName='interpreted' isRoot={true}/>
+
+        return <RenderTree 
+            val={activeObservableMap.get()} 
+            set={v => {
+
+                if(typeof v !== 'object') {
+
+                    alert('Must be object type.');
+                    return;
+
+                }
+
+
+                const v2 = observableMapRecursive(v);
+                const old = activeObservableMap.get();
+
+                execute({
+                    doIt: () => Promise.resolve(activeObservableMap.set(v2)),
+                    undoIt: () => Promise.resolve(activeObservableMap.set(old)),
+                    message: <span>Set root to <code key={1}>{JSON.stringify(v)}</code>.</span>
+                })
+              
+            }}
+            />;
+
     }
 }
-
-
-const interpret = pipe(arrayToStr, JSON.parse);
-const serialize = pipe(JSON.stringify, strToArray);
-
-
-export const objectToKeyData = obj => observable.map({
-    bytearray: addPrefix(serialize(obj), PREFIX)});
-
-export const defaultKeyData = () => objectToKeyData({});

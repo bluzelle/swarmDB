@@ -1,48 +1,43 @@
-import {defaultKeyData as jsonDefault} from "../../JSONEditor";
-import {defaultKeyData as textDefault} from "../../PlainTextEditor";
-import {defaultKeyData as fileDefault} from "../../FileEditor/FileEditor";
-
-import {ObjIcon} from "../../ObjIcon";
-import {enableExecution} from "../../../services/CommandQueueService";
-import {selectedKey} from "../KeyList";
+import {JSONIcon, TextIcon, FileIcon} from "../../ObjIcon";
+import {selectedKey, refreshKeys} from "../KeyList";
+import {update, remove} from 'bluzelle';
+import {execute} from '../../../services/CommandQueueService';
 
 
-@enableExecution
 export class TypeModal extends Component {
 
     chooseJSON() {
-        this.addNewKey(jsonDefault(), 'JSON');
+        this.addNewKey({}, 'JSON');
     }
 
     chooseText() {
-        this.addNewKey(textDefault(), 'plain text');
+        this.addNewKey('', 'plain text');
     }
 
     chooseFile() {
-        this.addNewKey(fileDefault(), 'file');
+        this.addNewKey(new ArrayBuffer(), 'file');
     }
 
-    addNewKey(keyData, typeName) {
-        const {obj, keyField} = this.props;
-        const oldSelection = selectedKey.get();
-        const serial = keyData.get('bytearray').slice();
 
-        this.context.execute({
-            doIt: () => {
-                obj.set(keyField, keyData);
-                selectedKey.set(keyField);
-            },
-            undoIt: () => {
-                selectedKey.set(oldSelection);
-                obj.delete(keyField)
-            },
-            onSave: () => ({
-                [keyField]: serial
-            }),
-            message: <span>Created <code key={1}>{keyField}</code> as {typeName}.</span>
+    addNewKey(keyData, typeName) {
+
+        const oldSelection = selectedKey.get();
+
+
+        execute({
+            doIt: () => new Promise(resolve =>
+                update(this.props.keyField, keyData).then(() =>
+                    refreshKeys().then(resolve))),
+
+            undoIt: () => new Promise(resolve =>
+                remove(this.props.keyField).then(() =>
+                    refreshKeys().then(resolve))),
+
+            message: <span>Added field <code key={1}>{this.props.keyField}</code>.</span>
         });
 
         this.props.onHide();
+
     }
 
 
@@ -57,16 +52,16 @@ export class TypeModal extends Component {
                 <BS.Modal.Body>
                     <BS.ListGroup>
                         <BS.ListGroupItem onClick={this.chooseJSON.bind(this)}>
-                            <ObjIcon keyData={jsonDefault()}/>
-                            JSON Data
+                            <JSONIcon/>
+                            <span style={{marginLeft: 15}}>JSON Data</span>
                         </BS.ListGroupItem>
                         <BS.ListGroupItem onClick={this.chooseText.bind(this)}>
-                            <ObjIcon keyData={textDefault()}/>
-                            Plain Text
+                            <TextIcon/>
+                            <span style={{marginLeft: 15}}>Plain Text</span>
                         </BS.ListGroupItem>
                         <BS.ListGroupItem onClick={this.chooseFile.bind(this)}>
-                            <ObjIcon keyData={fileDefault()}/>
-                            File
+                            <FileIcon/>
+                            <span style={{marginLeft: 15}}>File</span>
                         </BS.ListGroupItem>
                     </BS.ListGroup>
                 </BS.Modal.Body>
