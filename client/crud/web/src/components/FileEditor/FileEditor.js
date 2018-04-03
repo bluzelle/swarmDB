@@ -1,12 +1,25 @@
-import {enableExecution} from "../../services/CommandQueueService";
 import {FileName} from './FileName';
 import {FileSize} from "./FileSize";
+import {selectedKey} from '../KeyList';
+import {activeValue} from '../../services/CRUDService';
 
-export const PREFIX = 2;
 
 @observer
-@enableExecution
 export class FileEditor extends Component {
+
+
+    constructor() {
+        super();
+
+        this.state = {
+
+            uploaded: false,
+            uploadedFilename: ''
+
+        };
+
+    }
+
 
     onSubmit(e) {
 
@@ -20,32 +33,31 @@ export class FileEditor extends Component {
         const reader = new FileReader();
 
 
-        const props = this.props;
-        const execute = this.context.execute;
+        reader.onload = () => {
 
-        reader.onload = function() {
-
-            const oldBytearray = props.keyData.get('bytearray'),
-                oldFilename = props.keyData.get('filename');
+            // const oldBytearray = props.keyData.get('bytearray'),
+            ///    oldFilename = props.keyData.get('filename');
 
 
-            const arr = new Uint8Array(reader.result);
+            activeValue.set(reader.result);
 
-
-            execute({
-                doIt: () => {
-                    props.keyData.set('bytearray', [PREFIX, ...arr]);
-                    props.keyData.set('filename', file.name);
-                },
-                undoIt: () => {
-                    props.keyData.set('bytearray', oldBytearray);
-                    props.keyData.set('filename', oldFilename);
-                },
-                message: <span>Uploaded <code key={1}>{file.name}</code> to <code key={2}>{props.keyName}</code>.</span>,
-                onSave: () => ({
-                    [props.keyName]: props.keyData.get('bytearray')
-                })
+            this.setState({
+                uploaded: true,
+                uploadedFilename: file.name
             });
+
+
+            // execute({
+            //     doIt: () => {
+            //         props.keyData.set('bytearray', [PREFIX, ...arr]);
+            //         props.keyData.set('filename', file.name);
+            //     },
+            //     undoIt: () => {
+            //         props.keyData.set('bytearray', oldBytearray);
+            //         props.keyData.set('filename', oldFilename);
+            //     },
+            //     message: <span>Uploaded <code key={1}>{file.name}</code> to <code key={2}>{props.keyName}</code>.</span>
+            // });
 
 
         };
@@ -57,15 +69,13 @@ export class FileEditor extends Component {
 
     download() {
 
-        const bytearray = this.props.keyData.get('bytearray');
-        const arrBuffer = new Uint8Array(bytearray).buffer;
+        const arrBuffer = activeValue.get();
 
         const blob = new Blob([arrBuffer]);
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
 
-        const fileName = this.props.keyData.get('filename')
-            || this.props.keyName;
+        const fileName = this.state.uploadedFilename;
 
         link.download = fileName;
         link.click();
@@ -75,8 +85,6 @@ export class FileEditor extends Component {
 
     render() {
 
-        const {keyData, keyName} = this.props;
-
         return (
             <div style={{ padding: 15 }}>
                 <BS.Panel>
@@ -84,8 +92,8 @@ export class FileEditor extends Component {
                         File Editor
                     </BS.Panel.Heading>
                     <BS.Panel.Body>
-                        <div>File size: <code><FileSize numBytes={keyData.get('bytearray').length - 1}/></code></div>
-                        <div>File name: <code>{keyName}</code></div>
+                        <div>File size: <code><FileSize numBytes={activeValue.get().byteLength}/></code></div>
+                        <div>File name: <code>{selectedKey.get()}</code></div>
 
                         <hr/>
 
@@ -109,10 +117,10 @@ export class FileEditor extends Component {
                             </BS.FormGroup>
 
                         {
-                            keyData.get('filename') &&
+                            this.state.uploaded &&
 
                             <div>
-                                Uploaded <FileName filename={keyData.get('filename')}/> successfully.
+                                Uploaded <FileName filename={this.state.uploadedFilename}/> successfully as <code>{selectedKey.get()}</code>.
                             </div>
                         }
 
@@ -123,9 +131,3 @@ export class FileEditor extends Component {
     }
 
 }
-
-
-export const defaultKeyData = () => observable.map({
-    bytearray: [PREFIX],
-    filename: ''
-});

@@ -19,7 +19,7 @@ describe('File Editor', () => {
     });
 
 
-    it('should be able to upload a file', () => {
+    const upload = () => {
 
         browser.waitForExist('.glyphicon-plus');
 
@@ -37,6 +37,17 @@ describe('File Editor', () => {
         
         browser.waitForExist('div*=File size: 0 bytes', 500, true);
 
+    };
+
+    it('should be able to upload a file', () => {
+
+        upload();
+
+    });
+
+    it('should be able to upload a file w/ undo', () => {
+
+        upload();
 
         checkUndo({
             verifyUndo: () => {

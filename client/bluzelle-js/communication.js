@@ -44,12 +44,18 @@ const connect = addr => {
 
 const onMessage = (event, socket) => {
 
+    if(event.response_to === undefined) {
+
+        throw new Error('Received non-response message.');
+
+    }
+
     resolvers.get(event.response_to)(event);
-    resolvers.delete(event.response_to);
 
 };
 
 
+// TODO: return promise
 
 const disconnect = () => {
     for(let connection of connections.values()) {
@@ -103,7 +109,7 @@ const update = (key, value) => new Promise((resolve, reject) => {
 });
 
 
-const delet = key => new Promise((resolve, reject) => {
+const remove = key => new Promise((resolve, reject) => {
 
     const cmd = amendBznApi({
         cmd: 'delete',
@@ -150,15 +156,30 @@ const has = key => new Promise(resolve => {
 });
 
 
+const keys = () => new Promise(resolve => {
+
+    const cmd = amendBznApi({
+        cmd: 'keys'
+    });
+
+    send(cmd, obj => resolve(obj.data.value));
+
+});
+
+
+
 module.exports = {
+    
     connect,
     disconnect,
     ping,
 
     read,
     update,
-    'delete': delet, // delete is a reserved keyword
-    has
+    remove,
+    has,
+    keys
+
 };
 
 

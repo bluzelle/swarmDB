@@ -1,5 +1,4 @@
 import {commandQueue, undo, redo, canUndo, canRedo, currentPosition} from "../services/CommandQueueService";
-import {save} from "../services/SaveService";
 
 @observer
 export class CommandControls extends Component {
@@ -40,19 +39,6 @@ export class CommandControls extends Component {
                 </BS.Button>
             </BS.OverlayTrigger>;
 
-        const saveButton =
-            <BS.OverlayTrigger placement="bottom" overlay={
-                <BS.Tooltip id="save-tooltip">Save</BS.Tooltip>
-            }>
-                <BS.Button style={{color: 'green'}}
-                           onClick={save}>
-                    <BS.Glyphicon glyph='floppy-save'/>
-                    {
-                        commandQueue.length > 1 && <span>*</span>
-                    }
-                </BS.Button>
-            </BS.OverlayTrigger>;
-
         const closeButton =
             <BS.Button style={{float: 'right'}}
                        onClick={() => this.setState({show: false})}>
@@ -76,13 +62,11 @@ export class CommandControls extends Component {
 
                 {undoRedo}
                 {historyButton}
-                {saveButton}
 
                 <BS.Modal show={this.state.show}
                           onHide={() => this.setState({show: false})}>
                     <div style={{padding: 10}}>
                         {undoRedo}
-                        {saveButton}
                         {closeButton}
                     </div>
                     <div style={{fontFamily: 'monospace'}}>

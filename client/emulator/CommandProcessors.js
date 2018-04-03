@@ -1,11 +1,13 @@
 const {maxNodes} = require('./Values');
-const {read, update, delete:delet, has} = require('./DataStore');
+const {read, update, delete:delet, has, keys} = require('./DataStore');
 const {getAllNodesInfo} = require('./NodeStore.js');
 const assert = require('assert');
 
 
 const CommandProcessors = {
+
     setMaxNodes: num => maxNodes.set(num),
+    
     requestAllNodes: ({data}, connection) =>
         connection.send(JSON.stringify({cmd: 'updateNodes', data: getAllNodesInfo()})),
     
@@ -20,7 +22,8 @@ const CommandProcessors = {
     read,
     update,
     'delete': delet,
-    has
+    has,
+    keys
 
 };
 

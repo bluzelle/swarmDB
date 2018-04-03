@@ -22,11 +22,14 @@ describe('JSON Editor functionality.', () => {
 
     });
 
-    it('should be able to edit json directly', () => {
+
+
+    const editJSON = () => {
 
         setJSON('[1, "crazy text", 3, 4]');
 
         browser.waitForExist('span*=crazy text');
+
 
         // Since we use nested spans in the styling, we want to click
         // only the innermost one (i.e. the last one) to activate the
@@ -36,8 +39,25 @@ describe('JSON Editor functionality.', () => {
 
         last.click();
 
+        browser.waitForExist('input');
+
         browser.setValue('input', '{ "mykey": 123 }');
         browser.submitForm('input');
+
+
+        browser.waitForExist('span*=mykey');
+
+    };
+
+    it('should be able to edit json directly', () => {
+
+        editJSON();
+
+    });
+
+    it('should be able to edit json directly w/ undo', () => {
+
+        editJSON();
 
         checkUndo({
             verifyDo: () =>
@@ -49,7 +69,7 @@ describe('JSON Editor functionality.', () => {
     });
 
 
-    it('should have a working plus button for objects', () => {
+    const objPlus = () => {
 
         browser.moveToObject('span*=(0 entries)');
 
@@ -58,6 +78,19 @@ describe('JSON Editor functionality.', () => {
         plus.click();
 
         browser.keys(['myKey', 'Enter', '132', 'Enter']);
+
+    };
+
+
+    it('should have a working plus button for objects', () => {
+
+        objPlus();
+
+    });
+
+    it('should have a working plus button for objects w/ undo', () => {
+
+        objPlus();
 
         checkUndo({
             verifyDo: () => {
@@ -72,17 +105,38 @@ describe('JSON Editor functionality.', () => {
 
     });
 
-    it('should have a working delete button for objects', () => {
+
+
+    const objDel = () => {
 
         browser.moveToObject('span*=(0 entries)');
 
         browser.click('.glyphicon-pencil');
 
-        browser.keys(['{ "keyA": 123, "keyB": "whence" }', 'Enter']);
+        browser.waitForExist('input');
+
+        browser.keys(['{ "keyA": 123 }', 'Enter']);
 
         browser.moveToObject('span*=123');
 
+        browser.waitForExist('.glyphicon-remove');
+
         browser.elements('.glyphicon-remove').value[1].click();
+
+        browser.waitForExist('span*=123', 500, true);
+
+    };
+
+    it('should have a working delete button for objects', () => {
+
+        objDel();
+
+    });
+
+
+    it('should have a working delete button for objects w/ undo', () => {
+
+        objDel();
 
         checkUndo({
             verifyDo: () =>
@@ -94,7 +148,8 @@ describe('JSON Editor functionality.', () => {
     });
 
 
-    it('should have a working plus button for arrays', () => {
+
+    const plusArray = () => {
 
         browser.moveToObject('span*=(0 entries)');
 
@@ -106,6 +161,19 @@ describe('JSON Editor functionality.', () => {
 
         browser.keys(['999', 'Enter']);
 
+    };
+
+    it('should have a working plus button for arrays', () => {
+
+        plusArray();
+
+    });
+
+
+    it('should have a working plus button for arrays w/undo', () => {
+
+       plusArray();
+
         checkUndo({
             verifyDo: () =>
                 browser.waitForExist('span*=999'),
@@ -115,7 +183,9 @@ describe('JSON Editor functionality.', () => {
 
     });
 
-    it('should have a working delete button for arrays', () => {
+
+
+    const arrDel = () => {
 
         browser.moveToObject('span*=(0 entries)');
 
@@ -126,6 +196,18 @@ describe('JSON Editor functionality.', () => {
         browser.moveToObject('span*=654');
 
         browser.elements('.glyphicon-remove').value[1].click();
+
+    };
+
+    it('should have a working delete button for arrays', () => {
+
+        arrDel();
+
+    });
+
+    it('should have a working delete button for arrays w/ undo', () => {
+
+        arrDel();
 
         checkUndo({
             verifyDo: () =>

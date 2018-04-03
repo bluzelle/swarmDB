@@ -31,26 +31,32 @@ export class NewKeyField extends Component {
     }
 
     render() {
-        const {obj} = this.props;
 
         return (
+
             <React.Fragment>
                 <BS.ListGroupItem>
+                
                     <span style={{display: 'inline-block', width: 25}}>
                         <BS.Glyphicon glyph='asterisk'/>
                     </span>
+
                     <EditableField
                         val={this.state.keyField}
                         active={true}
                         onChange={this.onChange.bind(this)}/>
+
                 </BS.ListGroupItem>
 
                 {this.state.showModal &&
+
                     <TypeModal
                         onHide={this.exit.bind(this)}
-                        obj={obj}
                         keyField={this.state.keyField}/>}
+
             </React.Fragment>
+
         );
+
     }
 }
