@@ -73,7 +73,7 @@ describe('cmd line', () => {
                 expect(log).to.have.string('Found peer 123.45.67.123:50000 (fake_1)'));
 
             it('logs number of peers found', () =>
-                expect(log).to.have.string('Found 3 new peers'));
+                expect(log).to.have.string('Found 4 new peers'));
 
             after( async () => {
                 exec('cd ../../; yarn daemon-kill');
@@ -138,7 +138,7 @@ describe('cmd line', () => {
                 expect(log).to.have.string('Found peer 123.45.67.123:50000 (fake_1)'));
 
             it('logs number of peers found', () =>
-                expect(log).to.have.string('Found 3 new peers'));
+                expect(log).to.have.string('Found 4 new peers'));
 
             after( async () => {
                 exec('cd ../../; yarn daemon-kill');
@@ -170,6 +170,34 @@ describe('cmd line', () => {
 
             it('logs number of peers found', () =>
                 expect(log).to.have.string('Found 4 new peers'));
+
+            after( async () => {
+                exec('cd ../../; yarn daemon-kill');
+                await waitUntil( () => logFileMoved(logFileName));
+            });
+        });
+
+        describe('with -a -l -p -bootstrap_url -b', () => {
+
+            before( async () => {
+                exec(`cd ${PATH_TO_DAEMON}/daemon; ./swarm -a 0xf88CD1943406a0A6c1492C35Bb0eE645CD7eA656 -l 127.0.0.1 -p 49155 --bootstrap_url pastebin.com/raw/mbdezA9Z -b peers.json`);
+                [log, logFileName] = await waitForStartup();
+            });
+
+            it('reads from local peerlist', () =>
+                expect(log).to.have.string('Reading peers from peers.json'));
+
+            it('reads from remote peerlist', () =>
+                expect(log).to.have.string('Downloaded peer list from pastebin.com/raw/mbdezA9Z'));
+
+            it('logs number of peers found', () =>
+                expect(log).to.have.string('Found 4 new peers'));
+
+            it('logs number of peers found', () =>
+                expect(log).to.have.string('Found 3 new peers'));
+
+            it('ignores duplicate addresses, using local list as truth', () =>
+                expect(log).to.have.string('Ignored 1 duplicate addresses'));
 
             after( async () => {
                 exec('cd ../../; yarn daemon-kill');
