@@ -4,7 +4,7 @@ const Node = require('./Node');
 const fp = require('lodash/fp');
 const {maxNodes, behaveRandomly} = require('./Values');
 const CommandProcessors = require('./CommandProcessors');
-const {getData, setData} = require('./DataStore.js');
+const {getData, setData, setup, uuids} = require('./DataStore.js');
 
 require.main === module && setTimeout(start);
 
@@ -13,6 +13,7 @@ const nodes = require('./NodeStore').nodes;
 let initialStartPort;
 let lastPort;
 let randomBehavior = false;
+let defaultUuid = '2222';
 
 module.exports = {
     getNodes: () => nodes.values(),
@@ -24,20 +25,26 @@ module.exports = {
         return nodes.values().map(node => node.shutdown())
     },
     start: _.once(start),
-    getData: getData,
-    setData: setData,
+    getData: uuid => getData(uuid),
+    setData: uuid => setData(uuid),
     behaveRandomly: (v) => behaveRandomly.set(v),
     isRandom: () => behaveRandomly.get()
 };
 
-module.exports.reset = async function() {
+module.exports.reset = async function(uuid = defaultUuid) {
 
+    // This wipes all databases
+    uuids.clear();
+
+    setup({'db-uuid': uuid});
     this.start();
 
     await Promise.all(this.shutdown());
 
     this.setMaxNodes(1);
-    setData({});
+
+    // This empties a specific database
+    setData(uuid, {});
 
     await new Promise(resolve => (function loop() {
 
@@ -52,7 +59,8 @@ module.exports.reset = async function() {
 
 
 
-function start(startPort = 8100) {
+function start(startPort = 8100, uuid = defaultUuid) {
+
     initialStartPort = lastPort = startPort;
     module.exports.wasStarted = true;
 
@@ -67,7 +75,9 @@ function start(startPort = 8100) {
     (function checkNeedLessNodes() {
         nodes.size > maxNodes.get() && getRandomNode().shutdown();
         setTimeout(checkNeedLessNodes, 250);
-    }())
+    }());
+
+    setup({'db-uuid': uuid});
 }
 
 

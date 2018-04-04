@@ -2,7 +2,6 @@ const {valToBase64, base64ToVal} = require('../base64convert');
 const {isEqual} = require('lodash');
 const assert = require('assert');
 
-
 describe('base64 convert', () => {
 
 	it('should convert numbers', () => {

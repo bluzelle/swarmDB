@@ -2,7 +2,7 @@ const WebSocket = require('isomorphic-ws');
 
 const connections = new Set();
 const resolvers = new Map();
-
+let uuid;
 
 const ping = () => new Promise(resolve => {
 
@@ -14,7 +14,8 @@ const ping = () => new Promise(resolve => {
 });
 
 
-const connect = addr => {
+const connect = (addr, id) => {
+    uuid = id;
 
     return new Promise(resolve => {
 
@@ -35,7 +36,8 @@ const connect = addr => {
 
         }
 
-        s.onmessage = e => onMessage(JSON.parse(e.data), s);
+        s.onmessage = e =>
+            onMessage(JSON.parse(e.data), s)
 
     });
 
@@ -69,6 +71,11 @@ const amendBznApi = obj =>
         'bzn-api': 'crud'
     });
 
+const amendUuid = (uuid, obj) =>
+    Object.assign(obj, {
+        'db-uuid': uuid
+    });
+
 
 const amendRequestID = (() => {
 
@@ -84,14 +91,25 @@ const amendRequestID = (() => {
 
 const send = (obj, resolver) => {
 
-    const message = amendRequestID(obj);
-
+    const message = amendUuid(uuid , amendRequestID(obj));
     resolvers.set(message.request_id, resolver);
 
     for(let connection of connections.values()) {
         connection.send(JSON.stringify(message));
     }
 };
+
+const setup = () => new Promise((resolve, reject) => {
+
+    const cmd = amendBznApi({
+        cmd: 'setup'
+    });
+
+
+    send(cmd, obj =>
+        obj.error ? reject(new Error(obj.error)) : resolve());
+
+});
 
 
 const update = (key, value) => new Promise((resolve, reject) => {
@@ -169,11 +187,11 @@ const keys = () => new Promise(resolve => {
 
 
 module.exports = {
-    
+    getUuid: () => uuid,
     connect,
     disconnect,
     ping,
-
+    setup,
     read,
     update,
     remove,

@@ -3,34 +3,31 @@ const api = require('../api');
 const assert = require('assert');
 
 
-beforeEach(reset);
-
-
 describe('bluzelle api', () => {
 
-    beforeEach(() =>
-        api.connect('ws://localhost:8100'));
+    beforeEach(reset);
+
+    beforeEach( async () => {
+        await api.connect('ws://localhost:8100', '71e2cd35-b606-41e6-bb08-f20de30df76c');
+        api.setup();
+    });
 
     afterEach(() =>
         api.disconnect());
 
 
-    const isEqual = (a, b) => 
+    const isEqual = (a, b) =>
         a.length === b.length && !a.some((v, i) => b[i] !== v);
 
-
-
     it('should be able to connect many times', async () => {
-       
-        await api.connect('ws://localhost:8100');
-        await api.connect('ws://localhost:8100');
-        await api.connect('ws://localhost:8100');
+
+        await api.connect('ws://localhost:8100', '71e2cd35-b606-41e6-bb08-f20de30df76c');
+        await api.connect('ws://localhost:8100', '71e2cd35-b606-41e6-bb08-f20de30df76c');
+        await api.connect('ws://localhost:8100', '71e2cd35-b606-41e6-bb08-f20de30df76c');
 
     });
 
-
     it('should be able to create and read number fields', async () => {
-
         await api.update('myKey', 123);
         assert(await api.read('myKey') === 123);
 
