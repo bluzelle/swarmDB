@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bluzelle/swarmDB.svg?branch=devel)](https://travis-ci.org/bluzelle/swarmDB)
+
 BUILD INSTRUCTIONS
 ==================
 
