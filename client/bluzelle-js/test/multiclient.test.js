@@ -5,6 +5,9 @@ const path = require('path');
 
 const api1 = require('../api');
 
+
+// This enables us to have two copies of the library with seperate state
+
 delete require.cache[path.resolve(__dirname + '/../communication.js')];
 delete require.cache[path.resolve(__dirname + '/../api.js')];
 
