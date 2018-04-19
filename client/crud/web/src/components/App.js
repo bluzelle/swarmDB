@@ -13,7 +13,7 @@ import DevTools from 'mobx-react-devtools';
 // configureDevtool({logEnabled: true});
 
 
-import {connect} from 'bluzelle';
+import {connect, setup} from 'bluzelle';
 
 
 @observer
@@ -28,12 +28,18 @@ export class App extends Component {
     }
 
 
-    go() {
+    go(ws_url, uuid) {
 
-        connect('ws://localhost:8100/').then(() => {
+        // 'ws://localhost:8100/'
 
-            this.setState({
-                connected: true
+        connect(ws_url, uuid).then(() => {
+
+            setup().then(() => {
+
+                this.setState({
+                    connected: true
+                });
+
             });
 
         });

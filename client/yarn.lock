@@ -1014,12 +1014,16 @@ bluebird@^3.5.1:
 "bluzelle-client-common@file:bluzelle-client-common":
   version "1.0.0"
 
+"bluzelle-client-common@file:bluzelle-client-common/":
+  version "1.0.0"
+
 "bluzelle@file:bluzelle-js":
-  version "0.0.1"
+  version "0.1.0"
   dependencies:
     base64-arraybuffer "^0.1.5"
     buffer "^5.1.0"
     isomorphic-ws "^4.0.0"
+    websocket "^1.0.25"
 
 bn.js@^4.0.0, bn.js@^4.1.0, bn.js@^4.1.1, bn.js@^4.4.0:
   version "4.11.8"
@@ -5900,6 +5904,10 @@ util@0.10.3, util@^0.10.3:
 uuid@^3.0.0, uuid@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.1.0.tgz#3dd3d3e790abc24d7b0d3a034ffababe28ebbc04"
+
+uuid@^3.2.1:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.2.1.tgz#12c528bb9d58d0b9265d9a2f6f0fe8be17ff1f14"
 
 validate-npm-package-license@^3.0.1:
   version "3.0.1"
