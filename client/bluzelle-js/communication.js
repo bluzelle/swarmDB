@@ -52,18 +52,30 @@ const onMessage = (event, socket) => {
 
     }
 
-    resolvers.get(event.response_to)(event);
+    if(event.redirect) {
 
-};
+        disconnect().then(() => {
 
+            connect(event.redirect, uuid).then(() => {
 
-// TODO: return promise
+               send(JSON.parse(event.data), resolvers.get(event.response_to));
 
-const disconnect = () => {
-    for(let connection of connections.values()) {
-        connection.close();
+            });
+
+        });
+
+    } else {
+
+        resolvers.get(event.response_to)(event);
+
     }
+
 };
+
+
+
+const disconnect = () => 
+    Promise.all(Array.from(connections).map(con => con.close()));
 
 
 const amendBznApi = obj =>
