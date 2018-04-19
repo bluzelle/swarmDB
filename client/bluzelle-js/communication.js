@@ -58,7 +58,7 @@ const onMessage = (event, socket) => {
 
             connect(event.redirect, uuid).then(() => {
 
-               send(JSON.parse(event.data), resolvers.get(event.response_to));
+               send(event.data, resolvers.get(event.response_to));
 
             });
 

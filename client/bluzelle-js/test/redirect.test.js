@@ -19,8 +19,7 @@ const assert = require('assert');
 
 	before(async () => {
 
-		// Here we're going to mock the daemon with a simple redirect 
-		// server.
+		// Here we're going to mock the daemon with a simple redirect message.
 
 		httpServer = http.createServer();
 		await httpServer.listen(port);
@@ -39,7 +38,7 @@ const assert = require('assert');
 				connection.send(JSON.stringify({
 					response_to: id,
 					redirect: 'ws://localhost:8100', // Proper emulator
-					data: message
+					data: JSON.parse(message)
 				}));
 			}));
 
