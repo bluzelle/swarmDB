@@ -29,9 +29,7 @@ export class App extends Component {
 
 
     go(ws_url, uuid) {
-
-        // 'ws://localhost:8100/'
-
+        
         connect(ws_url, uuid).then(() => {
 
             setup().then(() => {

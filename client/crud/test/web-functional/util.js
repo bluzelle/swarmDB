@@ -1,13 +1,10 @@
 import {nodes} from "./emulator/NodeStore";
 import {setMaxNodes, shutdown, setData} from "./emulator/Emulator";
 
-export const reset = () => {
-    wrapAsync(() => Promise.all(shutdown()))();
-    setMaxNodes(1);
-    setData({});
-    browser.waitUntil(() => nodes.keys().length);
-};
+const api = require('bluzelle');
 
+export const reset = () =>
+    require('./emulator/Emulator').reset(api.getUuid());
 
 
 const undo = () =>
