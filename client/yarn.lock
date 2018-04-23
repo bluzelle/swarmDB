@@ -1014,9 +1014,6 @@ bluebird@^3.5.1:
 "bluzelle-client-common@file:bluzelle-client-common":
   version "1.0.0"
 
-"bluzelle-client-common@file:bluzelle-client-common/":
-  version "1.0.0"
-
 "bluzelle@file:bluzelle-js":
   version "0.1.0"
   dependencies:
