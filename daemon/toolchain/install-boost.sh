@@ -32,3 +32,6 @@ if [ ! -e ${BOOST_PACKAGE_DIR}/libs ]; then
 else
     echo "Using cached Boost"
 fi
+
+echo "BOOST_ROOT=${BOOST_PACKAGE_DIR}"
+export BOOST_ROOT=${BOOST_PACKAGE_DIR}
