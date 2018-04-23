@@ -1,6 +1,0 @@
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 49152,
-  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
-  "bootstrap_file" : "./peers.json"
-}

@@ -1,1 +1,0 @@
-../../../bluzelle-client-common/webpack-test.config.js
