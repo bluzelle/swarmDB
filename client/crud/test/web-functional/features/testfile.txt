@@ -1,3 +1,0 @@
-Useless text.
-
-This is used in FileEditor.specs.js.
