@@ -1,18 +1,31 @@
+// Copyright (C) 2018 Bluzelle
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License, version 3,
+// as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+#pragma once
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/regex.hpp>
-#include <cstdlib>
-#include <iostream>
-#include <string>
+#include <regex>
 
 #include <include/bluzelle.hpp>
 
 namespace
 {
-    boost::regex url_regex{
+    std::regex url_regex{
         R"((?:http://)?)"      // Throw away http:// and www. if they're there
         R"((?:www\.)?)"
         R"(([^/\.]+\.[^/]+))"  // Domain must be something.something
@@ -32,8 +45,8 @@ namespace bzn::http
 		tcp::resolver resolver{ioc};
 		tcp::socket socket{ioc};
 
-        boost::smatch what;
-        if(!boost::regex_match(url, what, url_regex)){
+        std::smatch what;
+        if(!std::regex_match(url, what, url_regex)){
             LOG(error) << "could not parse url " << url;
             throw std::runtime_error("could not parse url " + url);
         }

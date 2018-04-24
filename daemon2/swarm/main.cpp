@@ -12,15 +12,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include <options/options.hpp>
-#include <node/node.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
+#include <crud/crud.hpp>
+#include <node/node.hpp>
+#include <options/options.hpp>
+#include <raft/raft.hpp>
+#include <storage/storage.hpp>
 
-#include <boost/program_options.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/program_options.hpp>
 
 
 void init_logging()
@@ -56,6 +59,24 @@ void init_logging()
 }
 
 
+void set_logging_level(const bzn::options& options)
+{
+    if (options.get_debug_logging())
+    {
+        LOG(info) << "debug logging enabled";
+
+        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+    }
+    else
+    {
+        LOG(info) << "debug logging disabled";
+
+        boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
+    }
+}
+
+
+
 void print_banner(const bzn::options& options)
 {
     std::stringstream ss;
@@ -68,7 +89,6 @@ void print_banner(const bzn::options& options)
         << '\n';
 
     LOG(info) << ss.str();
-    std::cout << ss.str();
 }
 
 
@@ -76,14 +96,19 @@ int main(int argc, const char* argv[])
 {
     try
     {
-        init_logging();
-
         bzn::options options;
 
         if (!options.parse_command_line(argc, argv))
         {
             return 0;
         }
+
+        if (!options.get_log_to_stdout())
+        {
+            init_logging();
+        }
+
+        set_logging_level(options);
 
         bzn::bootstrap_peers init_peers;
         std::string peers_file = options.get_bootstrap_peers_file();
@@ -118,7 +143,7 @@ int main(int argc, const char* argv[])
 
         // todo: just for testing...
         node->register_for_message("ping",
-            [](const bzn::msg& msg, std::shared_ptr<bzn::session_base> session)
+            [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
                 LOG(info) << '\n' << msg.toStyledString();
 
@@ -126,8 +151,11 @@ int main(int argc, const char* argv[])
                 reply["bzn-api"] = "pong";
 
                 // echo back what the client sent...
-                session->send_msg(reply, nullptr);
+                session->send_message(reply, nullptr);
             });
+
+        // add raft
+        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
 
         // setup signal handler...
         boost::asio::signal_set signals(io_context->get_io_context(), SIGINT, SIGTERM);
@@ -142,6 +170,11 @@ int main(int argc, const char* argv[])
             });
 
         node->start();
+        raft->start();
+
+        auto storage = std::make_shared<bzn::storage>(node);
+
+        auto crud = std::make_shared<bzn::crud>(node, raft, storage);
 
         print_banner(options);
 

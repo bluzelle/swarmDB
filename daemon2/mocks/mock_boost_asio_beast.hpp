@@ -50,12 +50,31 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
+    class Mocksteady_timer_base : public steady_timer_base {
+    public:
+        MOCK_METHOD1(async_wait,
+            void(wait_handler handler));
+        MOCK_METHOD1(expires_from_now,
+            std::size_t(const std::chrono::milliseconds& expiry_time));
+        MOCK_METHOD0(cancel,
+            void());
+        MOCK_METHOD0(get_steady_timer,
+            boost::asio::steady_timer&());
+    };
+
+}  // namespace bzn::asio
+
+
+namespace bzn::asio {
+
     class Mockio_context_base : public io_context_base {
     public:
         MOCK_METHOD1(make_unique_tcp_acceptor,
             std::unique_ptr<bzn::asio::tcp_acceptor_base>(const boost::asio::ip::tcp::endpoint& ep));
         MOCK_METHOD0(make_unique_tcp_socket,
             std::unique_ptr<bzn::asio::tcp_socket_base>());
+        MOCK_METHOD0(make_unique_steady_timer,
+            std::unique_ptr<bzn::asio::steady_timer_base>());
         MOCK_METHOD0(run,
             boost::asio::io_context::count_type());
         MOCK_METHOD0(stop,

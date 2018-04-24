@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <boost/asio.hpp>
 #include <node/session_base.hpp>
 #include <json/json.h>
 
@@ -31,7 +32,7 @@ namespace bzn
          * @param msg_handler   callback
          * @return true if registration succeeded
          */
-        virtual bool register_for_message(const std::string& msg_type, bzn::msg_handler msg_handler) = 0;
+        virtual bool register_for_message(const std::string& msg_type, bzn::message_handler msg_handler) = 0;
 
         /**
          * Start server's listener etc.
@@ -44,7 +45,7 @@ namespace bzn
          * @param msg           message to send
          * @param reply_handler if set the callback is executed for the reply
          */
-        virtual void send_msg(const boost::asio::ip::tcp::endpoint& ep, const bzn::msg& msg, bzn::msg_handler reply_handler) = 0;
+        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, const bzn::message& msg, bzn::message_handler reply_handler) = 0;
     };
 
 } // blz

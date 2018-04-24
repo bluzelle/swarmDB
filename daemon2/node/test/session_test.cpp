@@ -35,7 +35,7 @@ namespace bzn
         ));
 
         // only one call on success...
-        EXPECT_CALL(*websocket_stream, is_open()).WillOnce(Return(false));
+        EXPECT_CALL(*websocket_stream, is_open()).Times(2).WillRepeatedly(Return(false));
         EXPECT_CALL(*websocket_stream, async_read(_,_));
 
         session->start([](auto&,auto){});
@@ -102,9 +102,10 @@ namespace bzn
         auto session = std::make_shared<bzn::session>(websocket_stream);
 
         EXPECT_CALL(*websocket_stream, async_write(_,_));
+        EXPECT_CALL(*websocket_stream, is_open()).WillOnce(Return(false));
 
         // no read exepected...
-        session->send_msg("asdf", nullptr);
+        session->send_message("asdf", nullptr);
 
         // read should be setup...
         bzn::asio::write_handler write_handler;
@@ -115,7 +116,7 @@ namespace bzn
             }));
 
         EXPECT_CALL(*websocket_stream, async_read(_,_));
-        session->send_msg("asdf", [](const auto&, auto){});
+        session->send_message("asdf", [](const auto&, auto){});
         write_handler(boost::system::error_code(), 0);
 
         // error no read should be setup...

@@ -182,7 +182,7 @@ namespace  bzn
                 return std::move(mock_websocket_stream);
             }));
 
-        node->send_msg(TEST_ENDPOINT, "{}", nullptr);
+        node->send_message(TEST_ENDPOINT, "{}", nullptr);
 
         // call with no error to validate handshake...
         connect_handler(boost::system::error_code());
@@ -208,7 +208,7 @@ namespace  bzn
                 LOG(info) << '\n' << msg.toStyledString();
 
                 // echo back what the client sent...
-                session->send_msg(msg, nullptr);
+                session->send_message(msg, nullptr);
             });
 
         node->start();

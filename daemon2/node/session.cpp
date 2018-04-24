@@ -24,8 +24,24 @@ session::session(std::shared_ptr<bzn::beast::websocket_stream_base> websocket)
 }
 
 
+session::~session()
+{
+    if (this->websocket->is_open())
+    {
+        boost::system::error_code ec;
+
+        this->websocket->get_websocket().close(boost::beast::websocket::close_code::normal, ec);
+
+        if (ec)
+        {
+           LOG(debug) << "failed to close websocket: " << ec.message();
+        }
+    }
+}
+
+
 void
-session::start(bzn::msg_handler handler)
+session::start(bzn::message_handler handler)
 {
     this->handler = std::move(handler);
 
@@ -50,7 +66,7 @@ session::start(bzn::msg_handler handler)
 
 
 void
-session::do_read(bzn::msg_handler reply_handler)
+session::do_read(bzn::message_handler reply_handler)
 {
     this->buffer.consume(this->buffer.size());
 
@@ -96,7 +112,7 @@ session::do_read(bzn::msg_handler reply_handler)
 
 
 void
-session::send_msg(const bzn::msg& msg, bzn::msg_handler reply_handler)
+session::send_message(const bzn::message& msg, bzn::message_handler reply_handler)
 {
     this->websocket->async_write(boost::asio::buffer(msg.toStyledString()),
         [self = shared_from_this(), reply_handler](auto ec, auto bytes_transferred)
@@ -104,6 +120,11 @@ session::send_msg(const bzn::msg& msg, bzn::msg_handler reply_handler)
             if (ec)
             {
                 LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
+
+                if(reply_handler)
+                {
+                    reply_handler(bzn::message(), nullptr);
+                }
                 return;
             }
 

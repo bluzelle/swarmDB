@@ -14,11 +14,10 @@
 
 #pragma once
 
-#include <include/bluzelle.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 
-// todo: this file needs a better name
+// todo: this file needs a better name!
 
 namespace bzn::asio
 {
@@ -27,6 +26,7 @@ namespace bzn::asio
     using    read_handler = std::function<void(const boost::system::error_code& ec, size_t bytes_transfered)>;
     using   write_handler = std::function<void(const boost::system::error_code& ec, size_t bytes_transfered)>;
     using connect_handler = std::function<void(const boost::system::error_code& ec)>;
+    using    wait_handler = std::function<void(const boost::system::error_code& ec)>;
 
     ///////////////////////////////////////////////////////////////////////////
     // mockable interfaces...
@@ -57,6 +57,22 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
 
+    class steady_timer_base
+    {
+    public:
+        virtual ~steady_timer_base() = default;
+
+        virtual void async_wait(wait_handler handler) = 0;
+
+        virtual std::size_t expires_from_now(const std::chrono::milliseconds& expiry_time) = 0;
+
+        virtual void cancel() = 0;
+
+        virtual boost::asio::steady_timer& get_steady_timer() = 0;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
     class io_context_base
     {
     public:
@@ -65,6 +81,8 @@ namespace bzn::asio
         virtual std::unique_ptr<bzn::asio::tcp_acceptor_base> make_unique_tcp_acceptor(const boost::asio::ip::tcp::endpoint& ep) = 0;
 
         virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() = 0;
+
+        virtual std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() = 0;
 
         virtual boost::asio::io_context::count_type run() = 0;
 
@@ -79,22 +97,22 @@ namespace bzn::asio
     class tcp_socket final : public tcp_socket_base
     {
     public:
-        tcp_socket(boost::asio::io_context& io_context)
+        explicit tcp_socket(boost::asio::io_context& io_context)
             : socket(io_context)
         {
         }
 
-        void async_connect(const boost::asio::ip::tcp::endpoint& ep, bzn::asio::connect_handler handler)
+        void async_connect(const boost::asio::ip::tcp::endpoint& ep, bzn::asio::connect_handler handler) override
         {
             this->socket.async_connect(ep, handler);
         }
 
-        boost::asio::ip::tcp::endpoint remote_endpoint()
+        boost::asio::ip::tcp::endpoint remote_endpoint() override
         {
             return this->socket.remote_endpoint();
         }
 
-        boost::asio::ip::tcp::socket& get_tcp_socket()
+        boost::asio::ip::tcp::socket& get_tcp_socket() override
         {
             return this->socket;
         }
@@ -108,17 +126,17 @@ namespace bzn::asio
     class tcp_acceptor final : public tcp_acceptor_base
     {
     public:
-        tcp_acceptor(boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& ep)
+        explicit tcp_acceptor(boost::asio::io_context& io_context, const boost::asio::ip::tcp::endpoint& ep)
             : acceptor(io_context, ep)
         {
         }
 
-        void async_accept(bzn::asio::tcp_socket_base& socket, bzn::asio::accept_handler handler)
+        void async_accept(bzn::asio::tcp_socket_base& socket, bzn::asio::accept_handler handler) override
         {
             this->acceptor.async_accept(socket.get_tcp_socket(), std::move(handler));
         }
 
-        boost::asio::ip::tcp::acceptor& get_tcp_acceptor()
+        boost::asio::ip::tcp::acceptor& get_tcp_acceptor() override
         {
             return this->acceptor;
         }
@@ -129,30 +147,69 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
 
+    class steady_timer final : public steady_timer_base
+    {
+    public:
+        explicit steady_timer(boost::asio::io_context& io_context)
+            : timer(io_context)
+        {
+        }
+
+        void async_wait(wait_handler handler) override
+        {
+            this->timer.async_wait(handler);
+        }
+
+        std::size_t expires_from_now(const std::chrono::milliseconds& expiry_time) override
+        {
+            return this->timer.expires_from_now(expiry_time);
+        }
+
+        void cancel() override
+        {
+            this->timer.cancel();
+        }
+
+        boost::asio::steady_timer& get_steady_timer() override
+        {
+            return this->timer;
+        }
+
+    private:
+        boost::asio::steady_timer timer;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
     class io_context final : public io_context_base
     {
     public:
-        std::unique_ptr<bzn::asio::tcp_acceptor_base> make_unique_tcp_acceptor(const boost::asio::ip::tcp::endpoint& ep)
+        std::unique_ptr<bzn::asio::tcp_acceptor_base> make_unique_tcp_acceptor(const boost::asio::ip::tcp::endpoint& ep) override
         {
             return std::make_unique<bzn::asio::tcp_acceptor>(this->io_context, ep);
         }
 
-        virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket()
+        std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() override
         {
             return std::make_unique<bzn::asio::tcp_socket>(this->io_context);
         }
 
-        boost::asio::io_context::count_type run()
+        std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() override
+        {
+            return std::make_unique<bzn::asio::steady_timer>(this->io_context);
+        }
+
+        boost::asio::io_context::count_type run() override
         {
             return this->io_context.run();
         }
 
-        void stop()
+        void stop() override
         {
             this->io_context.stop();
         }
 
-        boost::asio::io_context& get_io_context()
+        boost::asio::io_context& get_io_context() override
         {
             return this->io_context;
         }
@@ -198,42 +255,42 @@ namespace bzn::beast
     class websocket_stream final : public websocket_stream_base
     {
     public:
-        websocket_stream(boost::asio::ip::tcp::socket socket)
+        explicit websocket_stream(boost::asio::ip::tcp::socket socket)
             : websocket(std::move(socket))
         {
         }
 
-        boost::beast::websocket::stream<boost::asio::ip::tcp::socket>& get_websocket()
+        boost::beast::websocket::stream<boost::asio::ip::tcp::socket>& get_websocket() override
         {
             return this->websocket;
         }
 
-        void async_accept(bzn::asio::accept_handler handler)
+        void async_accept(bzn::asio::accept_handler handler) override
         {
             this->websocket.async_accept(handler);
         }
 
-        void async_read(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler)
+        void async_read(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler) override
         {
             this->websocket.async_read(buffer, handler);
         }
 
-        void async_write(const boost::asio::const_buffers_1& buffer, bzn::asio::write_handler handler)
+        void async_write(const boost::asio::const_buffers_1& buffer, bzn::asio::write_handler handler) override
         {
             this->websocket.async_write(buffer, handler);
         }
 
-        void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler)
+        void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler) override
         {
             this->websocket.async_close(reason, handler);
         }
 
-        void async_handshake(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler)
+        void async_handshake(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler) override
         {
             this->websocket.async_handshake(host, target, handler);
         }
 
-        bool is_open()
+        bool is_open() override
         {
             return this->websocket.is_open();
         }
@@ -257,7 +314,7 @@ namespace bzn::beast
     class websocket final : public websocket_base
     {
     public:
-        std::unique_ptr<bzn::beast::websocket_stream_base> make_unique_websocket_stream(boost::asio::ip::tcp::socket& socket)
+        std::unique_ptr<bzn::beast::websocket_stream_base> make_unique_websocket_stream(boost::asio::ip::tcp::socket& socket) override
         {
             return std::make_unique<bzn::beast::websocket_stream>(std::move(socket));
         }

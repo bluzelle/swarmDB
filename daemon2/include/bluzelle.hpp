@@ -14,50 +14,36 @@
 
 #pragma once
 
-#include <boost/asio.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <functional>
 #include <string_view>
 #include <json/json.h>
 
+#define GCC_VERSION (__GNUC__ * 10000 \
+                     + __GNUC_MINOR__ * 100 \
+                     + __GNUC_PATCHLEVEL__)
 
 namespace bzn
 {
-    using msg = Json::Value;
+    using message = Json::Value;
 
-    constexpr std::string_view BLUZELLE_VERSION = "0.0.1";
+    const std::string_view BLUZELLE_VERSION = "0.0.1";
 
-    using uuid_t = boost::uuids::uuid;
-
-    /*
-    using node_info = struct
-    {
-        std::string host;
-        uint16_t    port;
-        std::string name;
-
-        boost::uuids::uuid id;
-        std::string ethereum_address;
-        uint64_t    ropsten_token_balance;
-    };
-    */
-
-    // forward declare...
-    class session_base;
-
-    using msg_handler = std::function<void(const Json::Value& msg, std::shared_ptr<bzn::session_base> session)>;
+    using uuid_t = std::string;
 
 } // bzn
 
 
 namespace bzn::utils
 {
-    constexpr std::string_view basename(const std::string_view& path)
+#if __APPLE__ || GCC_VERSION > 70200
+    constexpr
+#else
+    inline
+#endif
+    std::string_view basename(const std::string_view& path)
     {
         return path.substr(path.rfind('/') + 1);
     }
-
 } // bzn::utils
 
 

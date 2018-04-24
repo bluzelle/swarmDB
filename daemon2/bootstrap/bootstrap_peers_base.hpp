@@ -11,18 +11,29 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 #pragma once
-
-#include <string>
-#include <unordered_set>
-
-#include <boost/functional/hash.hpp>
 
 #include <include/bluzelle.hpp>
 #include <bootstrap/peer_address.hpp>
+#include <unordered_set>
+
+
+namespace std
+{
+    template<> struct hash<bzn::peer_address>
+    {
+        size_t operator()(const bzn::peer_address& x) const noexcept
+        {
+            return std::hash<std::string>()(std::string{x.host} + std::to_string(x.port));
+        }
+    };
+}
 
 namespace bzn
 {
+    using peers_list_t = std::unordered_set<bzn::peer_address>;
+
     class bootstrap_peers_base
     {
     public:
@@ -44,6 +55,7 @@ namespace bzn
         /**
          * @return a reference to the initial set of peers
          */
-        virtual const std::unordered_set<peer_address, boost::hash<peer_address>>& get_peers() const = 0; 
+        virtual const peers_list_t& get_peers() const = 0;
     };
-}
+
+} // namespace bzn
