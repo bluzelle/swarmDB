@@ -1,4 +1,4 @@
-#set(test_srcs raft_test.cpp log_test.cpp)
-#set(test_libs raft bootstrap)
-#
-#add_gmock_test(raft_tests)
+set(test_srcs crud_tests.cpp)
+set(test_libs crud node storage bootstrap raft)
+
+add_gmock_test(crud_tests)

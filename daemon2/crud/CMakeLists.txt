@@ -7,4 +7,4 @@ add_library(crud STATIC
 target_link_libraries(crud)
 target_include_directories(crud PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
-#add_subdirectory(test)
+add_subdirectory(test)

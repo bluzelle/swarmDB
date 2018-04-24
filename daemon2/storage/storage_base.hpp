@@ -18,6 +18,9 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 namespace bzn
 {
@@ -25,24 +28,44 @@ namespace bzn
     {
     public:
 
-        using record = struct
+        struct record
         {
+            friend class boost::serialization::access;
             std::chrono::seconds timestamp;
             std::string          value;
             bzn::uuid_t          transaction_id;
+
+            template <class Archive>
+            void
+            serialize(Archive& ar, const unsigned int /*version*/)
+            {
+                auto ts = this->timestamp.count();
+
+                ar & this->value & this->transaction_id & ts;
+
+                this->timestamp = std::chrono::seconds(ts);
+            }
         };
+
+        enum class result : uint8_t
+        { ok=0, not_found, exists, not_saved };
 
         virtual ~storage_base() = default;
 
-        virtual void create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
+        virtual storage_base::result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
 
         virtual std::shared_ptr<bzn::storage_base::record> read(const bzn::uuid_t& uuid, const std::string& key) = 0;
 
-        virtual void update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
+        virtual storage_base::result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
 
-        virtual void remove(const bzn::uuid_t& uuid, const std::string& key) = 0;
+        virtual storage_base::result remove(const bzn::uuid_t& uuid, const std::string& key) = 0;
 
-        virtual void start() = 0;
+        virtual storage_base::result save(const std::string& path) = 0;
+
+        virtual storage_base::result load(const std::string& path) = 0;
+
+        virtual std::string error_msg(storage_base::result error_id) = 0;
+
+        virtual std::vector<std::string> get_keys(const bzn::uuid_t& uuid) = 0;
     };
-
 } // bzn
