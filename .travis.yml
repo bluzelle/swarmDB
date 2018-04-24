@@ -50,7 +50,7 @@ compiler:
 
 before_script:
   - cd $TRAVIS_BUILD_DIR
-  - travis_retry daemon/toolchain/install-boost.sh
+  - travis_wait daemon/toolchain/install-boost.sh
   - mkdir build
   - cd build
   - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
