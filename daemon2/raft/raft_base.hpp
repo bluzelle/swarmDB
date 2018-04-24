@@ -134,7 +134,8 @@ namespace bzn
          * Storage commit handler called once concensus has been achieved
          * @param handler callback
          */
-        virtual void register_commit_handler(commit_handler handler) = 0;
+        virtual void register_commit_handler(bzn::raft_base::commit_handler handler) = 0;
+
     };
 
 

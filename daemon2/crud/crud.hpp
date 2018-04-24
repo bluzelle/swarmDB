@@ -19,7 +19,7 @@
 #include <raft/raft_base.hpp>
 #include <node/node_base.hpp>
 #include <storage/storage_base.hpp>
-
+#include <unordered_map>
 
 namespace bzn
 {
@@ -31,8 +31,27 @@ namespace bzn
     private:
         void handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
+        void do_tasks(const bzn::message& msg, bzn::message& response);
+        bzn::message do_candidate_tasks(const bzn::message& msg);
+        bzn::message do_follower_tasks(const bzn::message& msg);
+        bzn::message do_leader_tasks(const bzn::message& msg);
+
+        void leader_read_task(const bzn::message& msg, bzn::message& response);
+
+        void handle_create(const bzn::message& msg);
+        void handle_read(const bzn::message& msg, bzn::message& response);
+        void handle_update(const bzn::message& msg);
+        void handle_delete(const bzn::message& msg);
+
+        // TODO move get keys out of crud.
+        void handle_get_keys(const bzn::message& msg, bzn::message& response);
+
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::storage_base> storage;
+
+        using crud_handler_t = std::function<void(const bzn::message& msg)>;
+
+        std::unordered_map<std::string, crud_handler_t> handlers;
     };
 
 } // bzn

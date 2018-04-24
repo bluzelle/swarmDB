@@ -169,10 +169,10 @@ int main(int argc, const char* argv[])
                 }
             });
 
+        auto storage = std::make_shared<bzn::storage>();
+
         node->start();
         raft->start();
-
-        auto storage = std::make_shared<bzn::storage>(node);
 
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
 

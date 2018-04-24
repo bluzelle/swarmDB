@@ -34,6 +34,7 @@ find_package(
         program_options
         system
         thread
+        serialization
 )
 
 if(Boost_FOUND)

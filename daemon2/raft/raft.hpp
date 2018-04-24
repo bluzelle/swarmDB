@@ -20,7 +20,6 @@
 #include <raft/raft_base.hpp>
 #include <node/node_base.hpp>
 #include <memory>
-
 #ifndef __APPLE__
 #include <optional>
 #else

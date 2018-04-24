@@ -390,8 +390,8 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 #ifndef __APPLE__
             this->voted_for.reset();
 #else
-	        this->voted_for = std::experimental::optional<bzn::uuid_t>();
-#endif	    
+            this->voted_for = std::experimental::optional<bzn::uuid_t>();
+#endif
             this->start_election_timer();
             return;
         }
