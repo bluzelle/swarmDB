@@ -16,7 +16,7 @@ if [ -z "${BOOST_INSTALL_DIR}" ]; then
     exit 1
 fi
 
-BOOST_LIBS="test,chrono,coroutine,program_options,random,regex,system,thread"
+BOOST_LIBS="test,chrono,coroutine,program_options,random,regex,system,thread,log,serialization"
 BOOST_VERSION_UNDERSCORES="$(echo "${BOOST_VERSION}" | sed 's/\./_/g')"
 BOOST_TARBALL="boost_${BOOST_VERSION_UNDERSCORES}.tar.gz"
 BOOST_URL="http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}"
