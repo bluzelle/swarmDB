@@ -30,7 +30,14 @@ namespace bzn
         std::string get_ethererum_address() const override;
 
         std::string get_bootstrap_peers_file() const override;
+
         std::string get_bootstrap_peers_url() const override;
+
+        bool get_debug_logging() const override;
+
+        bool get_log_to_stdout() const override;
+
+        bzn::uuid_t get_uuid() const override;
 
     private:
         bool parse(int argc, const char* argv[]);

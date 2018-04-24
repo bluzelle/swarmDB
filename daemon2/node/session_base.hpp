@@ -20,6 +20,11 @@
 
 namespace bzn
 {
+    // forward declare...
+    class session_base;
+
+    using message_handler = std::function<void(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)>;
+
     class session_base
     {
     public:
@@ -29,14 +34,19 @@ namespace bzn
          * Start accepting new connections
          * @param handler   callback to execute when connection is established
          */
-        virtual void start(bzn::msg_handler handler) = 0;
+        virtual void start(bzn::message_handler handler) = 0;
 
         /**
          * Send a message to the connected node
          * @param msg       message
          * @param handler   called if there is a response
          */
-        virtual void send_msg(const bzn::msg& msg, bzn::msg_handler handler) = 0;
+        virtual void send_message(const bzn::message& msg, bzn::message_handler handler) = 0;
+
+        /**
+         * Perform an orderly shutdown of the websocket.
+         */
+        virtual void close() = 0;
     };
 
 } // bzn

@@ -28,6 +28,8 @@ namespace
     const std::string ETHERERUM_KEY              = "ethereum";
     const std::string BOOTSTRAP_PEERS_FILE_KEY   = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL_KEY    = "bootstrap_url";
+    const std::string DEBUG_LOGGING_KEY          = "debug_logging";
+    const std::string LOG_TO_STDOUT_KEY          = "log_to_stdout";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -96,6 +98,14 @@ options::get_bootstrap_peers_url() const
 {
     return this->config_data[BOOTSTRAP_PEERS_URL_KEY].asString();
 }
+
+
+bzn::uuid_t
+options::get_uuid() const
+{
+    return this->config_data["uuid"].asString();
+}
+
 
 void
 options::load(const std::string& config_file)
@@ -166,6 +176,30 @@ options::validate()
     }
 
     return true;
+}
+
+
+bool
+options::get_debug_logging() const
+{
+    if (this->config_data.isMember(DEBUG_LOGGING_KEY))
+    {
+        return this->config_data[DEBUG_LOGGING_KEY].asBool();
+    }
+
+    return false;
+}
+
+
+bool
+options::get_log_to_stdout() const
+{
+    if (this->config_data.isMember(LOG_TO_STDOUT_KEY))
+    {
+        return this->config_data[LOG_TO_STDOUT_KEY].asBool();
+    }
+
+    return false;
 }
 
 

@@ -8,9 +8,10 @@ add_library(node STATIC
         session_base.hpp
         session.hpp
         session.cpp
-        )
+        ../mocks/mock_session_base.hpp)
 
 target_link_libraries(node)
+add_dependencies(node googletest) # for FRIEND_TEST
 target_include_directories(node PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(test)

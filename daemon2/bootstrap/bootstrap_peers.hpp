@@ -11,22 +11,29 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 #pragma once
 
 #include <bootstrap/peer_address.hpp>
 #include <bootstrap/bootstrap_peers_base.hpp>
 
+
 namespace bzn
 {
+
     class bootstrap_peers final : public bzn::bootstrap_peers_base
     {
     public:
         bool fetch_peers_from_file(const std::string& filename) override;
+
         bool fetch_peers_from_url(const std::string& url) override;
-        const std::unordered_set<peer_address, boost::hash<peer_address>>& get_peers() const override;
+
+        const bzn::peers_list_t& get_peers() const override;
 
     private:
-        std::unordered_set<peer_address, boost::hash<peer_address>> peer_addresses;
         bool ingest_json(std::istream& peers);
+
+        bzn::peers_list_t peer_addresses;
     };
-}
+
+} // namespace bzn

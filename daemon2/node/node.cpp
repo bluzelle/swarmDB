@@ -41,7 +41,7 @@ node::start()
 
 
 bool
-node::register_for_message(const std::string& msg_type, bzn::msg_handler msg_handler)
+node::register_for_message(const std::string& msg_type, bzn::message_handler msg_handler)
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
@@ -81,7 +81,7 @@ node::do_accept()
             {
                 auto ep = self->acceptor_socket->remote_endpoint();
 
-                LOG(info) << "connection from: " << ep.address() << ":" << ep.port();
+                LOG(debug) << "connection from: " << ep.address() << ":" << ep.port();
 
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
@@ -98,10 +98,10 @@ node::do_accept()
 void
 node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base> session)
 {
-    std::lock_guard<std::mutex> lock(this->message_map_mutex);
-
     if (msg.isMember(BZN_API_KEY))
     {
+        std::lock_guard<std::mutex> lock(this->message_map_mutex);
+
         if (auto it = this->message_map.find(msg[BZN_API_KEY].asString()); it != this->message_map.end())
         {
             it->second(msg, std::move(session));
@@ -114,7 +114,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 
 
 void
-node::send_msg(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg, bzn::msg_handler reply_handler)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg, bzn::message_handler reply_handler)
 {
     std::shared_ptr<bzn::asio::tcp_socket_base> socket = this->io_context->make_unique_tcp_socket();
 
@@ -124,6 +124,12 @@ node::send_msg(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg,
             if (ec)
             {
                 LOG(error) << "failed to connect to: " << ep.address().to_string() << ":" << ep.port() << " - " << ec.message();
+
+                if (reply_handler)
+                {
+                    reply_handler(bzn::message(), nullptr);
+                }
+
                 return;
             }
 
@@ -136,6 +142,12 @@ node::send_msg(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg,
                     if (ec)
                     {
                         LOG(error) << "handshake failed: " << ec.message();
+
+                        if (reply_handler)
+                        {
+                            reply_handler(bzn::message(), nullptr);
+                        }
+
                         return;
                     }
 
@@ -144,7 +156,7 @@ node::send_msg(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg,
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
 
                     // send the message requested, if a handler is set then they will forward the response...
-                    session->send_msg(msg, reply_handler);
+                    session->send_message(msg, reply_handler);
                 });
         });
 }

@@ -11,20 +11,19 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 #include <include/http_get.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
-
 #include <fstream>
-#include <iostream>
-
 #include <json/json.h>
 
 using namespace bzn;
 
+
 bool bootstrap_peers::fetch_peers_from_file(const std::string& filename)
 {
     std::ifstream file(filename);
-    if(file.fail())
+    if (file.fail())
     {
         LOG(error) << "Failed to read bootstrap peers file " << filename;
         return false;
@@ -34,6 +33,7 @@ bool bootstrap_peers::fetch_peers_from_file(const std::string& filename)
 
     return ingest_json(file);
 }
+
 
 bool 
 bootstrap_peers::fetch_peers_from_url(const std::string& url)
@@ -48,11 +48,13 @@ bootstrap_peers::fetch_peers_from_url(const std::string& url)
     return ingest_json(stream);
 }
 
-const std::unordered_set<peer_address, boost::hash<peer_address>>&
+
+const bzn::peers_list_t&
 bootstrap_peers::get_peers() const
 {
     return this->peer_addresses;
 }
+
 
 bool 
 bootstrap_peers::ingest_json(std::istream& peers)
@@ -66,21 +68,22 @@ bootstrap_peers::ingest_json(std::istream& peers)
     {
         peers >> root;
     }
-    catch(const Json::Exception& e)
+    catch (const Json::Exception& e)
     {
         LOG(error) << "Failed to parse peer JSON (" << e.what() << ")";
         return false;
     }
 
     // Expect the read json to be an array of peer objects
-    for(const auto& peer : root)
+    for (const auto& peer : root)
     {
-        std::string host, name;
+        std::string host, name, uuid;
         uint16_t port;
         try
         {
             host = peer["host"].asString();
             port = peer["port"].asUInt();
+            uuid = peer.isMember("uuid") ? peer["uuid"].asString() : "unknown";
             name = peer.isMember("name") ? peer["name"].asString() : "unknown";
         }
         catch(Json::Exception e)
@@ -90,20 +93,20 @@ bootstrap_peers::ingest_json(std::istream& peers)
         }
 
         // port wasn't actually a 16 bit uint
-        if(peer["port"].asUInt() != port) 
+        if (peer["port"].asUInt() != port)
         {
             LOG(warning) << "Ignoring peer with bad port " << peer;
             continue;
         }
 
         // peer didn't contain everything we need
-        if(host.empty() || port == 0)
+        if (host.empty() || port == 0)
         {
             LOG(warning) << "Ignoring underspecified peer (needs host and port) " << peer;
             continue;
         }
 
-        this->peer_addresses.emplace(host, port, name);
+        this->peer_addresses.emplace(host, port, name, uuid);
         LOG(trace) << "Found peer " << host << ":" << port << " (" << name << ")";
         valid_addresses_read++;
     }
@@ -112,7 +115,7 @@ bootstrap_peers::ingest_json(std::istream& peers)
     uint duplicate_addresses = new_addresses - valid_addresses_read;
 
     LOG(info) << "Found " << new_addresses << " new peers";
-    if(duplicate_addresses > 0)
+    if (duplicate_addresses > 0)
     {
         LOG(info) << "Ignored " << duplicate_addresses << " duplicate addresses";
     }

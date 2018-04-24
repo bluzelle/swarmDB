@@ -44,7 +44,9 @@ namespace
         "  \"listener_port\" : 49152,\n"
         "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\",\n"
         "  \"bootstrap_file\" : \"peers.json\",\n"
-        "  \"bootstrap_url\"  : \"example.org/peers.json\"\n"
+        "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
+        "  \"debug_logging\" : true,"
+        "  \"log_to_stdout\" : true"
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
@@ -79,6 +81,8 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
 
     EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
+    ASSERT_EQ(true, options.get_debug_logging());
+    ASSERT_EQ(true, options.get_log_to_stdout());
     //EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     //EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
 }
@@ -122,5 +126,9 @@ TEST(options, test_that_bootstrap_config_read_from_cmd)
         ASSERT_TRUE(options.parse_command_line(11, VALID_ARGS_WITH_PEERS));
         ASSERT_EQ("peers_from_cmd.json", options.get_bootstrap_peers_file());
         ASSERT_EQ("example.org/peers_from_cmd.json", options.get_bootstrap_peers_url());
+
+        // default is off
+        ASSERT_EQ(false, options.get_debug_logging());
+        ASSERT_EQ(false, options.get_log_to_stdout());
     }
 }

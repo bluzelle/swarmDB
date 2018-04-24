@@ -1,5 +1,8 @@
 add_library(raft
-        raft_base.h raft.cpp raft.h log.cpp log.h)
-target_link_libraries(raft)
+        raft_base.hpp
+        raft.cpp
+        raft.hpp)
 
+target_link_libraries(raft)
+target_include_directories(raft PRIVATE ${JSONCPP_INCLUDE_DIRS})
 add_subdirectory(test)

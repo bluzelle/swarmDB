@@ -16,11 +16,11 @@
 
 namespace bzn
 {
-    class raft {
+    class crud_base
+    {
+    public:
+        virtual ~crud_base() = default;
 
     };
 
-
-}
-
-
+} // namespace bzn

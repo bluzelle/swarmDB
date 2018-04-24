@@ -14,7 +14,25 @@
 
 #pragma once
 
+#include <include/bluzelle.hpp>
+#include <crud/crud_base.hpp>
+#include <raft/raft_base.hpp>
+#include <node/node_base.hpp>
+#include <storage/storage_base.hpp>
+
+
 namespace bzn
 {
+    class crud final : public bzn::crud_base
+    {
+    public:
+        crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage);
 
-}
+    private:
+        void handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+
+        std::shared_ptr<bzn::raft_base>    raft;
+        std::shared_ptr<bzn::storage_base> storage;
+    };
+
+} // bzn

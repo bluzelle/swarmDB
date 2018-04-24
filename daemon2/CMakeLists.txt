@@ -10,7 +10,7 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 # output dir
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/daemon)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 
 # compiler options...
 set(CMAKE_CXX_STANDARD 17)
@@ -24,7 +24,7 @@ set(CMAKE_C_FLAGS   ${warnings})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(cmake/add_gmock_test.cmake)
 
-set(REQUIRED_BOOST "1.66.0")
+set(REQUIRED_BOOST "1.67.0")
 set(Boost_USE_STATIC_LIBS on)
 
 find_package(
@@ -50,9 +50,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include(cmake/googletest.cmake)
 enable_testing()
 
-add_subdirectory(swarm)
+add_subdirectory(bootstrap)
+add_subdirectory(crud)
 add_subdirectory(node)
 add_subdirectory(options)
 add_subdirectory(raft)
-add_subdirectory(bootstrap)
-#add_subdirectory(storage)
+add_subdirectory(storage)
+add_subdirectory(swarm)

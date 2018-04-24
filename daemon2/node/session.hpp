@@ -29,21 +29,23 @@ namespace bzn
     public:
         session(std::shared_ptr<bzn::beast::websocket_stream_base> websocket);
 
-        void start(bzn::msg_handler handler) override;
+        ~session();
 
-        void send_msg(const bzn::msg& msg, bzn::msg_handler handler) override;
+        void start(bzn::message_handler handler) override;
+
+        void send_message(const bzn::message& msg, bzn::message_handler handler) override;
+
+        void close() override;
 
     private:
         FRIEND_TEST(node_session, test_that_when_message_arrives_registered_callback_is_executed);
 
-        void do_read(bzn::msg_handler reply_handler);
-
-        void close();
+        void do_read(bzn::message_handler reply_handler);
 
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
 
         // todo: do we need a strand?
-        bzn::msg_handler           handler;
+        bzn::message_handler           handler;
         boost::beast::multi_buffer buffer;
 
         const bool ignore_json_errors = false;

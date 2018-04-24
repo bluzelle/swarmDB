@@ -11,15 +11,12 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 #include <bootstrap/bootstrap_peers.hpp>
 #include <bootstrap/bootstrap_peers_base.hpp>
-
-#include <iostream>
 #include <fstream>
 #include <string>
-
 #include <gtest/gtest.h>
-#include <boost/foreach.hpp>
 
 namespace
 {
@@ -36,6 +33,7 @@ namespace
 }
 
 using namespace ::testing;
+
 
 class bootstrap_file_test : public Test
 {
@@ -55,12 +53,14 @@ public:
     }
 };
 
+
 TEST_F(bootstrap_file_test, test_invalid_json)
 {
     set_peers_data(invalid_json);
     ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
     ASSERT_TRUE(bootstrap_peers.get_peers().empty());
 }
+
 
 TEST_F(bootstrap_file_test, test_no_peers)
 {
@@ -69,6 +69,7 @@ TEST_F(bootstrap_file_test, test_no_peers)
     ASSERT_TRUE(bootstrap_peers.get_peers().empty());
 }
 
+
 TEST_F(bootstrap_file_test, test_underspecified_peer)
 {
     set_peers_data(underspecified_peer);
@@ -76,12 +77,14 @@ TEST_F(bootstrap_file_test, test_underspecified_peer)
     ASSERT_TRUE(bootstrap_peers.get_peers().empty());
 }
 
+
 TEST_F(bootstrap_file_test, test_bad_port)
 {
     set_peers_data(bad_port);
     ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
     ASSERT_TRUE(bootstrap_peers.get_peers().empty());
 }
+
 
 TEST_F(bootstrap_file_test, test_valid_peers)
 {
@@ -92,7 +95,7 @@ TEST_F(bootstrap_file_test, test_valid_peers)
     bool seen_peer1 = false;
     bool seen_peer2 = false;
 
-    BOOST_FOREACH(bzn::peer_address p, bootstrap_peers.get_peers())
+    for (const bzn::peer_address& p : bootstrap_peers.get_peers())
     {
         if(p.port == 12345) seen_peer1 = true;
         if(p.port == 54321) seen_peer2 = true;
@@ -100,6 +103,7 @@ TEST_F(bootstrap_file_test, test_valid_peers)
 
     ASSERT_TRUE(seen_peer1 && seen_peer2);
 }
+
 
 TEST_F(bootstrap_file_test, test_unnamed_peers)
 {
@@ -110,7 +114,7 @@ TEST_F(bootstrap_file_test, test_unnamed_peers)
     bool seen_name1 = false;
     bool seen_name2 = false;
 
-    BOOST_FOREACH(bzn::peer_address p, bootstrap_peers.get_peers())
+    for (const bzn::peer_address& p : bootstrap_peers.get_peers())
     {
         if(p.name == "peer1") seen_name1 = true;
         if(p.name == "unknown") seen_name2 = true;
@@ -119,12 +123,14 @@ TEST_F(bootstrap_file_test, test_unnamed_peers)
     ASSERT_TRUE(seen_name1 && seen_name2);
 }
 
+
 TEST_F(bootstrap_file_test, test_duplicate_peers)
 {
     set_peers_data(duplicate_peers);
     ASSERT_TRUE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
     ASSERT_EQ(bootstrap_peers.get_peers().size(), 1U);
 }
+
 
 TEST(bootstrap_net_test, test_fetch_data)
 {
@@ -134,6 +140,7 @@ TEST(bootstrap_net_test, test_fetch_data)
     ASSERT_TRUE(bootstrap_peers.fetch_peers_from_url(sample_peers_url));
     ASSERT_EQ(bootstrap_peers.get_peers().size(), 1U);
 }
+
 
 TEST(bootstrap_net_test, test_fetch_data_with_protocol)
 {

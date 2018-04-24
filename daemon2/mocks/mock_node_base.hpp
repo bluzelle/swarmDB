@@ -25,11 +25,11 @@ namespace bzn {
 class Mocknode_base : public node_base {
  public:
   MOCK_METHOD2(register_for_message,
-      bool(const std::string& msg_type, bzn::msg_handler msg_handler));
+      bool(const std::string& msg_type, bzn::message_handler message_handler));
   MOCK_METHOD0(start,
       void());
-  MOCK_METHOD3(send_msg,
-      void(const boost::asio::ip::tcp::endpoint& ep, const bzn::msg& msg, bzn::msg_handler reply_handler));
+  MOCK_METHOD3(send_message,
+      void(const boost::asio::ip::tcp::endpoint& ep, const bzn::message& msg, bzn::message_handler reply_handler));
 };
 
 }  // namespace bzn

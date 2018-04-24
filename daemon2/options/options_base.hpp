@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <boost/asio/ip/tcp.hpp>
 #include <include/bluzelle.hpp>
 #include <string>
 
@@ -49,6 +50,24 @@ namespace bzn
          * @return filename
          */
         virtual std::string get_bootstrap_peers_file() const = 0;
+
+        /**
+         * Debug logging level?
+         * @return true if we should log debug entries
+         */
+        virtual bool get_debug_logging() const = 0;
+
+        /**
+         * Log to terminal instead of disk.
+         * @return true if we log to stdout
+         */
+        virtual bool get_log_to_stdout() const = 0;
+
+        /**
+         * Get the peer's unique id
+         * @return uuid
+         */
+        virtual bzn::uuid_t get_uuid() const = 0;
 
     };
 
