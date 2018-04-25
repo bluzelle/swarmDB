@@ -95,6 +95,8 @@ public:
                         Invoke([&](bzn::raft_base::commit_handler ch) { this->ch = ch; }));
 
         this->crud = std::make_shared<bzn::crud>(mock_node, mock_raft, mock_storage);
+
+        this->crud->start();
     }
 
     std::shared_ptr<bzn::Mocknode_base> mock_node;
@@ -175,7 +177,6 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
 
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_OK;
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -203,7 +204,6 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
 
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_OK;
 
     // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -235,7 +235,6 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
 
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_OK;
     expected_response["data"]["value"] = "skdif9ek34587fk30df6vm73==";
 
     // This node is in the follower state.
@@ -311,7 +310,6 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
 
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_OK;
     expected_response["data"]["value"] = "skdif9ek34587fk30df6vm73==";
 
     // This node is in the follower state.
@@ -402,7 +400,6 @@ TEST_F(crud_test, test_that_a_leader_can_update)
 
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_OK;
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -486,7 +483,7 @@ TEST_F(crud_test, test_that_a_candidate_delete_fails)
 TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
 {
     // check for key, if the key does not exist send error message and bail
-    // if the key does exit:
+    // if the key does exist:
     //   respond with OK
     //   start the deletion process via RAFT
     //   append to log - do not commit
@@ -498,43 +495,35 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
 
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_OK;
 
+    // We tell CRUD that we are the leader
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
+    // we fake a call to storage->has and tell CRUD that the record exists
+    EXPECT_CALL(*this->mock_storage, has(request["db-uuid"].asString(),request["data"]["key"].asString()))
+            .WillOnce(Return(true));
+
+    // since we do have a valid record to delete, we tell raft, raft will be cool with it...
     EXPECT_CALL(*this->mock_raft, append_log(_))
             .WillOnce(Return(true));
 
-    EXPECT_CALL(*this->mock_storage, read(request["db-uuid"].asString(), request["data"]["key"].asString()))
-            .WillOnce(Invoke(
-                    [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
-                    {
-                        std::shared_ptr<bzn::storage_base::record> record = std::make_shared<bzn::storage_base::record>();
-                        record->value = "skdif9ek34587fk30df6vm73==";
-                        record->timestamp = std::chrono::seconds(0);
-                        record->transaction_id = TEST_NODE_UUID;
-                        return record;
-                    }));
-
-    EXPECT_CALL(*this->mock_storage, remove(user_uuid, key));
-
+    // we respond to the user with OK.
     EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
 
+
+    // OK, run the message handler
     this->mh(request, mock_session);
 
+    // at this point leader has accepted the request, parsed it, determined that
+    // it's a delete command and sent the command to raft to send to the swarm,
+    // apon reaching concensus RAFT will call the commit handler
+    EXPECT_CALL(*this->mock_storage, remove(user_uuid, key));
     this->ch(request);
 }
 
 TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
 {
-    // check for key, if the key does not exist send error message and bail
-    // if the key does exit:
-    //   respond with OK
-    //   start the deletion process via RAFT
-    //   append to log - do not commit
-    //   do concensus via RAFT
-    //   when RAFT calls commit handler perform delete
     const std::string key{"key0"};
     bzn::message request = generate_delete_request(user_uuid, key);
 
@@ -542,17 +531,21 @@ TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
     accepted_response["request-id"] = request["request-id"];
     accepted_response["error"] = bzn::MSG_RECORD_NOT_FOUND;
 
+    // We tell CRUD that we are the leader
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
-    EXPECT_CALL(*this->mock_storage, read(request["db-uuid"].asString(), request["data"]["key"].asString()))
-            .WillOnce(Invoke([](const bzn::uuid_t&, const std::string&) {return nullptr;}));
+    // we fake a call to storage->has and tell CRUD that the record exists
+    EXPECT_CALL(*this->mock_storage, has(request["db-uuid"].asString(),request["data"]["key"].asString()))
+            .WillOnce(Return(false));
 
+    // we respond to the user with an error.
     EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
 
+
+    // OK, run the message handler
     this->mh(request, mock_session);
 }
-
 
 TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
 {
@@ -561,7 +554,7 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
 
 
     const std::string key{"key0"};
-    bzn::message request = generate_generic_message(user_uuid, "", "get_keys");
+    bzn::message request = generate_generic_message(user_uuid, "", "keys");
 
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
@@ -571,7 +564,6 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
     key_array.append("key2");
 
     accepted_response["data"]["keys"] = key_array;
-    accepted_response["error"] = bzn::MSG_OK;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
@@ -588,15 +580,12 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
     this->mh(request, mock_session);
 }
 
-
 TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-
-
     const std::string key{"key0"};
-    bzn::message request = generate_generic_message(user_uuid, "", "get_keys");
+    bzn::message request = generate_generic_message(user_uuid, "", "keys");
 
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
@@ -606,7 +595,6 @@ TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
     key_array.append("key2");
 
     accepted_response["data"]["keys"] = key_array;
-    accepted_response["error"] = bzn::MSG_OK;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -622,3 +610,126 @@ TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
 
     this->mh(request, mock_session);
 }
+
+TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
+{
+    // Ask local storage for all the keys for the user
+    // package up the keys into a JSON array, send it back to the user
+    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    request["data"]["key"] = "key0";
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["data"]["key-exists"] = true;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
+
+    EXPECT_CALL(*this->mock_storage, has(user_uuid, "key0"))
+            .WillOnce(Invoke(
+                    [](const bzn::uuid_t& /*uuid*/, std::string)
+                    {
+                        return true;
+                    }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+
+
+    accepted_response["data"]["key-exists"] = false;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
+
+    EXPECT_CALL(*this->mock_storage, has(user_uuid, "key0"))
+            .WillOnce(Invoke(
+                    [](const bzn::uuid_t& /*uuid*/, std::string)
+                    {
+                        return false;
+                    }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}
+
+TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command_with_bad_args)
+{
+    // Ask local storage for all the keys for the user
+    // package up the keys into a JSON array, send it back to the user
+    bzn::message request = generate_generic_message(user_uuid, "", "has");
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}
+
+TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
+{
+    // Ask local storage for all the keys for the user
+    // package up the keys into a JSON array, send it back to the user
+    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    request["data"]["key"] = "key0";
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["data"]["key-exists"] = true;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
+
+    EXPECT_CALL(*this->mock_storage, has(user_uuid, "key0"))
+            .WillOnce(Invoke(
+                    [](const bzn::uuid_t& /*uuid*/, std::string)
+                    {
+                        return true;
+                    }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+
+
+    accepted_response["data"]["key-exists"] = false;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
+
+    EXPECT_CALL(*this->mock_storage, has(user_uuid, "key0"))
+            .WillOnce(Invoke(
+                    [](const bzn::uuid_t& /*uuid*/, std::string)
+                    {
+                        return false;
+                    }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}
+
+TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
+{
+    // Ask local storage for all the keys for the user
+    // package up the keys into a JSON array, send it back to the user
+    bzn::message request = generate_generic_message(user_uuid, "", "has");
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+            .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}
+

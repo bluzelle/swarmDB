@@ -19,34 +19,56 @@ using namespace bzn;
 
 namespace
 {
-    std::set<std::string> accepted_crud_commands{"create", "read", "update", "delete", "get_keys"};
+    std::set<std::string> accepted_crud_commands{bzn::MSG_CMD_CREATE, bzn::MSG_CMD_READ, bzn::MSG_CMD_UPDATE, bzn::MSG_CMD_DELETE,
+                                                 bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS};
 }
 
 crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage)
         : raft(std::move(raft))
+        , node(std::move(node))
         , storage(std::move(storage))
 {
-    if(!node->register_for_message("crud", std::bind(&crud::handle_ws_crud_messages, this, std::placeholders::_1, std::placeholders::_2)))
-    {
-        throw std::runtime_error("Unable to register for CRUD messages!");
-    }
+    this->handlers[bzn::MSG_CMD_CREATE] = std::bind(&crud::handle_create, this, std::placeholders::_1);
+    this->handlers[bzn::MSG_CMD_UPDATE] = std::bind(&crud::handle_update, this, std::placeholders::_1);
+    this->handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::handle_delete, this, std::placeholders::_1);
 
-    this->handlers["create"] = std::bind(&crud::handle_create, this, std::placeholders::_1);
-    this->handlers["update"] = std::bind(&crud::handle_update, this, std::placeholders::_1);
-    this->handlers["delete"] = std::bind(&crud::handle_delete, this, std::placeholders::_1);
+    this->command_handlers[bzn::MSG_CMD_READ]   = std::bind(&crud::handle_read,        this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::leader_delete_task, this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_KEYS]   = std::bind(&crud::handle_get_keys,    this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_HAS]    = std::bind(&crud::handle_has,         this, std::placeholders::_1, std::placeholders::_2);
+}
 
-    this->raft->register_commit_handler(
-        [&](const bzn::message& msg)
+
+void
+crud::start()
+{
+    std::call_once(this->start_once,
+        [this]()
         {
-            LOG(debug) << " commit: " << msg.toStyledString();
-
-            if(auto search = this->handlers.find(msg["cmd"].asString());search != this->handlers.end())
+            // This handler deals with messages coming from the user.
+            if (!this->node->register_for_message("crud",
+                                                  std::bind(&crud::handle_ws_crud_messages, shared_from_this(), std::placeholders::_1,std::placeholders::_2)))
             {
-                search->second(msg);
+                throw std::runtime_error("Unable to register for CRUD messages!");
             }
-            return true;
+
+            // the commit handler deals with tasks that require concensus from RAFT
+            this->raft->register_commit_handler(
+                [self = shared_from_this()](const bzn::message& msg)
+                {
+                    LOG(debug) << " commit: " << msg.toStyledString();
+
+                    if (auto search = self->handlers.find(msg["cmd"].asString());search != self->handlers.end())
+                    {
+                        search->second(msg);
+                    }
+                    return true;
+                });
+
+
         });
 }
+
 
 void
 crud::handle_create(const bzn::message& msg)
@@ -76,7 +98,6 @@ crud::handle_read(const bzn::message& msg, bzn::message& response)
     if (record)
     {
         response["data"]["value"] = record->value;
-        response["error"] = bzn::MSG_OK;
     }
     else
     {
@@ -146,11 +167,24 @@ crud::handle_get_keys(const bzn::message& msg, bzn::message& response)
         json_keys.append(key);
     }
 
-    response["data"]["keys"] = json_keys;
+    response["data"][bzn::MSG_CMD_KEYS] = json_keys;
 }
 
 void
-crud::do_tasks(const bzn::message& msg, bzn::message& response)
+crud::handle_has(const bzn::message& msg, bzn::message& response)
+{
+    if(msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key"))
+    {
+        response["data"]["key-exists"] = this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString());
+    }
+    else
+    {
+        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    }
+}
+
+void
+crud::do_raft_task_routing(const bzn::message &msg, bzn::message &response)
 {
     switch(raft->get_state())
     {
@@ -163,7 +197,7 @@ crud::do_tasks(const bzn::message& msg, bzn::message& response)
         case bzn::raft_state::leader:
             response = do_leader_tasks(msg);
             break;
-        default: // holy crap! This should not happen
+        default: // A bad RAFT State?!?!?! This should not happen
             response["request-id"] = msg["request-id"];
             response["error"] = bzn::MSG_INVALID_RAFT_STATE;
             assert(false);
@@ -182,7 +216,7 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
     if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
     {
-        this->do_tasks(msg,response);
+        this->do_raft_task_routing(msg, response);
     }
     else
     {
@@ -206,18 +240,21 @@ crud::do_follower_tasks(const bzn::message& msg)
 {
     bzn::message response;
     response["request-id"] = msg["request-id"];
-    response["error"] = bzn::MSG_OK;
 
     std::string cmd = msg["cmd"].asString();
 
     // TODO: replace this if else tree with the strategy pattern.
-    if(cmd=="read")
+    if(cmd==bzn::MSG_CMD_READ)
     {
         this->handle_read(msg, response);
     }
-    else if(cmd=="get_keys")
+    else if(cmd==bzn::MSG_CMD_KEYS)
     {
         this->handle_get_keys(msg, response);
+    }
+    else if(cmd==bzn::MSG_CMD_HAS)
+    {
+        this->handle_has(msg, response);
     }
     else
     {
@@ -228,9 +265,9 @@ crud::do_follower_tasks(const bzn::message& msg)
 }
 
 void
-crud::leader_read_task(const bzn::message& msg, bzn::message& response)
+crud::leader_delete_task(const bzn::message &msg, bzn::message &response)
 {
-    if (this->storage->read(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
+    if (this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
     {
         this->raft->append_log(msg);
     }
@@ -247,25 +284,25 @@ crud::do_leader_tasks(const bzn::message& msg)
 
     bzn::message response;
     response["request-id"] = msg["request-id"];
-    response["error"] = bzn::MSG_OK;
 
-    // todo: Rich - map with lamda (mini-strategy)
+    if(msg.isMember("cmd"))
+    {
+        const auto cmd = msg["cmd"].asString();
 
-    if(msg["cmd"].asString()=="read")
-    {
-        this->handle_read(msg, response);
-    }
-    else if(msg["cmd"].asString()=="delete")
-    {
-        this->leader_read_task(msg,response);
-    }
-    else if(msg["cmd"].asString()=="get_keys")
-    {
-        this->handle_get_keys(msg, response);
+        const auto command_handler = this->command_handlers.find(cmd);
+
+        if (command_handler == this->command_handlers.end())
+        {
+            this->raft->append_log(msg);
+        }
+        else
+        {
+            command_handler->second(msg, response);
+        }
     }
     else
     {
-        this->raft->append_log(msg);
+        response["error"] = bzn::MSG_COMMAND_NOT_SET;
     }
 
     return response;

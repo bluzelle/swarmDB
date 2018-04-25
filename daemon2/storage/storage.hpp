@@ -43,6 +43,8 @@ namespace bzn
 
         std::vector<std::string> get_keys(const bzn::uuid_t& uuid) override;
 
+        bool has(const bzn::uuid_t& uuid, const  std::string& key) override;
+
     private:
         friend class boost::serialization::access;
 
