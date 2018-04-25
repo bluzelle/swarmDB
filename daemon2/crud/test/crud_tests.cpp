@@ -733,3 +733,50 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
     this->mh(request, mock_session);
 }
 
+TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
+{
+    const std::string key{"key0"};
+    bzn::message request = generate_generic_message(user_uuid, "", "size");
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["data"]["size"] = Json::UInt64(123);
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+        .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
+
+    EXPECT_CALL(*this->mock_storage, get_size(user_uuid))
+        .WillOnce(Invoke(
+            [](const bzn::uuid_t& /*uuid*/)
+            {
+                return 123;
+            }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}
+
+TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
+{
+    const std::string key{"key0"};
+    bzn::message request = generate_generic_message(user_uuid, "", "size");
+
+    bzn::message accepted_response;
+    accepted_response["request-id"] = request["request-id"];
+    accepted_response["data"]["size"] = Json::UInt64(123);
+
+    EXPECT_CALL(*this->mock_raft, get_state())
+        .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
+
+    EXPECT_CALL(*this->mock_storage, get_size(user_uuid))
+        .WillOnce(Invoke(
+            [](const bzn::uuid_t& /*uuid*/)
+            {
+                return 123;
+            }));
+
+    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+
+    this->mh(request, mock_session);
+}

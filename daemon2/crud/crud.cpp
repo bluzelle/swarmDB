@@ -20,7 +20,7 @@ using namespace bzn;
 namespace
 {
     std::set<std::string> accepted_crud_commands{bzn::MSG_CMD_CREATE, bzn::MSG_CMD_READ, bzn::MSG_CMD_UPDATE, bzn::MSG_CMD_DELETE,
-                                                 bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS};
+                                                 bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS, bzn::MSG_CMD_SIZE};
 }
 
 crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage)
@@ -36,6 +36,7 @@ crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base>
     this->command_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::leader_delete_task, this, std::placeholders::_1, std::placeholders::_2);
     this->command_handlers[bzn::MSG_CMD_KEYS]   = std::bind(&crud::handle_get_keys,    this, std::placeholders::_1, std::placeholders::_2);
     this->command_handlers[bzn::MSG_CMD_HAS]    = std::bind(&crud::handle_has,         this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_SIZE]   = std::bind(&crud::handle_size,        this, std::placeholders::_1, std::placeholders::_2);
 }
 
 
@@ -184,7 +185,13 @@ crud::handle_has(const bzn::message& msg, bzn::message& response)
 }
 
 void
-crud::do_raft_task_routing(const bzn::message &msg, bzn::message &response)
+crud::handle_size(const bzn::message& msg, bzn::message& response)
+{
+    response["data"]["size"] = Json::UInt64(this->storage->get_size(msg["db-uuid"].asString()));
+}
+
+void
+crud::do_raft_task_routing(const bzn::message& msg, bzn::message& response)
 {
     switch(raft->get_state())
     {
@@ -256,6 +263,10 @@ crud::do_follower_tasks(const bzn::message& msg)
     {
         this->handle_has(msg, response);
     }
+    else if(cmd==bzn::MSG_CMD_SIZE)
+    {
+        this->handle_size(msg, response);
+    }
     else
     {
         response["error"] = bzn::MSG_NOT_THE_LEADER;
@@ -299,6 +310,10 @@ crud::do_leader_tasks(const bzn::message& msg)
         {
             command_handler->second(msg, response);
         }
+    }
+    else if(msg["cmd"].asString()==bzn::MSG_CMD_SIZE)
+    {
+        this->handle_size(msg, response);
     }
     else
     {

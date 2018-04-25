@@ -48,6 +48,7 @@ namespace bzn
         // TODO move get keys out of crud.
         void handle_get_keys(const bzn::message& msg, bzn::message& response);
         void handle_has(const bzn::message& msg, bzn::message& response);
+        void handle_size(const bzn::message& msg, bzn::message& response);
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;

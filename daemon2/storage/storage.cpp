@@ -227,3 +227,25 @@ storage::has(const bzn::uuid_t& uuid, const  std::string& key)
     auto v = this->get_keys(uuid);
     return std::find(v.begin(), v.end(), key) != v.end();
 }
+
+std::size_t
+storage::get_size(const bzn::uuid_t& uuid)
+{
+    auto it = this->kv_store.find(uuid);
+
+    if (it == this->kv_store.end())
+    {
+        // database not found...
+        return 0;
+    }
+
+    std::size_t usage{};
+
+    for(const auto& record : it->second)
+    {
+        usage += record.second->value.size();
+    }
+
+    return usage;
+}
+
