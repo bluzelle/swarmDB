@@ -116,7 +116,7 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader_id"] = "";
+    expected_response["data"]["leader-id"] = "";
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -139,7 +139,7 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 
     accepted_response["request-id"] = msg["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader_id"] = leader_uuid;
+    accepted_response["data"]["leader-id"] = leader_uuid;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -266,7 +266,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
     expected_response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
-    expected_response["data"]["leader_id"] = leader_uuid;
+    expected_response["data"]["leader-id"] = leader_uuid;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillRepeatedly(Invoke([](){return bzn::raft_state ::follower;}));
@@ -340,7 +340,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader_id"] = leader_uuid;
+    accepted_response["data"]["leader-id"] = leader_uuid;
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -361,7 +361,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader_id"] = "";
+    accepted_response["data"]["leader-id"] = "";
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -425,7 +425,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader_id"] = "";
+    expected_response["data"]["leader-id"] = "";
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -447,7 +447,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader_id"] = leader_uuid;
+    expected_response["data"]["leader-id"] = leader_uuid;
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
