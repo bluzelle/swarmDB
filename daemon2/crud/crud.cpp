@@ -109,7 +109,7 @@ crud::handle_read(const bzn::message& msg, bzn::message& response)
         else
         {
             response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
-            response["data"]["leader_id"] = this->raft->get_leader();
+            response["data"]["leader-id"] = this->raft->get_leader();
         }
     }
 }
@@ -270,7 +270,7 @@ crud::do_follower_tasks(const bzn::message& msg)
     else
     {
         response["error"] = bzn::MSG_NOT_THE_LEADER;
-        response["data"]["leader_id"] = this->raft->get_leader();
+        response["data"]["leader-id"] = this->raft->get_leader();
     }
     return response;
 }
