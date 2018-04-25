@@ -39,6 +39,8 @@ namespace bzn {
                      std::string(storage_base::result error_id));
         MOCK_METHOD1(get_keys,
                      std::vector<std::string>(const bzn::uuid_t& uuid));
+        MOCK_METHOD2(has,
+                     bool(const bzn::uuid_t& uuid, const std::string& key));
     };
 
 }  // namespace bzn

@@ -137,9 +137,25 @@ int main(int argc, const char* argv[])
         }
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
+
+        // setup signal handler...
+        boost::asio::signal_set signals(io_context->get_io_context(), SIGINT, SIGTERM);
+
+        signals.async_wait([io_context](const boost::system::error_code& error, int signal_number)
+            {
+                if (!error)
+                {
+                    LOG(info) << "signal received -- shutting down (" << signal_number << ")";
+                    io_context->stop();
+                }
+            });
+
+        // startup...
         auto websocket = std::make_shared<bzn::beast::websocket>();
 
         auto node = std::make_shared<bzn::node>(io_context, websocket, boost::asio::ip::tcp::endpoint{options.get_listener()});
+        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
+        auto crud = std::make_shared<bzn::crud>(node, raft, std::make_shared<bzn::storage>());
 
         // todo: just for testing...
         node->register_for_message("ping",
@@ -154,27 +170,9 @@ int main(int argc, const char* argv[])
                 session->send_message(reply, nullptr);
             });
 
-        // add raft
-        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
-
-        // setup signal handler...
-        boost::asio::signal_set signals(io_context->get_io_context(), SIGINT, SIGTERM);
-
-        signals.async_wait([io_context](const boost::system::error_code& error, int signal_number)
-            {
-                if (!error)
-                {
-                    LOG(info) << "signal received -- shutting down (" << signal_number << ")";
-                    io_context->stop();
-                }
-            });
-
-        auto storage = std::make_shared<bzn::storage>();
-
         node->start();
+        crud->start();
         raft->start();
-
-        auto crud = std::make_shared<bzn::crud>(node, raft, storage);
 
         print_banner(options);
 

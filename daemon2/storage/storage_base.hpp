@@ -67,5 +67,7 @@ namespace bzn
         virtual std::string error_msg(storage_base::result error_id) = 0;
 
         virtual std::vector<std::string> get_keys(const bzn::uuid_t& uuid) = 0;
+        
+        virtual bool has(const bzn::uuid_t& uuid, const  std::string& key) = 0;
     };
 } // bzn

@@ -220,3 +220,10 @@ storage::get_keys(const bzn::uuid_t& uuid)
     }
     return keys;
 }
+
+bool
+storage::has(const bzn::uuid_t& uuid, const  std::string& key)
+{
+    auto v = this->get_keys(uuid);
+    return std::find(v.begin(), v.end(), key) != v.end();
+}

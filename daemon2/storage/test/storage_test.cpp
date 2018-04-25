@@ -247,3 +247,34 @@ TEST_F(storageTest, test_get_keys_returns_all_keys)
     }
 }
 
+
+TEST_F(storageTest, test_has_returns_true_if_key_exists_false_otherwise)
+{
+    const bzn::uuid_t user_0{"b9dc2595-15ee-435a-8af7-7cafc132f527"};
+    const bzn::uuid_t user_1{"fa82925e-4657-11e8-842f-0ed5f89f718b"};
+    const bzn::uuid_t user_2{"f3f72dd5-efcb-4db9-b0a1-47f7891ffdef"};
+
+    std::vector<std::string> user_keys;
+
+    std::string key;
+
+    for(int i=0; i<100; ++i)
+    {
+        key = "key";
+        key.append(std::to_string(i));
+        user_keys.emplace_back(key);
+
+        this->storage->create(user_0, key, generate_test_string());
+        this->storage->create(user_1, key, generate_test_string());
+        this->storage->create(user_2, key, generate_test_string());
+    }
+
+    EXPECT_TRUE(this->storage->has(user_0, "key0"));
+    EXPECT_FALSE(this->storage->has(user_0, "notkey0"));
+
+    EXPECT_TRUE(this->storage->has(user_1, "key1"));
+    EXPECT_FALSE(this->storage->has(user_1, "notkey"));
+
+    EXPECT_TRUE(this->storage->has(user_2, "key2"));
+    EXPECT_FALSE(this->storage->has(user_2, "notkey"));
+}
