@@ -41,6 +41,8 @@ namespace bzn {
                      std::vector<std::string>(const bzn::uuid_t& uuid));
         MOCK_METHOD2(has,
                      bool(const bzn::uuid_t& uuid, const std::string& key));
+        MOCK_METHOD1(get_size,
+                     std::size_t(const bzn::uuid_t& uuid));
     };
 
 }  // namespace bzn

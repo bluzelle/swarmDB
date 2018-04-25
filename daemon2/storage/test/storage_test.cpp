@@ -89,6 +89,12 @@ TEST_F(storageTest, test_create_and_read)
 
     EXPECT_TRUE(returned_record->transaction_id.size()>0); // todo: maybe check for valid uuid?
 
+    EXPECT_EQ(returned_record->value.size(), this->storage->get_size(user_uuid));
+
+    // add another one...
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, "another_key", value));
+    EXPECT_EQ(value.size()*2, this->storage->get_size(user_uuid));
+
     const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
 
     EXPECT_TRUE( (now.count() - returned_record->timestamp.count()) >= 0 );

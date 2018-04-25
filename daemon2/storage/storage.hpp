@@ -45,6 +45,8 @@ namespace bzn
 
         bool has(const bzn::uuid_t& uuid, const  std::string& key) override;
 
+        std::size_t get_size(const bzn::uuid_t& uuid) override;
+
     private:
         friend class boost::serialization::access;
 

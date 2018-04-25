@@ -32,6 +32,7 @@ namespace bzn
 
     const std::string MSG_CMD_KEYS{"keys"};
     const std::string MSG_CMD_HAS{"has"};
+    const std::string MSG_CMD_SIZE{"size"};
 
     class crud_base
     {
