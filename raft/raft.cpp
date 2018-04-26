@@ -613,8 +613,16 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
 }
 
 
-bzn::uuid_t
+bzn::peer_address_t
 raft::get_leader()
 {
-    return this->leader;
+    for(auto& peer : this->peers)
+    {
+        if (peer.uuid == this->leader)
+        {
+            return peer;
+        }
+    }
+
+    return bzn::peer_address_t("",0,"","");
 }

@@ -264,7 +264,7 @@ TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_sav
     // and away we go...
     raft->start();
 
-    EXPECT_EQ(raft->get_leader(), "");
+    EXPECT_EQ(raft->get_leader().uuid, "");
 
     // try to append a log. It will fail since we are not the leader...
     ASSERT_FALSE(raft->append_log(bzn::message()));
@@ -291,7 +291,7 @@ TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_sav
 
     EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-    EXPECT_EQ(raft->get_leader(), TEST_NODE_UUID);
+    EXPECT_EQ(raft->get_leader().uuid, TEST_NODE_UUID);
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -385,7 +385,7 @@ TEST(raft, test_that_follower_stores_append_entries_and_responds)
     // and away we go...
     raft->start();
 
-    EXPECT_EQ(raft->get_leader(), "");
+    EXPECT_EQ(raft->get_leader().uuid, "");
 
     // try to append a log. It will fail since we are not the leader...
     ASSERT_FALSE(raft->append_log(bzn::message()));

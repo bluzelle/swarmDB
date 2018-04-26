@@ -26,7 +26,7 @@ namespace bzn
         MOCK_METHOD0(start,
                      void());
         MOCK_METHOD0(get_leader,
-                     bzn::uuid_t());
+                     bzn::peer_address_t());
         MOCK_METHOD1(append_log,
                      bool(const bzn::message& msg));
         MOCK_METHOD1(register_commit_handler,

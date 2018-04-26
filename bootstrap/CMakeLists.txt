@@ -1,8 +1,8 @@
 add_library(bootstrap STATIC
-  peer_address.hpp
-  bootstrap_peers_base.hpp
-  bootstrap_peers.cpp
-  bootstrap_peers.hpp
+    peer_address.hpp
+    bootstrap_peers_base.hpp
+    bootstrap_peers.cpp
+    bootstrap_peers.hpp
   )
 
 target_link_libraries(bootstrap)

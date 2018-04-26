@@ -19,9 +19,9 @@
 
 namespace bzn
 {
-    struct peer_address
+    struct peer_address_t
     {
-        peer_address(std::string host, uint16_t port, std::string name, std::string uuid)
+        peer_address_t(std::string host, uint16_t port, std::string name, std::string uuid)
             : host(std::move(host))
             , port(std::move(port))
             , name(std::move(name))
@@ -29,7 +29,7 @@ namespace bzn
         {
         };
 
-        bool operator==(const peer_address& other) const
+        bool operator==(const peer_address_t& other) const
         {
             if (&other == this)
             {

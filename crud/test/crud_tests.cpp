@@ -68,6 +68,14 @@ namespace
     {
         return generate_generic_message(uid, key, "delete");
     }
+
+    void set_leader_info(bzn::message& msg, const std::string& leader, const std::string& host, const uint16_t port, const std::string& name)
+    {
+        msg["data"]["leader-id"] = leader;
+        msg["data"]["leader-host"] = host;
+        msg["data"]["leader-port"] = port;
+        msg["data"]["leader-name"] = name;
+    }
 }
 
 class crud_test : public Test
@@ -116,7 +124,8 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader-id"] = "";
+
+    set_leader_info(expected_response, "", "", 0, "" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -124,7 +133,7 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
 
     // We don't know the leader, maybe this node just started.
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([](){return "";}));
+            .WillOnce(Invoke([](){return bzn::peer_address_t("",0,"","");}));
 
     EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
 
@@ -139,13 +148,14 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 
     accepted_response["request-id"] = msg["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader-id"] = leader_uuid;
+
+    set_leader_info(accepted_response, leader_uuid, "127.0.0.1", 49153, "iron maiden" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([&](){return leader_uuid;}));
+            .WillOnce(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49153,"iron maiden",leader_uuid);}));
 
     EXPECT_CALL(*this->mock_session, send_message(accepted_response, _));
 
@@ -266,7 +276,8 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
     bzn::message expected_response;
     expected_response["request-id"] = request["request-id"];
     expected_response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
-    expected_response["data"]["leader-id"] = leader_uuid;
+
+    set_leader_info(expected_response, leader_uuid, "127.0.0.1", 49152, "ozzy" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillRepeatedly(Invoke([](){return bzn::raft_state ::follower;}));
@@ -278,7 +289,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
                     ));
 
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillRepeatedly(Invoke([&](){return leader_uuid;}));
+            .WillRepeatedly(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49152,"ozzy",leader_uuid);}));
 
     EXPECT_CALL(*this->mock_session, send_message(expected_response, _));
 
@@ -340,14 +351,15 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader-id"] = leader_uuid;
+
+    set_leader_info(accepted_response, leader_uuid, "127.0.0.1", 49152, "punkh" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([&](){return leader_uuid;}));
+            .WillOnce(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49152,"punkh",leader_uuid);}));
 
     EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
 
@@ -361,14 +373,15 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
     bzn::message accepted_response;
     accepted_response["request-id"] = request["request-id"];
     accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    accepted_response["data"]["leader-id"] = "";
+
+    set_leader_info(accepted_response, "", "", 0, "" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([&](){return "";}));
+            .WillOnce(Invoke([&](){return bzn::peer_address_t("",0,"","");}));
 
     EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
 
@@ -425,14 +438,15 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader-id"] = "";
+
+    set_leader_info(expected_response, "", "", 0, "" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
     // We don't know the leader, maybe this node just started.
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([](){return "";}));
+            .WillOnce(Invoke([](){return bzn::peer_address_t("",0,"","");}));
 
     EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
 
@@ -447,7 +461,8 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
     bzn::message expected_response;
     expected_response["request-id"] = 85746;
     expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
-    expected_response["data"]["leader-id"] = leader_uuid;
+
+    set_leader_info(expected_response, leader_uuid, "127.0.0.1", 49152, "Pantera" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -455,7 +470,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
 
     // We don't know the leader, maybe this node just started.
     EXPECT_CALL(*this->mock_raft, get_leader())
-            .WillOnce(Invoke([](){return leader_uuid;}));
+            .WillOnce(Invoke([](){return bzn::peer_address_t("127.0.0.1", 49152,"Pantera",leader_uuid);}));
 
     EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
 

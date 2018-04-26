@@ -40,7 +40,7 @@ namespace bzn
 
         void register_commit_handler(commit_handler handler) override;
 
-        bzn::uuid_t get_leader() override;
+        bzn::peer_address_t get_leader() override;
 
         void start() override;
 
