@@ -70,6 +70,16 @@ crud::start()
         });
 }
 
+void
+crud::set_leader_info(bzn::message& msg)
+{
+    peer_address_t leader = this->raft->get_leader();
+    msg["data"]["leader-id"] = leader.uuid;
+    msg["data"]["leader-host"] = leader.host;
+    msg["data"]["leader-port"] = leader.port;
+    msg["data"]["leader-name"] = leader.name;
+}
+
 
 void
 crud::handle_create(const bzn::message& msg)
@@ -109,7 +119,7 @@ crud::handle_read(const bzn::message& msg, bzn::message& response)
         else
         {
             response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
-            response["data"]["leader-id"] = this->raft->get_leader();
+            this->set_leader_info(response);
         }
     }
 }
@@ -270,7 +280,7 @@ crud::do_follower_tasks(const bzn::message& msg)
     else
     {
         response["error"] = bzn::MSG_NOT_THE_LEADER;
-        response["data"]["leader-id"] = this->raft->get_leader();
+        this->set_leader_info(response);
     }
     return response;
 }

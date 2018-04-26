@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <bootstrap/peer_address.hpp>
+
 namespace bzn
 {
     enum class raft_state : uint8_t
@@ -122,7 +124,7 @@ namespace bzn
          * Current leader
          * @return uuid of leader or blank if unknown
          */
-        virtual bzn::uuid_t get_leader() = 0;
+        virtual bzn::peer_address_t get_leader() = 0;
 
         /**
          * Appends entry to leader's log via CRUD

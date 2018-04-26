@@ -33,7 +33,10 @@ namespace bzn
     private:
         void handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
+        void set_leader_info(bzn::message& msg);
+
         void do_raft_task_routing(const bzn::message &msg, bzn::message &response);
+
         bzn::message do_candidate_tasks(const bzn::message& msg);
         bzn::message do_follower_tasks(const bzn::message& msg);
         bzn::message do_leader_tasks(const bzn::message& msg);
