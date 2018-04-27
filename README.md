@@ -64,7 +64,7 @@ sudo apt-get install pkg-config libjsoncpp-dev
 
 ### ccache
 
-If available, cmake will attempt to use ccache (https://ccache.samba.org) to *drastically* speed up comiplation. 
+If available, cmake will attempt to use ccache (https://ccache.samba.org) to *drastically* speed up compilation. 
 
 #### OSX 
 
@@ -96,9 +96,17 @@ sudo apt-get install node-ws
 
 ## BUILDING THE DAEMON
 
-If you have cLion, open the folder that you have just cloned and build and execute from there.
+### CLion
 
-Otherwise, from most CLIs (OSX, Linux, etc), you can build from the command line. 
+Ensure that you set your cmake args to pass in:
+
+```
+-DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/
+```
+The project root directly can be directly imported into CLion.
+
+### CLI
+
 Here are the steps to build the daemon and unit test application from the command line:
 ```
 mkdir build
