@@ -190,7 +190,55 @@ swarm -c daemon-build/output -c bluzelle2.json
 swarm -c daemon-build/output -c bluzelle3.json
 ```
 
-## SWARMDB API Documentation
+## Testing Locally
+
+### Install wscat
+
+```
+npm install wscat
+```
+
+### Sample WebSocker Calls
+
+
+```
+wscat -c 13.78.131.94:51011
+connected (press CTRL+C to quit)
+
+> {"bzn-api" : "crud","cmd" : "create","data" :{"key" : "key1","value" : "I2luY2x1ZGUgPG1vY2tzL21vY2tfbm9kZV9iYXNlLmhwcD4NCiNpbmNsdWRlIDxtb2Nrcy9tb2NrX3Nlc3Npb25fYmFzZS5ocHA+DQojaW5jbHVkZSA8bW9ja3MvbW9ja19yYWZ0X2Jhc2UuaHBwPg0KI2luY2x1ZGUgPG1vY2tzL21vY2tfc3RvcmFnZV9iYXNlLmhwcD4NCg=="},"db-uuid" : "80174b53-2dda-49f1-9d6a-6a780d4cceca","request-id" : 85746}
+< {
+   "data" : {
+      "leader-host" : "13.78.131.94",
+      "leader-id" : "92b8bac6-3242-452a-9090-1aa48afd71a3",
+      "leader-name" : "swarm01",
+      "leader-port" : 51010
+   },
+   "error" : "NOT_THE_LEADER",
+   "request-id" : 85746
+}
+
+disconnected
+
+wscat -c 13.78.131.94:51010
+connected (press CTRL+C to quit)
+> {"bzn-api" : "crud","cmd" : "create","data" :{"key" : "key1","value" : "I2luY2x1ZGUgPG1vY2tzL21vY2tfbm9kZV9iYXNlLmhwcD4NCiNpbmNsdWRlIDxtb2Nrcy9tb2NrX3Nlc3Npb25fYmFzZS5ocHA+DQojaW5jbHVkZSA8bW9ja3MvbW9ja19yYWZ0X2Jhc2UuaHBwPg0KI2luY2x1ZGUgPG1vY2tzL21vY2tfc3RvcmFnZV9iYXNlLmhwcD4NCg=="},"db-uuid" : "80174b53-2dda-49f1-9d6a-6a780d4cceca","request-id" : 85746}
+< {
+   "request-id" : 85746
+}
+
+disconnected
+
+wscat -c 13.78.131.94:51010
+connected (press CTRL+C to quit)
+> {"bzn-api" : "crud","cmd" : "has","data" :{"key" : "key0"},"db-uuid" : "80174b53-2dda-49f1-9d6a-6a780d4cceca","request-id" : 85746}
+< {
+   "data" : {
+      "key-exists" : true
+   },
+   "request-id" : 85746
+}
+```
+## FULL API Documentation
 
 https://bluzelle.github.io/api/
 
