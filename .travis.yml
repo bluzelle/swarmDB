@@ -51,7 +51,7 @@ compiler:
 
 before_script:
   - cd $TRAVIS_BUILD_DIR
-  - travis_wait source $TRAVIS_BUILD_DIR/daemon/toolchain/install-boost.sh
+  - travis_wait source $TRAVIS_BUILD_DIR/toolchain/install-boost.sh
   - mkdir build
   - cd build
   - source $TRAVIS_BUILD_DIR/toolchain/install-boost.sh && ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$BOOST_ROOT ..
