@@ -112,12 +112,83 @@ Here are the steps to build the daemon and unit test application from the comman
 mkdir build
 cd build
 ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/ ..
-make
+make install
 ````
 
 ## RUNNING THE APPLICATION
 
+Steps to setup testing environment:
 
+Build your Daemon in a directory named daemon-build in the same level as the swarmclient-js repo directory. 
+Create each of the json files below in daemon-build/output/, where the swarm executable resides. (bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json)
+
+Config files for Daemon:
+```
+// bluzelle.json
+{
+  "listener_address" : "127.0.0.1",
+  "listener_port" : 50000,
+  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "bootstrap_file" : "./peers.json",
+  "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
+  "debug_logging" : true,
+  "log_to_stdout" : false
+ 
+}
+ 
+// bluzelle2.json
+{
+  "listener_address" : "127.0.0.1",
+  "listener_port" : 50001,
+  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "bootstrap_file" : "./peers.json",
+  "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7",
+  "debug_logging" : true,
+  "log_to_stdout" : true
+ 
+}
+ 
+// bluzelle3.json
+{
+  "listener_address" : "127.0.0.1",
+  "listener_port" : 50002,
+  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "bootstrap_file" : "./peers.json",
+  "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41",
+  "debug_logging" : true,
+  "log_to_stdout" : false
+ 
+}
+ 
+// A unique ID (uuid) must be specified for each daemon.
+// debug_logging is an optional setting (default is false)
+// listener address and port must match peer list
+ 
+ 
+// peers.json
+[
+  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
+  {"name": "peer2", "host": "127.0.0.1",  "port": 50001, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
+  {"name": "peer3", "host": "127.0.0.1",  "port": 50002, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
+]
+ 
+// bluzelle-bootstrap-url.json
+{
+  "listener_address" : "127.0.0.1",
+  "listener_port" : 49200,
+  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
+  "bootstrap_url" : "pastebin.com/raw/mbdezA9Z"
+}
+```
+
+Start your cluster from the daemon-build/output directory run:
+
+```
+swarm -c daemon-build/output -c bluzelle1.json
+swarm -c daemon-build/output -c bluzelle2.json
+swarm -c daemon-build/output -c bluzelle3.json
+```
 
 ## SWARMDB API Documentation
 
