@@ -68,7 +68,7 @@ bootstrap_peers::ingest_json(std::istream& peers)
     {
         peers >> root;
     }
-    catch (const Json::Exception& e)
+    catch (const std::exception& e)
     {
         LOG(error) << "Failed to parse peer JSON (" << e.what() << ")";
         return false;
@@ -86,7 +86,7 @@ bootstrap_peers::ingest_json(std::istream& peers)
             uuid = peer.isMember("uuid") ? peer["uuid"].asString() : "unknown";
             name = peer.isMember("name") ? peer["name"].asString() : "unknown";
         }
-        catch(Json::Exception e)
+        catch(std::exception& e)
         {
             LOG(warning) << "Ignoring malformed peer specification " << peer;
             continue;
