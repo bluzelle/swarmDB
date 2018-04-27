@@ -147,7 +147,8 @@ node_3=localhost:58003
 node_4=localhost:58004
 node_5=localhost:58005
 ```
-- Create simpe shell script to start multiple nodes. Below is the script for Ubuntu Linux:
+- Create a simple shell script to start multiple nodes. 
+- For Ubuntu Linux:
 ```
 #!/bin/bash
 
@@ -157,7 +158,30 @@ gnome-terminal -x bash -c './the_db --address 0x006eae72077449caca91078ef78552c0
 gnome-terminal -x bash -c './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004'
 gnome-terminal -x bash -c './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005'
 ```
-You can name it run.sh and put into the same directory where the_db is located. Use ```sudo chmod +x ./run.sh``` to make it executable from command line. Each line in script is responsible for running an instance of the_db. Arguments are --address - Ethereum address on Ropsten network for account tha have MK_13 token balance higher that 100 (you can use known address 0x006eae72077449caca91078ef78552c0cd9bce8f) and --port - port the_db listens on. Port must be in range 49152 - 65535 and unique for each instance of the_db.
+- For GNU Screen:
+```
+#!/bin/bash
+screen -dmS bluzelle_nodes; 
+screen -S bluzelle_nodes -X screen ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001;
+screen -S bluzelle_nodes -X screen ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002;
+screen -S bluzelle_nodes -X screen ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58003;
+screen -S bluzelle_nodes -X screen ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004;
+screen -S bluzelle_nodes -X screen ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005;
+```
+- For tmux:
+```
+#!/bin/bash
+tmux new-session -d -s bluzelle_nodes
+tmux new-window -t bluzelle_nodes:1 './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001';
+tmux new-window -t bluzelle_nodes:2 './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002';
+tmux new-window -t bluzelle_nodes:3 './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58003';
+tmux new-window -t bluzelle_nodes:4 './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58004';
+tmux new-window -t bluzelle_nodes:5 './the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58005';
+```
+- on macOS:
+You can either open terminal.app and from the directory where you have the_db, paste the line ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58001, open a new tab (cmd-t) and paste the following line, ./the_db --address 0x006eae72077449caca91078ef78552c0cd9bce8f --port 58002, repeat with ports 58003, 58005 and 58005. Or you can install gnu screen or tmux with homebrew and run the scripts for them.
+
+Name the script run.sh and put into the same directory where the_db is located. Use ```sudo chmod +x ./run.sh``` to make it executable from command line. Each line in script is responsible for running an instance of the_db. Arguments are --address - Ethereum address on Ropsten network for account that has a MK_13 token balance higher that 100 (you can use known address 0x006eae72077449caca91078ef78552c0cd9bce8f) and --port - port the_db listens on. Port must be in range 49152 - 65535 and unique for each instance of the_db.
 - From the directory where you have your ```peers``` file, ```run.sh``` file and ```the_db``` open terminal window and run script.
 ```
 ./run.sh
