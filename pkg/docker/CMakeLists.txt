@@ -1,0 +1,2 @@
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ${CMAKE_BINARY_DIR}/Dockerfile COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.json.template ${CMAKE_BINARY_DIR}/config.json.template COPYONLY)

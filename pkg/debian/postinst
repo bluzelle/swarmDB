@@ -1,0 +1,13 @@
+#! /bin/sh
+
+set -e
+
+echo "   _____                              ____  ____"
+echo "  / ___/      ______ __________ ___  / __ \/ __ )"
+echo "  \\__ \\ | /| / / __ \`/ ___/ __ \`__ \\/ / / / __  |"
+echo " ___/ / |/ |/ / /_/ / /  / / / / / / /_/ / /_/ /"
+echo "/____/|__/|__/\__,_/_/  /_/ /_/ /_/_____/_____/"
+echo "\n\n"
+echo "SwarmDB node successfully installed.\n\n"
+echo "You can find the SwarmDB docs at:"
+echo "https://github.com/swarmdb"
