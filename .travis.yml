@@ -3,7 +3,7 @@ language: cpp
 
 env:
   global:
-    - BOOST_INSTALL_DIR="$HOME/.local/"
+    - BOOST_INSTALL_DIR="$HOME/.local"
     - BOOST_VERSION="1.67.0"
 
 matrix:
@@ -15,6 +15,8 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-7
+            - pkg-config
+            - libjsoncpp-dev
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
@@ -23,7 +25,7 @@ matrix:
     - os: osx
       osx_image: xcode8
       env:
-        - MATRIX_EVAL="brew update && brew upgrade cmake"
+        - MATRIX_EVAL="brew update && brew install jsoncpp && brew upgrade cmake"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake"
 
@@ -44,16 +46,15 @@ before_install:
           echo "Using cached CMake"
         fi
       fi
-
 compiler:
   - gcc
 
 before_script:
   - cd $TRAVIS_BUILD_DIR
-  - travis_wait toolchain/install-boost.sh
+  - travis_wait source $TRAVIS_BUILD_DIR/daemon/toolchain/install-boost.sh
   - mkdir build
   - cd build
-  - ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$HOME/.local/$BOOST_PACKAGE ..
+  - source $TRAVIS_BUILD_DIR/toolchain/install-boost.sh && ${CMAKE_COMMAND} -DBOOST_ROOT:PATHNAME=$BOOST_ROOT ..
 
 script:
   - ${CXX} --version
