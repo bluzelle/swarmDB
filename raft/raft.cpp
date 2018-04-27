@@ -22,9 +22,8 @@ namespace
 {
     const std::string NO_PEERS_ERRORS_MGS = " No peers given!";
 
-    // todo: add a check for env. variable to scale this for testing?
-    const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::seconds(2)};
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
+    const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
 }
 
 using namespace bzn;
@@ -76,15 +75,15 @@ raft::start_election_timer()
 {
     this->timer->cancel();
 
-    auto timeout = DEFAULT_ELECTION_TIMER_LEN;
-
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint32_t> dist(DEFAULT_HEARTBEAT_TIMER_LEN.count(), DEFAULT_ELECTION_TIMER_LEN.count());
 
-    timeout = std::chrono::milliseconds(dist(gen));
+    // todo: testing range as big messages can cause election to occur...
+    std::uniform_int_distribution<uint32_t> dist(DEFAULT_HEARTBEAT_TIMER_LEN.count() * 3 , DEFAULT_ELECTION_TIMER_LEN.count());
 
-    LOG(debug) << "election timer will expire in: " << timeout.count() << "ms";
+    auto timeout = std::chrono::milliseconds(dist(gen));
+
+    LOG(info) << "election timer will expire in: " << timeout.count() << "ms";
 
     this->timer->expires_from_now(timeout);
 
@@ -110,7 +109,7 @@ raft::handle_election_timeout(const boost::system::error_code& ec)
 {
     if (ec)
     {
-        LOG(debug) << "election timer was canceled: " << ec.message();
+        LOG(info) << "election timer was canceled: " << ec.message();
 
         return;
     }
@@ -331,6 +330,9 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
             }
         }
     }
+
+    // update leader's peer index
+    this->peer_match_index[this->leader] = msg["data"]["commitIndex"].asUInt();
 
     this->start_election_timer();
 }

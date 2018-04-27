@@ -114,7 +114,10 @@ session::do_read(bzn::message_handler reply_handler)
 void
 session::send_message(const bzn::message& msg, bzn::message_handler reply_handler)
 {
-    this->websocket->async_write(boost::asio::buffer(msg.toStyledString()),
+    // todo: we will want to use a shared_ptr!
+    this->send_msg = msg.toStyledString();
+
+    this->websocket->async_write(boost::asio::buffer(this->send_msg),
         [self = shared_from_this(), reply_handler](auto ec, auto bytes_transferred)
         {
             if (ec)

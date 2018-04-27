@@ -241,7 +241,7 @@ namespace bzn::beast
 
         virtual void async_read(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler) = 0;
 
-        virtual void async_write(const boost::asio::const_buffers_1& buffer, bzn::asio::write_handler handler) = 0;
+        virtual void async_write(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler) = 0;
 
         virtual void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler) = 0;
 
@@ -275,7 +275,7 @@ namespace bzn::beast
             this->websocket.async_read(buffer, handler);
         }
 
-        void async_write(const boost::asio::const_buffers_1& buffer, bzn::asio::write_handler handler) override
+        void async_write(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler) override
         {
             this->websocket.async_write(buffer, handler);
         }

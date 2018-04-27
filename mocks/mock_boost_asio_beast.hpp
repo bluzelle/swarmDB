@@ -97,7 +97,7 @@ namespace bzn::beast {
         MOCK_METHOD2(async_read,
             void(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler));
         MOCK_METHOD2(async_write,
-            void(const boost::asio::const_buffers_1& buffer, bzn::asio::write_handler handler));
+            void(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler));
         MOCK_METHOD2(async_close,
             void(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler));
         MOCK_METHOD3(async_handshake,
