@@ -45,8 +45,9 @@ namespace bzn
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
 
         // todo: do we need a strand?
-        bzn::message_handler           handler;
+        bzn::message_handler       handler;
         boost::beast::multi_buffer buffer;
+        std::string send_msg;
 
         const bool ignore_json_errors = false;
     };
