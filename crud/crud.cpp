@@ -32,11 +32,13 @@ crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base>
     this->handlers[bzn::MSG_CMD_UPDATE] = std::bind(&crud::handle_update, this, std::placeholders::_1);
     this->handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::handle_delete, this, std::placeholders::_1);
 
-    this->command_handlers[bzn::MSG_CMD_READ]   = std::bind(&crud::handle_read,        this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::leader_delete_task, this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_KEYS]   = std::bind(&crud::handle_get_keys,    this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_HAS]    = std::bind(&crud::handle_has,         this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_SIZE]   = std::bind(&crud::handle_size,        this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_CREATE] = std::bind(&crud::handle_create_command, this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_READ]   = std::bind(&crud::handle_read,           this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_UPDATE] = std::bind(&crud::handle_update_command, this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::leader_delete_task,    this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_KEYS]   = std::bind(&crud::handle_get_keys,       this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_HAS]    = std::bind(&crud::handle_has,            this, std::placeholders::_1, std::placeholders::_2);
+    this->command_handlers[bzn::MSG_CMD_SIZE]   = std::bind(&crud::handle_size,           this, std::placeholders::_1, std::placeholders::_2);
 }
 
 
@@ -99,6 +101,49 @@ crud::handle_create(const bzn::message& msg)
                    << "]";
     }
 }
+
+void
+crud::handle_create_command(const bzn::message& msg, bzn::message& response)
+{
+    if(msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value"))
+    {
+        if(this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
+        {
+            response["error"] = bzn::MSG_RECORD_EXISTS;
+        }
+        else
+        {
+            this->raft->append_log(msg);
+        }
+    }
+    else
+    {
+        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    }
+}
+
+
+void
+crud::handle_update_command(const bzn::message& msg, bzn::message& response)
+{
+    if(msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value"))
+    {
+        if(!this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
+        {
+            response["error"] = bzn::MSG_RECORD_NOT_FOUND;
+        }
+        else
+        {
+            this->raft->append_log(msg);
+        }
+    }
+    else
+    {
+        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    }
+}
+
+
 
 void
 crud::handle_read(const bzn::message& msg, bzn::message& response)
