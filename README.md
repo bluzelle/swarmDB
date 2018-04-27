@@ -17,7 +17,7 @@ Docker Swarm Deploy
 
 1. Download sample [peerlist.json](https://gist.github.com/amastracci/b6144d32bd790cf1a93e3c498a9d46cc)
 2. Add your swarm machines' IP to the "host" field of each peer in peerlist.json
-3. Host your peerlist.json at a publically accessable URL
+3. Host your peerlist.json at a publically accessable URL (must be non-https and non-redirecting)
 4. Download sample [docker-compose.yml](https://gist.githubusercontent.com/amastracci/5e34d586c6a682e0eb91dc2ead9b5ed8/raw/ea259cadf1021b06e7b84ffe9f73143e119bee8d/docker-compose.yml)
 5. Add your public URL to "SWARM_BOOTSTRAP_URL" to each service in docker-compose.yml
 6. Run 'docker compose up' in the same directory of your docker-compose.yml
@@ -56,7 +56,7 @@ mkdir -p ~/mycmake
 curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
 ```
 
-Again this will result in a customer cmake install into ```~/mycmake/```
+Again, this will result in a custom cmake install into ```~/mycmake/``` and will not overload the system cmake.
 
 ```
 sudo apt-get install pkg-config libjsoncpp-dev 
@@ -116,4 +116,11 @@ make
 ````
 
 ## RUNNING THE APPLICATION
+
+
+
+## SWARMDB API Documentation
+
+https://bluzelle.github.io/api/
+
 
