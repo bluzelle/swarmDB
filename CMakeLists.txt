@@ -58,3 +58,5 @@ add_subdirectory(options)
 add_subdirectory(raft)
 add_subdirectory(storage)
 add_subdirectory(swarm)
+add_subdirectory(pkg)
+
