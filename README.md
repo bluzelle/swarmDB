@@ -26,7 +26,7 @@ Docker Swarm Deploy
 
 ### BOOST
 
-Open up a console and install the capatible version of Boost:
+Open up a console and install the compatible version of Boost:
 
 ```
 ENV BOOST_VERSION="1.67.0"
@@ -35,7 +35,7 @@ ENV BOOST_INSTALL_DIR="~/myboost"
 mkdir -p ~/myboost
 toolchain/install_boost.sh
 ```
-This will result in a custom Boost install at ```~/myboost/1_67_0/```that will not collide with your system Boost.
+This will result in a custom Boost install at ```~/myboost/1_67_0/```that will not collide with your system's Boost.
 
 ### Other dependencies
 
@@ -56,7 +56,7 @@ mkdir -p ~/mycmake
 curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
 ```
 
-Again, this will result in a custom cmake install into ```~/mycmake/``` and will not overload the system cmake.
+Again, this will result in a custom cmake install into ```~/mycmake/``` and will not overwrite the system cmake.
 
 ```
 sudo apt-get install pkg-config libjsoncpp-dev 
@@ -83,11 +83,11 @@ Ensure that you set your cmake args to pass in:
 ```
 -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/
 ```
-The project root directly can be directly imported into CLion.
+The project root can be directly imported into CLion.
 
 ### CLI
 
-Here are the steps to build the daemon and unit test application from the command line:
+Here are the steps to build the Daemon and unit test application from the command line:
 ```
 mkdir build
 cd build
@@ -154,12 +154,12 @@ Config files for Daemon:
  
 ```
 
-Start your cluster from the daemon-build/output directory run:
+Start your cluster from the daemon-build/output directory, run:
 
 ```
-swarm -c daemon-build/output -c bluzelle1.json
-swarm -c daemon-build/output -c bluzelle2.json
-swarm -c daemon-build/output -c bluzelle3.json
+./swarm -c bluzelle1.json
+./swarm -c bluzelle2.json
+./swarm -c bluzelle3.json
 ```
 
 ## Testing Locally
@@ -174,7 +174,7 @@ sudo apt-get install npm
 ```
 sudo npm install npm@latest -g
 ```
-#### Install wscat 
+#### Install WSCAT 
 ```
 sudo npm install wscat -g
 ```
@@ -183,7 +183,7 @@ sudo npm install wscat -g
 sudo apt-get install node-ws
 ```
 
-### Sample WebSocker Calls
+### Sample WebSocket Calls
 
 
 ```
