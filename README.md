@@ -20,7 +20,7 @@ Docker Swarm Deploy
 3. Host your peerlist.json at a publically accessable URL (must be non-https and non-redirecting)
 4. Download sample [docker-compose.yml](https://gist.githubusercontent.com/amastracci/5e34d586c6a682e0eb91dc2ead9b5ed8/raw/ea259cadf1021b06e7b84ffe9f73143e119bee8d/docker-compose.yml)
 5. Add your public URL to "SWARM_BOOTSTRAP_URL" to each service in docker-compose.yml
-6. Run 'docker compose up' in the same directory of your docker-compose.yml
+6. Run 'docker-compose up' in the same directory of your docker-compose.yml
 
 ## Building from source 
 
