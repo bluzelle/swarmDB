@@ -1,8 +1,8 @@
 # SwarmDB
 
 [![Build Status](https://travis-ci.org/bluzelle/swarmDB.svg?branch=devel)](https://travis-ci.org/bluzelle/swarmDB)
-[![License](https://img.shields.io/:license-AGPLv3-blue.svg?style=flat-square)](https://github.com/bluzelle/swarmdb/blob/master/LICENSE)
-[![Twitter](https://img.shields.io/badge/twitter-@bluzelle-blue.svg?style=flat-square)](https://twitter.com/bluzelle)
+[![License](https://img.shields.io/:license-AGPLv3-blue.svg?style=flat-square)](https://github.com/bluzelle/swarmDB/blob/devel/LICENSE)
+[![Twitter](https://img.shields.io/badge/twitter-@bluzelle-blue.svg?style=flat-square)](https://twitter.com/BluzelleHQ)
 [![Slack chat](https://img.shields.io/badge/slackchat-join%20chat-brightgreen.svg?style=flat-square)](https://bluzelle-swarm.slack.com)
 
 ## ABOUT SWARMDB
@@ -73,26 +73,6 @@ If available, cmake will attempt to use ccache (https://ccache.samba.org) to *dr
 ### Ubuntu
 
 ```sudo apt-get install ccache```
-
-
-## NPM and WSCAT installation
-
-Install npm if you don't have it with
-```
-sudo apt-get install npm
-```
-Update npm to the latest
-```
-sudo npm install npm@latest -g
-```
-Install wscat 
-```
-sudo npm install wscat -g
-```
-WSCAT installation without NPM
-```
-sudo apt-get install node-ws
-```
 
 ## BUILDING THE DAEMON
 
@@ -184,10 +164,23 @@ swarm -c daemon-build/output -c bluzelle3.json
 
 ## Testing Locally
 
-### Install wscat
+### NPM and WSCAT installation
 
+#### Install npm if you don't have it with
 ```
-npm install wscat
+sudo apt-get install npm
+```
+#### Update npm to the latest
+```
+sudo npm install npm@latest -g
+```
+#### Install wscat 
+```
+sudo npm install wscat -g
+```
+#### WSCAT installation without NPM
+```
+sudo apt-get install node-ws
 ```
 
 ### Sample WebSocker Calls
