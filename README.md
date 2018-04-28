@@ -120,11 +120,11 @@ make install
 Steps to setup testing environment:
 
 Build your Daemon in a directory named daemon-build in the same level as the swarmclient-js repo directory. 
-Create each of the json files below in daemon-build/output/, where the swarm executable resides. (bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json)
+Create each of the json files below in daemon-build/output/, where the swarm executable resides. (bluzelle1.json, bluzelle2.json, bluzelle3.json, peers.json)
 
 Config files for Daemon:
 ```
-// bluzelle.json
+// bluzelle1.json
 {
   "listener_address" : "127.0.0.1",
   "listener_port" : 50000,
@@ -172,14 +172,6 @@ Config files for Daemon:
   {"name": "peer3", "host": "127.0.0.1",  "port": 50002, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
 ]
  
-// bluzelle-bootstrap-url.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 49200,
-  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
-  "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
-  "bootstrap_url" : "pastebin.com/raw/mbdezA9Z"
-}
 ```
 
 Start your cluster from the daemon-build/output directory run:
