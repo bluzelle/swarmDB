@@ -41,19 +41,26 @@ namespace bzn
         bzn::message do_follower_tasks(const bzn::message& msg);
         bzn::message do_leader_tasks(const bzn::message& msg);
 
-        void leader_delete_task(const bzn::message &msg, bzn::message &response);
-        void handle_create_command(const bzn::message& msg, bzn::message& response);
-        void handle_update_command(const bzn::message& msg, bzn::message& response);
+        void handle_delete(const bzn::message &msg, bzn::message &response);
+        void handle_create(const bzn::message &msg, bzn::message &response);
+        void handle_update(const bzn::message &msg, bzn::message &response);
 
-        void handle_create(const bzn::message& msg);
+        void commit_create(const bzn::message &msg);
         void handle_read(const bzn::message& msg, bzn::message& response);
-        void handle_update(const bzn::message& msg);
-        void handle_delete(const bzn::message& msg);
+        void commit_update(const bzn::message &msg);
+        void commit_delete(const bzn::message &msg);
 
         // TODO move get keys out of crud.
         void handle_get_keys(const bzn::message& msg, bzn::message& response);
         void handle_has(const bzn::message& msg, bzn::message& response);
         void handle_size(const bzn::message& msg, bzn::message& response);
+
+        void register_crud_command_handlers();
+        void register_utility_command_handlers();
+        void register_commit_handlers();
+
+
+
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;
@@ -63,7 +70,7 @@ namespace bzn
 
         using commit_handler_t = std::function<void(const bzn::message& msg, bzn::message& resp)>;
 
-        std::unordered_map<std::string, crud_handler_t> handlers;
+        std::unordered_map<std::string, crud_handler_t> commit_handlers;
 
         std::unordered_map<std::string, commit_handler_t> command_handlers;
 
