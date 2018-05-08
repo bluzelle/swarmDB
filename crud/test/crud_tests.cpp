@@ -1010,7 +1010,7 @@ TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
 
     auto perform_test = [&](){
         EXPECT_CALL(*this->mock_raft, get_state())
-                .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
+                .WillOnce(Invoke([&](){return raft_state;}));
 
         EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
 
