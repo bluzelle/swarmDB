@@ -60,6 +60,9 @@ namespace bzn
         void register_commit_handlers();
 
 
+        bool validate_create(const bzn::message &msg);
+
+
 
 
         std::shared_ptr<bzn::raft_base>    raft;

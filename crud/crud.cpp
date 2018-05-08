@@ -19,7 +19,7 @@ using namespace bzn;
 
 namespace
 {
-    std::set<std::string> accepted_crud_commands{bzn::MSG_CMD_CREATE, bzn::MSG_CMD_READ, bzn::MSG_CMD_UPDATE, bzn::MSG_CMD_DELETE,
+    const std::set<std::string> accepted_crud_commands{bzn::MSG_CMD_CREATE, bzn::MSG_CMD_READ, bzn::MSG_CMD_UPDATE, bzn::MSG_CMD_DELETE,
                                                  bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS, bzn::MSG_CMD_SIZE};
 }
 
@@ -58,9 +58,29 @@ crud::start()
                     }
                     return true;
                 });
-
-
         });
+}
+
+void
+crud::do_raft_task_routing(const bzn::message& msg, bzn::message& response)
+{
+    switch(raft->get_state())
+    {
+        case bzn::raft_state::candidate:
+            response = do_candidate_tasks(msg);
+            break;
+        case bzn::raft_state::follower:
+            response = do_follower_tasks(msg);
+            break;
+        case bzn::raft_state::leader:
+            response = do_leader_tasks(msg);
+            break;
+        default: // A bad RAFT State?!?!?! This should not happen
+            response["request-id"] = msg["request-id"];
+            response["error"] = bzn::MSG_INVALID_RAFT_STATE;
+            assert(false);
+            break;
+    }
 }
 
 void
@@ -72,13 +92,6 @@ crud::set_leader_info(bzn::message& msg)
     msg["data"]["leader-port"] = leader.port;
     msg["data"]["leader-name"] = leader.name;
 }
-
-
-bool validate_create(const bzn::message /*&msg*/)
-{
-    return false;
-}
-
 
 
 void
@@ -100,23 +113,31 @@ crud::commit_create(const bzn::message &msg)
     }
 }
 
+bool
+crud::validate_create(const bzn::message &msg)
+{
+    return msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value");
+}
+
 void
 crud::handle_create(const bzn::message &msg, bzn::message &response)
 {
-    if(msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value"))
+    if(!this->validate_create(msg))
+    {
+        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+        return;
+    }
+    else
     {
         if(this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
         {
             response["error"] = bzn::MSG_RECORD_EXISTS;
+            return;
         }
         else
         {
             this->raft->append_log(msg);
         }
-    }
-    else
-    {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
 }
 
@@ -210,6 +231,19 @@ crud::commit_delete(const bzn::message &msg)
 }
 
 void
+crud::handle_delete(const bzn::message &msg, bzn::message &response)
+{
+    if (this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
+    {
+        this->raft->append_log(msg);
+    }
+    else
+    {
+        response["error"] = bzn::MSG_RECORD_NOT_FOUND;
+    }
+}
+
+void
 crud::handle_get_keys(const bzn::message& msg, bzn::message& response)
 {
     std::vector<std::string> keys = this->storage->get_keys(msg["db-uuid"].asString());
@@ -244,44 +278,27 @@ crud::handle_size(const bzn::message& msg, bzn::message& response)
 }
 
 void
-crud::do_raft_task_routing(const bzn::message& msg, bzn::message& response)
-{
-    switch(raft->get_state())
-    {
-        case bzn::raft_state::candidate:
-            response = do_candidate_tasks(msg);
-            break;
-        case bzn::raft_state::follower:
-            response = do_follower_tasks(msg);
-            break;
-        case bzn::raft_state::leader:
-            response = do_leader_tasks(msg);
-            break;
-        default: // A bad RAFT State?!?!?! This should not happen
-            response["request-id"] = msg["request-id"];
-            response["error"] = bzn::MSG_INVALID_RAFT_STATE;
-            assert(false);
-            break;
-    }
-}
-
-void
 crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
     LOG(debug) << msg.toStyledString();
 
     auto response = std::make_shared<bzn::message>();
+    (*response)["request-id"] = msg["request-id"];
 
-    assert(msg["bzn-api"]=="crud");
-
-    if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
+    if( !(msg.isMember("bzn-api") && msg["bzn-api"]=="crud"))
     {
-        this->do_raft_task_routing(msg, *response);
+        (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
     }
     else
     {
-        (*response)["request-id"] = msg["request-id"];
-        (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+        if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
+        {
+            this->do_raft_task_routing(msg, response);
+        }
+        else
+        {
+            (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+        }
     }
     session->send_message(response, nullptr);
 }
@@ -329,18 +346,6 @@ crud::do_follower_tasks(const bzn::message& msg)
     return response;
 }
 
-void
-crud::handle_delete(const bzn::message &msg, bzn::message &response)
-{
-    if (this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString()))
-    {
-        this->raft->append_log(msg);
-    }
-    else
-    {
-        response["error"] = bzn::MSG_RECORD_NOT_FOUND;
-    }
-}
 
 bzn::message
 crud::do_leader_tasks(const bzn::message& msg)
