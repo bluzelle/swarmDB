@@ -19,16 +19,12 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 
 ### Docker Swarm Deploy
 
-1. Download sample [peerlist.json](https://gist.github.com/amastracci/b6144d32bd790cf1a93e3c498a9d46cc)
-2. Add your swarm machines' local IP to the "host" field of each peer in peerlist.json. This is the IP assigned to the primary network interface. 
-3. Host your peerlist.json at a publically accessable URL that is non-https and non-redirecting such as [pastebin](https://www.pastebin.com). Ensure that you you rewrite the protocol of the "raw" URL to use http and not https.
-4. Download sample [docker-compose.yml](https://gist.githubusercontent.com/amastracci/5e34d586c6a682e0eb91dc2ead9b5ed8/raw/ea259cadf1021b06e7b84ffe9f73143e119bee8d/docker-compose.yml)
-5. Add your public URL to "SWARM_BOOTSTRAP_URL" to each service in docker-compose.yml
-6. Run 'docker-compose up' in the same directory of your docker-compose.yml. This command will initialize the swarm within your local docker-machine. Full docker-componse documentation can be found [here](https://docs.docker.com/compose/)
-7. Nodes are available on localhost port 51010-51012
-8. [Connect a test websocket client](https://github.com/bluzelle/swarmDB#testing-locally)
-9. [Create a javascript application](https://bluzelle.github.io/api/)
-10. ```CTRL-C``` to terminate the docker-compose swarm
+1. Setup a local docker-compose swarm with the instructions found [here](https://github.com/bluzelle/docker-swarm-deploy)
+2. Run 'docker-compose up' in the same directory of your docker-compose.yml. This command will initialize the swarm within your local docker-machine. Full docker-componse documentation can be found [here](https://docs.docker.com/compose/)
+3. Nodes are available on localhost port 51010-51012
+4. [Connect a test websocket client](https://github.com/bluzelle/swarmDB#testing-locally)
+5. [Create a javascript application](https://bluzelle.github.io/api/)
+6. ```CTRL-C``` to terminate the docker-compose swarm
 
 
 ## Building from source 
