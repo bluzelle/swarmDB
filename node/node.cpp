@@ -67,7 +67,6 @@ node::register_for_message(const std::string& msg_type, bzn::message_handler msg
 void
 node::do_accept()
 {
-    // todo: look at speeding this up...
     this->acceptor_socket = this->io_context->make_unique_tcp_socket();
 
     this->tcp_acceptor->async_accept(*this->acceptor_socket,
@@ -86,7 +85,7 @@ node::do_accept()
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                std::make_shared<bzn::session>(std::move(ws))->start(
+                std::make_shared<bzn::session>(self->io_context, std::move(ws))->start(
                     std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
             }
 
@@ -151,7 +150,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& 
                         return;
                     }
 
-                    auto session = std::make_shared<bzn::session>(ws);
+                    auto session = std::make_shared<bzn::session>(self->io_context, ws);
 
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
 

@@ -59,6 +59,8 @@ namespace  bzn
                 return mock_socket;
             }));
 
+        EXPECT_CALL(*mock_io_context, make_unique_strand());
+
         // intercept the handler...
         bzn::asio::accept_handler accept_handler;
         EXPECT_CALL(*mock_tcp_acceptor, async_accept(_, _)).WillRepeatedly(Invoke(

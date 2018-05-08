@@ -48,4 +48,4 @@ namespace bzn
         virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, const bzn::message& msg, bzn::message_handler reply_handler) = 0;
     };
 
-} // blz
+} // bzn
