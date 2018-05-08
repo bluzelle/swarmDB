@@ -128,7 +128,7 @@ namespace bzn
         EXPECT_CALL(*websocket_stream, is_open()).WillOnce(Return(false));
 
         // no read exepected...
-        session->send_message("asdf", nullptr);
+        session->send_message(std::make_shared<bzn::message>("asdf"), nullptr);
 
         // read should be setup...
         bzn::asio::write_handler write_handler;
@@ -139,7 +139,7 @@ namespace bzn
             }));
 
         EXPECT_CALL(*websocket_stream, async_read(_,_));
-        session->send_message("asdf", [](const auto&, auto){});
+        session->send_message(std::make_shared<bzn::message>("asdf"), [](const auto&, auto){});
         write_handler(boost::system::error_code(), 0);
 
         // error no read should be setup...

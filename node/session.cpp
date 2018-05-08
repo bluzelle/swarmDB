@@ -115,17 +115,16 @@ session::do_read(bzn::message_handler reply_handler)
 
 // todo: We will want to pipeline other messages on this stream, so we will not
 // use the reply_handler, but instead rely on the node to continue parsing messages
-// and dispatching them accordingly. All uses of send_message do not use the reply_handler anyway.
+// and dispatching them accordingly.
 void
-session::send_message(const bzn::message& msg, bzn::message_handler reply_handler)
+session::send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler)
 {
-    // todo: we will want to use a shared_ptr!
-    this->send_msg = msg.toStyledString();
+    auto send_msg = std::make_shared<std::string>(msg->toStyledString());
 
     this->websocket->async_write(
-        boost::asio::buffer(this->send_msg),
+        boost::asio::buffer(*send_msg),
         this->strand->wrap(
-            [self = shared_from_this(), reply_handler](auto ec, auto bytes_transferred)
+            [self = shared_from_this(), reply_handler, send_msg](auto ec, auto bytes_transferred)
             {
                 if (ec)
                 {

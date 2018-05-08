@@ -41,7 +41,7 @@ namespace bzn
          * @param msg       message
          * @param handler   called if there is a response
          */
-        virtual void send_message(const bzn::message& msg, bzn::message_handler handler) = 0;
+        virtual void send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler handler) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.

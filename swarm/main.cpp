@@ -190,8 +190,8 @@ main(int argc, const char* argv[])
             {
                 LOG(debug) << '\n' << msg.toStyledString();
 
-                auto reply = msg;
-                reply["bzn-api"] = "pong";
+                auto reply = std::make_shared<bzn::message>(msg);
+                (*reply)["bzn-api"] = "pong";
 
                 // echo back what the client sent...
                 session->send_message(reply, nullptr);

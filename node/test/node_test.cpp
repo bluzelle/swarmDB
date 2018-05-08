@@ -184,7 +184,7 @@ namespace  bzn
                 return std::move(mock_websocket_stream);
             }));
 
-        node->send_message(TEST_ENDPOINT, "{}", nullptr);
+        node->send_message(TEST_ENDPOINT, std::make_shared<bzn::message>("{}"), nullptr);
 
         // call with no error to validate handshake...
         connect_handler(boost::system::error_code());
@@ -205,12 +205,12 @@ namespace  bzn
         auto node = std::make_shared<bzn::node>(io_context, websocket, ep);
 
         node->register_for_message("crud",
-            [](const Json::Value& msg, std::shared_ptr<bzn::session_base> session)
+            [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
                 LOG(info) << '\n' << msg.toStyledString();
 
                 // echo back what the client sent...
-                session->send_message(msg, nullptr);
+                session->send_message(std::make_shared<bzn::message>(msg), nullptr);
             });
 
         node->start();

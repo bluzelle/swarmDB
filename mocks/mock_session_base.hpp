@@ -26,7 +26,7 @@ namespace bzn {
         MOCK_METHOD1(start,
                      void(bzn::message_handler handler));
         MOCK_METHOD2(send_message,
-                     void(const bzn::message& msg, bzn::message_handler handler));
+                     void(std::shared_ptr<const bzn::message> msg, bzn::message_handler handler));
         MOCK_METHOD0(close,
                     void());
     };

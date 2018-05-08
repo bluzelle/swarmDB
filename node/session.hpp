@@ -33,7 +33,7 @@ namespace bzn
 
         void start(bzn::message_handler handler) override;
 
-        void send_message(const bzn::message& msg, bzn::message_handler handler) override;
+        void send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler handler) override;
 
         void close() override;
 
@@ -48,7 +48,6 @@ namespace bzn
 
         bzn::message_handler       handler;
         boost::beast::multi_buffer buffer;
-        std::string send_msg;
 
         const bool ignore_json_errors = false;
     };

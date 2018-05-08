@@ -113,7 +113,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, const Json::Value& msg, bzn::message_handler reply_handler)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler)
 {
     std::shared_ptr<bzn::asio::tcp_socket_base> socket = this->io_context->make_unique_tcp_socket();
 
