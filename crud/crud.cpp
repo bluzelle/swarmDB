@@ -272,18 +272,18 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 {
     LOG(debug) << msg.toStyledString();
 
-    bzn::message response;
+    auto response = std::make_shared<bzn::message>();
 
     assert(msg["bzn-api"]=="crud");
 
     if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
     {
-        this->do_raft_task_routing(msg, response);
+        this->do_raft_task_routing(msg, *response);
     }
     else
     {
-        response["request-id"] = msg["request-id"];
-        response["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+        (*response)["request-id"] = msg["request-id"];
+        (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
     }
     session->send_message(response, nullptr);
 }

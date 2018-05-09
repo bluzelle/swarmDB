@@ -18,8 +18,9 @@
 using namespace bzn;
 
 
-session::session(std::shared_ptr<bzn::beast::websocket_stream_base> websocket)
-    : websocket(std::move(websocket))
+session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket)
+    : strand(io_context->make_unique_strand())
+    , websocket(std::move(websocket))
 {
 }
 
@@ -111,37 +112,41 @@ session::do_read(bzn::message_handler reply_handler)
 }
 
 
+// todo: We will want to pipeline other messages on this stream, so we will not
+// use the reply_handler, but instead rely on the node to continue parsing messages
+// and dispatching them accordingly.
 void
-session::send_message(const bzn::message& msg, bzn::message_handler reply_handler)
+session::send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler)
 {
-    // todo: we will want to use a shared_ptr!
-    this->send_msg = msg.toStyledString();
+    auto send_msg = std::make_shared<std::string>(msg->toStyledString());
 
-    this->websocket->async_write(boost::asio::buffer(this->send_msg),
-        [self = shared_from_this(), reply_handler](auto ec, auto bytes_transferred)
-        {
-            if (ec)
+    this->websocket->async_write(
+        boost::asio::buffer(*send_msg),
+        this->strand->wrap(
+            [self = shared_from_this(), reply_handler, send_msg](auto ec, auto bytes_transferred)
             {
-                LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
-
-                if(reply_handler)
+                if (ec)
                 {
-                    reply_handler(bzn::message(), nullptr);
+                    LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
+
+                    if(reply_handler)
+                    {
+                        reply_handler(bzn::message(), nullptr);
+                    }
+                    return;
                 }
-                return;
-            }
 
-            if (reply_handler)
-            {
-                LOG(debug) << "response requested";
+                if (reply_handler)
+                {
+                    LOG(debug) << "response requested";
 
-                self->do_read(reply_handler);
+                    self->do_read(reply_handler);
 
-                return;
-            }
+                    return;
+                }
 
-            self->close();
-        });
+                self->close();
+            }));
 }
 
 

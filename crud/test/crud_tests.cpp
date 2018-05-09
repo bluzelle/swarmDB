@@ -117,15 +117,16 @@ public:
     std::shared_ptr<bzn::crud> crud;
 };
 
+
 TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
 {
     bzn::message request = generate_create_request(user_uuid, "key0", test_value);
 
-    bzn::message expected_response;
-    expected_response["request-id"] = 85746;
-    expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = 85746;
+    (*expected_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(expected_response, "", "", 0, "" );
+    set_leader_info(*expected_response, "", "", 0, "" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -135,21 +136,26 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([](){return bzn::peer_address_t("",0,"","");}));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 {
     // must respond with error, and respond with leader uuid
     bzn::message msg = generate_create_request(user_uuid, "key0", test_value);
-    bzn::message accepted_response;
+    auto accepted_response = std::make_shared<bzn::message>();
 
-    accepted_response["request-id"] = msg["request-id"];
-    accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    (*accepted_response)["request-id"] = msg["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(accepted_response, leader_uuid, "127.0.0.1", 49153, "iron maiden" );
+    set_leader_info(*accepted_response, leader_uuid, "127.0.0.1", 49153, "iron maiden" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -157,27 +163,38 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49153,"iron maiden",leader_uuid);}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response, _));
+
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(msg, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_candidate_fails_to_create)
 {
     // must respond with error
     bzn::message msg = generate_create_request(user_uuid, "key0", test_value);
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = msg["request-id"];
-    accepted_response["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = msg["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::candidate;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(msg, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
 {
@@ -185,8 +202,8 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
     // must respond with error
     bzn::message request = generate_create_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -195,7 +212,11 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
     EXPECT_CALL(*this->mock_raft, append_log(_))
             .WillOnce(Return(true));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 
@@ -207,6 +228,7 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
     this->ch(request);
 }
 
+
 TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
 {
     // record exists, don't bother with raft
@@ -214,8 +236,8 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
     const std::string value{"skdif9ek34587fk30df6vm73=="};
     bzn::message request = generate_create_request(user_uuid, key, value);
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
 
     // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -227,7 +249,11 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
 
     EXPECT_CALL(*this->mock_raft, append_log(_));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 
@@ -250,14 +276,19 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
     EXPECT_CALL(*this->mock_storage, has(user_uuid, key))
             .WillOnce(Return(true));
 
-    expected_response.clear();
-    expected_response["error"] = bzn::MSG_RECORD_EXISTS;
-    expected_response["request-id"] = request["request-id"];
+    expected_response->clear();
+    (*expected_response)["error"] = bzn::MSG_RECORD_EXISTS;
+    (*expected_response)["request-id"] = request["request-id"];
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
 {
@@ -267,9 +298,9 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
 
     bzn::message request = generate_read_request(user_uuid, "key0");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
-    expected_response["data"]["value"] = "skdif9ek34587fk30df6vm73==";
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["data"]["value"] = "skdif9ek34587fk30df6vm73==";
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -287,21 +318,26 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
                     }
             ));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response, _));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
 {
     // same, but refer user to leader id.
     bzn::message request = generate_read_request(user_uuid, "key0");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
 
-    set_leader_info(expected_response, leader_uuid, "127.0.0.1", 49152, "ozzy" );
+    set_leader_info(*expected_response, leader_uuid, "127.0.0.1", 49152, "ozzy" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillRepeatedly(Invoke([](){return bzn::raft_state ::follower;}));
@@ -315,27 +351,37 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillRepeatedly(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49152,"ozzy",leader_uuid);}));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response, _));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_candidate_read_fails)
 {
     // there is an election respond with error
     bzn::message msg = generate_read_request(user_uuid, "key0");
-    bzn::message accepted_response;
-    accepted_response["request-id"] = msg["request-id"];
-    accepted_response["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = msg["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(
                     Invoke([](){return bzn::raft_state::candidate;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(msg, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
 {
@@ -343,9 +389,9 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
     // not exist respond with data does not exist error.
     bzn::message request = generate_read_request(user_uuid,"key0");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
-    expected_response["data"]["value"] = "skdif9ek34587fk30df6vm73==";
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["data"]["value"] = "skdif9ek34587fk30df6vm73==";
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -363,20 +409,25 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
                         return record;
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response, _));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
 {
     // must respond with error, and leader uuid if it
     bzn::message request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(accepted_response, leader_uuid, "127.0.0.1", 49152, "punkh" );
+    set_leader_info(*accepted_response, leader_uuid, "127.0.0.1", 49152, "punkh" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -385,20 +436,25 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([&](){return bzn::peer_address_t("127.0.0.1",49152,"punkh",leader_uuid);}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
 {
     bzn::message request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(accepted_response, "", "", 0, "" );
+    set_leader_info(*accepted_response, "", "", 0, "" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -407,26 +463,36 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([&](){return bzn::peer_address_t("",0,"","");}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_candidate_update_fails)
 {
     bzn::message msg = generate_update_request(user_uuid, "key0", test_value);
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = msg["request-id"];
-    accepted_response["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = msg["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::candidate;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(msg, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_update)
 {
@@ -435,8 +501,8 @@ TEST_F(crud_test, test_that_a_leader_can_update)
     const std::string key{"key0"};
     bzn::message request = generate_update_request(user_uuid, key, test_value);
 
-    bzn::message expected_response;
-    expected_response["request-id"] = request["request-id"];
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
 
     // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -448,7 +514,12 @@ TEST_F(crud_test, test_that_a_leader_can_update)
     EXPECT_CALL(*this->mock_raft, append_log(_))
             .WillOnce(Return(true));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
+
 
     this->mh(request, this->mock_session);
 
@@ -457,6 +528,7 @@ TEST_F(crud_test, test_that_a_leader_can_update)
     this->ch(request);
 }
 
+
 TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
 {
     // if key-value pair exists, must respond with OK, and start the
@@ -464,11 +536,11 @@ TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
     const std::string key{"key0"};
     bzn::message request = generate_update_request(user_uuid, key, test_value);
 
-    bzn::message expected_response;
+    auto expected_response = std::make_shared<bzn::message>();
 
     // "{\n\t\"error\" : \"RECORD_NOT_FOUND\",\n\t\"request-id\" : 85746\n}\n"
-    expected_response["request-id"] = request["request-id"];
-    expected_response["error"] = bzn::MSG_RECORD_NOT_FOUND;
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["error"] = bzn::MSG_RECORD_NOT_FOUND;
 
     // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -477,12 +549,14 @@ TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
     EXPECT_CALL( *this->mock_storage, has(user_uuid, key))
             .WillOnce(Return(false));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
-
-
 
 
 TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
@@ -490,11 +564,11 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
     // must respond with error
     bzn::message request = generate_delete_request(user_uuid, "key0");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = 85746;
-    expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = 85746;
+    (*expected_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(expected_response, "", "", 0, "" );
+    set_leader_info(*expected_response, "", "", 0, "" );
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -503,21 +577,26 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([](){return bzn::peer_address_t("",0,"","");}));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
 {
     // must respond with error, and leader uuid
     bzn::message request = generate_delete_request(user_uuid, "key0");
 
-    bzn::message expected_response;
-    expected_response["request-id"] = 85746;
-    expected_response["error"] = bzn::MSG_NOT_THE_LEADER;
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = 85746;
+    (*expected_response)["error"] = bzn::MSG_NOT_THE_LEADER;
 
-    set_leader_info(expected_response, leader_uuid, "127.0.0.1", 49152, "Pantera" );
+    set_leader_info(*expected_response, leader_uuid, "127.0.0.1", 49152, "Pantera" );
 
     // This node is in the follower state.
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -527,28 +606,38 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([](){return bzn::peer_address_t("127.0.0.1", 49152,"Pantera",leader_uuid);}));
 
-    EXPECT_CALL(*this->mock_session, send_message(expected_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*expected_response, *msg);
+        }));
 
     this->mh(request, this->mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_candidate_delete_fails)
 {
     // must respond with error
     bzn::message msg = generate_delete_request(user_uuid, "key0");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = msg["request-id"];
-    accepted_response["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = msg["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(
                     Invoke([](){return bzn::raft_state::candidate;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(msg, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
 {
@@ -563,8 +652,8 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     const std::string key{"key0"};
     bzn::message request = generate_delete_request(user_uuid, key);
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
 
     // We tell CRUD that we are the leader
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -579,8 +668,11 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
             .WillOnce(Return(true));
 
     // we respond to the user with OK.
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
-
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     // OK, run the message handler
     this->mh(request, mock_session);
@@ -592,14 +684,15 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     this->ch(request);
 }
 
+
 TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
 {
     const std::string key{"key0"};
     bzn::message request = generate_delete_request(user_uuid, key);
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_RECORD_NOT_FOUND;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_RECORD_NOT_FOUND;
 
     // We tell CRUD that we are the leader
     EXPECT_CALL(*this->mock_raft, get_state())
@@ -610,30 +703,33 @@ TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
             .WillOnce(Return(false));
 
     // we respond to the user with an error.
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
-
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     // OK, run the message handler
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
 
-
     const std::string key{"key0"};
     bzn::message request = generate_generic_message(user_uuid, "", "keys");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
     Json::Value key_array;
     key_array.append("key0");
     key_array.append("key1");
     key_array.append("key2");
 
-    accepted_response["data"]["keys"] = key_array;
+    (*accepted_response)["data"]["keys"] = key_array;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
@@ -645,10 +741,15 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
                         return std::vector<std::string>{"key0", "key1", "key2"};
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
 {
@@ -657,14 +758,14 @@ TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
     const std::string key{"key0"};
     bzn::message request = generate_generic_message(user_uuid, "", "keys");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
     Json::Value key_array;
     key_array.append("key0");
     key_array.append("key1");
     key_array.append("key2");
 
-    accepted_response["data"]["keys"] = key_array;
+    (*accepted_response)["data"]["keys"] = key_array;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -676,10 +777,15 @@ TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
                         return std::vector<std::string>{"key0", "key1", "key2"};
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
 {
@@ -688,9 +794,9 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
     bzn::message request = generate_generic_message(user_uuid, "", "has");
     request["data"]["key"] = "key0";
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["data"]["key-exists"] = true;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["data"]["key-exists"] = true;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -702,12 +808,15 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
                         return true;
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 
-
-    accepted_response["data"]["key-exists"] = false;
+    (*accepted_response)["data"]["key-exists"] = false;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -719,10 +828,15 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
                         return false;
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command_with_bad_args)
 {
@@ -730,17 +844,22 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command_with_bad_args)
     // package up the keys into a JSON array, send it back to the user
     bzn::message request = generate_generic_message(user_uuid, "", "has");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
 {
@@ -749,9 +868,9 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
     bzn::message request = generate_generic_message(user_uuid, "", "has");
     request["data"]["key"] = "key0";
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["data"]["key-exists"] = true;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["data"]["key-exists"] = true;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
@@ -763,12 +882,15 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
                         return true;
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 
-
-    accepted_response["data"]["key-exists"] = false;
+    (*accepted_response)["data"]["key-exists"] = false;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
@@ -780,10 +902,16 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
                         return false;
                     }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
+
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
 {
@@ -791,26 +919,31 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
     // package up the keys into a JSON array, send it back to the user
     bzn::message request = generate_generic_message(user_uuid, "", "has");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
 
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
 {
     const std::string key{"key0"};
     bzn::message request = generate_generic_message(user_uuid, "", "size");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["data"]["size"] = Json::UInt64(123);
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["data"]["size"] = Json::UInt64(123);
 
     EXPECT_CALL(*this->mock_raft, get_state())
         .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
@@ -822,19 +955,24 @@ TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
                 return 123;
             }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
 {
     const std::string key{"key0"};
     bzn::message request = generate_generic_message(user_uuid, "", "size");
 
-    bzn::message accepted_response;
-    accepted_response["request-id"] = request["request-id"];
-    accepted_response["data"]["size"] = Json::UInt64(123);
+    auto accepted_response = std::make_shared<bzn::message>();
+    (*accepted_response)["request-id"] = request["request-id"];
+    (*accepted_response)["data"]["size"] = Json::UInt64(123);
 
     EXPECT_CALL(*this->mock_raft, get_state())
         .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
@@ -846,7 +984,11 @@ TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
                 return 123;
             }));
 
-    EXPECT_CALL(*this->mock_session, send_message(accepted_response,_));
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+        [&](auto& msg, auto)
+        {
+            EXPECT_EQ(*accepted_response, *msg);
+        }));
 
     this->mh(request, mock_session);
 }

@@ -73,6 +73,18 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
 
+    class strand_base
+    {
+    public:
+        virtual ~strand_base() = default;
+
+        virtual bzn::asio::write_handler wrap(write_handler handler) = 0;
+
+        virtual boost::asio::io_context::strand& get_strand() = 0;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
     class io_context_base
     {
     public:
@@ -83,6 +95,8 @@ namespace bzn::asio
         virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() = 0;
 
         virtual std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() = 0;
+
+        virtual std::unique_ptr<bzn::asio::strand_base> make_unique_strand() = 0;
 
         virtual boost::asio::io_context::count_type run() = 0;
 
@@ -181,6 +195,30 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
 
+    class strand final : public strand_base
+    {
+    public:
+        explicit strand(boost::asio::io_context& io_context)
+            : s(io_context)
+        {
+        }
+
+        bzn::asio::write_handler wrap(write_handler handler) override
+        {
+            return this->s.wrap(std::move(handler));
+        }
+
+        boost::asio::io_context::strand& get_strand() override
+        {
+            return this->s;
+        }
+
+    private:
+        boost::asio::io_context::strand s;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
     class io_context final : public io_context_base
     {
     public:
@@ -197,6 +235,11 @@ namespace bzn::asio
         std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() override
         {
             return std::make_unique<bzn::asio::steady_timer>(this->io_context);
+        }
+
+        std::unique_ptr<bzn::asio::strand_base> make_unique_strand() override
+        {
+            return std::make_unique<bzn::asio::strand>(this->io_context);
         }
 
         boost::asio::io_context::count_type run() override
