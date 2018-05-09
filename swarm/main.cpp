@@ -25,8 +25,11 @@
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/program_options.hpp>
 
+#include <thread>
 
-void init_logging()
+
+void
+init_logging()
 {
     namespace keywords = boost::log::keywords;
 
@@ -59,7 +62,8 @@ void init_logging()
 }
 
 
-void set_logging_level(const bzn::options& options)
+void
+set_logging_level(const bzn::options& options)
 {
     if (options.get_debug_logging())
     {
@@ -77,7 +81,8 @@ void set_logging_level(const bzn::options& options)
 
 
 
-void print_banner(const bzn::options& options)
+void
+print_banner(const bzn::options& options)
 {
     std::stringstream ss;
 
@@ -92,7 +97,29 @@ void print_banner(const bzn::options& options)
 }
 
 
-int main(int argc, const char* argv[])
+void
+start_worker_threads_and_wait(std::shared_ptr<bzn::asio::io_context_base> io_context)
+{
+    std::vector<std::thread> workers;
+
+    for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+    {
+        workers.emplace_back(std::thread([io_context]
+        {
+            io_context->run();
+        }));
+    }
+
+    // wait for shutdown...
+    for (auto& t : workers)
+    {
+        t.join();
+    }
+}
+
+
+int
+main(int argc, const char* argv[])
 {
     try
     {
@@ -161,10 +188,10 @@ int main(int argc, const char* argv[])
         node->register_for_message("ping",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
-                LOG(info) << '\n' << msg.toStyledString();
+                LOG(debug) << '\n' << msg.toStyledString();
 
-                auto reply = msg;
-                reply["bzn-api"] = "pong";
+                auto reply = std::make_shared<bzn::message>(msg);
+                (*reply)["bzn-api"] = "pong";
 
                 // echo back what the client sent...
                 session->send_message(reply, nullptr);
@@ -176,8 +203,7 @@ int main(int argc, const char* argv[])
 
         print_banner(options);
 
-        io_context->run();
-
+        start_worker_threads_and_wait(io_context);
     }
     catch(std::exception& ex)
     {

@@ -143,7 +143,7 @@ raft::request_vote_request()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            this->node->send_message(ep, bzn::create_request_vote_request(this->uuid, this->current_term, this->last_log_index, this->last_log_term),
+            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->last_log_index, this->last_log_term)),
                 [peer, self = shared_from_this()](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
                 {
                     if (!session)
@@ -234,7 +234,7 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
 {
     if (this->current_state == bzn::raft_state::leader || this->voted_for)
     {
-        session->send_message(bzn::create_request_vote_response(this->uuid, this->current_term, false), nullptr);
+        session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, false)), nullptr);
 
         return;
     }
@@ -244,7 +244,7 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
 
     bool vote = msg["data"]["lastLogIndex"].asUInt() >= this->last_log_index;
 
-    session->send_message(bzn::create_request_vote_response(this->uuid, this->current_term, vote), nullptr);
+    session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), nullptr);
 }
 
 
@@ -312,9 +312,9 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         }
     }
 
-    auto resp_msg = bzn::create_append_entries_response(this->uuid, this->current_term, success, this->last_log_index);
+    auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, this->last_log_index));
 
-    LOG(debug) << "Sending WS message:\n" << resp_msg.toStyledString();
+    LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
 
     session->send_message(resp_msg, nullptr);
 
@@ -370,7 +370,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             {
                 this->voted_for = msg["data"]["uuid"].asString();
 
-                session->send_message(bzn::create_request_vote_response(this->uuid, this->current_term, true), nullptr);
+                session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, true)), nullptr);
 
                 return;
             }
@@ -379,9 +379,9 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             {
                 this->leader = msg["data"]["from"].asString();
 
-                auto resp_msg = bzn::create_append_entries_response(this->uuid, this->current_term, true, this->last_log_index);
+                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, true, this->last_log_index));
 
-                LOG(debug) << "Sending WS message:\n" << resp_msg.toStyledString();
+                LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
 
                 session->send_message(resp_msg, nullptr);
             }
@@ -478,9 +478,9 @@ raft::request_append_entries()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            auto req = bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg);
+            auto req = std::make_shared<bzn::message>(bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg));
 
-            LOG(debug) << "Sending request:\n" << req.toStyledString();
+            LOG(debug) << "Sending request:\n" << req->toStyledString();
 
             this->node->send_message(ep, req,
                 [peer, self = shared_from_this()](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)

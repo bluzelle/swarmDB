@@ -23,8 +23,12 @@ namespace bzn
 {
     TEST(node_session, test_that_when_session_starts_it_accepts_and_read_is_scheduled)
     {
+        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
-        auto session = std::make_shared<bzn::session>(websocket_stream);
+
+        EXPECT_CALL(*io_context, make_unique_strand());
+
+        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
 
         bzn::asio::accept_handler accept_handler;
         EXPECT_CALL(*websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
@@ -50,8 +54,12 @@ namespace bzn
 
     TEST(node_session, test_that_when_message_arrives_registered_callback_is_executed)
     {
+        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto websocket_stream = std::make_shared<NiceMock<bzn::beast::Mockwebsocket_stream_base>>();
-        auto session = std::make_shared<bzn::session>(websocket_stream);
+
+        EXPECT_CALL(*io_context, make_unique_strand());
+
+        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
 
         bzn::asio::accept_handler accept_handler;
         EXPECT_CALL(*websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
@@ -98,14 +106,29 @@ namespace bzn
 
     TEST(node_session, test_that_response_can_be_sent)
     {
+        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+        auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+
+        EXPECT_CALL(*strand, wrap(_)).WillRepeatedly(Invoke(
+            [&](bzn::asio::write_handler handler)
+            {
+                return handler;
+            }));
+
+        EXPECT_CALL(*io_context, make_unique_strand()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(strand);
+            }));
+
         auto websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
-        auto session = std::make_shared<bzn::session>(websocket_stream);
+        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
 
         EXPECT_CALL(*websocket_stream, async_write(_,_));
         EXPECT_CALL(*websocket_stream, is_open()).WillOnce(Return(false));
 
         // no read exepected...
-        session->send_message("asdf", nullptr);
+        session->send_message(std::make_shared<bzn::message>("asdf"), nullptr);
 
         // read should be setup...
         bzn::asio::write_handler write_handler;
@@ -116,7 +139,7 @@ namespace bzn
             }));
 
         EXPECT_CALL(*websocket_stream, async_read(_,_));
-        session->send_message("asdf", [](const auto&, auto){});
+        session->send_message(std::make_shared<bzn::message>("asdf"), [](const auto&, auto){});
         write_handler(boost::system::error_code(), 0);
 
         // error no read should be setup...

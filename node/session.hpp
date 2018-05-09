@@ -27,13 +27,13 @@ namespace bzn
     class session : public bzn::session_base, public std::enable_shared_from_this<session>
     {
     public:
-        session(std::shared_ptr<bzn::beast::websocket_stream_base> websocket);
+        session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket);
 
         ~session();
 
         void start(bzn::message_handler handler) override;
 
-        void send_message(const bzn::message& msg, bzn::message_handler handler) override;
+        void send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler handler) override;
 
         void close() override;
 
@@ -42,12 +42,11 @@ namespace bzn
 
         void do_read(bzn::message_handler reply_handler);
 
+        std::unique_ptr<bzn::asio::strand_base> strand;
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
 
-        // todo: do we need a strand?
         bzn::message_handler       handler;
         boost::beast::multi_buffer buffer;
-        std::string send_msg;
 
         const bool ignore_json_errors = false;
     };

@@ -67,6 +67,19 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
+    class Mockstrand_base : public strand_base {
+    public:
+        MOCK_METHOD1(wrap,
+            bzn::asio::write_handler(write_handler handler));
+        MOCK_METHOD0(get_strand,
+            boost::asio::io_context::strand&());
+    };
+
+}  // namespace bzn::asio
+
+
+namespace bzn::asio {
+
     class Mockio_context_base : public io_context_base {
     public:
         MOCK_METHOD1(make_unique_tcp_acceptor,
@@ -75,6 +88,8 @@ namespace bzn::asio {
             std::unique_ptr<bzn::asio::tcp_socket_base>());
         MOCK_METHOD0(make_unique_steady_timer,
             std::unique_ptr<bzn::asio::steady_timer_base>());
+        MOCK_METHOD0(make_unique_strand,
+            std::unique_ptr<bzn::asio::strand_base>());
         MOCK_METHOD0(run,
             boost::asio::io_context::count_type());
         MOCK_METHOD0(stop,

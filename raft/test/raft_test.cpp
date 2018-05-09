@@ -130,7 +130,7 @@ TEST(raft, test_that_request_for_vote_response_while_candidate_is_no)
 
     bzn::message resp;
     EXPECT_CALL(*mock_session, send_message(_,_)).WillOnce(Invoke(
-        [&](const auto& msg, auto ) { resp = msg; } ));
+        [&](const auto& msg, auto ) { resp = *msg; } ));
 
     // send a message through the registered "node message" callback...
     mh(bzn::create_request_vote_request("uuid1", 2, 0, 0), mock_session);
@@ -173,7 +173,7 @@ TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers)
     EXPECT_CALL(*mock_node, send_message(_, _, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
         [&](const auto&, const auto& msg, auto handler)
         {
-            EXPECT_EQ(msg["cmd"].asString(), "RequestVote");
+            EXPECT_EQ((*msg)["cmd"].asString(), "RequestVote");
             mh_req.emplace_back(handler);
         }));
 
@@ -185,7 +185,7 @@ TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers)
     EXPECT_CALL(*mock_node, send_message(_, _, _)).Times((TEST_PEER_LIST.size() - 1)*2).WillRepeatedly(Invoke(
         [&](const auto&, const auto& msg, auto handler)
         {
-            EXPECT_EQ(msg["cmd"].asString(), "AppendEntries");
+            EXPECT_EQ((*msg)["cmd"].asString(), "AppendEntries");
             mh_resp.emplace_back(handler);
         }));
 
@@ -229,7 +229,7 @@ TEST(raft, test_that_as_follower_append_entries_is_answered)
 
     bzn::message resp;
     EXPECT_CALL(*mock_session, send_message(_,_)).Times(1).WillRepeatedly(Invoke(
-        [&](const auto& msg, auto){ resp = msg; } ));
+        [&](const auto& msg, auto){ resp = *msg; } ));
 
     // send a message through the registered "node message" callback...
     bzn::message msg;
@@ -398,7 +398,7 @@ TEST(raft, test_that_follower_stores_append_entries_and_responds)
     EXPECT_CALL(*mock_session, send_message(_, _)).WillRepeatedly(Invoke(
         [&](const auto& msg, auto /*handler*/)
         {
-            resp = msg;
+            resp = *msg;
         }));
 
     int commit_handler_times_called=0;
