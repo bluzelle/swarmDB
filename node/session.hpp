@@ -43,7 +43,6 @@ namespace bzn
         void do_read(bzn::message_handler reply_handler);
 
         std::unique_ptr<bzn::asio::strand_base> strand;
-        std::shared_ptr<bzn::asio::io_context_base> io_context;
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
 
         bzn::message_handler       handler;

@@ -20,7 +20,6 @@ using namespace bzn;
 
 session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket)
     : strand(io_context->make_unique_strand())
-    , io_context(std::move(io_context))
     , websocket(std::move(websocket))
 {
 }
