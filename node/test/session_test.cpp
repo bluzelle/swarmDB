@@ -112,7 +112,7 @@ namespace bzn
         EXPECT_CALL(*strand, wrap(_)).WillRepeatedly(Invoke(
             [&](bzn::asio::write_handler handler)
             {
-                return std::move(handler);
+                return handler;
             }));
 
         EXPECT_CALL(*io_context, make_unique_strand()).WillOnce(Invoke(
