@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// TODO:  https://stackoverflow.com/questions/19915152/c11-multiple-read-and-one-write-thread-mutex
+#pragma once
 
 #include <include/bluzelle.hpp>
 #include <storage/storage_base.hpp>
@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <shared_mutex>
 #include <boost/serialization/unordered_map.hpp>
+
 
 namespace bzn
 {
@@ -50,11 +51,11 @@ namespace bzn
     private:
         friend class boost::serialization::access;
 
-        template<class Archive>
-        void serialize(Archive& ar, const uint16_t /*version*/);
-
         bzn::uuid_t generate_random_uuid();
 
         std::unordered_map<bzn::uuid_t, std::unordered_map<std::string, std::shared_ptr<bzn::storage_base::record>>> kv_store;
+
+        std::shared_mutex lock; // for multi-reader and single writer access
     };
+
 } // bzn

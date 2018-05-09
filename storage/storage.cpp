@@ -34,7 +34,8 @@ namespace
 std::string
 storage::error_msg(storage_base::result error_id)
 {
-    std::string message{""};
+    std::string message;
+
     switch(error_id)
     {
         case storage_base::result::ok:
@@ -56,14 +57,6 @@ storage::error_msg(storage_base::result error_id)
 }
 
 
-template<class Archive>
-void
-storage::serialize(Archive& ar, const uint16_t /*version*/)
-{
-    ar & this->kv_store;
-}
-
-
 bzn::uuid_t
 storage::generate_random_uuid()
 {
@@ -75,6 +68,8 @@ storage::generate_random_uuid()
 storage_base::result
 storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     auto search = this->kv_store.find(uuid);
 
     if(search != this->kv_store.end())
@@ -109,6 +104,8 @@ storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::stri
 std::shared_ptr<bzn::storage_base::record>
 storage::read(const bzn::uuid_t& uuid, const std::string& key)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     auto search = this->kv_store.find(uuid);
     if(search == this->kv_store.end())
     {
@@ -129,8 +126,10 @@ storage::read(const bzn::uuid_t& uuid, const std::string& key)
 storage_base::result
 storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     auto search = this->kv_store.find(uuid);
-    if(search == kv_store.end())
+    if(search == this->kv_store.end())
     {
         return bzn::storage_base::result::not_found;
     }
@@ -154,6 +153,8 @@ storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::stri
 storage_base::result
 storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     auto search = this->kv_store.find(uuid);
 
     if(search == this->kv_store.end())
@@ -175,6 +176,8 @@ storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 storage_base::result
 storage::save(const std::string& path)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     try
     {
         std::ofstream ofs(path);
@@ -192,6 +195,8 @@ storage::save(const std::string& path)
 storage_base::result
 storage::load(const std::string& path)
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     if(!boost::filesystem::exists(path))
     {
         return storage_base::result::not_found;
@@ -206,6 +211,8 @@ storage::load(const std::string& path)
 std::vector<std::string>
 storage::get_keys(const bzn::uuid_t& uuid)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     std::vector<std::string> keys;
     auto inner_db = this->kv_store.find(uuid);
 
@@ -221,16 +228,21 @@ storage::get_keys(const bzn::uuid_t& uuid)
     return keys;
 }
 
+
 bool
-storage::has(const bzn::uuid_t& uuid, const  std::string& key)
+storage::has(const bzn::uuid_t& uuid, const std::string& key)
 {
     auto v = this->get_keys(uuid);
     return std::find(v.begin(), v.end(), key) != v.end();
 }
 
+
+// todo: optimize! Track size as it grows and not iterate over every value!
 std::size_t
 storage::get_size(const bzn::uuid_t& uuid)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     auto it = this->kv_store.find(uuid);
 
     if (it == this->kv_store.end())
