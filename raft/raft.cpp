@@ -20,10 +20,12 @@
 
 namespace
 {
-    const std::string NO_PEERS_ERRORS_MGS = " No peers given!";
+    const std::string NO_PEERS_ERRORS_MGS = "No peers given!";
 
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
+
+    const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 }
 
 using namespace bzn;
@@ -46,6 +48,28 @@ raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
     {
         this->peer_match_index[peer.uuid] = 0;
     }
+
+    this->get_raft_timeout_scale();
+}
+
+
+void
+raft::get_raft_timeout_scale()
+{
+    // for testing we may want to slow things down...
+    if (auto env = getenv(RAFT_TIMEOUT_SCALE.c_str()))
+    {
+        try
+        {
+            this->timeout_scale = std::max(1ul, std::stoul(env));
+        }
+        catch(std::exception& ex)
+        {
+            LOG(error) << "Invalid RAFT_TIMEOUT_SCALE value: " << env;
+        }
+    }
+
+    LOG(debug) << "RAFT_TIMEOUT_SCALE: " << this->timeout_scale;
 }
 
 
@@ -79,7 +103,7 @@ raft::start_election_timer()
     std::mt19937 gen(rd());
 
     // todo: testing range as big messages can cause election to occur...
-    std::uniform_int_distribution<uint32_t> dist(DEFAULT_HEARTBEAT_TIMER_LEN.count() * 3 , DEFAULT_ELECTION_TIMER_LEN.count());
+    std::uniform_int_distribution<uint32_t> dist(DEFAULT_HEARTBEAT_TIMER_LEN.count() * 3 * this->timeout_scale, DEFAULT_ELECTION_TIMER_LEN.count() * this->timeout_scale);
 
     auto timeout = std::chrono::milliseconds(dist(gen));
 
@@ -96,9 +120,9 @@ raft::start_heartbeat_timer()
 {
     this->timer->cancel();
 
-    LOG(debug) << "heartbeat timer will expire in: " << DEFAULT_HEARTBEAT_TIMER_LEN.count() << "ms";
+    LOG(debug) << "heartbeat timer will expire in: " << DEFAULT_HEARTBEAT_TIMER_LEN.count() * this->timeout_scale << "ms";
 
-    this->timer->expires_from_now(DEFAULT_HEARTBEAT_TIMER_LEN);
+    this->timer->expires_from_now(DEFAULT_HEARTBEAT_TIMER_LEN * this->timeout_scale);
 
     this->timer->async_wait(std::bind(&raft::handle_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 }
