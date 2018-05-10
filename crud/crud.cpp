@@ -23,6 +23,7 @@ namespace
                                                  bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS, bzn::MSG_CMD_SIZE};
 }
 
+
 crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage)
         : raft(std::move(raft))
         , node(std::move(node))
@@ -32,6 +33,7 @@ crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base>
     this->register_utility_command_handlers();
     this->register_commit_handlers();
 }
+
 
 void
 crud::start()
@@ -60,6 +62,7 @@ crud::start()
                 });
         });
 }
+
 
 void
 crud::do_raft_task_routing(const bzn::message& msg, bzn::message& response)
@@ -293,7 +296,7 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     {
         if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
         {
-            this->do_raft_task_routing(msg, response);
+            this->do_raft_task_routing(msg, *response);
         }
         else
         {
