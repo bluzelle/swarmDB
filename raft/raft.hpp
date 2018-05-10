@@ -101,6 +101,8 @@ namespace bzn
         std::shared_ptr<bzn::node_base> node;
 
         std::once_flag start_once;
+
+        std::mutex raft_lock;
     };
 
 } // bzn
