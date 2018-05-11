@@ -138,6 +138,9 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
     EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
         [&](auto& msg, auto)
         {
+//            LOG(debug) << "msg: " << (*msg).toStyledString();
+//            LOG(debug) << "expected: " << (*expected_response).toStyledString();
+
             EXPECT_EQ(*expected_response, *msg);
         }));
 
@@ -215,6 +218,9 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
         {
             EXPECT_EQ(*expected_response, *msg);
         }));
+
+    EXPECT_CALL(*this->mock_storage, has(request["db-uuid"].asString(),request["data"]["key"].asString()))
+            .WillOnce(Return(false));
 
     this->mh(request, this->mock_session);
 
@@ -985,6 +991,7 @@ TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
 
     this->mh(request, mock_session);
 }
+
 
 TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
 {
