@@ -59,8 +59,8 @@ bootstrap_peers::get_peers() const
 bool 
 bootstrap_peers::ingest_json(std::istream& peers)
 {
-    uint addresses_before = this->peer_addresses.size();
-    uint valid_addresses_read = 0;
+    size_t addresses_before = this->peer_addresses.size();
+    size_t valid_addresses_read = 0;
 
     Json::Value root;
 
@@ -111,8 +111,8 @@ bootstrap_peers::ingest_json(std::istream& peers)
         valid_addresses_read++;
     }
 
-    uint new_addresses = this->peer_addresses.size() - addresses_before;
-    uint duplicate_addresses = new_addresses - valid_addresses_read;
+    size_t new_addresses = this->peer_addresses.size() - addresses_before;
+    size_t duplicate_addresses = new_addresses - valid_addresses_read;
 
     LOG(info) << "Found " << new_addresses << " new peers";
     if (duplicate_addresses > 0)

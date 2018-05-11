@@ -26,6 +26,7 @@ namespace
     const std::string LISTENER_ADDRESS_KEY       = "listener_address";
     const std::string LISTENER_PORT_KEY          = "listener_port";
     const std::string ETHERERUM_KEY              = "ethereum";
+    const std::string ETHERERUM_IO_API_TOKEN_KEY = "ethereum_io_api_token";
     const std::string BOOTSTRAP_PEERS_FILE_KEY   = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL_KEY    = "bootstrap_url";
     const std::string DEBUG_LOGGING_KEY          = "debug_logging";
@@ -86,6 +87,14 @@ options::get_ethererum_address() const
 {
     return this->config_data[ETHERERUM_KEY].asString();
 }
+
+
+std::string
+options::get_ethererum_io_api_token() const
+{
+    return this->config_data[ETHERERUM_IO_API_TOKEN_KEY].asString();
+}
+
 
 std::string
 options::get_bootstrap_peers_file() const
@@ -175,6 +184,12 @@ options::validate()
         }
     }
 
+    if (!this->config_data.isMember(ETHERERUM_IO_API_TOKEN_KEY))
+    {
+        std::cerr << "Missing Ethereum IO API token entry!" << '\n';
+        return false;
+    }
+
     return true;
 }
 
@@ -211,6 +226,7 @@ options::parse(int argc, const char* argv[])
     // variables the map will fill...
     std::string config_file;
     std::string ethereum;
+    std::string ethereum_io_api_token;
     std::string listener_address;
     std::string bootstrap_file;
     std::string bootstrap_url;
@@ -219,12 +235,13 @@ options::parse(int argc, const char* argv[])
     desc.add_options()
         ("help,h",             "Shows this information")
         ("version,v",          "Show the application's version")
-        ("address,a",          po::value<std::string>(&ethereum),        " Ethereum account address")
-        ("listener_address,l", po::value<std::string>(&listener_address), "Listener IP address")
-        ("listener_port,p",    po::value<uint32_t>(&listener_port),       "Listener port")
-        ("bootstrap_file,b",   po::value<std::string>(&bootstrap_file),   "Path to initial peers file")
-        ("bootstrap_url",      po::value<std::string>(&bootstrap_url),    "URL to fetch initial peers")
-        ("config,c",           po::value<std::string>(&config_file),      "Path to configuration file");
+        ("address,a",          po::value<std::string>(&ethereum),              "Ethereum account address")
+        ("api_token,t",        po::value<std::string>(&ethereum_io_api_token), "Ethereum IO API token")
+        ("listener_address,l", po::value<std::string>(&listener_address),      "Listener IP address")
+        ("listener_port,p",    po::value<uint32_t>(&listener_port),            "Listener port")
+        ("bootstrap_file,b",   po::value<std::string>(&bootstrap_file),        "Path to initial peers file")
+        ("bootstrap_url",      po::value<std::string>(&bootstrap_url),         "URL to fetch initial peers")
+        ("config,c",           po::value<std::string>(&config_file),           "Path to configuration file");
 
     po::variables_map vm;
 
@@ -264,6 +281,7 @@ options::parse(int argc, const char* argv[])
         this->config_data[ETHERERUM_KEY] = ethereum;
         this->config_data[BOOTSTRAP_PEERS_FILE_KEY] = bootstrap_file;
         this->config_data[BOOTSTRAP_PEERS_URL_KEY] = bootstrap_url;
+        this->config_data[ETHERERUM_IO_API_TOKEN_KEY] = ethereum_io_api_token;
     }
     catch(po::error& e)
     {
