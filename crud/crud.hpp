@@ -43,8 +43,8 @@ namespace bzn
 
         void handle_create(const bzn::message &msg, bzn::message &response);
         void handle_read(const bzn::message& msg, bzn::message& response);
-        void handle_update(const bzn::message &msg, bzn::message &response);
-        void handle_delete(const bzn::message &msg, bzn::message &response);
+        void handle_update(const bzn::message &request, bzn::message &response);
+        void handle_delete(const bzn::message &request, bzn::message &response);
 
         void commit_create(const bzn::message &msg);
         void commit_update(const bzn::message &msg);
@@ -60,21 +60,22 @@ namespace bzn
         void register_utility_command_handlers();
         void register_commit_handlers();
 
-        bool validate_create(const bzn::message &msg);
-
-        void set_error_response(bzn::message& response, const bzn::message& message, const std::string& error);
+        bool validate_create(const bzn::message &request);
+        bool validate_read_xor_delete(const bzn::message &request);
+        bool validate_update(const bzn::message &request);
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;
         std::shared_ptr<bzn::storage_base> storage;
 
         using route_handler_t = std::function<void(const bzn::message& request, bzn::message& response)>;
-        using crud_handler_t = std::function<void(const bzn::message& msg)>;
-        using commit_handler_t = std::function<void(const bzn::message& msg, bzn::message& resp)>;
+        using commit_handler_t = std::function<void(const bzn::message& msg)>;
+        using command_handler_t = std::function<void(const bzn::message& msg, bzn::message& resp)>;
 
         std::unordered_map<bzn::raft_state, route_handler_t> route_handlers;
-        std::unordered_map<std::string, crud_handler_t> commit_handlers;
-        std::unordered_map<std::string, commit_handler_t> command_handlers;
+        std::unordered_map<std::string, commit_handler_t> commit_handlers;
+        std::unordered_map<std::string, command_handler_t> command_handlers;
+        std::unordered_map<std::string, command_handler_t> utility_handlers;
 
         std::once_flag start_once;
     };

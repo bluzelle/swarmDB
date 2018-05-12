@@ -837,7 +837,7 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
 }
 
 
-TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command_with_bad_args)
+TEST_F(crud_test, test_that_a_follower_has_with_bad_args_fails)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
@@ -995,33 +995,85 @@ TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
 
 TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
 {
+    bzn::raft_state raft_state = bzn::raft_state::leader;
+
     bzn::message request = generate_create_request(user_uuid, "key", "skdif9ek34587fk30df6vm73==");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
-    (*expected_response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+    (*expected_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
+
+    auto perform_test = [&](){
+        EXPECT_CALL(*this->mock_raft, get_state())
+                .WillOnce(Invoke([&](){return raft_state;}));
+
+        EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+                [&](auto& msg, auto)
+                {
+                    EXPECT_EQ(*expected_response, *msg);
+                }));
+
+        this->mh(request, this->mock_session);
+    };
+
+    request["data"].removeMember("key");
+    perform_test();
+    request["data"]["key"] = "key";
+
+    request["data"].removeMember("value");
+    perform_test();
+    request["data"]["value"] = "datavalue==";
+
+    request.removeMember("db-uuid");
+    perform_test();
+    request["db-uuid"] = user_uuid;
+
+    request.removeMember("data");
+    perform_test();
+}
+
+
+TEST_F(crud_test, test_that_a_read_fails_when_not_given_required_parameters)
+{
     bzn::raft_state raft_state = bzn::raft_state::leader;
 
+    bzn::message request = generate_read_request(user_uuid, "key");
 
-    request.removeMember("bzn-api");
-    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
-            [&](auto& msg, auto)
-            {
-                EXPECT_EQ(*expected_response, *msg);
-            }));
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
 
-    this->mh(request, this->mock_session);
-    request["bzn-api"] = "crud";
+    auto perform_test = [&](){
+        EXPECT_CALL(*this->mock_raft, get_state())
+                .WillOnce(Invoke([&](){return raft_state;}));
 
-    request.removeMember("cmd");
-    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
-            [&](auto& msg, auto)
-            {
-                EXPECT_EQ(*expected_response, *msg);
-            }));
-    this->mh(request, this->mock_session);
-    request["cmd"] = "create";
+        EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+                [&](auto& msg, auto)
+                {
+                    EXPECT_EQ(*expected_response, *msg);
+                }));
 
+        this->mh(request, this->mock_session);
+    };
+
+    request["data"].removeMember("key");
+    perform_test();
+    request["data"]["key"] = "key";
+
+    request.removeMember("db-uuid");
+    perform_test();
+    request["db-uuid"] = user_uuid;
+}
+
+
+TEST_F(crud_test, test_that_an_update_fails_when_not_given_required_parameters)
+{
+    bzn::raft_state raft_state = bzn::raft_state::leader;
+
+    bzn::message request = generate_update_request(user_uuid, "key", "nicedata==");
+
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
     (*expected_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
 
     auto perform_test = [&](){
@@ -1052,3 +1104,68 @@ TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
     request.removeMember("data");
     perform_test();
 }
+
+
+TEST_F(crud_test, test_that_a_delete_fails_when_not_given_required_parameters)
+{
+    bzn::raft_state raft_state = bzn::raft_state::leader;
+
+    bzn::message request = generate_delete_request(user_uuid, "key");
+
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+
+    auto perform_test = [&](){
+        EXPECT_CALL(*this->mock_raft, get_state())
+                .WillOnce(Invoke([&](){return raft_state;}));
+
+        EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+                [&](auto& msg, auto)
+                {
+                    EXPECT_EQ(*expected_response, *msg);
+                }));
+
+        this->mh(request, this->mock_session);
+    };
+
+    (*expected_response)["error"] = bzn::MSG_INVALID_ARGUMENTS;
+
+    request["data"].removeMember("key");
+    perform_test();
+    request["data"]["key"] = "key";
+
+    request.removeMember("db-uuid");
+    perform_test();
+    request["db-uuid"] = user_uuid;
+}
+
+
+TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
+{
+    bzn::message request = generate_delete_request(user_uuid, "key");
+
+    auto expected_response = std::make_shared<bzn::message>();
+    (*expected_response)["request-id"] = request["request-id"];
+    (*expected_response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+
+    request.removeMember("bzn-api");
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+            [&](auto& msg, auto)
+            {
+                EXPECT_EQ(*expected_response, *msg);
+            }));
+
+    this->mh(request, this->mock_session);
+
+    request["bzn-api"] = "crud";
+
+    request.removeMember("cmd");
+    EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
+            [&](auto& msg, auto)
+            {
+                EXPECT_EQ(*expected_response, *msg);
+            }));
+    this->mh(request, this->mock_session);
+}
+
+
