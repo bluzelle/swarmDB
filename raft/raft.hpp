@@ -26,6 +26,8 @@
 #include <experimental/optional>
 #endif
 
+#include <gtest/gtest_prod.h>
+
 namespace bzn
 {
     class raft final : public bzn::raft_base, public std::enable_shared_from_this<raft>
@@ -45,6 +47,8 @@ namespace bzn
         void start() override;
 
     private:
+        FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
+
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
 
@@ -63,6 +67,9 @@ namespace bzn
 
         void update_raft_state(uint32_t term, bzn::raft_state state);
 
+        // helpers...
+        void get_raft_timeout_scale();
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 1;
@@ -79,6 +86,7 @@ namespace bzn
         uint32_t last_log_index = 0;
         uint32_t last_log_term  = 0; // not sure if we need this
         uint32_t commit_index   = 0;
+        uint32_t timeout_scale  = 1;
 
         // log_entries entries...
         struct log_entry
