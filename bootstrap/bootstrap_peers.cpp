@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include <include/http_get.hpp>
+#include <utils/http_get.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <fstream>
 #include <json/json.h>
@@ -38,7 +38,7 @@ bool bootstrap_peers::fetch_peers_from_file(const std::string& filename)
 bool 
 bootstrap_peers::fetch_peers_from_url(const std::string& url)
 {
-    std::string peers = http::sync_get(url);
+    std::string peers = bzn::utils::http::sync_get(url);
 
     LOG(info) << "Downloaded peer list from " << url;
 

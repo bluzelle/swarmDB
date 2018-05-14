@@ -4,7 +4,7 @@ add_library(ethereum STATIC
     ethereum_base.hpp
   )
 
-target_link_libraries(ethereum)
+target_link_libraries(ethereum utils)
 target_include_directories(ethereum PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(test)
