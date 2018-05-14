@@ -122,6 +122,8 @@ raft::handle_election_timeout(const boost::system::error_code& ec)
 void
 raft::request_vote_request()
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     // update raft state...
     this->voted_for = this->uuid;
     this->yes_votes = 1;
@@ -171,6 +173,8 @@ raft::request_vote_request()
 void
 raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     LOG(debug) << '\n' << msg.toStyledString();
 
     // If I'm the leader and my term is less than vote request then I should step down and become a follower.
@@ -341,6 +345,8 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 void
 raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     LOG(debug) << "Received WS message:\n" << msg.toStyledString();
 
     uint32_t term = msg["data"]["term"].asUInt();
@@ -429,6 +435,8 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
     }
 
     // request votes from our peer list...
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     this->request_append_entries();
 }
 
@@ -510,6 +518,8 @@ raft::request_append_entries()
 void
 raft::handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "No longer the leader. Ignoring message from peer: " << msg["data"]["from"].asString();
@@ -553,6 +563,8 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 bool
 raft::append_log(const bzn::message& msg)
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "not the leader can't append log_entries!";
@@ -618,6 +630,8 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
 bzn::peer_address_t
 raft::get_leader()
 {
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     for(auto& peer : this->peers)
     {
         if (peer.uuid == this->leader)
