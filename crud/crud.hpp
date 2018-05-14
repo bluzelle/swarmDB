@@ -60,9 +60,8 @@ namespace bzn
         void register_utility_command_handlers();
         void register_commit_handlers();
 
-        bool validate_create(const bzn::message &request);
-        bool validate_read_xor_delete(const bzn::message &request);
-        bool validate_update(const bzn::message &request);
+        bool validate_create_or_update(const bzn::message &request);
+        bool validate_read_or_delete(const bzn::message &request);
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;

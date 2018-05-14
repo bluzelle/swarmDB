@@ -83,7 +83,7 @@ crud::do_raft_task_routing(const bzn::message& request, bzn::message& response)
 void
 crud::handle_create(const bzn::message &request, bzn::message &response)
 {
-    if(!this->validate_create(request))
+    if(!this->validate_create_or_update(request))
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
@@ -124,7 +124,7 @@ crud::commit_create(const bzn::message &msg)
 void
 crud::handle_read(const bzn::message& request, bzn::message& response)
 {
-    if(!validate_read_xor_delete(request))
+    if(!validate_read_or_delete(request))
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
@@ -155,7 +155,7 @@ crud::handle_read(const bzn::message& request, bzn::message& response)
 void
 crud::handle_update(const bzn::message &request, bzn::message &response)
 {
-    if(!this->validate_update(request))
+    if(!this->validate_create_or_update(request))
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
@@ -192,7 +192,7 @@ crud::commit_update(const bzn::message &msg)
 void
 crud::handle_delete(const bzn::message &request, bzn::message &response)
 {
-    if(!validate_read_xor_delete(request))
+    if(!validate_read_or_delete(request))
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
@@ -398,21 +398,14 @@ crud::set_leader_info(bzn::message& msg)
 
 
 bool
-crud::validate_create(const bzn::message &msg)
+crud::validate_create_or_update(const bzn::message &msg)
 {
     return msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value");
 }
 
 
 bool
-crud::validate_read_xor_delete(const bzn::message &request)
+crud::validate_read_or_delete(const bzn::message &request)
 {
     return request.isMember("db-uuid") && request.isMember("data") && request["data"].isMember("key");
-}
-
-
-bool
-crud::validate_update(const bzn::message &msg)
-{
-    return msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value");
 }
