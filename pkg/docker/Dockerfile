@@ -7,7 +7,6 @@ RUN set -x \
         gettext-base \
         libjsoncpp-dev
 
-ARG SWARM_BUILD_DIR
 ARG SWARM_NAME
 
 COPY swarmdb__amd64.deb /tmp

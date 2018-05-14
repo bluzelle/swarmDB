@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 project(bluzelle CXX)
 
+include(swarm_version.cmake)
+configure_file(${PROJECT_SOURCE_DIR}/swarm_version.hpp.in ${CMAKE_BINARY_DIR}/swarm_version.hpp)
+message("Build version ${PROJECT_VERSION}")
+
+
 # use ccache if available...
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

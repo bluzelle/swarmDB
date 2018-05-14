@@ -9,4 +9,8 @@ if (UNIX AND NOT APPLE)
     endif()
 endif()
 
+if (APPLE)
+    add_subdirectory(osx)
+endif()
+
 add_subdirectory(docker)
