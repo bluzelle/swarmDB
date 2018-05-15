@@ -17,6 +17,7 @@
 #include <boost/log/trivial.hpp>
 #include <string_view>
 #include <json/json.h>
+#include <swarm_version.hpp>
 
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \
@@ -25,8 +26,6 @@
 namespace bzn
 {
     using message = Json::Value;
-
-    const std::string_view BLUZELLE_VERSION = "0.0.1";
 
     using uuid_t = std::string;
 
