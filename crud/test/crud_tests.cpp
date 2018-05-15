@@ -47,7 +47,7 @@ namespace
 
     bzn::message generate_create_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
     {
-        bzn::message msg = generate_generic_message(uid, key, "create");
+        auto msg = generate_generic_message(uid, key, "create");
         msg["data"]["value"] = value;
         return msg;
     }
@@ -59,7 +59,7 @@ namespace
 
     bzn::message generate_update_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
     {
-        bzn::message msg = generate_generic_message(uid, key, "update");
+        auto msg = generate_generic_message(uid, key, "update");
         msg["data"]["value"] = value;
         return msg;
     }
@@ -120,7 +120,7 @@ public:
 
 TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
 {
-    bzn::message request = generate_create_request(user_uuid, "key0", test_value);
+    auto request = generate_create_request(user_uuid, "key0", test_value);
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = 85746;
@@ -138,9 +138,6 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
     EXPECT_CALL(*this->mock_session, send_message(_,_)).WillOnce(Invoke(
         [&](auto& msg, auto)
         {
-//            LOG(debug) << "msg: " << (*msg).toStyledString();
-//            LOG(debug) << "expected: " << (*expected_response).toStyledString();
-
             EXPECT_EQ(*expected_response, *msg);
         }));
 
@@ -151,7 +148,7 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
 TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 {
     // must respond with error, and respond with leader uuid
-    bzn::message msg = generate_create_request(user_uuid, "key0", test_value);
+    auto msg = generate_create_request(user_uuid, "key0", test_value);
     auto accepted_response = std::make_shared<bzn::message>();
 
     (*accepted_response)["request-id"] = msg["request-id"];
@@ -179,7 +176,7 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 TEST_F(crud_test, test_that_a_candidate_fails_to_create)
 {
     // must respond with error
-    bzn::message msg = generate_create_request(user_uuid, "key0", test_value);
+    auto msg = generate_create_request(user_uuid, "key0", test_value);
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = msg["request-id"];
@@ -202,7 +199,7 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
 {
     // must confirm with raft and create the record in storage
     // must respond with error
-    bzn::message request = generate_create_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
+    auto request = generate_create_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -238,7 +235,7 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
     // record exists, don't bother with raft
     const std::string key{"key0"};
     const std::string value{"skdif9ek34587fk30df6vm73=="};
-    bzn::message request = generate_create_request(user_uuid, key, value);
+    auto request = generate_create_request(user_uuid, key, value);
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -247,7 +244,6 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
-    // has(const bzn::uuid_t& uuid, const  std::string& key)
     EXPECT_CALL(*this->mock_storage, has(user_uuid, key))
             .WillOnce(Return(false));
 
@@ -276,7 +272,6 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
-    // has(const bzn::uuid_t& uuid, const  std::string& key)
     EXPECT_CALL(*this->mock_storage, has(user_uuid, key))
             .WillOnce(Return(true));
 
@@ -300,7 +295,7 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
     // if value does not exist in local storage, respond with error
     // and give leader uuid if it exists.
 
-    bzn::message request = generate_read_request(user_uuid, "key0");
+    auto request = generate_read_request(user_uuid, "key0");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -334,7 +329,7 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
 TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
 {
     // same, but refer user to leader id.
-    bzn::message request = generate_read_request(user_uuid, "key0");
+    auto request = generate_read_request(user_uuid, "key0");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -367,7 +362,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
 TEST_F(crud_test, test_that_a_candidate_read_fails)
 {
     // there is an election respond with error
-    bzn::message msg = generate_read_request(user_uuid, "key0");
+    auto msg = generate_read_request(user_uuid, "key0");
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = msg["request-id"];
     (*accepted_response)["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
@@ -390,7 +385,7 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
 {
     // must respond with data from storage, if it exists, if it does
     // not exist respond with data does not exist error.
-    bzn::message request = generate_read_request(user_uuid,"key0");
+    auto request = generate_read_request(user_uuid,"key0");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -404,7 +399,7 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
             .WillOnce(Invoke(
                     [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
                     {
-                        std::shared_ptr<bzn::storage_base::record> record = std::make_shared<bzn::storage_base::record>();
+                        auto record = std::make_shared<bzn::storage_base::record>();
                         record->value = "skdif9ek34587fk30df6vm73==";
                         record->timestamp = std::chrono::seconds(0);
                         record->transaction_id = TEST_NODE_UUID;
@@ -424,7 +419,7 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
 TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
 {
     // must respond with error, and leader uuid if it
-    bzn::message request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
+    auto request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
     (*accepted_response)["error"] = bzn::MSG_NOT_THE_LEADER;
@@ -449,7 +444,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
 
 TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
 {
-    bzn::message request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
+    auto request = generate_update_request(user_uuid, "key0", "skdif9ek34587fk30df6vm73==");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -475,7 +470,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
 
 TEST_F(crud_test, test_that_a_candidate_update_fails)
 {
-    bzn::message msg = generate_update_request(user_uuid, "key0", test_value);
+    auto msg = generate_update_request(user_uuid, "key0", test_value);
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = msg["request-id"];
@@ -499,7 +494,7 @@ TEST_F(crud_test, test_that_a_leader_can_update)
     // if key-value pair exists, must respond with OK, and start the
     // update process via RAFT, otherwise error - key does not exist.
     const std::string key{"key0"};
-    bzn::message request = generate_update_request(user_uuid, key, test_value);
+    auto request = generate_update_request(user_uuid, key, test_value);
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -534,15 +529,13 @@ TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
     // if key-value pair exists, must respond with OK, and start the
     // update process via RAFT, otherwise error - key does not exist.
     const std::string key{"key0"};
-    bzn::message request = generate_update_request(user_uuid, key, test_value);
+    auto request = generate_update_request(user_uuid, key, test_value);
 
     auto expected_response = std::make_shared<bzn::message>();
 
-    // "{\n\t\"error\" : \"RECORD_NOT_FOUND\",\n\t\"request-id\" : 85746\n}\n"
     (*expected_response)["request-id"] = request["request-id"];
     (*expected_response)["error"] = bzn::MSG_RECORD_NOT_FOUND;
 
-    // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::leader;}));
 
@@ -561,8 +554,7 @@ TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
 
 TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
 {
-    // must respond with error
-    bzn::message request = generate_delete_request(user_uuid, "key0");
+    auto request = generate_delete_request(user_uuid, "key0");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = 85746;
@@ -573,7 +565,6 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
     EXPECT_CALL(*this->mock_raft, get_state())
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
-    // We don't know the leader, maybe this node just started.
     EXPECT_CALL(*this->mock_raft, get_leader())
             .WillOnce(Invoke([](){return bzn::peer_address_t("",0,"","");}));
 
@@ -590,7 +581,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
 TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
 {
     // must respond with error, and leader uuid
-    bzn::message request = generate_delete_request(user_uuid, "key0");
+    auto request = generate_delete_request(user_uuid, "key0");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = 85746;
@@ -618,7 +609,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
 TEST_F(crud_test, test_that_a_candidate_delete_fails)
 {
     // must respond with error
-    bzn::message msg = generate_delete_request(user_uuid, "key0");
+    auto msg = generate_delete_request(user_uuid, "key0");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = msg["request-id"];
@@ -648,8 +639,8 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     //   do concensus via RAFT
     //   when RAFT calls commit handler perform delete
 
-    const std::string key{"key0"};
-    bzn::message request = generate_delete_request(user_uuid, key);
+    const auto key{"key0"};
+    auto request = generate_delete_request(user_uuid, key);
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -687,7 +678,7 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
 TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
 {
     const std::string key{"key0"};
-    bzn::message request = generate_delete_request(user_uuid, key);
+    auto request = generate_delete_request(user_uuid, key);
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -717,9 +708,7 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-
-    const std::string key{"key0"};
-    bzn::message request = generate_generic_message(user_uuid, "", "keys");
+    auto request = generate_generic_message(user_uuid, "", "keys");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -752,10 +741,7 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
 
 TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
 {
-    // Ask local storage for all the keys for the user
-    // package up the keys into a JSON array, send it back to the user
-    const std::string key{"key0"};
-    bzn::message request = generate_generic_message(user_uuid, "", "keys");
+    auto request = generate_generic_message(user_uuid, "", "keys");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -790,7 +776,7 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    auto request = generate_generic_message(user_uuid, "", "has");
     request["data"]["key"] = "key0";
 
     auto accepted_response = std::make_shared<bzn::message>();
@@ -841,7 +827,7 @@ TEST_F(crud_test, test_that_a_follower_has_with_bad_args_fails)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    auto request = generate_generic_message(user_uuid, "", "has");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -864,7 +850,7 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    auto request = generate_generic_message(user_uuid, "", "has");
     request["data"]["key"] = "key0";
 
     auto accepted_response = std::make_shared<bzn::message>();
@@ -916,7 +902,7 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
 {
     // Ask local storage for all the keys for the user
     // package up the keys into a JSON array, send it back to the user
-    bzn::message request = generate_generic_message(user_uuid, "", "has");
+    auto request = generate_generic_message(user_uuid, "", "has");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -937,7 +923,6 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command_with_bad_args)
 
 TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
 {
-    const std::string key{"key0"};
     bzn::message request = generate_generic_message(user_uuid, "", "size");
 
     auto accepted_response = std::make_shared<bzn::message>();
@@ -966,8 +951,7 @@ TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
 
 TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
 {
-    const std::string key{"key0"};
-    bzn::message request = generate_generic_message(user_uuid, "", "size");
+    auto request = generate_generic_message(user_uuid, "", "size");
 
     auto accepted_response = std::make_shared<bzn::message>();
     (*accepted_response)["request-id"] = request["request-id"];
@@ -995,9 +979,9 @@ TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
 
 TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
 {
-    bzn::raft_state raft_state = bzn::raft_state::leader;
+    const auto raft_state = bzn::raft_state::leader;
 
-    bzn::message request = generate_create_request(user_uuid, "key", "skdif9ek34587fk30df6vm73==");
+    auto request = generate_create_request(user_uuid, "key", "skdif9ek34587fk30df6vm73==");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -1035,9 +1019,9 @@ TEST_F(crud_test, test_that_a_create_fails_when_not_given_required_parameters)
 
 TEST_F(crud_test, test_that_a_read_fails_when_not_given_required_parameters)
 {
-    bzn::raft_state raft_state = bzn::raft_state::leader;
+    const auto raft_state = bzn::raft_state::leader;
 
-    bzn::message request = generate_read_request(user_uuid, "key");
+    auto request = generate_read_request(user_uuid, "key");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -1068,9 +1052,9 @@ TEST_F(crud_test, test_that_a_read_fails_when_not_given_required_parameters)
 
 TEST_F(crud_test, test_that_an_update_fails_when_not_given_required_parameters)
 {
-    bzn::raft_state raft_state = bzn::raft_state::leader;
+    const auto raft_state = bzn::raft_state::leader;
 
-    bzn::message request = generate_update_request(user_uuid, "key", "nicedata==");
+    auto request = generate_update_request(user_uuid, "key", "nicedata==");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -1108,9 +1092,9 @@ TEST_F(crud_test, test_that_an_update_fails_when_not_given_required_parameters)
 
 TEST_F(crud_test, test_that_a_delete_fails_when_not_given_required_parameters)
 {
-    bzn::raft_state raft_state = bzn::raft_state::leader;
+    const auto raft_state = bzn::raft_state::leader;
 
-    bzn::message request = generate_delete_request(user_uuid, "key");
+    auto request = generate_delete_request(user_uuid, "key");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];
@@ -1142,7 +1126,7 @@ TEST_F(crud_test, test_that_a_delete_fails_when_not_given_required_parameters)
 
 TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
 {
-    bzn::message request = generate_delete_request(user_uuid, "key");
+    auto request = generate_delete_request(user_uuid, "key");
 
     auto expected_response = std::make_shared<bzn::message>();
     (*expected_response)["request-id"] = request["request-id"];

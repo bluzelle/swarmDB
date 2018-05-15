@@ -35,20 +35,20 @@ namespace bzn
 
         void set_leader_info(bzn::message& msg);
 
-        void do_raft_task_routing(const bzn::message &msg, bzn::message &response);
+        void do_raft_task_routing(const bzn::message& msg, bzn::message& response);
 
         void do_candidate_tasks(const bzn::message& request, bzn::message& response);
         void do_follower_tasks(const bzn::message& request, bzn::message& response);
         void do_leader_tasks(const bzn::message& request, bzn::message& response);
 
-        void handle_create(const bzn::message &msg, bzn::message &response);
+        void handle_create(const bzn::message& msg, bzn::message& response);
         void handle_read(const bzn::message& msg, bzn::message& response);
-        void handle_update(const bzn::message &request, bzn::message &response);
-        void handle_delete(const bzn::message &request, bzn::message &response);
+        void handle_update(const bzn::message& request, bzn::message& response);
+        void handle_delete(const bzn::message& request, bzn::message& response);
 
-        void commit_create(const bzn::message &msg);
-        void commit_update(const bzn::message &msg);
-        void commit_delete(const bzn::message &msg);
+        void commit_create(const bzn::message& msg);
+        void commit_update(const bzn::message& msg);
+        void commit_delete(const bzn::message& msg);
 
         // TODO move get keys out of crud.
         void handle_get_keys(const bzn::message& msg, bzn::message& response);
@@ -60,8 +60,8 @@ namespace bzn
         void register_utility_command_handlers();
         void register_commit_handlers();
 
-        bool validate_create_or_update(const bzn::message &request);
-        bool validate_read_or_delete(const bzn::message &request);
+        bool validate_create_or_update(const bzn::message& request);
+        bool validate_read_or_delete(const bzn::message& request);
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;

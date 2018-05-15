@@ -81,7 +81,7 @@ crud::do_raft_task_routing(const bzn::message& request, bzn::message& response)
 
 
 void
-crud::handle_create(const bzn::message &request, bzn::message &response)
+crud::handle_create(const bzn::message& request, bzn::message& response)
 {
     if(!this->validate_create_or_update(request))
     {
@@ -102,9 +102,9 @@ crud::handle_create(const bzn::message &request, bzn::message &response)
 
 
 void
-crud::commit_create(const bzn::message &msg)
+crud::commit_create(const bzn::message& msg)
 {
-    storage_base::result result = this->storage->create(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
+    auto result = this->storage->create(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
 
     if(storage_base::result::ok == result)
     {
@@ -153,7 +153,7 @@ crud::handle_read(const bzn::message& request, bzn::message& response)
 
 
 void
-crud::handle_update(const bzn::message &request, bzn::message &response)
+crud::handle_update(const bzn::message& request, bzn::message& response)
 {
     if(!this->validate_create_or_update(request))
     {
@@ -174,9 +174,9 @@ crud::handle_update(const bzn::message &request, bzn::message &response)
 
 
 void
-crud::commit_update(const bzn::message &msg)
+crud::commit_update(const bzn::message& msg)
 {
-    storage_base::result result = this->storage->update(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
+    auto result = this->storage->update(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
 
     if(storage_base::result::ok != result)
     {
@@ -190,7 +190,7 @@ crud::commit_update(const bzn::message &msg)
 
 
 void
-crud::handle_delete(const bzn::message &request, bzn::message &response)
+crud::handle_delete(const bzn::message& request, bzn::message& response)
 {
     if(!validate_read_or_delete(request))
     {
@@ -211,9 +211,9 @@ crud::handle_delete(const bzn::message &request, bzn::message &response)
 
 
 void
-crud::commit_delete(const bzn::message &msg)
+crud::commit_delete(const bzn::message& msg)
 {
-    storage_base::result result = this->storage->remove(msg["db-uuid"].asString(), msg["data"]["key"].asString());
+    auto result = this->storage->remove(msg["db-uuid"].asString(), msg["data"]["key"].asString());
 
     if(storage_base::result::ok!=result)
     {
@@ -229,7 +229,7 @@ crud::commit_delete(const bzn::message &msg)
 void
 crud::handle_get_keys(const bzn::message& msg, bzn::message& response)
 {
-    std::vector<std::string> keys = this->storage->get_keys(msg["db-uuid"].asString());
+    auto keys = this->storage->get_keys(msg["db-uuid"].asString());
 
     Json::Value json_keys;
 
@@ -275,7 +275,7 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     }
     else
     {
-        if( auto search = accepted_crud_commands.find(msg["cmd"].asString()); search != accepted_crud_commands.end() )
+        if( accepted_crud_commands.find(msg["cmd"].asString()) != accepted_crud_commands.end() )
         {
             this->do_raft_task_routing(msg, *response);
         }
@@ -298,7 +298,7 @@ crud::do_candidate_tasks(const bzn::message& /*request*/, bzn::message& response
 void
 crud::do_follower_tasks(const bzn::message& request, bzn::message& response)
 {
-    std::string cmd = request["cmd"].asString();
+    auto cmd = request["cmd"].asString();
 
     if(cmd==bzn::MSG_CMD_READ)
     {
@@ -322,7 +322,7 @@ crud::do_leader_tasks(const bzn::message& request, bzn::message& response)
 {
     if(request.isMember("cmd"))
     {
-        std::string command = request["cmd"].asString();
+        auto command = request["cmd"].asString();
         if(auto ch = this->command_handlers.find(command); ch != this->command_handlers.end())
         {
             ch->second(request, response);
@@ -398,14 +398,14 @@ crud::set_leader_info(bzn::message& msg)
 
 
 bool
-crud::validate_create_or_update(const bzn::message &msg)
+crud::validate_create_or_update(const bzn::message& msg)
 {
     return msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value");
 }
 
 
 bool
-crud::validate_read_or_delete(const bzn::message &request)
+crud::validate_read_or_delete(const bzn::message& request)
 {
     return request.isMember("db-uuid") && request.isMember("data") && request["data"].isMember("key");
 }
