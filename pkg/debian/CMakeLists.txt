@@ -4,13 +4,14 @@ set(BOOST_DEB_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUB
 
 set(CPACK_PACKAGE_VENDOR              "Bluzelle")
 set(CPACK_PACKAGE_CONTACT             "devops@bluzelle.com")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A Bluzelle decentralized database node.")
-set(CPACK_PACKAGE_NAME                "swarmdb")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Bluzelle decentralized database node.")
+set(CPACK_PACKAGE_NAME                "bluzelle-swarmdb")
 set(CPACK_PACKAGE_VERSION             ${PROJECT_VERSION})
 set(CPACK_PACKAGE_VERSION_MAJOR       ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR       ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH       ${PROJECT_VERSION_PATCH})
 set(CPACK_DEBIAN_PACKAGE_SECTION      "databases")
+set(CPACK_DEBIAN_COMPRESSION_TYPE     "xz")
 
 set(CPACK_SYSTEM_NAME                 "amd64")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
