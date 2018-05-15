@@ -33,6 +33,8 @@ namespace bzn
 
         std::string get_bootstrap_peers_url() const override;
 
+        std::string get_ethererum_io_api_token() const override;
+
         bool get_debug_logging() const override;
 
         bool get_log_to_stdout() const override;

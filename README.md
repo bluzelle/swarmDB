@@ -106,6 +106,7 @@ Steps to setup testing environment:
 
 Build your Daemon in a directory named daemon-build in the same level as the swarmclient-js repo directory. 
 Create each of the json files below in daemon-build/output/, where the swarm executable resides. (bluzelle1.json, bluzelle2.json, bluzelle3.json, peers.json)
+You must provide a valid Ethereum address and API key.
 
 Config files for Daemon:
 ```
@@ -114,6 +115,7 @@ Config files for Daemon:
   "listener_address" : "127.0.0.1",
   "listener_port" : 50000,
   "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "ethereum_io_api_token" : "**********************************",
   "bootstrap_file" : "./peers.json",
   "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
   "debug_logging" : true,
@@ -126,6 +128,7 @@ Config files for Daemon:
   "listener_address" : "127.0.0.1",
   "listener_port" : 50001,
   "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "ethereum_io_api_token" : "**********************************",
   "bootstrap_file" : "./peers.json",
   "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7",
   "debug_logging" : true,
@@ -138,6 +141,7 @@ Config files for Daemon:
   "listener_address" : "127.0.0.1",
   "listener_port" : 50002,
   "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
+  "ethereum_io_api_token" : "**********************************",
   "bootstrap_file" : "./peers.json",
   "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41",
   "debug_logging" : true,
