@@ -639,7 +639,7 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     //   do concensus via RAFT
     //   when RAFT calls commit handler perform delete
 
-    const auto key{"key0"};
+    const std::string key{"key0"};
     auto request = generate_delete_request(user_uuid, key);
 
     auto accepted_response = std::make_shared<bzn::message>();
