@@ -25,7 +25,7 @@ namespace
 {
     const char* NO_ARGS[] = {"config_tests"};
 
-    const char* VALID_ARGS[] = {"config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f"};
+    const char* VALID_ARGS[] = {"config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f", "-t", "ASDFASDFASDFASDFSDF"};
 
     const char* VALID_ARGS_WITH_PEERS[] = {
         "config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f",
@@ -43,6 +43,7 @@ namespace
         "  \"listener_address\" : \"0.0.0.0\",\n"
         "  \"listener_port\" : 49152,\n"
         "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\",\n"
+        "  \"ethereum_io_api_token\" : \"ASDFASDFASDFASDFSDF\",\n"
         "  \"bootstrap_file\" : \"peers.json\",\n"
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
         "  \"debug_logging\" : true,"

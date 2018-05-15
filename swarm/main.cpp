@@ -14,6 +14,7 @@
 
 #include <bootstrap/bootstrap_peers.hpp>
 #include <crud/crud.hpp>
+#include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
 #include <options/options.hpp>
 #include <raft/raft.hpp>
@@ -82,17 +83,19 @@ set_logging_level(const bzn::options& options)
 
 
 void
-print_banner(const bzn::options& options)
+print_banner(const bzn::options& options, double eth_balance)
 {
     std::stringstream ss;
 
-    ss  << "\nRunning node with ID: " /*<< daemon_info.id() */<< "\n"
-        << " Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
-        << "    Local IP Address: " << options.get_listener().address().to_string() << "\n"
-        << "             On port: " << options.get_listener().port()    << "\n"
-        << "       Token Balance: " /*<< daemon_info.ropsten_token_balance() */<< " BLZ\n"
-        << '\n';
+    ss << '\n';
+    ss << "  Running node with ID: " << options.get_uuid() << "\n"
+       << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
+       << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
+       << "               On port: " << options.get_listener().port()    << "\n"
+       << "         Token Balance: " << eth_balance << " ETH\n"
+       << '\n';
 
+    std::cout << ss.str();
     LOG(info) << ss.str();
 }
 
@@ -136,6 +139,15 @@ main(int argc, const char* argv[])
         }
 
         set_logging_level(options);
+
+        // todo: right now we just want to check that an account "has" a balance...
+        double eth_balance = bzn::ethereum().get_ether_balance(options.get_ethererum_address(), options.get_ethererum_io_api_token());
+
+        if (eth_balance == 0)
+        {
+            LOG(error) << "No ETH balance found";
+            return 0;
+        }
 
         bzn::bootstrap_peers init_peers;
         std::string peers_file = options.get_bootstrap_peers_file();
@@ -201,7 +213,7 @@ main(int argc, const char* argv[])
         crud->start();
         raft->start();
 
-        print_banner(options);
+        print_banner(options, eth_balance);
 
         start_worker_threads_and_wait(io_context);
     }

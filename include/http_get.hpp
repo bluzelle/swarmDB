@@ -20,6 +20,7 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <regex>
+#include <string>
 
 #include <include/bluzelle.hpp>
 
@@ -39,7 +40,7 @@ namespace bzn::http
 	namespace http = boost::beast::http;    // from <boost/beast/http.hpp>
 
 	// Performs an HTTP GET and returns the body of the HTTP response
-    std::string sync_get(const std::string& url)
+    inline std::string sync_get(const std::string& url)
 	{
 		boost::asio::io_context ioc;
 		tcp::resolver resolver{ioc};
