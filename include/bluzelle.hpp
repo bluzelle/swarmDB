@@ -27,8 +27,6 @@ namespace bzn
 {
     using message = Json::Value;
 
-    const std::string_view BLUZELLE_VERSION = SWARM_VERSION;
-
     using uuid_t = std::string;
 
 } // bzn

@@ -16,6 +16,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <fstream>
+#include <swarm_version.hpp>
 
 namespace po = boost::program_options;
 using namespace bzn;
@@ -242,7 +243,7 @@ options::parse(int argc, const char* argv[])
 
         if (vm.count("version"))
         {
-            std::cout << "Bluzelle" << ": v" << BLUZELLE_VERSION << std::endl;
+            std::cout << "Bluzelle" << ": v" << SWARM_VERSION << std::endl;
             return false;
         }
 
