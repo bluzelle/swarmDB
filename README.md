@@ -102,11 +102,16 @@ make install
 
 ## RUNNING THE APPLICATION
 
-Steps to setup testing environment:
+### Steps to setup testing environment:
 
 Build your Daemon in a directory named daemon-build in the same level as the swarmclient-js repo directory. 
 Create each of the json files below in daemon-build/output/, where the swarm executable resides. (bluzelle1.json, bluzelle2.json, bluzelle3.json, peers.json)
 You must provide a valid Ethereum address and API key.
+
+Creating an Etherscan.io API Key:
+
+1. Create an account with Etherscan: https://etherscan.io/register
+2. Create an Etherscan API KEY by clicking Developers->API-KEYs
 
 Config files for Daemon:
 ```
