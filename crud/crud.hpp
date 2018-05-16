@@ -62,6 +62,7 @@ namespace bzn
 
         bool validate_create_or_update(const bzn::message& request);
         bool validate_read_or_delete(const bzn::message& request);
+        bool validate_value_size(const bzn::message& request);
 
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;

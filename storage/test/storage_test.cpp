@@ -21,14 +21,15 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 using namespace ::testing;
 
 namespace
 {
-    const bzn::uuid_t user_uuid = "4bba2aeb-44fe-441e-bb6b-8817561eb716";
-    const std::string key = "bluzelle.json";
-    const std::string value = "ewogICJsaXN0ZW5lcl9hZGRyZXNzIiA6ICIxMjcuMC4wLjEiLAogICJsaXN0ZW5lcl9wb3J0IiA6"
+    const bzn::uuid_t USER_UUID = "4bba2aeb-44fe-441e-bb6b-8817561eb716";
+    const std::string KEY = "bluzelle.json";
+    std::string value = "ewogICJsaXN0ZW5lcl9hZGRyZXNzIiA6ICIxMjcuMC4wLjEiLAogICJsaXN0ZW5lcl9wb3J0IiA6"
                               "IDQ5MTUyLAogICJldGhlcmV1bSIgOiAiMHgwMDZlYWU3MjA3NzQ0OWNhY2E5MTA3OGVmNzg1NTJj"
                               "MGNkOWJjZThmIgp9Cg==";
     const std::string path{"storage_test.dat"};
@@ -81,19 +82,19 @@ public:
 };
 
 
-TEST_F(storageTest, test_create_and_read)
+TEST_F(storageTest, test_that_storage_can_create_a_record_and_read_the_same_record)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, key, value));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    const auto returned_record = this->storage->read(user_uuid, key);
+    const auto returned_record = this->storage->read(USER_UUID, KEY);
 
     EXPECT_TRUE(returned_record->transaction_id.size()>0); // todo: maybe check for valid uuid?
 
-    EXPECT_EQ(returned_record->value.size(), this->storage->get_size(user_uuid));
+    EXPECT_EQ(returned_record->value.size(), this->storage->get_size(USER_UUID));
 
     // add another one...
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, "another_key", value));
-    EXPECT_EQ(value.size()*2, this->storage->get_size(user_uuid));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "another_key", value));
+    EXPECT_EQ(value.size()*2, this->storage->get_size(USER_UUID));
 
     const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
 
@@ -103,54 +104,54 @@ TEST_F(storageTest, test_create_and_read)
 }
 
 
-TEST_F(storageTest, test_create_existing)
+TEST_F(storageTest, test_that_storage_fails_to_create_a_record_that_already_exists)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, key, value));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    EXPECT_EQ(bzn::storage_base::result::exists, this->storage->create(user_uuid, key, value));
+    EXPECT_EQ(bzn::storage_base::result::exists, this->storage->create(USER_UUID, KEY, value));
 }
 
 
-TEST_F(storageTest, test_read_null)
+TEST_F(storageTest, test_that_attempting_to_read_a_record_from_storage_that_does_not_exist_returns_null)
 {
-    EXPECT_EQ(nullptr, this->storage->read(user_uuid, "nokey"));
+    EXPECT_EQ(nullptr, this->storage->read(USER_UUID, "nokey"));
 }
 
 
-TEST_F(storageTest, test_update)
+TEST_F(storageTest, test_that_storage_can_update_an_existing_record)
 {
     const std::string updated_value = "I have changed the value of the text";
 
     // try updating a record that does not exist
-    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->update(user_uuid, key, updated_value));
+    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->update(USER_UUID, KEY, updated_value));
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, key, value));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->update(user_uuid, key, updated_value));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->update(USER_UUID, KEY, updated_value));
 
-    const auto returned_record = this->storage->read(user_uuid, key);
+    const auto returned_record = this->storage->read(USER_UUID, KEY);
 
     EXPECT_EQ(returned_record->value, updated_value);
 }
 
 
-TEST_F(storageTest, test_delete)
+TEST_F(storageTest, test_that_storage_can_delete_a_record)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(user_uuid, key, value));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    const auto  returned_record = this->storage->read(user_uuid, key);
+    const auto  returned_record = this->storage->read(USER_UUID, KEY);
 
     EXPECT_EQ(returned_record->value, value);
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->remove(user_uuid, key));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->remove(USER_UUID, KEY));
 
-    EXPECT_EQ(this->storage->read(user_uuid, key), nullptr);
+    EXPECT_EQ(this->storage->read(USER_UUID, KEY), nullptr);
 
-    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->remove(user_uuid, key));
+    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->remove(USER_UUID, KEY));
 }
 
 
-TEST_F(storageTest, test_save)
+TEST_F(storageTest, test_that_storage_can_save_to_local_storage)
 {
     boost::filesystem::remove(path);
 
@@ -166,7 +167,7 @@ TEST_F(storageTest, test_save)
 }
 
 
-TEST_F(storageTest, test_save_load)
+TEST_F(storageTest, test_that_storage_can_load_from_local_storage)
 {
     boost::filesystem::remove(path);
 
@@ -184,8 +185,8 @@ TEST_F(storageTest, test_save_load)
 
     for(const auto& key : keys)
     {
-        const auto record = this->storage->read(user_uuid, key);
-        const auto record_copy = storage_copy->read(user_uuid, key);
+        const auto record = this->storage->read(USER_UUID, key);
+        const auto record_copy = storage_copy->read(USER_UUID, key);
 
         EXPECT_EQ(record->timestamp, record_copy->timestamp);
         EXPECT_EQ(record->transaction_id, record_copy->transaction_id);
@@ -284,3 +285,27 @@ TEST_F(storageTest, test_has_returns_true_if_key_exists_false_otherwise)
     EXPECT_TRUE(this->storage->has(user_2, "key2"));
     EXPECT_FALSE(this->storage->has(user_2, "notkey"));
 }
+
+
+TEST_F(storageTest, test_that_storage_fails_to_create_a_value_that_exceeds_the_size_limit)
+{
+    std::string value{""};
+    value.resize(bzn::MAX_VALUE_SIZE+1, 'c');
+    EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(nullptr, this->storage->read(USER_UUID, KEY));
+}
+
+
+TEST_F(storageTest, test_that_storage_fails_to_update_with_a_value_that_exceeds_the_size_limit)
+{
+    std::string expected_value{"gooddata"};
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, expected_value));
+    auto actual_record = this->storage->read(USER_UUID, KEY);
+    EXPECT_EQ(expected_value, actual_record->value);
+
+    std::string bad_value{""};
+    bad_value.resize(bzn::MAX_VALUE_SIZE+1, 'c');
+    EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
+    EXPECT_EQ(expected_value, this->storage->read(USER_UUID, KEY)->value);
+}
+

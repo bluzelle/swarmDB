@@ -24,6 +24,7 @@ namespace bzn
     const std::string MSG_NOT_THE_LEADER = "NOT_THE_LEADER";
     const std::string MSG_RECORD_NOT_FOUND = "RECORD_NOT_FOUND";
     const std::string MSG_INVALID_ARGUMENTS = "INVALID_ARGUMENTS";
+    const std::string MSG_VALUE_SIZE_TOO_LARGE = "VALUE_SIZE_TOO_LARGE";
     const std::string MSG_COMMAND_NOT_SET = "COMMAND_NOT_SET";
 
     const std::string MSG_CMD_CREATE{"create"};
