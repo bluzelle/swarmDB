@@ -13,4 +13,3 @@ if (APPLE)
     add_subdirectory(osx)
 endif()
 
-add_subdirectory(docker)

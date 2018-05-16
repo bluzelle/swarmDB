@@ -1,9 +1,0 @@
-{
-  "listener_address" : "0.0.0.0",
-  "listener_port" : 51010,
-  "ethereum" : "0x006eae72077449caca91078ef78552c0cd9bce8f",
-  "bootstrap_url" : "${NODE_BOOTSTRAP_URL}",
-  "uuid" : "${NODE_UUID}",
-  "debug_logging" : ${NODE_DEBUG_LOGGING},
-  "log_to_stdout" : true
-}
