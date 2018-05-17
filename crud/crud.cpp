@@ -14,7 +14,7 @@
 
 #include <crud/crud.hpp>
 #include <numeric>
-
+#include <storage/storage.hpp>
 using namespace bzn;
 
 namespace
@@ -43,8 +43,11 @@ crud::start()
         [this]()
         {
             // This handler deals with messages coming from the user.
-            if (!this->node->register_for_message("crud",
-                                                  std::bind(&crud::handle_ws_crud_messages, shared_from_this(), std::placeholders::_1,std::placeholders::_2)))
+            if (!this->node->register_for_message("crud"
+                                                  , std::bind(&crud::handle_ws_crud_messages
+                                                  , shared_from_this()
+                                                  , std::placeholders::_1
+                                                  , std::placeholders::_2)))
             {
                 throw std::runtime_error("Unable to register for CRUD messages!");
             }
@@ -87,6 +90,10 @@ crud::handle_create(const bzn::message& request, bzn::message& response)
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
     }
+    else if(this->validate_value_size(request))
+    {
+        response["error"] = bzn::MSG_VALUE_SIZE_TOO_LARGE;
+    }
     else
     {
         if(this->storage->has(request["db-uuid"].asString(), request["data"]["key"].asString()))
@@ -114,11 +121,10 @@ crud::commit_create(const bzn::message& msg)
     {
         LOG(error) << "Request:"
                    << msg["request-id"].asString()
-                   << " Create failed with error ["
-                   << this->storage->error_msg(result)
-                   << "]";
+                   << " Create failed";
     }
 }
+
 
 
 void
@@ -152,12 +158,17 @@ crud::handle_read(const bzn::message& request, bzn::message& response)
 }
 
 
+
 void
 crud::handle_update(const bzn::message& request, bzn::message& response)
 {
     if(!this->validate_create_or_update(request))
     {
         response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+    }
+    else if(this->validate_value_size(request))
+    {
+        response["error"] = bzn::MSG_VALUE_SIZE_TOO_LARGE;
     }
     else
     {
@@ -182,9 +193,7 @@ crud::commit_update(const bzn::message& msg)
     {
         LOG(error) << "Request:"
                    << msg["request-id"].asString()
-                   << " Update failed with error ["
-                   << this->storage->error_msg(result)
-                   << "]";
+                   << " Update failed";
     }
 }
 
@@ -219,11 +228,10 @@ crud::commit_delete(const bzn::message& msg)
     {
         LOG(error) << "Request:"
                    << msg["request-id"].asString()
-                   << " Delete failed with error ["
-                   << this->storage->error_msg(result)
-                   << "]";
+                   << " Delete failed";
     }
 }
+
 
 
 void
@@ -409,3 +417,11 @@ crud::validate_read_or_delete(const bzn::message& request)
 {
     return request.isMember("db-uuid") && request.isMember("data") && request["data"].isMember("key");
 }
+
+
+bool
+crud::validate_value_size(const bzn::message& request)
+{
+    return bzn::MAX_VALUE_SIZE < request["data"]["value"].asString().length();
+}
+

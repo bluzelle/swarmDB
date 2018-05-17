@@ -40,8 +40,6 @@ namespace bzn
 
         storage_base::result load(const std::string& path) override;
 
-        std::string error_msg(storage_base::result error_id) override;
-
         std::vector<std::string> get_keys(const bzn::uuid_t& uuid) override;
 
         bool has(const bzn::uuid_t& uuid, const  std::string& key) override;

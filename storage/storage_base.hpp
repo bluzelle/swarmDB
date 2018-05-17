@@ -24,6 +24,8 @@
 
 namespace bzn
 {
+    const size_t MAX_VALUE_SIZE = 300000;
+
     class storage_base
     {
     public:
@@ -48,7 +50,7 @@ namespace bzn
         };
 
         enum class result : uint8_t
-        { ok=0, not_found, exists, not_saved };
+        { ok=0, not_found, exists, not_saved, value_too_large };
 
         virtual ~storage_base() = default;
 
@@ -63,8 +65,6 @@ namespace bzn
         virtual storage_base::result save(const std::string& path) = 0;
 
         virtual storage_base::result load(const std::string& path) = 0;
-
-        virtual std::string error_msg(storage_base::result error_id) = 0;
 
         virtual std::vector<std::string> get_keys(const bzn::uuid_t& uuid) = 0;
         

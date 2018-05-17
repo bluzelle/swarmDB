@@ -31,32 +31,6 @@ namespace
 }
 
 
-std::string
-storage::error_msg(storage_base::result error_id)
-{
-    std::string message;
-
-    switch(error_id)
-    {
-        case storage_base::result::ok:
-            message = "ok";
-            break;
-        case storage_base::result::not_saved:
-            message = "not saved";
-            break;
-        case storage_base::result::not_found:
-            message = "not found";
-            break;
-        case storage_base::result::exists:
-            message = "exists";
-            break;
-        default:
-            break;
-    }
-    return message;
-}
-
-
 bzn::uuid_t
 storage::generate_random_uuid()
 {
@@ -69,6 +43,11 @@ storage_base::result
 storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    if(value.size() > bzn::MAX_VALUE_SIZE)
+    {
+        return storage_base::result::value_too_large;
+    }
 
     auto search = this->kv_store.find(uuid);
 
@@ -127,6 +106,11 @@ storage_base::result
 storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    if(value.size() > bzn::MAX_VALUE_SIZE)
+    {
+        return storage_base::result::value_too_large;
+    }
 
     auto search = this->kv_store.find(uuid);
     if(search == this->kv_store.end())
