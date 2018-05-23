@@ -17,6 +17,7 @@
 
 #include <gmock/gmock.h>
 #include <include/bluzelle.hpp>
+#include <mocks/mock_session_base.hpp>
 
 using namespace ::testing;
 
@@ -35,7 +36,7 @@ namespace  bzn
         auto io_context = std::make_shared<bzn::asio::io_context>();
 
         EXPECT_THROW(
-            bzn::node(io_context, nullptr,
+            bzn::node(io_context, nullptr, std::chrono::milliseconds(0),
                 boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string("8.8.8.8"), 8080}),
             std::exception
         );
@@ -47,6 +48,7 @@ namespace  bzn
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_tcp_acceptor = std::make_unique<bzn::asio::Mocktcp_acceptor_base>();
         auto mock_websocket = std::make_shared<bzn::beast::Mockwebsocket_base>();
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         // start expectations... (here we are returning a real socket)
         EXPECT_CALL(*mock_io_context, make_unique_tcp_socket()).WillRepeatedly(Invoke(
@@ -60,6 +62,12 @@ namespace  bzn
             }));
 
         EXPECT_CALL(*mock_io_context, make_unique_strand());
+
+        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_steady_timer);
+            }));
 
         // intercept the handler...
         bzn::asio::accept_handler accept_handler;
@@ -83,7 +91,7 @@ namespace  bzn
                 return std::make_unique<bzn::beast::websocket_stream>(std::move(socket));
             }));
 
-        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, std::chrono::milliseconds(0), TEST_ENDPOINT);
         node->start();
 
         // call the handler to test do_accept() is not called on error and do_accept() is called again...
@@ -100,7 +108,7 @@ namespace  bzn
     TEST(node, test_that_registering_message_handler_can_only_be_done_once)
     {
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, std::chrono::milliseconds(0), TEST_ENDPOINT);
 
         // test that nulls are rejected...
         ASSERT_FALSE(node->register_for_message("asdf", nullptr));
@@ -116,7 +124,7 @@ namespace  bzn
     TEST(node, test_that_registered_message_handler_is_invoked)
     {
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, std::chrono::milliseconds(0), TEST_ENDPOINT);
 
         // Add our test callback...
         bool callback_execute = false;
@@ -128,15 +136,17 @@ namespace  bzn
         }));
 
         // test no handler found...
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
         Json::Value msg;
         msg["bzn-api"] = "1234";
-        node->priv_msg_handler(msg, nullptr);
+        EXPECT_CALL(*mock_session, close());
+        node->priv_msg_handler(msg, mock_session);
         EXPECT_FALSE(callback_execute);
         EXPECT_EQ(msg_type, "");
 
         // test handler found...
         msg["bzn-api"] = "asdf";
-        node->priv_msg_handler(msg, nullptr);
+        node->priv_msg_handler(msg, mock_session);
         EXPECT_TRUE(callback_execute);
         EXPECT_EQ(msg_type, "asdf");
     }
@@ -151,7 +161,7 @@ namespace  bzn
 
         // satisfy constructor...
         EXPECT_CALL(*mock_io_context, make_unique_tcp_acceptor(_));
-        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, std::chrono::milliseconds(0), TEST_ENDPOINT);
 
         // setup expectations for connect...
         bzn::asio::connect_handler connect_handler;
@@ -184,7 +194,7 @@ namespace  bzn
                 return std::move(mock_websocket_stream);
             }));
 
-        node->send_message(TEST_ENDPOINT, std::make_shared<bzn::message>("{}"), nullptr);
+        node->send_message(TEST_ENDPOINT, std::make_shared<bzn::message>("{}"));
 
         // call with no error to validate handshake...
         connect_handler(boost::system::error_code());
@@ -202,7 +212,7 @@ namespace  bzn
 
         boost::asio::ip::tcp::endpoint ep{boost::asio::ip::address_v4::from_string("127.0.0.1"), 8080};
 
-        auto node = std::make_shared<bzn::node>(io_context, websocket, ep);
+        auto node = std::make_shared<bzn::node>(io_context, websocket, std::chrono::milliseconds(0), ep);
 
         node->register_for_message("crud",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
@@ -210,7 +220,7 @@ namespace  bzn
                 LOG(info) << '\n' << msg.toStyledString();
 
                 // echo back what the client sent...
-                session->send_message(std::make_shared<bzn::message>(msg), nullptr);
+                session->send_message(std::make_shared<bzn::message>(msg), true);
             });
 
         node->start();

@@ -71,6 +71,8 @@ namespace bzn::asio {
     public:
         MOCK_METHOD1(wrap,
             bzn::asio::write_handler(write_handler handler));
+        MOCK_METHOD1(wrap,
+            bzn::asio::close_handler(close_handler handler));
         MOCK_METHOD0(get_strand,
             boost::asio::io_context::strand&());
     };

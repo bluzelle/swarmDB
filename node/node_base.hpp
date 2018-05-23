@@ -43,9 +43,8 @@ namespace bzn
          * Convenience method to connect and send a message to a node
          * @param ep            host to send the message to
          * @param msg           message to send
-         * @param reply_handler if set the callback is executed for the reply
          */
-        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler) = 0;
+        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg) = 0;
     };
 
 } // bzn

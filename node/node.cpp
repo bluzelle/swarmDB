@@ -24,11 +24,12 @@ namespace
 }
 
 
-node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket,
+node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, const std::chrono::milliseconds& ws_idle_timeout,
     const boost::asio::ip::tcp::endpoint& ep)
     : tcp_acceptor(io_context->make_unique_tcp_acceptor(ep))
     , io_context(std::move(io_context))
     , websocket(std::move(websocket))
+    , ws_idle_timeout(ws_idle_timeout)
 {
 }
 
@@ -85,7 +86,7 @@ node::do_accept()
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                std::make_shared<bzn::session>(self->io_context, std::move(ws))->start(
+                std::make_shared<bzn::session>(self->io_context, std::move(ws), self->ws_idle_timeout)->start(
                     std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
             }
 
@@ -109,25 +110,22 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
     }
 
     LOG(debug) << "no handler for:\n" << msg.toStyledString();
+
+    session->close();
 }
 
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg)
 {
     std::shared_ptr<bzn::asio::tcp_socket_base> socket = this->io_context->make_unique_tcp_socket();
 
     socket->async_connect(ep,
-        [self = shared_from_this(), socket, ep, msg, reply_handler](const boost::system::error_code& ec)
+        [self = shared_from_this(), socket, ep, msg](const boost::system::error_code& ec)
         {
             if (ec)
             {
                 LOG(error) << "failed to connect to: " << ep.address().to_string() << ":" << ep.port() << " - " << ec.message();
-
-                if (reply_handler)
-                {
-                    reply_handler(bzn::message(), nullptr);
-                }
 
                 return;
             }
@@ -136,26 +134,21 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<con
             std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(socket->get_tcp_socket());
 
             ws->async_handshake(ep.address().to_string(), "/",
-                [self, ws, msg, reply_handler](const boost::system::error_code& ec)
+                [self, ws, msg](const boost::system::error_code& ec)
                 {
                     if (ec)
                     {
                         LOG(error) << "handshake failed: " << ec.message();
 
-                        if (reply_handler)
-                        {
-                            reply_handler(bzn::message(), nullptr);
-                        }
-
                         return;
                     }
 
-                    auto session = std::make_shared<bzn::session>(self->io_context, ws);
+                    auto session = std::make_shared<bzn::session>(self->io_context, ws, self->ws_idle_timeout);
 
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
 
-                    // send the message requested, if a handler is set then they will forward the response...
-                    session->send_message(msg, reply_handler);
+                    // send the message requested...
+                    session->send_message(msg, false);
                 });
         });
 }

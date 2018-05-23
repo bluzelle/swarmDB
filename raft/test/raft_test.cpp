@@ -80,17 +80,14 @@ namespace bzn
         raft->start();
 
         // we should see requests for votes... and then the Append Requests
-        std::vector<bzn::message_handler> mh;
-        EXPECT_CALL(*mock_node, send_message(_, _, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
-            [&](const auto&, const auto&, auto handler)
-            { mh.emplace_back(handler); }));
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         // expire timer...
         wh(boost::system::error_code());
 
         // now send in each vote...
-        mh[0](bzn::create_request_vote_response("uuid1", 1, true), mock_session);
-        mh[1](bzn::create_request_vote_response("uuid2", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), mock_session);
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
     }
@@ -133,7 +130,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*mock_node, send_message(_, _, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
 
         // expire timer...
         wh(boost::system::error_code());
@@ -149,7 +146,7 @@ namespace bzn
         mh(bzn::create_request_vote_request("uuid1", 2, 0, 0), mock_session);
 
         // we expect a "no" response in this state...
-        EXPECT_EQ(resp["cmd"].asString(), "responseVote");
+        EXPECT_EQ(resp["cmd"].asString(), "ResponseVote");
         EXPECT_EQ(resp["data"]["granted"].asBool(), false);
     }
 
@@ -185,11 +182,10 @@ namespace bzn
 
         // we should see requests for votes...
         std::vector<bzn::message_handler> mh_req;
-        EXPECT_CALL(*mock_node, send_message(_, _, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
-            [&](const auto&, const auto& msg, auto handler)
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
+            [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "RequestVote");
-                mh_req.emplace_back(handler);
             }));
 
         // expire election timer...
@@ -197,16 +193,15 @@ namespace bzn
 
         // heartbeat timer expired and we should be sending requests...
         std::vector<bzn::message_handler> mh_resp;
-        EXPECT_CALL(*mock_node, send_message(_, _, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
-            [&](const auto&, const auto& msg, auto handler)
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
+            [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "AppendEntries");
-                mh_resp.emplace_back(handler);
             }));
 
         // now send in each vote...
-        mh_req[0](bzn::create_request_vote_response("uuid1", 1, true), mock_session);
-        mh_req[1](bzn::create_request_vote_response("uuid2", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), mock_session);
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
@@ -295,14 +290,8 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
 
-        // we should see requests for votes...
-        std::vector<bzn::message_handler> send_messages;
-        EXPECT_CALL(*mock_node, send_message(_, _, _)).WillRepeatedly(Invoke(
-            [&](const auto&, const auto& /*msg*/, auto handler)
-            {
-                LOG(info) << send_messages.size();// << ":\n" << msg.toStyledString();
-                send_messages.emplace_back(handler);
-            }));
+        // we should see requests...
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(10);
 
         // expire election timer...
         wh(boost::system::error_code());
@@ -310,8 +299,8 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
         // now send in each vote...
-        send_messages[0](bzn::create_request_vote_response("uuid1", 1, true), mock_session);
-        send_messages[1](bzn::create_request_vote_response("uuid2", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), mock_session);
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
@@ -339,37 +328,27 @@ namespace bzn
         msg["data"] = "utests_2";
         ASSERT_TRUE(raft->append_log(msg));
 
-        // clear stored callbacks...
-        send_messages.clear();
-
         // next heartbeat...
         wh(boost::system::error_code());
 
-        EXPECT_EQ(send_messages.size(), size_t(2));
-
         // send false so second peer will achieve consensus and leader will commit the entries..
-        send_messages[0](bzn::create_append_entries_response("uuid1", 2, false, 0), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 2, false, 0), mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 0);
         ASSERT_FALSE(commit_handler_called);
 
         // enough peers have stored the first entry
-        send_messages[1](bzn::create_append_entries_response("uuid2", 2, true, 1), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 1), mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
-
-        // clear stored callbacks...
-        send_messages.clear();
 
         // expire heart beat
         wh(boost::system::error_code());
 
-        EXPECT_EQ(send_messages.size(), size_t(2));
-
         // enough peers have stored the first entry
         commit_handler_times_called = 0;
         commit_handler_called = false;
-        send_messages[1](bzn::create_append_entries_response("uuid2", 2, true, 2), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 2), mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
         ASSERT_TRUE(commit_handler_called);

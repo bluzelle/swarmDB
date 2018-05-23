@@ -32,6 +32,7 @@ namespace
     const std::string BOOTSTRAP_PEERS_URL_KEY    = "bootstrap_url";
     const std::string DEBUG_LOGGING_KEY          = "debug_logging";
     const std::string LOG_TO_STDOUT_KEY          = "log_to_stdout";
+    const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -216,6 +217,13 @@ options::get_log_to_stdout() const
     }
 
     return false;
+}
+
+
+std::chrono::seconds
+options::get_ws_idle_timeout() const
+{
+    return std::chrono::seconds(this->config_data[WS_IDLE_TIMEOUT_KEY].asUInt64());
 }
 
 

@@ -15,18 +15,28 @@
 #include <node/session.hpp>
 #include <sstream>
 
+namespace
+{
+    const std::chrono::seconds DEFAULT_WS_TIMEOUT_MS{10};
+}
+
+
 using namespace bzn;
 
 
-session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket)
+session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout)
     : strand(io_context->make_unique_strand())
     , websocket(std::move(websocket))
+    , idle_timer(io_context->make_unique_steady_timer())
+    , ws_idle_timeout(ws_idle_timeout.count() ? ws_idle_timeout : DEFAULT_WS_TIMEOUT_MS)
 {
 }
 
 
 session::~session()
 {
+    this->idle_timer->cancel();
+
     if (this->websocket->is_open())
     {
         boost::system::error_code ec;
@@ -59,7 +69,7 @@ session::start(bzn::message_handler handler)
                 }
 
                 // schedule read...
-                self->do_read(nullptr);
+                self->do_read();
             }
         );
     }
@@ -67,16 +77,19 @@ session::start(bzn::message_handler handler)
 
 
 void
-session::do_read(bzn::message_handler reply_handler)
+session::do_read()
 {
     this->buffer.consume(this->buffer.size());
 
+    this->start_idle_timeout();
+
     this->websocket->async_read(this->buffer,
-        [self = shared_from_this(), reply_handler](auto ec, auto /*bytes_transferred*/)
+        [self = shared_from_this()](boost::system::error_code ec, auto /*bytes_transferred*/)
         {
             if (ec)
             {
                 LOG(error) << "websocket read failed: " << ec.message();
+                self->close();
                 return;
             }
 
@@ -99,53 +112,39 @@ session::do_read(bzn::message_handler reply_handler)
                 }
             }
 
-            // handler may schedule a write asking for the response, if not then we are shutting down...
-            if (reply_handler)
-            {
-                reply_handler(msg, self);
-            }
-            else
-            {
-                self->handler(msg, self);
-            }
+            // call subscriber...
+            self->handler(msg, self);
         });
 }
 
 
-// todo: We will want to pipeline other messages on this stream, so we will not
-// use the reply_handler, but instead rely on the node to continue parsing messages
-// and dispatching them accordingly.
 void
-session::send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler)
+session::send_message(std::shared_ptr<const bzn::message> msg, const bool end_session)
 {
     auto send_msg = std::make_shared<std::string>(msg->toStyledString());
+
+    this->idle_timer->cancel(); // kill timer for duration of write...
 
     this->websocket->async_write(
         boost::asio::buffer(*send_msg),
         this->strand->wrap(
-            [self = shared_from_this(), reply_handler, send_msg](auto ec, auto bytes_transferred)
+            [self = shared_from_this(), send_msg, end_session](auto ec, auto bytes_transferred)
             {
                 if (ec)
                 {
                     LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
 
-                    if(reply_handler)
-                    {
-                        reply_handler(bzn::message(), nullptr);
-                    }
+                    self->close();
                     return;
                 }
 
-                if (reply_handler)
+                if (end_session)
                 {
-                    LOG(debug) << "response requested";
-
-                    self->do_read(reply_handler);
-
+                    self->close();
                     return;
                 }
 
-                self->close();
+                self->do_read();
             }));
 }
 
@@ -153,12 +152,42 @@ session::send_message(std::shared_ptr<const bzn::message> msg, bzn::message_hand
 void
 session::close()
 {
-    this->websocket->async_close(boost::beast::websocket::close_code::normal,
+    this->idle_timer->cancel();
+
+    if (this->websocket->is_open())
+    {
+        LOG(info) << "closing session";
+
+        this->websocket->async_close(boost::beast::websocket::close_code::normal,
+            this->strand->wrap(
+                [self = shared_from_this()](auto ec)
+                {
+                    if (ec)
+                    {
+                        LOG(error) << "failed to close websocket: " << ec.message();
+                    }
+                }));
+    }
+}
+
+
+void
+session::start_idle_timeout()
+{
+    this->idle_timer->cancel();
+
+    LOG(debug) << "resetting " << this->ws_idle_timeout.count() << "ms idle timer";
+
+    this->idle_timer->expires_from_now(this->ws_idle_timeout);
+
+    this->idle_timer->async_wait(
         [self = shared_from_this()](auto ec)
         {
-            if (ec)
+            if (!ec)
             {
-                LOG(error) << "failed to close websocket: " << ec.message();
+                LOG(info) << "reached idle timeout -- closing session";
+                self->close();
+                return;
             }
         });
 }

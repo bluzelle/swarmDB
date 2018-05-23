@@ -26,6 +26,7 @@ namespace bzn::asio
     using    read_handler = std::function<void(const boost::system::error_code& ec, size_t bytes_transfered)>;
     using   write_handler = std::function<void(const boost::system::error_code& ec, size_t bytes_transfered)>;
     using connect_handler = std::function<void(const boost::system::error_code& ec)>;
+    using   close_handler = std::function<void(const boost::system::error_code& ec)>;
     using    wait_handler = std::function<void(const boost::system::error_code& ec)>;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -79,6 +80,8 @@ namespace bzn::asio
         virtual ~strand_base() = default;
 
         virtual bzn::asio::write_handler wrap(write_handler handler) = 0;
+
+        virtual bzn::asio::close_handler wrap(close_handler handler) = 0;
 
         virtual boost::asio::io_context::strand& get_strand() = 0;
     };
@@ -204,6 +207,11 @@ namespace bzn::asio
         }
 
         bzn::asio::write_handler wrap(write_handler handler) override
+        {
+            return this->s.wrap(std::move(handler));
+        }
+
+        bzn::asio::close_handler wrap(close_handler handler) override
         {
             return this->s.wrap(std::move(handler));
         }
