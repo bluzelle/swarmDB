@@ -14,22 +14,24 @@
 
 #pragma once
 
-#include <include/bluzelle.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <raft/raft_base.hpp>
-#include <node/node_base.hpp>
-#include <memory>
+#include <raft/log_entry.hpp>
+#include <storage/storage.hpp>
+#include <gtest/gtest_prod.h>
+#include <fstream>
+
 #ifndef __APPLE__
 #include <optional>
 #else
 #include <experimental/optional>
 #endif
 
-#include <gtest/gtest_prod.h>
 
 namespace bzn
 {
+
     class raft final : public bzn::raft_base, public std::enable_shared_from_this<raft>
     {
     public:
@@ -46,11 +48,20 @@ namespace bzn
 
         void start() override;
 
+        void initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage);
+
+        bzn::uuid_t get_uuid() { return this->uuid; }
+
     private:
+        friend class raft_log_base;
+        friend class raft_log;
         FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
-        FRIEND_TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
+        FRIEND_TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries);
+        FRIEND_TEST(raft, test_that_raft_can_rehydrate_storage);
         FRIEND_TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers);
         FRIEND_TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
+        FRIEND_TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
+        FRIEND_TEST(raft, test_that_raft_bails_on_bad_rehydrate);
 
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
@@ -73,6 +84,15 @@ namespace bzn
         // helpers...
         void get_raft_timeout_scale();
 
+        void append_entry_to_log(const bzn::log_entry& log_entry);
+        std::string entries_log_path();
+        void load_log_entries();
+        std::string state_path();
+        void save_state();
+        void load_state();
+
+        void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 1;
@@ -91,14 +111,6 @@ namespace bzn
         uint32_t commit_index   = 0;
         uint32_t timeout_scale  = 1;
 
-        // log_entries entries...
-        struct log_entry
-        {
-            uint32_t     log_index;
-            uint32_t     term;
-            bzn::message msg;
-        };
-
         std::vector<log_entry> log_entries;
         bzn::raft_base::commit_handler commit_handler;
 
@@ -114,6 +126,7 @@ namespace bzn
         std::once_flag start_once;
 
         std::mutex raft_lock;
-    };
 
+        std::ofstream log_entry_out_stream;
+    };
 } // bzn
