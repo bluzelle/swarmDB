@@ -277,13 +277,13 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     auto response = std::make_shared<bzn::message>();
     (*response)["request-id"] = msg["request-id"];
 
-    if( !(msg.isMember("bzn-api") && msg["bzn-api"]=="crud"))
+    if (!(msg.isMember("bzn-api") && msg["bzn-api"]=="crud"))
     {
         (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
     }
     else
     {
-        if( accepted_crud_commands.find(msg["cmd"].asString()) != accepted_crud_commands.end() )
+        if (accepted_crud_commands.find(msg["cmd"].asString()) != accepted_crud_commands.end())
         {
             this->do_raft_task_routing(msg, *response);
         }
@@ -292,7 +292,9 @@ crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
         }
     }
-    session->send_message(response, nullptr);
+    
+    // if there's an error close after send_message...
+    session->send_message(response, (response->isMember("error") && ((*response)["error"] == bzn::MSG_INVALID_CRUD_COMMAND || (*response)["error"] == bzn::MSG_INVALID_ARGUMENTS)));
 }
 
 

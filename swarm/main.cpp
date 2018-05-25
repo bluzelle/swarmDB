@@ -192,7 +192,7 @@ main(int argc, const char* argv[])
         // startup...
         auto websocket = std::make_shared<bzn::beast::websocket>();
 
-        auto node = std::make_shared<bzn::node>(io_context, websocket, boost::asio::ip::tcp::endpoint{options.get_listener()});
+        auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
         auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
         auto crud = std::make_shared<bzn::crud>(node, raft, std::make_shared<bzn::storage>());
 
@@ -206,7 +206,7 @@ main(int argc, const char* argv[])
                 (*reply)["bzn-api"] = "pong";
 
                 // echo back what the client sent...
-                session->send_message(reply, nullptr);
+                session->send_message(reply, false);
             });
 
         node->start();

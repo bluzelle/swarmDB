@@ -48,18 +48,21 @@ namespace bzn
 
     private:
         FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
+        FRIEND_TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
+        FRIEND_TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers);
+        FRIEND_TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
 
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
 
         void request_append_entries();
-        void handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr <bzn::session_base> session);
+        void handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
         void start_election_timer();
         void handle_election_timeout(const boost::system::error_code& ec);
 
         void request_vote_request();
-        void handle_request_vote_response(const bzn::message& msg, std::shared_ptr <bzn::session_base> session);
+        void handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
         void handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
         void handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);

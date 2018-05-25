@@ -51,7 +51,7 @@ namespace bzn
         bzn::message msg;
 
         msg["bzn-api"] = "raft";
-        msg["cmd"] = "responseVote";
+        msg["cmd"] = "ResponseVote";
         msg["data"] = bzn::message();
         msg["data"]["from"] = uuid;
         msg["data"]["term"] = current_term;

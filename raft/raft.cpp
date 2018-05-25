@@ -169,19 +169,7 @@ raft::request_vote_request()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->last_log_index, this->last_log_term)),
-                [peer, self = shared_from_this()](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
-                {
-                    if (!session)
-                    {
-                        LOG(warning) << "did not receive a RequestVote response from peer: " << peer.name
-                             << " (" << peer.host << ":" << peer.port << ")";
-
-                        return;
-                    }
-
-                    self->handle_request_vote_response(msg, std::move(session));
-                });
+            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->last_log_index, this->last_log_term)));
         }
         catch(const std::exception& ex)
         {
@@ -197,8 +185,6 @@ raft::request_vote_request()
 void
 raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    std::lock_guard<std::mutex> lock(this->raft_lock);
-
     LOG(debug) << '\n' << msg.toStyledString();
 
     // If I'm the leader and my term is less than vote request then I should step down and become a follower.
@@ -262,7 +248,7 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
 {
     if (this->current_state == bzn::raft_state::leader || this->voted_for)
     {
-        session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, false)), nullptr);
+        session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, false)), true);
 
         return;
     }
@@ -272,7 +258,7 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
 
     bool vote = msg["data"]["lastLogIndex"].asUInt() >= this->last_log_index;
 
-    session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), nullptr);
+    session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), true);
 }
 
 
@@ -288,6 +274,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 
         this->update_raft_state(term, bzn::raft_state::follower);
         this->start_election_timer();
+        session->close();
         return;
     }
 
@@ -344,7 +331,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 
     LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
 
-    session->send_message(resp_msg, nullptr);
+    session->send_message(resp_msg, true);
 
     // update commit index...
     if (success)
@@ -377,16 +364,26 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
     if (this->current_term == term)
     {
+        // bleh!
         if (msg["cmd"].asString() == "RequestVote")
         {
             this->handle_ws_request_vote(msg, session);
-            return;
         }
-
-        if (msg["cmd"].asString() == "AppendEntries")
+        else if (msg["cmd"].asString() == "AppendEntries")
         {
             this->handle_ws_append_entries(msg, session);
         }
+        else if (msg["cmd"].asString() == "AppendEntriesReply")
+        {
+            this->handle_request_append_entries_response(msg, session);
+            session->close();
+        }
+        else if (msg["cmd"].asString() == "ResponseVote")
+        {
+            this->handle_request_vote_response(msg, session);
+            session->close();
+        }
+
         return;
     }
     else
@@ -400,7 +397,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             {
                 this->voted_for = msg["data"]["uuid"].asString();
 
-                session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, true)), nullptr);
+                session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, true)), true);
 
                 return;
             }
@@ -413,7 +410,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
                 LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
 
-                session->send_message(resp_msg, nullptr);
+                session->send_message(resp_msg, true);
             }
 
             LOG(info) << "current term out of sync: " << this->current_term;
@@ -514,19 +511,7 @@ raft::request_append_entries()
 
             LOG(debug) << "Sending request:\n" << req->toStyledString();
 
-            this->node->send_message(ep, req,
-                [peer, self = shared_from_this()](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
-                {
-                    if (!session)
-                    {
-                        LOG(warning) << "did not receive a AppendEntries response from: "
-                                     << peer.name << " (" << peer.host << ":" << peer.port << ")";
-
-                        return;
-                    }
-
-                    self->handle_request_append_entries_response(msg, std::move(session));
-                });
+            this->node->send_message(ep, req);
         }
         catch(const std::exception& ex)
         {
@@ -542,15 +527,11 @@ raft::request_append_entries()
 void
 raft::handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    std::lock_guard<std::mutex> lock(this->raft_lock);
-
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "No longer the leader. Ignoring message from peer: " << msg["data"]["from"].asString();
         return;
     }
-
-    LOG(debug) << "Received AppendEntries response:\n" << msg.toStyledString();
 
     // check match index for bad peers...
     if (msg["data"]["matchIndex"].asUInt() > this->log_entries.size() ||

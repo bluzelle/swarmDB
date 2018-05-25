@@ -27,14 +27,14 @@ namespace bzn
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {
     public:
-        node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket,
+        node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, const std::chrono::milliseconds& ws_idle_timeout,
             const boost::asio::ip::tcp::endpoint& ep);
 
         bool register_for_message(const std::string& msg_type, bzn::message_handler msg_handler) override;
 
         void start() override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler) override;
+        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);
@@ -47,6 +47,7 @@ namespace bzn
         std::shared_ptr<bzn::asio::io_context_base>   io_context;
         std::unique_ptr<bzn::asio::tcp_socket_base>   acceptor_socket;
         std::shared_ptr<bzn::beast::websocket_base>   websocket;
+        const std::chrono::milliseconds               ws_idle_timeout;
 
         std::unordered_map<std::string, bzn::message_handler> message_map;
         std::mutex message_map_mutex;

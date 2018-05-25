@@ -23,15 +23,44 @@ namespace bzn
 {
     TEST(node_session, test_that_when_session_starts_it_accepts_and_read_is_scheduled)
     {
-        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
+        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+        auto mock_websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
+        auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+        auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
 
-        EXPECT_CALL(*io_context, make_unique_strand());
+        EXPECT_CALL(*mock_io_context, make_unique_strand()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_strand);
+            }));
 
-        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
+        EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::close_handler>())).WillRepeatedly(Invoke(
+            [&](bzn::asio::close_handler handler)
+            {
+                return handler;
+            }));
+
+        EXPECT_CALL(*mock_steady_timer, expires_from_now(std::chrono::milliseconds(1000)));
+
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).WillOnce(Invoke(
+            [&](auto handler)
+            {
+                wh = handler;
+            }));
+
+        EXPECT_CALL(*mock_steady_timer, cancel()).Times(3);
+
+        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_steady_timer);
+            }));
+
+        auto session = std::make_shared<bzn::session>(mock_io_context, mock_websocket_stream, std::chrono::milliseconds(1000));
 
         bzn::asio::accept_handler accept_handler;
-        EXPECT_CALL(*websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*mock_websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
             [&](auto handler)
             {
                 accept_handler = handler;
@@ -39,8 +68,8 @@ namespace bzn
         ));
 
         // only one call on success...
-        EXPECT_CALL(*websocket_stream, is_open()).Times(2).WillRepeatedly(Return(false));
-        EXPECT_CALL(*websocket_stream, async_read(_,_));
+        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(false)).WillOnce(Return(true)).WillOnce(Return(false));
+        EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
         session->start([](auto&,auto){});
 
@@ -49,17 +78,28 @@ namespace bzn
 
         // call with an error and no read will be scheduled...
         accept_handler(boost::asio::error::operation_aborted);
+
+        // expire idle timer (will close connection)
+        EXPECT_CALL(*mock_websocket_stream, async_close(_,_));
+        wh(boost::system::error_code());
     }
 
 
     TEST(node_session, test_that_when_message_arrives_registered_callback_is_executed)
     {
-        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto websocket_stream = std::make_shared<NiceMock<bzn::beast::Mockwebsocket_stream_base>>();
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
-        EXPECT_CALL(*io_context, make_unique_strand());
+        EXPECT_CALL(*mock_io_context, make_unique_strand());
 
-        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
+        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_steady_timer);
+            }));
+
+        auto session = std::make_shared<bzn::session>(mock_io_context, websocket_stream, std::chrono::milliseconds(0));
 
         bzn::asio::accept_handler accept_handler;
         EXPECT_CALL(*websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
@@ -106,43 +146,57 @@ namespace bzn
 
     TEST(node_session, test_that_response_can_be_sent)
     {
-        auto io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+        auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
-        EXPECT_CALL(*strand, wrap(_)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::write_handler>())).WillRepeatedly(Invoke(
             [&](bzn::asio::write_handler handler)
             {
                 return handler;
             }));
 
-        EXPECT_CALL(*io_context, make_unique_strand()).WillOnce(Invoke(
-            [&]()
+        EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::close_handler>())).WillRepeatedly(Invoke(
+            [&](bzn::asio::close_handler handler)
             {
-                return std::move(strand);
+                return handler;
             }));
 
-        auto websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
-        auto session = std::make_shared<bzn::session>(io_context, websocket_stream);
+        EXPECT_CALL(*mock_io_context, make_unique_strand()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_strand);
+            }));
 
-        EXPECT_CALL(*websocket_stream, async_write(_,_));
-        EXPECT_CALL(*websocket_stream, is_open()).WillOnce(Return(false));
+        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_steady_timer);
+            }));
+
+        auto mock_websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
+        auto session = std::make_shared<bzn::session>(mock_io_context, mock_websocket_stream, std::chrono::milliseconds(0));
+
+        EXPECT_CALL(*mock_websocket_stream, async_write(_,_));
+        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(true)).WillOnce(Return(false));
 
         // no read exepected...
-        session->send_message(std::make_shared<bzn::message>("asdf"), nullptr);
+        session->send_message(std::make_shared<bzn::message>("asdf"), true);
 
         // read should be setup...
         bzn::asio::write_handler write_handler;
-        EXPECT_CALL(*websocket_stream, async_write(_,_)).WillOnce(Invoke(
+        EXPECT_CALL(*mock_websocket_stream, async_write(_,_)).WillOnce(Invoke(
             [&](auto& /*buffer*/, auto handler)
             {
                 write_handler = handler;
             }));
 
-        EXPECT_CALL(*websocket_stream, async_read(_,_));
-        session->send_message(std::make_shared<bzn::message>("asdf"), [](const auto&, auto){});
+        EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
+        session->send_message(std::make_shared<bzn::message>("asdf"), false);
         write_handler(boost::system::error_code(), 0);
 
         // error no read should be setup...
+        EXPECT_CALL(*mock_websocket_stream, async_close(_,_));
         write_handler(boost::asio::error::operation_aborted, 0);
     }
 

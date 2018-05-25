@@ -41,6 +41,8 @@ namespace bzn
 
         bzn::uuid_t get_uuid() const override;
 
+        std::chrono::seconds get_ws_idle_timeout() const override;
+
     private:
         bool parse(int argc, const char* argv[]);
 
