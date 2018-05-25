@@ -76,7 +76,7 @@ script:
   - echo CXXFLAGS=${CXXFLAGS}
   - make
   - make package
-
+  - ctest
 
 after_success:
   - echo ${TRAVIS_BRANCH}
@@ -88,7 +88,7 @@ after_success:
       if [ "$TRAVIS_OS_NAME" = "osx" ]; then
         travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_OSX} "https://bluzelle.jfrog.io/bluzelle/OSX/${PACKAGE_NAME_OSX}"
       fi
-      git tag release-${TRAVIS_OS_NAME}-${PROJECT_VERSION}
+      git tag ${PROJECT_VERSION}
       git remote add origin-swarm https://${GITHUB_TOKEN}@github.com/bluzelle/swarmdb.git > /dev/null 2>&1
       git push --quiet --set-upstream origin-swarm ${TRAVIS_BRANCH} --tags
     fi
