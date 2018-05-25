@@ -115,12 +115,12 @@ crud::commit_create(const bzn::message& msg)
 
     if(storage_base::result::ok == result)
     {
-        LOG(info) << "Request:" << msg["request-id"].asString() << " Create successful.";
+        LOG(info) << "Request:" << msg["request-id"].asUInt64() << " Create successful.";
     }
     else
     {
         LOG(error) << "Request:"
-                   << msg["request-id"].asString()
+                   << msg["request-id"].asUInt64()
                    << " Create failed";
     }
 }
@@ -192,7 +192,7 @@ crud::commit_update(const bzn::message& msg)
     if(storage_base::result::ok != result)
     {
         LOG(error) << "Request:"
-                   << msg["request-id"].asString()
+                   << msg["request-id"].asUInt64()
                    << " Update failed";
     }
 }
@@ -227,7 +227,7 @@ crud::commit_delete(const bzn::message& msg)
     if(storage_base::result::ok!=result)
     {
         LOG(error) << "Request:"
-                   << msg["request-id"].asString()
+                   << msg["request-id"].asUInt64()
                    << " Delete failed";
     }
 }
