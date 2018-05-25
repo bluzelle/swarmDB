@@ -39,9 +39,9 @@ namespace bzn
         /**
          * Send a message to the connected node
          * @param msg       message
-         * @param handler   called if there is a response
+         * @param end_session close connection after send
          */
-        virtual void send_message(std::shared_ptr<const bzn::message> msg, bzn::message_handler handler) = 0;
+        virtual void send_message(std::shared_ptr<const bzn::message> msg, bool end_session) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.

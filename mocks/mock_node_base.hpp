@@ -28,8 +28,8 @@ class Mocknode_base : public node_base {
       bool(const std::string& msg_type, bzn::message_handler message_handler));
   MOCK_METHOD0(start,
       void());
-  MOCK_METHOD3(send_message,
-      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg, bzn::message_handler reply_handler));
+  MOCK_METHOD2(send_message,
+      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg));
 };
 
 }  // namespace bzn
