@@ -128,7 +128,7 @@ $ sudo make install
 
 #### Steps to setup Daemon configuration files:
 
-1. Create each of the JSON files below in swarmDB/output/, where the swarm executable resides. (bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json).
+1. Create each of the JSON files below in swarmDB/build/output/, where the swarm executable resides. (bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json).
 2. Create an account with Etherscan: https://etherscan.io/register
 3. Create an Etherscan API KEY by clicking Developers -> API-KEYs.
 4. Add your Etherscan API KEY Token to the configuration files.
@@ -203,7 +203,7 @@ Configuration files for Daemon:
  
 ```
 
-7. Deploy your swarm of Daemons. From the swarmDB/output/ directory, run:
+7. Deploy your swarm of Daemons. From the swarmDB/build/output/ directory, run:
 
 ```
 $ ./swarm -c bluzelle.json
