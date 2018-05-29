@@ -19,8 +19,6 @@
 #include <node/node.hpp>
 #include <http/server.hpp>
 #include <options/options.hpp>
-#include <raft/raft.hpp>
-#include <storage/storage.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/console.hpp>
@@ -30,6 +28,9 @@
 #include <boost/filesystem.hpp>
 #include <audit/audit.hpp>
 #include <thread>
+#include <pbft/pbft_service.hpp>
+#include <pbft/pbft.hpp>
+#include <raft/raft.hpp>
 
 
 void
@@ -225,28 +226,9 @@ main(int argc, const char* argv[])
 
         // startup...
         auto websocket = std::make_shared<bzn::beast::websocket>();
-
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
-        auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage());
-        auto storage = std::make_shared<bzn::storage>();
-        auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
 
-        // get our http listener port...
-        uint16_t http_port;
-        if (!get_http_listener_port(options, peers, http_port))
-        {
-            LOG(error) << "could not find our http port setting!";
-            return 1;
-        }
-
-        // create http server using our configured listener address & peer listen port number...
-        auto ep = options.get_listener();
-        ep.port(http_port);
-        auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
-
-        raft->initialize_storage_from_log(storage);
-        
         // todo: just for testing...
         node->register_for_message("ping",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
@@ -261,11 +243,44 @@ main(int argc, const char* argv[])
             });
 
         node->start();
-        crud->start();
-        raft->start();
-        http_server->start();
         audit->start();
 
+        if(options.pbft_enabled())
+        {
+            auto service = std::make_shared<bzn::pbft_service>();
+            auto pbft = std::make_shared<bzn::pbft>(node, peers.get_peers(), options.get_uuid(), service);
+
+            pbft->start();
+        }
+        else
+        {
+            uint16_t http_port;
+            if (!get_http_listener_port(options, peers, http_port))
+            {
+                LOG(error) << "could not find our http port setting!";
+                return 1;
+            }
+
+            // create http server using our configured listener address & peer listen port number...
+            auto ep = options.get_listener();
+            ep.port(http_port);
+
+            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage());
+            auto storage = std::make_shared<bzn::storage>();
+            auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
+            auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
+
+            raft->initialize_storage_from_log(storage);
+
+
+            // These are here because they are not yet integrated with pbft
+            http_server->start();
+            crud->start();
+
+
+            raft->start();
+        }
+        
         print_banner(options, eth_balance);
 
         start_worker_threads_and_wait(io_context);

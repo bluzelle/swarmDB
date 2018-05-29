@@ -51,6 +51,7 @@ namespace
     const std::string LOGFILE_MAX_SIZE_KEY = "logfile_max_size";
     const std::string DEBUG_LOGGING_KEY = "debug_logging";
     const std::string LOG_TO_STDOUT_KEY = "log_to_stdout";
+    const std::string PBFT_ENABLED_KEY = "use_pbft";
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
     const size_t DEFAULT_AUDIT_MEM_SIZE = 10000;
@@ -142,6 +143,19 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
     else
     {
         return bzn::optional<boost::asio::ip::udp::endpoint>{};
+    }
+}
+
+bool
+options::pbft_enabled() const
+{
+    if (this->config_data.isMember(PBFT_ENABLED_KEY))
+    {
+        return this->config_data[PBFT_ENABLED_KEY].asBool();
+    }
+    else
+    {
+        return false;
     }
 }
 
