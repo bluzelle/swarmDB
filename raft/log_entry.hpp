@@ -36,8 +36,8 @@ namespace bzn
         friend std::istream &operator>>(std::istream& in, log_entry& obj)
         {
             std::string msg_string;
-            obj.log_index = std::numeric_limits<uint32_t>::max();;
-            obj.term = std::numeric_limits<uint32_t>::max();;
+            obj.log_index = std::numeric_limits<uint32_t>::max();
+            obj.term = std::numeric_limits<uint32_t>::max();
             obj.msg.clear();
             in >> obj.log_index >> obj.term >> msg_string;
             if (!msg_string.empty())
