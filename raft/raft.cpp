@@ -598,21 +598,21 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
     switch (this->current_state)
     {
         case bzn::raft_state::leader:
-            LOG(info) << "RAFT State: Leader\n";
+            LOG(info) << "RAFT State: Leader";
 
             this->leader = this->uuid;
             break;
 
         case bzn::raft_state::candidate:
-            LOG(info) << "RAFT State: Candidate\n";
+            LOG(info) << "RAFT State: Candidate";
             break;
 
         case bzn::raft_state::follower:
-            LOG(info) << "RAFT State: Follower\n";
+            LOG(info) << "RAFT State: Follower";
             break;
 
         default:
-            LOG(info) << "RAFT State: Undefined(NB: This is bad!)\n";
+            LOG(info) << "RAFT State: Undefined";
             break;
     }
 }
