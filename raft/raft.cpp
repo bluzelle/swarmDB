@@ -615,35 +615,21 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
     switch (this->current_state)
     {
         case bzn::raft_state::leader:
-            LOG(info) << "\n"
-                         " ___                     _                   _           \n"
-                         "|_ _|   __ _ _ __ ___   | |    ___  __ _  __| | ___ _ __ \n"
-                         " | |   / _` | '_ ` _ \\  | |   / _ \\/ _` |/ _` |/ _ \\ '__|\n"
-                         " | |  | (_| | | | | | | | |__|  __/ (_| | (_| |  __/ |   \n"
-                         "|___|  \\__,_|_| |_| |_| |_____\\___|\\__,_|\\__,_|\\___|_|\n";
+            LOG(info) << "RAFT State: Leader";
 
             this->leader = this->uuid;
             break;
 
         case bzn::raft_state::candidate:
-            LOG(info) << "\n"
-                         " ___                      ____                _ _     _       _       \n"
-                         "|_ _|   __ _ _ __ ___    / ___|__ _ _ __   __| (_) __| | __ _| |_ ___ \n"
-                         " | |   / _` | '_ ` _ \\  | |   / _` | '_ \\ / _` | |/ _` |/ _` | __/ _ \\\n"
-                         " | |  | (_| | | | | | | | |__| (_| | | | | (_| | | (_| | (_| | ||  __/\n"
-                         "|___|  \\__,_|_| |_| |_|  \\____\\__,_|_| |_|\\__,_|_|\\__,_|\\__,_|\\__\\___|\n";
+            LOG(info) << "RAFT State: Candidate";
             break;
 
         case bzn::raft_state::follower:
-            LOG(info) << "\n"
-                         " ___                     _____     _ _                        \n"
-                         "|_ _|   __ _ _ __ ___   |  ___|__ | | | _____      _____ _ __ \n"
-                         " | |   / _` | '_ ` _ \\  | |_ / _ \\| | |/ _ \\ \\ /\\ / / _ \\ '__|\n"
-                         " | |  | (_| | | | | | | |  _| (_) | | | (_) \\ V  V /  __/ |   \n"
-                         "|___|  \\__,_|_| |_| |_| |_|  \\___/|_|_|\\___/ \\_/\\_/ \\___|_|  \n";
+            LOG(info) << "RAFT State: Follower";
             break;
 
         default:
+            LOG(info) << "RAFT State: Undefined";
             break;
     }
 }
