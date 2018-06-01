@@ -27,15 +27,6 @@ namespace bzn
     const std::string MSG_VALUE_SIZE_TOO_LARGE = "VALUE_SIZE_TOO_LARGE";
     const std::string MSG_COMMAND_NOT_SET = "COMMAND_NOT_SET";
 
-    const std::string MSG_CMD_CREATE{"create"};
-    const std::string MSG_CMD_READ{"read"};
-    const std::string MSG_CMD_UPDATE{"update"};
-    const std::string MSG_CMD_DELETE{"delete"};
-
-    const std::string MSG_CMD_KEYS{"keys"};
-    const std::string MSG_CMD_HAS{"has"};
-    const std::string MSG_CMD_SIZE{"size"};
-
     class crud_base
     {
     public:
