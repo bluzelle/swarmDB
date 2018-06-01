@@ -19,13 +19,12 @@
 #include <options/options.hpp>
 #include <raft/raft.hpp>
 #include <storage/storage.hpp>
-
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/program_options.hpp>
-
+#include <boost/filesystem.hpp>
 #include <thread>
 
 
@@ -79,7 +78,6 @@ set_logging_level(const bzn::options& options)
         boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
     }
 }
-
 
 
 void
@@ -194,8 +192,11 @@ main(int argc, const char* argv[])
 
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
         auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
-        auto crud = std::make_shared<bzn::crud>(node, raft, std::make_shared<bzn::storage>());
-
+        auto storage = std::make_shared<bzn::storage>();
+        auto crud = std::make_shared<bzn::crud>(node, raft, storage);
+        
+        raft->initialize_storage_from_log(storage);
+        
         // todo: just for testing...
         node->register_for_message("ping",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)

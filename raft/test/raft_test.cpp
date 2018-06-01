@@ -13,9 +13,15 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <raft/raft.hpp>
+#include <raft/log_entry.hpp>
+#include <storage/storage.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <boost/filesystem.hpp>
+#include <vector>
+#include <random>
+#include <stdlib.h>
 
 using namespace ::testing;
 
@@ -28,8 +34,50 @@ namespace
                                            {"127.0.0.1", 8084, "name3", TEST_NODE_UUID}};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
+
+
+    void
+    fill_entries_with_test_data(const size_t sz, std::vector<bzn::log_entry>& entries)
+    {
+        if(entries.size() != sz)
+        {
+            entries.resize(sz);
+        }
+
+        uint16_t index = 1;
+
+        for(auto& entry : entries)
+        {
+            entry.log_index = index;
+            entry.term = std::div(index, 5).quot;
+            std::string data(200 * (index%3 +1),'s');
+            entry.msg["data"]["value"] = data;
+            index ++;
+        }
+    }
+
+
+    void
+    save_entries_to_path(const std::string& path, const std::vector<bzn::log_entry>& entries)
+    {
+        std::ofstream ofs(path, std::ios::out |  std::ios::binary | std::ios::app);
+        for(auto& entry : entries)
+        {
+            ofs << entry;
+        }
+        ofs.close();
+    }
+
+
+    auto equality_test = [](const bzn::log_entry &rhs, const bzn::log_entry &lhs) -> bool
+    {
+        return rhs.log_index == lhs.log_index
+               && rhs.term == lhs.term
+               && rhs.msg.toStyledString() == lhs.msg.toStyledString();
+    };
 }
 
+class MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_IN_LOG;
 namespace bzn
 {
 
@@ -260,6 +308,8 @@ namespace bzn
 
     TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them)
     {
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
@@ -357,6 +407,9 @@ namespace bzn
         wh(boost::system::error_code());
 
         // todo: verify append entry contents
+
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
     }
 
 
@@ -378,6 +431,8 @@ namespace bzn
             { return std::move(mock_steady_timer); }));
 
         // create raft...
+        boost::filesystem::remove("./.state/uuid1.dat");
+        boost::filesystem::remove("./.state/uuid1.state");
         auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, "uuid1");
 
         bzn::message_handler mh;
@@ -448,6 +503,10 @@ namespace bzn
         mh(msg, mock_session);
         ASSERT_FALSE(resp["data"]["success"].asBool());
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
+
+
+        boost::filesystem::remove("./.state/uuid1.dat");
+        boost::filesystem::remove("./.state/uuid1.state");
     }
 
 
@@ -473,6 +532,259 @@ namespace bzn
             bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
             EXPECT_EQ(r.timeout_scale, 1ul);
         }
+    }
+
+
+    TEST(raft, test_log_entry_serialization)
+    {
+        const size_t number_of_entries = 300;
+        const std::string path{"./.state/test_data.dat"};
+        boost::filesystem::remove(path);
+
+        std::vector<bzn::log_entry> entries_source(number_of_entries);
+        fill_entries_with_test_data(number_of_entries, entries_source);
+        save_entries_to_path(path, entries_source);
+
+        std::vector<bzn::log_entry> entries_target;
+        {
+            bzn::log_entry log_entry;
+            std::ifstream is(path, std::ios::binary | std::ios::in);
+
+            while (is >> log_entry)
+            {
+                if (!log_entry.msg.empty())
+                {
+                    entries_target.emplace_back(log_entry);
+                }
+            }
+        }
+
+        EXPECT_EQ(number_of_entries, entries_target.size());
+        EXPECT_TRUE(std::equal(entries_source.begin(), entries_source.end(), entries_target.begin(), equality_test));
+
+        boost::filesystem::remove(path);
+    }
+
+
+    TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries)
+    {
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+
+        size_t number_of_entries = 300;
+
+        fill_entries_with_test_data(number_of_entries, raft_source->log_entries);
+
+        // TODO: this should be done via RAFT, not by cheating. That is, I'd like to simulate the append entry process to ensure that append_entry_to_log gets called
+        for(const auto& log_entry : raft_source->log_entries)
+        {
+            raft_source->append_entry_to_log(log_entry);
+        }
+
+        raft_source->last_log_index = number_of_entries;
+        raft_source->last_log_term = 60;
+        raft_source->commit_index = number_of_entries - 22;
+        raft_source->current_term = 60;
+
+        // TODO: This should be done via RAFT, not by cheating.
+        raft_source->save_state();
+
+
+        // instantiate a raft with the same uuid
+        auto raft_target = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+
+        EXPECT_EQ(raft_target->last_log_index, raft_source->last_log_index);
+        EXPECT_EQ(raft_target->last_log_term, raft_source->last_log_term);
+        EXPECT_EQ(raft_target->commit_index, raft_source->commit_index);
+        EXPECT_EQ(raft_target->current_term, raft_source->current_term);
+
+
+        auto source_entries = raft_source->log_entries;
+        auto target_entries = raft_target->log_entries;
+
+        EXPECT_TRUE(target_entries.size()>0);
+        EXPECT_EQ(target_entries.size(),source_entries.size());
+
+        EXPECT_TRUE(std::equal(
+                std::begin(target_entries), std::end(target_entries),
+                std::begin(source_entries),
+                [](const bzn::log_entry &rhs, const bzn::log_entry &lhs) -> bool
+                {
+                    return (rhs.log_index == lhs.log_index
+                            && rhs.term == lhs.term
+                            && rhs.msg.toStyledString() == lhs.msg.toStyledString()
+                    );
+                }
+        ));
+
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+
+    }
+
+    
+    TEST(raft, test_that_raft_can_rehydrate_storage)
+    {
+        const size_t number_of_entries = 300;
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
+                                                       nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto storage_source = std::make_shared<bzn::storage>();
+
+        std::random_device rd;  //Will be used to obtain a seed for the random number engine
+        std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+        std::uniform_int_distribution<> dis(0, 6);
+
+        bzn::message message;
+        Json::Reader reader;
+        std::string crud_msg;
+        uint16_t index = 0;
+
+        raft_source->current_state = bzn::raft_state::leader;
+
+        while (storage_source->get_keys(TEST_NODE_UUID).size() < number_of_entries)
+        {
+            uint8_t command = dis(gen);
+            if (command <= 3)
+            {
+                // create
+                const std::string key = "key" + std::to_string(index);
+                const std::string value = "value_for_" + key + "==";
+
+                crud_msg = R"({"bzn-api":"crud","cmd":"create","data":{"key": ")"
+                           + key
+                           + R"(","value":")"
+                           + value
+                           + R"("},"db-uuid":")"
+                           + TEST_NODE_UUID
+                           + R"(","request-id":"0"}")";
+
+                reader.parse(crud_msg, message);
+                raft_source->append_log(message);
+                storage_source->create(TEST_NODE_UUID, key, value);
+            }
+            else if (command < 5)
+            {
+                // update an existing record
+                const auto keys = storage_source->get_keys(TEST_NODE_UUID);
+                if (keys.size() > 10)
+                {
+                    std::uniform_int_distribution<> dis(0, keys.size() - 1);
+                    const size_t i = dis(gen);
+                    const auto key = keys[i];
+                    const auto value = "updated_value_for_" + key;
+                    crud_msg = R"({"bzn-api":"crud","cmd":"update","data":{"key": ")"
+                               + key
+                               + R"(","value":")"
+                               + value
+                               + R"("},"db-uuid":")"
+                               + TEST_NODE_UUID
+                               + R"(","request-id":"0"}")";
+
+                    reader.parse(crud_msg, message);
+                    raft_source->append_log(message);
+                    storage_source->update(TEST_NODE_UUID, key, value);
+                }
+            }
+            else
+            {
+                // delete an existing record
+                const auto keys = storage_source->get_keys(TEST_NODE_UUID);
+                if (keys.size() > 10)
+                {
+                    std::uniform_int_distribution<> dis(0, keys.size() - 1);
+                    const auto key_index = dis(gen);
+                    const auto key = keys[key_index];
+                    crud_msg = R"({"bzn-api":"crud","cmd":"delete","data":{"key": ")"
+                               + key
+                               + R"("},"db-uuid":")"
+                               + TEST_NODE_UUID
+                               + R"(","request-id":"0"}")";
+
+                    reader.parse(crud_msg, message);
+                    raft_source->append_log(message);
+                    storage_source->remove(TEST_NODE_UUID, key);
+                }
+            }
+            index++;
+        }
+
+        EXPECT_EQ(storage_source->get_keys(TEST_NODE_UUID).size(), number_of_entries);
+
+        auto storage_target = std::make_shared<bzn::storage>();
+
+        raft_source->initialize_storage_from_log(storage_target);
+
+        EXPECT_TRUE(storage_target->get_keys(TEST_NODE_UUID).size() > 0);
+        EXPECT_EQ(storage_source->get_keys(TEST_NODE_UUID).size(), storage_target->get_keys(TEST_NODE_UUID).size());
+
+        for (auto& key : storage_source->get_keys(TEST_NODE_UUID))
+        {
+            auto rec_1 = storage_source->read(TEST_NODE_UUID, key);
+            auto rec_2 = storage_target->read(TEST_NODE_UUID, key);
+            EXPECT_EQ(rec_1->value, rec_2->value);
+        }
+
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+    }
+
+
+    TEST(raft, test_that_raft_bails_on_bad_rehydrate)
+    {
+        std::string good_state{"1 0 1 4"};
+        std::string bad_state{"X 0 X X"};
+
+        std::string bad_entry_00{"1 4 THIS_IS_BADeyJiem4tYXB0K"};
+        std::string valid_entry{"1 2 eyJiem4tYXBpIjoiY3J1ZCIsImNtZCI6ImNyZWF0ZSIsImRhdGEiOnsia2V5Ijoia2V5MCIsInZhbHVlIjoidmFsdWVfZm9yX2tleTAifSwiZGItdXVpZCI6Im15LXV1aWQiLCJyZXF1ZXN0LWlkIjowfQo="};
+
+        boost::filesystem::path log_path{"./.state/" + TEST_NODE_UUID + ".dat"};
+        boost::filesystem::path state_path{"./.state/" + TEST_NODE_UUID + ".state"};
+
+        boost::filesystem::create_directory(log_path.parent_path());
+
+        boost::filesystem::remove(log_path);
+        boost::filesystem::remove(state_path);
+
+        // good state/ empty entry
+        std::ofstream out(state_path.string(), std::ios::out | std::ios::binary);
+        out << good_state;
+        out.close();
+
+        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out << "";
+        out.close();
+
+        EXPECT_THROW(
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                        , std::runtime_error);
+
+        // good state/bad entry
+        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out << bad_entry_00;
+        out.close();
+
+        EXPECT_THROW(
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                        , std::runtime_error);
+
+        // good state/good entry/mis-matched
+        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out << valid_entry;
+        out.close();
+
+        EXPECT_THROW(
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                        , std::runtime_error);
+
+        boost::filesystem::remove(log_path);
+        boost::filesystem::remove(state_path);
     }
 
 } // bzn

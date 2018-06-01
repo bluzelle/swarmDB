@@ -17,16 +17,21 @@
 #include <string>
 #include <random>
 #include <algorithm>
+#include <boost/filesystem.hpp>
 
 namespace
 {
     const std::string NO_PEERS_ERRORS_MGS = "No peers given!";
+    const std::string MSG_ERROR_INVALID_LOG_ENTRY_FILE{"Invalid log entry file. Please Delete .state folder."};
+    const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
+    const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
 
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 }
+
 
 using namespace bzn;
 
@@ -50,6 +55,18 @@ raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
     }
 
     this->get_raft_timeout_scale();
+
+    if (boost::filesystem::exists(this->state_path()) && boost::filesystem::exists(this->entries_log_path()))
+    {
+        this->load_state();
+        this->load_log_entries();
+
+        const auto& last_entry = this->log_entries.back();
+        if (last_entry.log_index!=this->last_log_index || last_entry.term!=this->current_term)
+        {
+            throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
+        }
+    }
 }
 
 
@@ -340,8 +357,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         {
             for(size_t i = this->commit_index; i < std::min(this->log_entries.size(), size_t(msg["data"]["commitIndex"].asUInt())); ++i)
             {
-                this->commit_handler(this->log_entries[i].msg);
-                this->commit_index++;
+                this->perform_commit(commit_index, this->log_entries[i]);
             }
         }
     }
@@ -367,6 +383,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         // bleh!
         if (msg["cmd"].asString() == "RequestVote")
         {
+            std::cout << "RequestVote:" << msg.toStyledString() << std::endl;
             this->handle_ws_request_vote(msg, session);
         }
         else if (msg["cmd"].asString() == "AppendEntries")
@@ -560,7 +577,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 
     while (this->commit_index < consensus_commit_index)
     {
-        this->commit_handler(this->log_entries[this->commit_index++].msg);
+        this->perform_commit(this->commit_index, this->log_entries[this->commit_index]);
     }
 }
 
@@ -576,7 +593,7 @@ raft::append_log(const bzn::message& msg)
         return false;
     }
 
-    this->log_entries.emplace_back(raft::log_entry{++this->last_log_index, this->current_term, msg});
+    this->log_entries.emplace_back(log_entry{++this->last_log_index, this->current_term, msg});
 
     return true;
 }
@@ -647,3 +664,123 @@ raft::get_leader()
 
     return bzn::peer_address_t("",0,"","");
 }
+
+
+void
+raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
+{
+
+    for (const auto log_entry : this->log_entries)
+    {
+        const auto command = log_entry.msg["cmd"].asString();
+        const auto db_uuid = log_entry.msg["db-uuid"].asString();
+        const auto key = log_entry.msg["data"]["key"].asString();
+        if (command == "create")
+        {
+            storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+        }
+        else if (command == "update")
+        {
+            storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+        }
+        else if (command == "delete")
+        {
+            storage->remove(db_uuid, key);
+        }
+    }
+}
+
+
+std::string
+raft::entries_log_path()
+{
+    return "./.state/" + this->get_uuid() +".dat";
+}
+
+
+void
+raft::append_entry_to_log(const bzn::log_entry& log_entry)
+{
+    if (!this->log_entry_out_stream.is_open())
+    {
+        boost::filesystem::path path{this->entries_log_path()};
+        if(!boost::filesystem::exists(path.parent_path()))
+        {
+            boost::filesystem::create_directories(path.parent_path());
+        }
+        this->log_entry_out_stream.open(path.string(), std::ios::out |  std::ios::binary | std::ios::app);
+    }
+    this->log_entry_out_stream << log_entry;
+    this->log_entry_out_stream.flush();
+}
+
+
+std::string
+raft::state_path()
+{
+    return "./.state/" + this->get_uuid() +".state";
+}
+
+
+void
+raft::save_state()
+{
+    boost::filesystem::path path{this->state_path()};
+    if (!boost::filesystem::exists(path.parent_path()))
+    {
+        boost::filesystem::create_directories(path.parent_path());
+    }
+
+    std::ofstream os( path.string() ,std::ios::out | std::ios::binary);
+    os << this->last_log_index  << " " << this->last_log_term << " " << this->commit_index << " " <<  this->current_term;
+    os.close();
+}
+
+
+void
+raft::load_state()
+{
+    this->last_log_index = std::numeric_limits<uint32_t>::max();
+    this->last_log_term = std::numeric_limits<uint32_t>::max();
+    this->commit_index = std::numeric_limits<uint32_t>::max();
+    this->current_term = std::numeric_limits<uint32_t>::max();
+    std::ifstream is(this->state_path(), std::ios::in | std::ios::binary);
+    is >> this->last_log_index >> this->last_log_term >> this->commit_index >> this->current_term;
+    if (std::numeric_limits<uint32_t>::max()==this->last_log_index
+        || std::numeric_limits<uint32_t>::max()==this->last_log_term
+        || std::numeric_limits<uint32_t>::max()==this->commit_index
+        || std::numeric_limits<uint32_t>::max()==this->current_term)
+    {
+        throw std::runtime_error(MSG_ERROR_INVALID_STATE_FILE);
+    }
+    is.close();
+}
+
+
+void
+raft::load_log_entries()
+{
+    std::ifstream is(this->entries_log_path(), std::ios::in | std::ios::binary);
+    bzn::log_entry log_entry;
+    while (is >> log_entry)
+    {
+        this->log_entries.emplace_back(log_entry);
+    }
+    is.close();
+
+    if (this->log_entries.empty())
+    {
+        throw std::runtime_error(MSG_ERROR_EMPTY_LOG_ENTRY_FILE);
+    }
+}
+
+
+void
+raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
+{
+    this->commit_handler(log_entry.msg);
+    this->append_entry_to_log(log_entry);
+    commit_index++;
+    this->save_state();
+}
+
