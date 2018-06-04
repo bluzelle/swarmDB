@@ -34,7 +34,7 @@ namespace bzn
 
         void start() override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<const bzn::message> msg) override;
+        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);

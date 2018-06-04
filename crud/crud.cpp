@@ -15,13 +15,10 @@
 #include <crud/crud.hpp>
 #include <numeric>
 #include <storage/storage.hpp>
-using namespace bzn;
 
-namespace
-{
-    const std::set<std::string> accepted_crud_commands{bzn::MSG_CMD_CREATE, bzn::MSG_CMD_READ, bzn::MSG_CMD_UPDATE, bzn::MSG_CMD_DELETE,
-                                                 bzn::MSG_CMD_KEYS, bzn::MSG_CMD_HAS, bzn::MSG_CMD_SIZE};
-}
+#include <boost/beast/core/detail/base64.hpp>
+
+using namespace bzn;
 
 
 crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage)
@@ -30,8 +27,7 @@ crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base>
         , storage(std::move(storage))
 {
     this->register_route_handlers();
-    this->register_crud_command_handlers();
-    this->register_utility_command_handlers();
+    this->register_command_handlers();
     this->register_commit_handlers();
 }
 
@@ -43,22 +39,30 @@ crud::start()
         [this]()
         {
             // This handler deals with messages coming from the user.
-            if (!this->node->register_for_message("crud"
+            if (!this->node->register_for_message("database"
                                                   , std::bind(&crud::handle_ws_crud_messages
                                                   , shared_from_this()
                                                   , std::placeholders::_1
                                                   , std::placeholders::_2)))
             {
-                throw std::runtime_error("Unable to register for CRUD messages!");
+                throw std::runtime_error("Unable to register for DATABASE messages!");
             }
 
             // the commit handler deals with tasks that require concensus from RAFT
             this->raft->register_commit_handler(
-                [self = shared_from_this()](const bzn::message& msg)
+                [self = shared_from_this()](const bzn::message& ws_msg)
                 {
-                    if (auto search = self->commit_handlers.find(msg["cmd"].asString());search != self->commit_handlers.end())
+                    bzn_msg msg;
+
+                    if (msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
                     {
-                        search->second(msg);
+                        if (msg.msg_case() == bzn_msg::kDb)
+                        {
+                            if (auto search = self->commit_handlers.find(msg.db().msg_case()); search != self->commit_handlers.end())
+                            {
+                                search->second(msg.db());
+                            }
+                        }
                     }
                     return true;
                 });
@@ -67,298 +71,243 @@ crud::start()
 
 
 void
-crud::do_raft_task_routing(const bzn::message& request, bzn::message& response)
+crud::do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response)
 {
-    // TODO: This module can be simplified by removing the need for this method. We can/do check state *inside* of the command handlers.
-    auto search = this->route_handlers.find(raft->get_state());
-
-    if (search==this->route_handlers.end())
+    if (auto it = this->route_handlers.find(raft->get_state()); it != this->route_handlers.end())
     {
-        response["error"] = bzn::MSG_INVALID_RAFT_STATE;
+        it->second(msg, request, response);
+        return;
     }
-    else
+
+    response.mutable_resp()->set_error(bzn::MSG_INVALID_RAFT_STATE);
+}
+
+
+void
+crud::handle_create(const bzn::message& msg, const database_msg& request, database_response& response)
+{
+    if (this->validate_value_size(request.create().value().size()))
     {
-        search->second(request, response);
+        response.mutable_resp()->set_error(bzn::MSG_VALUE_SIZE_TOO_LARGE);
+        return;
+    }
+
+    if (this->storage->has(request.header().db_uuid(), request.create().key()))
+    {
+        response.mutable_resp()->set_error(bzn::MSG_RECORD_EXISTS);
+        return;
+    }
+
+    this->raft->append_log(msg);
+}
+
+
+void
+crud::handle_read(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+{
+    if (auto record = this->storage->read(request.header().db_uuid(), request.read().key()); record)
+    {
+        response.mutable_resp()->set_value(record->value);
+        return;
+    }
+
+    if (this->raft->get_state() == bzn::raft_state::leader)
+    {
+        response.mutable_resp()->set_error(bzn::MSG_RECORD_NOT_FOUND);
+        return;
+    }
+
+    this->set_leader_info(response);
+}
+
+
+void
+crud::handle_update(const bzn::message& msg, const database_msg& request, database_response& response)
+{
+    if (this->validate_value_size(request.update().value().size()))
+    {
+        response.mutable_resp()->set_error(bzn::MSG_VALUE_SIZE_TOO_LARGE);
+        return;
+    }
+
+    if (!this->storage->has(request.header().db_uuid(), request.update().key()))
+    {
+        response.mutable_resp()->set_error(bzn::MSG_RECORD_NOT_FOUND);
+        return;
+    }
+
+    // todo: what should we set in the response?
+
+    this->raft->append_log(msg);
+}
+
+
+void
+crud::handle_delete(const bzn::message& msg, const database_msg& request, database_response& response)
+{
+    if (this->storage->has(request.header().db_uuid(), request.delete_().key()))
+    {
+        this->raft->append_log(msg);
+        return;
+    }
+
+    response.mutable_resp()->set_error(bzn::MSG_RECORD_NOT_FOUND);
+}
+
+
+void
+crud::handle_get_keys(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+{
+    auto keys = this->storage->get_keys(request.header().db_uuid());
+
+    if (keys.empty())
+    {
+        // todo: how to deal with no keys found
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_ARGUMENTS);
+        return;
+    }
+
+    for (const auto& key : keys)
+    {
+        response.mutable_resp()->add_keys(key);
     }
 }
 
 
 void
-crud::handle_create(const bzn::message& request, bzn::message& response)
+crud::handle_has(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
 {
-    if(!this->validate_create_or_update(request))
+    response.mutable_resp()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+}
+
+
+void
+crud::handle_size(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+{
+    response.mutable_resp()->set_size(this->storage->get_size(request.header().db_uuid()));
+}
+
+
+void
+crud::commit_create(const database_msg& msg)
+{
+    if (this->storage->create(msg.header().db_uuid(), msg.create().key(), msg.create().value()) != storage_base::result::ok)
     {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
+        LOG(error) << "Request:" <<msg.header().transaction_id() << " Create failed";
     }
-    else if(this->validate_value_size(request))
+}
+
+
+void
+crud::commit_update(const database_msg& msg)
+{
+    if (this->storage->update(msg.header().db_uuid(), msg.update().key(), msg.update().value()) != storage_base::result::ok)
     {
-        response["error"] = bzn::MSG_VALUE_SIZE_TOO_LARGE;
+        LOG(error) << "Request:" << msg.header().transaction_id() << " Update failed";
     }
-    else
+}
+
+
+void
+crud::commit_delete(const database_msg& msg)
+{
+    if (this->storage->remove(msg.header().db_uuid(), msg.delete_().key()) != storage_base::result::ok)
     {
-        if(this->storage->has(request["db-uuid"].asString(), request["data"]["key"].asString()))
+        LOG(error) << "Request:" << msg.header().transaction_id() << " Delete failed";
+    }
+}
+
+
+void
+crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::session_base> session)
+{
+    bzn_msg msg;
+    database_response response;
+
+    if (!ws_msg.isMember("msg"))
+    {
+        LOG(error) << "Invalid message: " << ws_msg.toStyledString();
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        return;
+    }
+
+    if (!msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
+    {
+        LOG(error) << "Failed to decode message: " << ws_msg.toStyledString();
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        return;
+    }
+
+    if (msg.msg_case() != msg.kDb)
+    {
+        LOG(error) << "Invalid message type: " << msg.msg_case();
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_ARGUMENTS);
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        return;
+    }
+
+    *response.mutable_header() = msg.db().header();
+
+    this->do_raft_task_routing(ws_msg, msg.db(), response);
+
+    session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
+}
+
+
+void
+crud::do_candidate_tasks(const bzn::message& /*msg*/, const database_msg& /*request*/, database_response& response)
+{
+    response.mutable_resp()->set_error(bzn::MSG_ELECTION_IN_PROGRESS);
+}
+
+
+void
+crud::do_follower_tasks(const bzn::message& msg, const database_msg& request, database_response& response)
+{
+    switch(request.msg_case())
+    {
+        case database_msg::kRead:
+        case database_msg::kKeys:
+        case database_msg::kHas:
+        case database_msg::kSize:
         {
-            response["error"] = bzn::MSG_RECORD_EXISTS;
+            this->command_handlers[request.msg_case()](msg, request, response);
+            break;
         }
-        else
+
+        default:
         {
-            this->raft->append_log(request);
-        }
-    }
-}
-
-
-void
-crud::commit_create(const bzn::message& msg)
-{
-    auto result = this->storage->create(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
-
-    if(storage_base::result::ok == result)
-    {
-        LOG(info) << "Request:" << msg["request-id"].asUInt64() << " Create successful.";
-    }
-    else
-    {
-        LOG(error) << "Request:"
-                   << msg["request-id"].asUInt64()
-                   << " Create failed";
-    }
-}
-
-
-
-void
-crud::handle_read(const bzn::message& request, bzn::message& response)
-{
-    if(!validate_read_or_delete(request))
-    {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
-    }
-    else
-    {
-        auto record = this->storage->read(request["db-uuid"].asString(), request["data"]["key"].asString());
-
-        if (record)
-        {
-            response["data"]["value"] = record->value;
-        }
-        else
-        {
-            if(this->raft->get_state()==bzn::raft_state::leader)
-            {
-                response["error"] = bzn::MSG_RECORD_NOT_FOUND;
-            }
-            else
-            {
-                response["error"] = bzn::MSG_VALUE_DOES_NOT_EXIST;
-                this->set_leader_info(response);
-            }
-        }
-    }
-}
-
-
-
-void
-crud::handle_update(const bzn::message& request, bzn::message& response)
-{
-    if(!this->validate_create_or_update(request))
-    {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
-    }
-    else if(this->validate_value_size(request))
-    {
-        response["error"] = bzn::MSG_VALUE_SIZE_TOO_LARGE;
-    }
-    else
-    {
-        if(!this->storage->has(request["db-uuid"].asString(), request["data"]["key"].asString()))
-        {
-            response["error"] = bzn::MSG_RECORD_NOT_FOUND;
-        }
-        else
-        {
-            this->raft->append_log(request);
-        }
-    }
-}
-
-
-void
-crud::commit_update(const bzn::message& msg)
-{
-    auto result = this->storage->update(msg["db-uuid"].asString(), msg["data"]["key"].asString(), msg["data"]["value"].asString());
-
-    if(storage_base::result::ok != result)
-    {
-        LOG(error) << "Request:"
-                   << msg["request-id"].asUInt64()
-                   << " Update failed";
-    }
-}
-
-
-void
-crud::handle_delete(const bzn::message& request, bzn::message& response)
-{
-    if(!validate_read_or_delete(request))
-    {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
-    }
-    else
-    {
-        if (this->storage->has(request["db-uuid"].asString(), request["data"]["key"].asString()))
-        {
-            this->raft->append_log(request);
-        }
-        else
-        {
-            response["error"] = bzn::MSG_RECORD_NOT_FOUND;
-        }
-    }
-}
-
-
-void
-crud::commit_delete(const bzn::message& msg)
-{
-    auto result = this->storage->remove(msg["db-uuid"].asString(), msg["data"]["key"].asString());
-
-    if(storage_base::result::ok!=result)
-    {
-        LOG(error) << "Request:"
-                   << msg["request-id"].asUInt64()
-                   << " Delete failed";
-    }
-}
-
-
-
-void
-crud::handle_get_keys(const bzn::message& msg, bzn::message& response)
-{
-    auto keys = this->storage->get_keys(msg["db-uuid"].asString());
-
-    Json::Value json_keys;
-
-    for(auto& key : keys)
-    {
-        json_keys.append(key);
-    }
-
-    response["data"][bzn::MSG_CMD_KEYS] = json_keys;
-}
-
-
-void
-crud::handle_has(const bzn::message& msg, bzn::message& response)
-{
-    if(msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key"))
-    {
-        response["data"]["key-exists"] = this->storage->has(msg["db-uuid"].asString(), msg["data"]["key"].asString());
-    }
-    else
-    {
-        response["error"] = bzn::MSG_INVALID_ARGUMENTS;
-    }
-}
-
-
-void
-crud::handle_size(const bzn::message& msg, bzn::message& response)
-{
-    response["data"]["size"] = Json::UInt64(this->storage->get_size(msg["db-uuid"].asString()));
-}
-
-
-void
-crud::handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
-{
-    auto response = std::make_shared<bzn::message>();
-    (*response)["request-id"] = msg["request-id"];
-
-    if (!(msg.isMember("bzn-api") && msg["bzn-api"]=="crud"))
-    {
-        (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
-    }
-    else
-    {
-        if (accepted_crud_commands.find(msg["cmd"].asString()) != accepted_crud_commands.end())
-        {
-            this->do_raft_task_routing(msg, *response);
-        }
-        else
-        {
-            (*response)["error"] = bzn::MSG_INVALID_CRUD_COMMAND;
+            this->set_leader_info(response);
+            break;
         }
     }
-    
-    // if there's an error close after send_message...
-    session->send_message(response, (response->isMember("error") && ((*response)["error"] == bzn::MSG_INVALID_CRUD_COMMAND || (*response)["error"] == bzn::MSG_INVALID_ARGUMENTS)));
 }
 
 
 void
-crud::do_candidate_tasks(const bzn::message& /*request*/, bzn::message& response)
+crud::do_leader_tasks(const bzn::message& msg, const database_msg& request, database_response& response)
 {
-    response["error"] = bzn::MSG_ELECTION_IN_PROGRESS;
-}
-
-
-void
-crud::do_follower_tasks(const bzn::message& request, bzn::message& response)
-{
-    auto cmd = request["cmd"].asString();
-
-    if(cmd==bzn::MSG_CMD_READ)
+    if (auto it = this->command_handlers.find(request.msg_case()); it != this->command_handlers.end())
     {
-        this->command_handlers[bzn::MSG_CMD_READ](request, response);
+        it->second(msg, request, response);
+        return;
     }
-    // TODO: Move utilities into their own module.
-    else if (auto search = this->utility_handlers.find(cmd); search != this->utility_handlers.end())
-    {
-        search->second(request, response);
-    }
-    else
-    {
-        response["error"] = bzn::MSG_NOT_THE_LEADER;
-        this->set_leader_info(response);
-    }
-}
 
-
-void
-crud::do_leader_tasks(const bzn::message& request, bzn::message& response)
-{
-    if(request.isMember("cmd"))
-    {
-        auto command = request["cmd"].asString();
-        if(auto ch = this->command_handlers.find(command); ch != this->command_handlers.end())
-        {
-            ch->second(request, response);
-        }
-        // TODO: Move utilities into their own module
-        else if(auto uh = this->utility_handlers.find(command); uh != this->utility_handlers.end())
-        {
-            uh->second(request, response);
-        }
-        else
-        {
-            this->raft->append_log(request);
-        }
-    }
+    LOG(error) << "dropping unknown request: " << request.msg_case();
 }
 
 
 void crud::register_route_handlers()
 {
-    this->route_handlers[bzn::raft_state::leader] = std::bind(&crud::do_leader_tasks, this, std::placeholders::_1, std::placeholders::_2);
-    this->route_handlers[bzn::raft_state::candidate] = std::bind(&crud::do_candidate_tasks, this, std::placeholders::_1, std::placeholders::_2);
-    this->route_handlers[bzn::raft_state::follower] = std::bind(&crud::do_follower_tasks, this, std::placeholders::_1, std::placeholders::_2);
+    this->route_handlers[bzn::raft_state::leader]    = std::bind(&crud::do_leader_tasks,    this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->route_handlers[bzn::raft_state::candidate] = std::bind(&crud::do_candidate_tasks, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->route_handlers[bzn::raft_state::follower]  = std::bind(&crud::do_follower_tasks,  this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
 
 
-void crud::register_crud_command_handlers()
+void crud::register_command_handlers()
 {
     // CRUD command handlers - these handlers accept incoming CRUD commands
     // and, based on the current state of the daemon, choose to ignore or act
@@ -367,10 +316,14 @@ void crud::register_crud_command_handlers()
     // Leaders will seek concensus from RAFT for all CRUD commands but the do
     // the READ work.
     // Candidates will refuse all commands.
-    this->command_handlers[bzn::MSG_CMD_CREATE] = std::bind(&crud::handle_create, this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_READ]   = std::bind(&crud::handle_read,   this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_UPDATE] = std::bind(&crud::handle_update, this, std::placeholders::_1, std::placeholders::_2);
-    this->command_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::handle_delete, this, std::placeholders::_1, std::placeholders::_2);
+
+    this->command_handlers[database_msg::kCreate] = std::bind(&crud::handle_create,   this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kRead]   = std::bind(&crud::handle_read,     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kUpdate] = std::bind(&crud::handle_update,   this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kDelete] = std::bind(&crud::handle_delete,   this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kKeys]   = std::bind(&crud::handle_get_keys, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kHas]    = std::bind(&crud::handle_has,      this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    this->command_handlers[database_msg::kSize]   = std::bind(&crud::handle_size,     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
 
 
@@ -378,52 +331,19 @@ void crud::register_commit_handlers()
 {
     // CUD commands are committed when the swarm reaches concensus via RAFT.
     // Note that READ does not require a commit as no data is being changed.
-    this->commit_handlers[bzn::MSG_CMD_CREATE] = std::bind(&crud::commit_create, this, std::placeholders::_1);
-    this->commit_handlers[bzn::MSG_CMD_UPDATE] = std::bind(&crud::commit_update, this, std::placeholders::_1);
-    this->commit_handlers[bzn::MSG_CMD_DELETE] = std::bind(&crud::commit_delete, this, std::placeholders::_1);
-}
-
-
-void crud::register_utility_command_handlers()
-{
-    // Utility command handlers - these handlers accept incoming non RAFT
-    // utility commands. They do not require concensus and can be applied
-    // to any node in a leader or follower state.
-    // TODO: move these commands into thier own class
-    this->utility_handlers[bzn::MSG_CMD_KEYS]   = std::bind(&crud::handle_get_keys,       this, std::placeholders::_1, std::placeholders::_2);
-    this->utility_handlers[bzn::MSG_CMD_HAS]    = std::bind(&crud::handle_has,            this, std::placeholders::_1, std::placeholders::_2);
-    this->utility_handlers[bzn::MSG_CMD_SIZE]   = std::bind(&crud::handle_size,           this, std::placeholders::_1, std::placeholders::_2);
+    this->commit_handlers[database_msg::kCreate] = std::bind(&crud::commit_create, this, std::placeholders::_1);
+    this->commit_handlers[database_msg::kUpdate] = std::bind(&crud::commit_update, this, std::placeholders::_1);
+    this->commit_handlers[database_msg::kDelete] = std::bind(&crud::commit_delete, this, std::placeholders::_1);
 }
 
 
 void
-crud::set_leader_info(bzn::message& msg)
+crud::set_leader_info(database_response& msg)
 {
-    peer_address_t leader = this->raft->get_leader();
-    msg["data"]["leader-id"] = leader.uuid;
-    msg["data"]["leader-host"] = leader.host;
-    msg["data"]["leader-port"] = leader.port;
-    msg["data"]["leader-name"] = leader.name;
+    const auto leader = this->raft->get_leader();
+
+    msg.mutable_redirect()->set_leader_id(leader.uuid);
+    msg.mutable_redirect()->set_leader_host(leader.host);
+    msg.mutable_redirect()->set_leader_port(leader.port);
+    msg.mutable_redirect()->set_leader_name(leader.name);
 }
-
-
-bool
-crud::validate_create_or_update(const bzn::message& msg)
-{
-    return msg.isMember("db-uuid") && msg.isMember("data") && msg["data"].isMember("key") && msg["data"].isMember("value");
-}
-
-
-bool
-crud::validate_read_or_delete(const bzn::message& request)
-{
-    return request.isMember("db-uuid") && request.isMember("data") && request["data"].isMember("key");
-}
-
-
-bool
-crud::validate_value_size(const bzn::message& request)
-{
-    return bzn::MAX_VALUE_SIZE < request["data"]["value"].asString().length();
-}
-

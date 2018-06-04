@@ -186,7 +186,7 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
         bzn::message resp;
-        EXPECT_CALL(*mock_session, send_message(_, _)).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
             [&](const auto& msg, auto)
             { resp = *msg; }));
 
@@ -292,7 +292,7 @@ namespace bzn
         raft->start();
 
         bzn::message resp;
-        EXPECT_CALL(*mock_session, send_message(_, _)).Times(1).WillRepeatedly(Invoke(
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
             [&](const auto& msg, auto)
             { resp = *msg; }));
 
@@ -456,7 +456,7 @@ namespace bzn
         ///////////////////////////////////////////////////////////////////////////
 
         bzn::message resp;
-        EXPECT_CALL(*mock_session, send_message(_, _)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillRepeatedly(Invoke(
             [&](const auto& msg, auto /*handler*/)
             {
                 resp = *msg;

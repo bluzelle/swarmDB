@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "database.proto";
+
+message bzn_msg
+{
+    oneof msg {
+        database_msg db = 10;
+        string json = 11;
+    }
+}

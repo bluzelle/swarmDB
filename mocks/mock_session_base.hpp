@@ -24,10 +24,12 @@ namespace bzn {
     class Mocksession_base : public session_base {
     public:
         MOCK_METHOD1(start,
-                     void(bzn::message_handler handler));
+            void(bzn::message_handler handler));
         MOCK_METHOD2(send_message,
-                     void(std::shared_ptr<const bzn::message> msg, bool end_session));
+            void(std::shared_ptr<bzn::message> msg, bool end_session));
+        MOCK_METHOD2(send_message,
+            void(std::shared_ptr<std::string> msg, bool end_session));
         MOCK_METHOD0(close,
-                    void());
+            void());
     };
 }  // namespace bzn
