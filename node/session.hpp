@@ -34,7 +34,9 @@ namespace bzn
 
         void start(bzn::message_handler handler) override;
 
-        void send_message(std::shared_ptr<const bzn::message> msg, bool end_session) override;
+        void send_message(std::shared_ptr<bzn::message> msg, bool end_session) override;
+
+        void send_message(std::shared_ptr<std::string> msg, bool end_session) override;
 
         void close() override;
 

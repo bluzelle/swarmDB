@@ -119,16 +119,21 @@ session::do_read()
 
 
 void
-session::send_message(std::shared_ptr<const bzn::message> msg, const bool end_session)
+session::send_message(std::shared_ptr<bzn::message> msg, const bool end_session)
 {
-    auto send_msg = std::make_shared<std::string>(msg->toStyledString());
+    this->send_message(std::make_shared<std::string>(msg->toStyledString()), end_session);
+}
 
+
+void
+session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
+{
     this->idle_timer->cancel(); // kill timer for duration of write...
 
     this->websocket->async_write(
-        boost::asio::buffer(*send_msg),
+        boost::asio::buffer(*msg),
         this->strand->wrap(
-            [self = shared_from_this(), send_msg, end_session](auto ec, auto bytes_transferred)
+            [self = shared_from_this(), msg, end_session](auto ec, auto bytes_transferred)
             {
                 if (ec)
                 {
