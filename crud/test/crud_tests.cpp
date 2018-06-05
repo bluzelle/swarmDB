@@ -45,7 +45,6 @@ namespace
         return request;
     }
 
-
     bzn::message generate_create_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
     {
         bzn_msg msg;
@@ -579,9 +578,6 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
 
     const std::string key{"key0"};
     auto request = generate_delete_request(USER_UUID, key);
-
-//    auto accepted_response = std::make_shared<bzn::message>();
-//    (*accepted_response)["request-id"] = request["request-id"];
 
     // We tell CRUD that we are the leader
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
