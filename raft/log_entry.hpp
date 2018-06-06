@@ -23,6 +23,13 @@ namespace bzn
 {
     const std::string MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_IN_LOG{"ENCOUNTERED_INVALID_ENTRY_IN_LOG"};
 
+    enum class log_entry_type : uint8_t
+    {
+        log_entry,
+        single_quorum,
+        joint_quorum
+    };
+
 
     struct log_entry
     {
@@ -59,9 +66,10 @@ namespace bzn
             return fastWriter.write(msg);
         }
 
-        uint32_t log_index;
-        uint32_t term;
-        bzn::message msg;
+        log_entry_type  entry_type;
+        uint32_t        log_index;
+        uint32_t        term;
+        bzn::message    msg;
     };
 }
 

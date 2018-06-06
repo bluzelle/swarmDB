@@ -310,7 +310,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
         if (!msg["data"]["entries"].empty() && leader_prev_index == 0)
         {
             this->log_entries.emplace_back(
-                log_entry{++this->last_log_index, entry_term, msg["data"]["entries"]});
+                log_entry{bzn::log_entry_type::log_entry, ++this->last_log_index, entry_term, msg["data"]["entries"]});
         }
     }
     else
@@ -323,7 +323,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
             if (!msg["data"]["entries"].empty())
             {
                 this->log_entries.emplace_back(
-                    log_entry{++this->last_log_index, entry_term, msg["data"]["entries"]});
+                    log_entry{bzn::log_entry_type::log_entry, ++this->last_log_index, entry_term, msg["data"]["entries"]});
             }
         }
         else
@@ -593,7 +593,7 @@ raft::append_log(const bzn::message& msg)
         return false;
     }
 
-    this->log_entries.emplace_back(log_entry{++this->last_log_index, this->current_term, msg});
+    this->log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, ++this->last_log_index, this->current_term, msg});
 
     return true;
 }
