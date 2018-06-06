@@ -21,8 +21,6 @@
 #include <storage/storage_base.hpp>
 #include <unordered_map>
 
-#include <proto/bluzelle.pb.h>
-
 
 namespace bzn
 {
@@ -30,6 +28,14 @@ namespace bzn
     {
     public:
         crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage);
+
+        void handle_create(const bzn::message& msg, const database_msg& request, database_response& response) override;
+
+        void handle_read(const bzn::message& msg, const database_msg& request, database_response& response) override;
+
+        void handle_update(const bzn::message& msg, const database_msg& request, database_response& response) override;
+
+        void handle_delete(const bzn::message& msg, const database_msg& request, database_response& response) override;
 
         void start() override;
 
@@ -43,11 +49,6 @@ namespace bzn
         void do_candidate_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
         void  do_follower_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
         void    do_leader_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
-
-        void handle_create(const bzn::message& msg, const database_msg& request, database_response& response);
-        void   handle_read(const bzn::message& msg, const database_msg& request, database_response& response);
-        void handle_update(const bzn::message& msg, const database_msg& request, database_response& response);
-        void handle_delete(const bzn::message& msg, const database_msg& request, database_response& response);
 
         void handle_get_keys(const bzn::message& msg, const database_msg& request, database_response& response);
         void      handle_has(const bzn::message& msg, const database_msg& request, database_response& response);

@@ -64,6 +64,11 @@ crud::start()
                             }
                         }
                     }
+                    else
+                    {
+                        LOG(error) << "failed to decode commit message:\n" << ws_msg.toStyledString().substr(0,60);
+                    }
+
                     return true;
                 });
         });
@@ -98,7 +103,13 @@ crud::handle_create(const bzn::message& msg, const database_msg& request, databa
         return;
     }
 
-    this->raft->append_log(msg);
+    if (this->raft->get_state() == bzn::raft_state::leader)
+    {
+        this->raft->append_log(msg);
+        return;
+    }
+
+    this->set_leader_info(response);
 }
 
 
@@ -136,15 +147,25 @@ crud::handle_update(const bzn::message& msg, const database_msg& request, databa
         return;
     }
 
-    // todo: what should we set in the response?
+    if (this->raft->get_state() == bzn::raft_state::leader)
+    {
+        this->raft->append_log(msg);
+        return;
+    }
 
-    this->raft->append_log(msg);
+    this->set_leader_info(response);
 }
 
 
 void
 crud::handle_delete(const bzn::message& msg, const database_msg& request, database_response& response)
 {
+    if (this->raft->get_state() != bzn::raft_state::leader)
+    {
+        this->set_leader_info(response);
+        return;
+    }
+
     if (this->storage->has(request.header().db_uuid(), request.delete_().key()))
     {
         this->raft->append_log(msg);
@@ -345,5 +366,6 @@ crud::set_leader_info(database_response& msg)
     msg.mutable_redirect()->set_leader_id(leader.uuid);
     msg.mutable_redirect()->set_leader_host(leader.host);
     msg.mutable_redirect()->set_leader_port(leader.port);
+    msg.mutable_redirect()->set_leader_http_port(leader.http_port);
     msg.mutable_redirect()->set_leader_name(leader.name);
 }

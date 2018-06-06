@@ -16,6 +16,7 @@
 #include <crud/crud.hpp>
 #include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
+#include <http/server.hpp>
 #include <options/options.hpp>
 #include <raft/raft.hpp>
 #include <storage/storage.hpp>
@@ -77,6 +78,21 @@ set_logging_level(const bzn::options& options)
 
         boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
     }
+}
+
+
+bool
+get_http_listener_port(const bzn::options& options, const bzn::bootstrap_peers& peers, uint16_t& http_port)
+{
+    for (const auto& peer : peers.get_peers())
+    {
+        if (peer.uuid == options.get_uuid())
+        {
+            http_port = peer.http_port;
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -194,7 +210,20 @@ main(int argc, const char* argv[])
         auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
-        
+
+        // get our http listener port...
+        uint16_t http_port;
+        if (!get_http_listener_port(options, init_peers, http_port))
+        {
+            LOG(error) << "could not find our http port setting!";
+            return 0;
+        }
+
+        // create http server using our configured listener address & peer listen port number...
+        auto ep = options.get_listener();
+        ep.port(http_port);
+        auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
+
         raft->initialize_storage_from_log(storage);
         
         // todo: just for testing...
@@ -213,6 +242,7 @@ main(int argc, const char* argv[])
         node->start();
         crud->start();
         raft->start();
+        http_server->start();
 
         print_banner(options, eth_balance);
 

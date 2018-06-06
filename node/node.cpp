@@ -143,8 +143,6 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
                         return;
                     }
 
-                    ws->get_websocket().binary(true);
-
                     auto session = std::make_shared<bzn::session>(self->io_context, ws, self->ws_idle_timeout);
 
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
