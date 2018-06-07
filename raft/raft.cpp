@@ -202,7 +202,7 @@ raft::request_vote_request()
 void
 raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    LOG(debug) << '\n' << msg.toStyledString();
+    LOG(debug) << '\n' << msg.toStyledString().substr(0, 60) << "...";
 
     // If I'm the leader and my term is less than vote request then I should step down and become a follower.
     if (this->current_state == bzn::raft_state::leader)
@@ -346,7 +346,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 
     auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, this->last_log_index));
 
-    LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
+    LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, 60) << "...";
 
     session->send_message(resp_msg, true);
 
@@ -374,7 +374,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 {
     std::lock_guard<std::mutex> lock(this->raft_lock);
 
-    LOG(debug) << "Received WS message:\n" << msg.toStyledString();
+    LOG(debug) << "Received WS message:\n" << msg.toStyledString().substr(0, 60) << "...";
 
     uint32_t term = msg["data"]["term"].asUInt();
 
@@ -383,7 +383,6 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         // bleh!
         if (msg["cmd"].asString() == "RequestVote")
         {
-            std::cout << "RequestVote:" << msg.toStyledString() << std::endl;
             this->handle_ws_request_vote(msg, session);
         }
         else if (msg["cmd"].asString() == "AppendEntries")
@@ -425,7 +424,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
                 auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, true, this->last_log_index));
 
-                LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString();
+                LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, 60) << "...";
 
                 session->send_message(resp_msg, true);
             }
@@ -526,7 +525,7 @@ raft::request_append_entries()
 
             auto req = std::make_shared<bzn::message>(bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg));
 
-            LOG(debug) << "Sending request:\n" << req->toStyledString();
+            LOG(debug) << "Sending request:\n" << req->toStyledString().substr(0, 60) << "...";
 
             this->node->send_message(ep, req);
         }
@@ -554,7 +553,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
     if (msg["data"]["matchIndex"].asUInt() > this->log_entries.size() ||
         msg["data"]["term"].asUInt() != this->current_term)
     {
-        LOG(error) << "received bad match index or term: \n" << msg.toStyledString();
+        LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, 60) << "...";
         return;
     }
 

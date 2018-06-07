@@ -226,7 +226,7 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
     if (!ws_msg.isMember("msg"))
     {
-        LOG(error) << "Invalid message: " << ws_msg.toStyledString();
+        LOG(error) << "Invalid message: " << ws_msg.toStyledString().substr(0,60) << "...";
         response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
@@ -234,7 +234,7 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
     if (!msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
     {
-        LOG(error) << "Failed to decode message: " << ws_msg.toStyledString();
+        LOG(error) << "Failed to decode message: " << ws_msg.toStyledString().substr(0,60) << "...";
         response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;

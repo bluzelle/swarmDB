@@ -363,7 +363,7 @@ namespace bzn
         raft->register_commit_handler(
             [&](const bzn::message& msg)
             {
-                LOG(info) << "commit:\n" << msg.toStyledString();
+                LOG(info) << "commit:\n" << msg.toStyledString().substr(0, 60) << "...";
 
                 commit_handler_called = true;
                 ++commit_handler_times_called;
@@ -466,7 +466,7 @@ namespace bzn
         raft->register_commit_handler(
             [&](const bzn::message& msg)
             {
-                LOG(info) << "commit:\n" << msg.toStyledString();
+                LOG(info) << "commit:\n" << msg.toStyledString().substr(0, 60) << "...";
                 ++commit_handler_times_called;
                 return true;
             });

@@ -201,7 +201,7 @@ main(int argc, const char* argv[])
         node->register_for_message("ping",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
-                LOG(debug) << '\n' << msg.toStyledString();
+                LOG(debug) << '\n' << msg.toStyledString().substr(0, 60) << "...";
 
                 auto reply = std::make_shared<bzn::message>(msg);
                 (*reply)["bzn-api"] = "pong";
