@@ -122,6 +122,8 @@ namespace bzn
 
         bzn::log_entry last_quorum();
 
+        bzn::log_entry last_quorum();
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;
