@@ -677,23 +677,23 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
     {
         if(log_entry.entry_type == bzn::log_entry_type::log_entry)
         {
-            const auto command = log_entry.msg["cmd"].asString();
-            const auto db_uuid = log_entry.msg["db-uuid"].asString();
-            const auto key = log_entry.msg["data"]["key"].asString();
-            if (command == "create")
-            {
-                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
-            }
-            else if (command == "update")
-            {
-                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
-            }
-            else if (command == "delete")
-            {
-                storage->remove(db_uuid, key);
-            }
+        const auto command = log_entry.msg["cmd"].asString();
+        const auto db_uuid = log_entry.msg["db-uuid"].asString();
+        const auto key = log_entry.msg["data"]["key"].asString();
+        if (command == "create")
+        {
+            storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+        }
+        else if (command == "update")
+        {
+            storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+        }
+        else if (command == "delete")
+        {
+            storage->remove(db_uuid, key);}
         }
     }
+}
 }
 
 
