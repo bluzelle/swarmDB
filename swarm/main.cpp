@@ -192,7 +192,6 @@ main(int argc, const char* argv[])
             LOG(error) << "No ETH balance found";
             return 0;
         }
-        ///////////////////////////////////////////////////////////////////////
 
         bzn::bootstrap_peers peers;
         init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url());
