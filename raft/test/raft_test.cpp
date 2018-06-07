@@ -848,7 +848,7 @@ namespace bzn
         EXPECT_EQ(raft.log_entries.size(), static_cast<size_t>(1));
         EXPECT_EQ(raft.log_entries.front().entry_type, bzn::log_entry_type::single_quorum);
         bzn::message msg = raft.log_entries.front().msg;
-        
+
         for (const auto& p : msg)
         {
             bzn::peer_address_t peer_address(p["host"].asString(), (uint16_t)p["port"].asUInt(), p["name"].asString(), p["uuid"].asString());
