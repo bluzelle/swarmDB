@@ -60,13 +60,35 @@ raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
     {
         this->load_state();
         this->load_log_entries();
+    }
+    else
+    {
+        bzn::message root;
+        for(const auto& p : this->peers)
+        {
+            bzn::message peer;
+            peer["host"] = p.host;
+            peer["port"] = p.port;
+            peer["name"] = p.name;
+            peer["uuid"] = p.uuid;
+            root.append(peer);
+        }
+        const bzn::log_entry entry{
+            bzn::log_entry_type::single_quorum,
+            0,
+            0,
+            root};
 
+
+        this->log_entries.emplace_back(entry);
+        this->append_entry_to_log(entry);
+        this->save_state();
+    }
         const auto& last_entry = this->log_entries.back();
         if (last_entry.log_index!=this->last_log_index || last_entry.term!=this->current_term)
         {
             throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
         }
-    }
 }
 
 
@@ -588,7 +610,7 @@ raft::append_log(const bzn::message& msg)
 
     if (this->current_state != bzn::raft_state::leader)
     {
-        LOG(warning) << "not the leader can't append log_entries!";
+        LOG(warning) << "not the leader, can't append log_entries!";
         return false;
     }
 
@@ -626,10 +648,6 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
         case bzn::raft_state::follower:
             LOG(info) << "RAFT State: Follower";
             break;
-
-        default:
-            LOG(info) << "RAFT State: Undefined";
-            break;
     }
 }
 
@@ -655,8 +673,10 @@ void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
 
-    for (const auto log_entry : this->log_entries)
+    for (const auto& log_entry : this->log_entries)
     {
+        if(log_entry.entry_type == bzn::log_entry_type::log_entry)
+        {
         const auto command = log_entry.msg["cmd"].asString();
         const auto db_uuid = log_entry.msg["db-uuid"].asString();
         const auto key = log_entry.msg["data"]["key"].asString();
@@ -673,6 +693,7 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
             storage->remove(db_uuid, key);
         }
     }
+}
 }
 
 
@@ -767,5 +788,23 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
     this->append_entry_to_log(log_entry);
     commit_index++;
     this->save_state();
+}
+
+
+bzn::log_entry
+raft::last_quorum()
+{
+    // TODO: Speed this up by not doing a search, when a quorum entry is added, simply store the index. Perhaps only do the search if the index is wrong.
+    auto it = this->log_entries.end();
+    while(it != this->log_entries.begin())
+    {
+        --it;
+        if  (it->entry_type != bzn::log_entry_type::log_entry)
+        {
+            break;
+        }
+    }
+    // assumes that the first entry in the log is always a quorum type.
+    return *it;
 }
 

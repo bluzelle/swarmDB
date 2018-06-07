@@ -62,6 +62,34 @@ init_logging()
 }
 
 
+void init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url)
+{
+//    std::string peers_file = options.get_bootstrap_peers_file();
+//    std::string peers_url = options.get_bootstrap_peers_url();
+
+    if (peers_file.empty() && peers_url.empty())
+    {
+        LOG(error) << "Bootstrap peers must be specified options (bootstrap_file or bootstrap_url)";
+        std::exit(EXC_SOFTWARE);
+    }
+
+    if (!peers_file.empty())
+    {
+        peers.fetch_peers_from_file(peers_file);
+    }
+
+    if (!peers_url.empty())
+    {
+        peers.fetch_peers_from_url(peers_url);
+    }
+
+    if (peers.get_peers().empty())
+    {
+        LOG(error) << "Failed to find any bootstrap peers";
+        std::exit(EXC_SOFTWARE);
+    }
+}
+
 void
 set_logging_level(const bzn::options& options)
 {
@@ -147,31 +175,8 @@ main(int argc, const char* argv[])
             return 0;
         }
 
-        bzn::bootstrap_peers init_peers;
-        std::string peers_file = options.get_bootstrap_peers_file();
-        std::string peers_url = options.get_bootstrap_peers_url();
-
-        if (peers_file.empty() && peers_url.empty())
-        {
-            LOG(error) << "Bootstrap peers must be specified options (bootstrap_file or bootstrap_url)";
-            return 0;
-        }
-
-        if (!peers_file.empty())
-        {
-            init_peers.fetch_peers_from_file(peers_file);
-        }
-
-        if (!peers_url.empty())
-        {
-            init_peers.fetch_peers_from_url(peers_url);
-        }
-
-        if(init_peers.get_peers().empty())
-        {
-            LOG(error) << "Failed to find any bootstrap peers";
-            return 0;
-        }
+        bzn::bootstrap_peers peers;
+        init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url());
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
 
@@ -191,7 +196,7 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
 
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
-        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
+        auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid());
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
         
