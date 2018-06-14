@@ -387,8 +387,6 @@ namespace bzn
 
         EXPECT_EQ(raft->get_leader().uuid, TEST_NODE_UUID);
 
-        ///////////////////////////////////////////////////////////////////////////
-
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
@@ -413,13 +411,13 @@ namespace bzn
         wh(boost::system::error_code());
 
         // send false so second peer will achieve consensus and leader will commit the entries..
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 2, false, 0), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, false, 0), mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 0);
         ASSERT_FALSE(commit_handler_called);
 
         // enough peers have stored the first entry
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 1), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 1), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
 
