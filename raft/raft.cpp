@@ -577,6 +577,8 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         msg["data"]["term"].asUInt() != this->current_term)
     {
         LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, 60) << "...";
+        LOG(debug) << "msg[\"data\"][\"matchIndex\"].asUInt() > this->log_entries.size() : " << msg["data"]["matchIndex"].asUInt() << ">" << this->log_entries.size();
+        LOG(debug) << "|| msg[\"data\"][\"term\"].asUInt() != this->current_term : " << msg["data"]["term"].asUInt() << "!=" << this->current_term;
         return;
     }
 
