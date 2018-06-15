@@ -25,6 +25,7 @@ namespace
     const std::string MSG_ERROR_INVALID_LOG_ENTRY_FILE{"Invalid log entry file. Please Delete .state folder."};
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
+    const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
 
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
@@ -576,8 +577,6 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         msg["data"]["term"].asUInt() != this->current_term)
     {
         LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, 60) << "...";
-        LOG(debug) << "msg[\"data\"][\"matchIndex\"].asUInt() > this->log_entries.size() : " << msg["data"]["matchIndex"].asUInt() << ">" << this->log_entries.size();
-        LOG(debug) << "|| msg[\"data\"][\"term\"].asUInt() != this->current_term : " << msg["data"]["term"].asUInt() << "!=" << this->current_term;
         return;
     }
 
@@ -674,28 +673,27 @@ raft::get_leader()
 void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
-
     for (const auto& log_entry : this->log_entries)
     {
         if(log_entry.entry_type == bzn::log_entry_type::log_entry)
         {
-        const auto command = log_entry.msg["cmd"].asString();
-        const auto db_uuid = log_entry.msg["db-uuid"].asString();
-        const auto key = log_entry.msg["data"]["key"].asString();
-        if (command == "create")
-        {
-            storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "update")
-        {
-            storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "delete")
-        {
-            storage->remove(db_uuid, key);
+            const auto command = log_entry.msg["cmd"].asString();
+            const auto db_uuid = log_entry.msg["db-uuid"].asString();
+            const auto key = log_entry.msg["data"]["key"].asString();
+            if (command == "create")
+            {
+                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "update")
+            {
+                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "delete")
+            {
+                storage->remove(db_uuid, key);
+            }
         }
     }
-}
 }
 
 
@@ -797,16 +795,16 @@ bzn::log_entry
 raft::last_quorum()
 {
     // TODO: Speed this up by not doing a search, when a quorum entry is added, simply store the index. Perhaps only do the search if the index is wrong.
-    auto it = this->log_entries.end();
-    while(it != this->log_entries.begin())
+    auto result = std::find_if(
+            this->log_entries.crbegin(),
+            this->log_entries.crend(),
+            [](const auto& entry)
+            {
+                return entry.entry_type != bzn::log_entry_type::log_entry;
+            });
+    if(result == this->log_entries.crend())
     {
-        --it;
-        if  (it->entry_type != bzn::log_entry_type::log_entry)
-        {
-            break;
-        }
+        throw std::runtime_error(MSG_NO_PEERS_IN_LOG);
     }
-    // assumes that the first entry in the log is always a quorum type.
-    return *it;
+    return *result;
 }
-
