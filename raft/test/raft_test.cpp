@@ -85,7 +85,7 @@ namespace
             }
             boost::filesystem::create_directory("./.state");
         }
-        catch(boost::filesystem::filesystem_error const & e)
+        catch(boost::filesystem::filesystem_error const& e)
         {
             LOG(error) << "Error while attempting to clean the state folder:" << e.what();
         }
@@ -843,8 +843,6 @@ namespace bzn
 
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
     {
-        clean_state_folder();
-
         bzn::message expected;
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
         EXPECT_EQ(raft.log_entries.size(), static_cast<size_t>(1));
@@ -856,8 +854,6 @@ namespace bzn
             bzn::peer_address_t peer_address(p["host"].asString(), (uint16_t)p["port"].asUInt(), p["name"].asString(), p["uuid"].asString());
             EXPECT_TRUE(TEST_PEER_LIST.find(peer_address) != TEST_PEER_LIST.end());
         }
-
-        clean_state_folder();
     }
 
 

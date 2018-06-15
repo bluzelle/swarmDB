@@ -577,8 +577,6 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         msg["data"]["term"].asUInt() != this->current_term)
     {
         LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, 60) << "...";
-        LOG(debug) << "msg[\"data\"][\"matchIndex\"].asUInt() > this->log_entries.size() : " << msg["data"]["matchIndex"].asUInt() << ">" << this->log_entries.size();
-        LOG(debug) << "|| msg[\"data\"][\"term\"].asUInt() != this->current_term : " << msg["data"]["term"].asUInt() << "!=" << this->current_term;
         return;
     }
 
@@ -675,28 +673,27 @@ raft::get_leader()
 void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
-
     for (const auto& log_entry : this->log_entries)
     {
         if(log_entry.entry_type == bzn::log_entry_type::log_entry)
         {
-        const auto command = log_entry.msg["cmd"].asString();
-        const auto db_uuid = log_entry.msg["db-uuid"].asString();
-        const auto key = log_entry.msg["data"]["key"].asString();
-        if (command == "create")
-        {
-            storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "update")
-        {
-            storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "delete")
-        {
-            storage->remove(db_uuid, key);
+            const auto command = log_entry.msg["cmd"].asString();
+            const auto db_uuid = log_entry.msg["db-uuid"].asString();
+            const auto key = log_entry.msg["data"]["key"].asString();
+            if (command == "create")
+            {
+                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "update")
+            {
+                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "delete")
+            {
+                storage->remove(db_uuid, key);
+            }
         }
     }
-}
 }
 
 
@@ -811,4 +808,3 @@ raft::last_quorum()
     }
     return *result;
 }
-

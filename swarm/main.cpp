@@ -65,9 +65,6 @@ init_logging()
 
 void init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url)
 {
-//    std::string peers_file = options.get_bootstrap_peers_file();
-//    std::string peers_url = options.get_bootstrap_peers_url();
-
     if (peers_file.empty() && peers_url.empty())
     {
         LOG(error) << "Bootstrap peers must be specified options (bootstrap_file or bootstrap_url)";
@@ -90,6 +87,7 @@ void init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, cons
         std::exit(EXC_SOFTWARE);
     }
 }
+
 
 void
 set_logging_level(const bzn::options& options)
