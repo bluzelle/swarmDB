@@ -62,6 +62,8 @@ namespace bzn
         FRIEND_TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
         FRIEND_TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
         FRIEND_TEST(raft, test_that_raft_bails_on_bad_rehydrate);
+        FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log);
 
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
@@ -92,6 +94,8 @@ namespace bzn
         void load_state();
 
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
+
+        bzn::log_entry last_quorum();
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;

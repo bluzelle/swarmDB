@@ -25,6 +25,7 @@ namespace
     const std::string MSG_ERROR_INVALID_LOG_ENTRY_FILE{"Invalid log entry file. Please Delete .state folder."};
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
+    const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
 
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
@@ -626,10 +627,6 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
         case bzn::raft_state::follower:
             LOG(info) << "RAFT State: Follower";
             break;
-
-        default:
-            LOG(info) << "RAFT State: Undefined";
-            break;
     }
 }
 
@@ -655,7 +652,7 @@ void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
 
-    for (const auto log_entry : this->log_entries)
+    for (const auto& log_entry : this->log_entries)
     {
         const auto command = log_entry.msg["cmd"].asString();
         const auto db_uuid = log_entry.msg["db-uuid"].asString();
@@ -767,5 +764,24 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
     this->append_entry_to_log(log_entry);
     commit_index++;
     this->save_state();
+}
+
+
+bzn::log_entry
+raft::last_quorum()
+{
+    // TODO: Speed this up by not doing a search, when a quorum entry is added, simply store the index. Perhaps only do the search if the index is wrong.
+    auto result = std::find_if(
+            this->log_entries.crbegin(),
+            this->log_entries.crend(),
+            [](const auto& entry)
+            {
+                return entry.entry_type != bzn::log_entry_type::log_entry;
+            });
+    if(result == this->log_entries.crend())
+    {
+        throw std::runtime_error(MSG_NO_PEERS_IN_LOG);
+    }
+    return *result;
 }
 
