@@ -233,7 +233,7 @@ namespace bzn
             { resp = *msg; }));
 
         // send a message through the registered "node message" callback...
-        mh(bzn::create_request_vote_request("uuid1", 2, 0, 0), mock_session);
+        mh(bzn::create_request_vote_request("uuid1", 1, 0, 0), mock_session);
 
         // we expect a "no" response in this state...
         EXPECT_EQ(resp["cmd"].asString(), "ResponseVote");
@@ -427,7 +427,7 @@ namespace bzn
         // enough peers have stored the first entry
         commit_handler_times_called = 0;
         commit_handler_called = false;
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 2), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 2), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
         ASSERT_TRUE(commit_handler_called);
@@ -844,7 +844,6 @@ namespace bzn
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
     {
         clean_state_folder();
-
 
         bzn::message expected;
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
