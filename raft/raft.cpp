@@ -694,7 +694,6 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
         }
     }
 }
-}
 
 
 std::string
