@@ -68,7 +68,7 @@ void init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, cons
     if (peers_file.empty() && peers_url.empty())
     {
         LOG(error) << "Bootstrap peers must be specified options (bootstrap_file or bootstrap_url)";
-        std::exit(EXC_SOFTWARE);
+        std::exit(5); // EXC_SOFTWARE
     }
 
     if (!peers_file.empty())
@@ -84,7 +84,7 @@ void init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, cons
     if (peers.get_peers().empty())
     {
         LOG(error) << "Failed to find any bootstrap peers";
-        std::exit(EXC_SOFTWARE);
+        std::exit(5); // EXC_SOFTWARE
     }
 }
 

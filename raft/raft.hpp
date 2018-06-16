@@ -63,6 +63,9 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
         FRIEND_TEST(raft, test_that_raft_bails_on_bad_rehydrate);
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
+        FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
         FRIEND_TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log);
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
         FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
