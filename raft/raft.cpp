@@ -466,6 +466,27 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         return;
     }
 
+
+    // TODO: Handle add_peer and remove_peer handlers here.
+    // - only the leader can do this
+    // - the current last quorum is not a joint quorum
+
+    if(msg["cmd"].asString()=="add_peer")
+    {
+        bzn::message joint_quorum = msg["data"];
+        this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
+    }
+    else if(msg["cmd"].asString() == "remove_peer" )
+    {
+        LOG(error) << "remove_peer not implemented.";
+    }
+
+
+
+
+
+
+
     uint32_t term = msg["data"]["term"].asUInt();
 
     if (this->current_term == term)
