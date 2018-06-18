@@ -25,18 +25,6 @@ namespace
 {
     const char* NO_ARGS[] = {"config_tests"};
 
-    const char* VALID_ARGS[] = {"config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f", "-t", "ASDFASDFASDFASDFSDF"};
-
-    const char* VALID_ARGS_WITH_PEERS[] = {
-        "config_tests", "-l", "0.0.0.0", "-p", "50000",  "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f",
-        "-b", "peers_from_cmd.json", "--bootstrap_url", "example.org/peers_from_cmd.json"};
-
-    const char* INVALID_port_ARGS[] = {"config_tests",  "-l",  "0.0.0.0", "-p", "90000", "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f"};
-
-    const char* INVALID_ethererum_ARGS[] = {"config_tests",  "-l",  "0.0.0.0", "-p", "50000", "-a", "0x006eae72077449Zcaca91078ef78552c0cd9bce8f"};
-
-    const char* INVALID_listener_ARGS[] = {"config_tests", "-p", "50000", "-a", "0x006eae72077449caca91078ef78552c0cd9bce8f"};
-
     const std::string TEST_CONFIG_FILE = "bluzelle.json";
 
     const std::string DEFAULT_CONFIG_DATA = "{\n"
@@ -94,42 +82,4 @@ TEST(options, test_that_missing_default_config_throws_exception)
     bzn::options options;
 
     EXPECT_THROW(options.parse_command_line(1, NO_ARGS), std::runtime_error);
-}
-
-
-TEST(options, test_that_all_valid_invalid_params)
-{
-    {
-        bzn::options options;
-        ASSERT_TRUE(options.parse_command_line(7, VALID_ARGS));
-    }
-
-    {
-        bzn::options options;
-        ASSERT_FALSE(options.parse_command_line(7, INVALID_port_ARGS));
-    }
-
-    {
-        bzn::options options;
-        ASSERT_FALSE(options.parse_command_line(7, INVALID_ethererum_ARGS));
-    }
-
-    {
-        bzn::options options;
-        ASSERT_FALSE(options.parse_command_line(5, INVALID_listener_ARGS));
-    }
-}
-
-TEST(options, test_that_bootstrap_config_read_from_cmd)
-{
-    {
-        bzn::options options;
-        ASSERT_TRUE(options.parse_command_line(11, VALID_ARGS_WITH_PEERS));
-        ASSERT_EQ("peers_from_cmd.json", options.get_bootstrap_peers_file());
-        ASSERT_EQ("example.org/peers_from_cmd.json", options.get_bootstrap_peers_url());
-
-        // default is off
-        ASSERT_EQ(false, options.get_debug_logging());
-        ASSERT_EQ(false, options.get_log_to_stdout());
-    }
 }

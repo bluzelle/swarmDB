@@ -234,23 +234,11 @@ options::parse(int argc, const char* argv[])
 
     // variables the map will fill...
     std::string config_file;
-    std::string ethereum;
-    std::string ethereum_io_api_token;
-    std::string listener_address;
-    std::string bootstrap_file;
-    std::string bootstrap_url;
-    uint32_t listener_port{};
 
     desc.add_options()
-        ("help,h",             "Shows this information")
-        ("version,v",          "Show the application's version")
-        ("address,a",          po::value<std::string>(&ethereum),              "Ethereum account address")
-        ("api_token,t",        po::value<std::string>(&ethereum_io_api_token), "Ethereum IO API token")
-        ("listener_address,l", po::value<std::string>(&listener_address),      "Listener IP address")
-        ("listener_port,p",    po::value<uint32_t>(&listener_port),            "Listener port")
-        ("bootstrap_file,b",   po::value<std::string>(&bootstrap_file),        "Path to initial peers file")
-        ("bootstrap_url",      po::value<std::string>(&bootstrap_url),         "URL to fetch initial peers")
-        ("config,c",           po::value<std::string>(&config_file),           "Path to configuration file");
+        ("help,h",    "Shows this information")
+        ("version,v", "Show the application's version")
+        ("config,c",  po::value<std::string>(&config_file), "Path to configuration file");
 
     po::variables_map vm;
 
@@ -258,7 +246,7 @@ options::parse(int argc, const char* argv[])
     {
         po::store(po::parse_command_line(argc, argv, desc), vm);
 
-        if (vm.count("help"))
+        if (vm.count("help") || vm.count("config") == 0)
         {
             std::cout << "Usage:" << '\n'
                       << "  " << "bluzelle" << " [OPTION]" << '\n'
@@ -274,23 +262,8 @@ options::parse(int argc, const char* argv[])
 
         po::notify(vm);
 
-        // if config is specified then ignore everything else...
-        if (vm.count("config"))
-        {
-            this->load(config_file);
-            return true;
-        }
-
-        if (!listener_address.empty())
-        {
-            // don't want to create the entry unless there is data to set...
-            this->config_data[LISTENER_ADDRESS_KEY]= listener_address;
-        }
-        this->config_data[LISTENER_PORT_KEY] = listener_port;
-        this->config_data[ETHERERUM_KEY] = ethereum;
-        this->config_data[BOOTSTRAP_PEERS_FILE_KEY] = bootstrap_file;
-        this->config_data[BOOTSTRAP_PEERS_URL_KEY] = bootstrap_url;
-        this->config_data[ETHERERUM_IO_API_TOKEN_KEY] = ethereum_io_api_token;
+        this->load(config_file);
+        return true;
     }
     catch(po::error& e)
     {
