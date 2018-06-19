@@ -5,6 +5,6 @@ add_library(raft
         raft.hpp
         )
 
-target_link_libraries(raft)
-target_include_directories(raft PRIVATE ${JSONCPP_INCLUDE_DIRS})
+target_link_libraries(raft proto)
+target_include_directories(raft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 add_subdirectory(test)

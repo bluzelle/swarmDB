@@ -97,6 +97,9 @@ namespace bzn
 
         bzn::log_entry last_quorum();
 
+        void notify_leader_status();
+        void notify_commit(size_t log_index, const std::string& operation);
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 1;
@@ -132,5 +135,7 @@ namespace bzn
         std::mutex raft_lock;
 
         std::ofstream log_entry_out_stream;
+
+        bool enable_audit = true;
     };
 } // bzn
