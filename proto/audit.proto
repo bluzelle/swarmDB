@@ -10,6 +10,8 @@ message audit_message {
 message leader_status {
     uint64 term = 1;
     string leader = 2;
+    uint64 current_log_index = 3;
+    uint64 current_commit_index = 4;
 }
 
 message commit_notification {

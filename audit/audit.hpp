@@ -16,6 +16,8 @@
 
 #include <audit/audit_base.hpp>
 #include <node/node_base.hpp>
+#include <proto/bluzelle.pb.h>
+#include <include/boost_asio_beast.hpp>
 #include <mutex>
 
 namespace bzn
@@ -24,7 +26,7 @@ namespace bzn
     class audit : public audit_base, public std::enable_shared_from_this<audit>
     {
     public:
-        audit(std::shared_ptr<bzn::node_base> node);
+        audit(std::shared_ptr<bzn::asio::io_context_base>, std::shared_ptr<bzn::node_base> node);
 
         size_t error_count() const override;
 
@@ -38,13 +40,37 @@ namespace bzn
 
     private:
 
+        void handle_leader_alive_timeout(const boost::system::error_code& ec);
+        void handle_leader_progress_timeout(const boost::system::error_code& ec);
+
+        void reset_leader_alive_timer();
+        void reset_leader_progress_timer();
+        void clear_leader_progress_timer();
+
+        void report_error(const std::string& short_name, const std::string& error_description);
+        
+        void handle_leader_data(const leader_status&);
+        void handle_leader_made_progress(const leader_status&);
+
         std::list<std::string> recorded_errors;
         const std::shared_ptr<bzn::node_base> node;
+
+        uint leader_dead_count = 0;
+        uint leader_stuck_count = 0;
 
         std::map<uint64_t, bzn::uuid_t> recorded_leaders;
         std::map<uint64_t, std::string> recorded_commits;
 
         std::once_flag start_once;
+        std::mutex audit_lock;
+        std::unique_ptr<bzn::asio::steady_timer_base> leader_alive_timer;
+        std::unique_ptr<bzn::asio::steady_timer_base> leader_progress_timer;
+
+        std::chrono::milliseconds leader_timeout{std::chrono::milliseconds(30000)};
+
+        bzn::uuid_t last_leader;
+        uint64_t last_leader_commit_index;
+        bool leader_has_uncommitted_entries = false;
     };
 
 }
