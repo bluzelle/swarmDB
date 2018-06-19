@@ -77,12 +77,17 @@ bootstrap_peers::ingest_json(std::istream& peers)
     // Expect the read json to be an array of peer objects
     for (const auto& peer : root)
     {
-        std::string host, name, uuid;
-        uint16_t port;
+        std::string host;
+        std::string name;
+        std::string uuid;
+        uint16_t    port;
+        uint16_t    http_port;
+
         try
         {
             host = peer["host"].asString();
             port = peer["port"].asUInt();
+            http_port = peer["http_port"].asUInt();
             uuid = peer.isMember("uuid") ? peer["uuid"].asString() : "unknown";
             name = peer.isMember("name") ? peer["name"].asString() : "unknown";
         }
@@ -99,15 +104,23 @@ bootstrap_peers::ingest_json(std::istream& peers)
             continue;
         }
 
-        // peer didn't contain everything we need
-        if (host.empty() || port == 0)
+        if (peer["http_port"].asUInt() != http_port)
         {
-            LOG(warning) << "Ignoring underspecified peer (needs host and port) " << peer;
+            LOG(warning) << "Ignoring peer with bad http port " << peer;
             continue;
         }
 
-        this->peer_addresses.emplace(host, port, name, uuid);
+        // peer didn't contain everything we need
+        if (host.empty() || port == 0 || http_port == 0)
+        {
+            LOG(warning) << "Ignoring underspecified peer (needs host, port and http_port) " << peer;
+            continue;
+        }
+
+        this->peer_addresses.emplace(host, port, http_port, name, uuid);
+
         LOG(trace) << "Found peer " << host << ":" << port << " (" << name << ")";
+
         valid_addresses_read++;
     }
 
@@ -115,6 +128,7 @@ bootstrap_peers::ingest_json(std::istream& peers)
     size_t duplicate_addresses = new_addresses - valid_addresses_read;
 
     LOG(info) << "Found " << new_addresses << " new peers";
+
     if (duplicate_addresses > 0)
     {
         LOG(info) << "Ignored " << duplicate_addresses << " duplicate addresses";

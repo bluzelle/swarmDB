@@ -24,7 +24,7 @@
 
 namespace bzn
 {
-    const size_t MAX_VALUE_SIZE = 300000;
+    const size_t MAX_VALUE_SIZE = 307200;
 
     class storage_base
     {

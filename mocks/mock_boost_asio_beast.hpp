@@ -105,6 +105,23 @@ namespace bzn::asio {
 
 namespace bzn::beast {
 
+    class Mockhttp_socket_base : public http_socket_base {
+    public:
+        MOCK_METHOD0(get_socket,
+            boost::asio::ip::tcp::socket&());
+        MOCK_METHOD3(async_read,
+            void(boost::beast::flat_buffer& buffer, boost::beast::http::request<boost::beast::http::dynamic_body>& request, bzn::beast::read_handler handler));
+        MOCK_METHOD2(async_write,
+            void(boost::beast::http::response<boost::beast::http::dynamic_body>& response, bzn::beast::write_handler handler));
+        MOCK_METHOD0(close,
+            void());
+    };
+
+}  // namespace bzn::beast
+
+
+namespace bzn::beast {
+
     class Mockwebsocket_stream_base : public websocket_stream_base {
     public:
         MOCK_METHOD0(get_websocket,
