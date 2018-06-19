@@ -919,6 +919,7 @@ namespace bzn
     }
 
 
+
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
     {
         bzn::message expected;
