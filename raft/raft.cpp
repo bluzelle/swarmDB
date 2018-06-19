@@ -485,22 +485,32 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     // - only the leader can do this
     // - the current last quorum is not a joint quorum
 
+
     if(msg["cmd"].asString()=="add_peer")
     {
-        bzn::message joint_quorum = msg["data"];
+        if(this->get_state() != bzn::raft_state::leader)
+        {
+            bzn::message response;
+            response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+        bzn::message joint_quorum;
+        joint_quorum["old"] = joint_quorum["new"] = this->last_quorum().msg;
+        joint_quorum["new"].append(msg["data"]["peer"]);
         this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
     }
     else if(msg["cmd"].asString() == "remove_peer" )
     {
-        LOG(error) << "remove_peer not implemented.";
+        if(this->get_state() != bzn::raft_state::leader)
+        {
+            bzn::message response;
+            response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
     }
-
-
-
-
-
-
-
+    std::lock_guard<std::mutex> lock(this->raft_lock);
     uint32_t term = msg["data"]["term"].asUInt();
 
     if (this->current_term == term)
