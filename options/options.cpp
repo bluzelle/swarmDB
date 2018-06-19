@@ -35,6 +35,7 @@ namespace
     const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
     const std::string MONITOR_ADDRESS_KEY        = "monitor_address";
     const std::string MONITOR_PORT_KEY           = "monitor_port";
+    const std::string AUDIT_MEM_SIZE_KEY         = "audit_mem_size";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -256,6 +257,19 @@ std::chrono::seconds
 options::get_ws_idle_timeout() const
 {
     return std::chrono::seconds(this->config_data[WS_IDLE_TIMEOUT_KEY].asUInt64());
+}
+
+size_t
+options::get_audit_mem_size() const
+{
+    if (this->config_data.isMember(AUDIT_MEM_SIZE_KEY))
+    {
+        return this->config_data[AUDIT_MEM_SIZE_KEY].asUInt();
+    }
+    else
+    {
+        return 10000;
+    }
 }
 
 

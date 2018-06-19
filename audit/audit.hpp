@@ -32,7 +32,8 @@ namespace bzn
         audit(std::shared_ptr<bzn::asio::io_context_base>
                 , std::shared_ptr<bzn::node_base> node
                 , bzn::optional<boost::asio::ip::udp::endpoint>
-                , bzn::uuid_t uuid);
+                , bzn::uuid_t uuid
+		        , size_t mem_size);
 
         size_t error_count() const override;
 
@@ -41,6 +42,8 @@ namespace bzn
         void handle(const bzn::message& message, std::shared_ptr<bzn::session_base> session) override;
         void handle_commit(const commit_notification&) override;
         void handle_leader_status(const leader_status&) override;
+
+        size_t current_memory_size();
 
         void start() override;
 
@@ -59,6 +62,7 @@ namespace bzn
         void handle_leader_data(const leader_status&);
         void handle_leader_made_progress(const leader_status&);
 
+        void trim();
         const bzn::uuid_t uuid;
 
         std::list<std::string> recorded_errors;
@@ -83,10 +87,13 @@ namespace bzn
         uint64_t last_leader_commit_index = 0;
         bool leader_has_uncommitted_entries = false;
 
+        size_t forgotten_error_count = 0;
         bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint;
         std::unique_ptr<bzn::asio::udp_socket_base> socket;
 
         const std::string statsd_namespace_prefix;
+
+        size_t mem_size;
     };
 
 }

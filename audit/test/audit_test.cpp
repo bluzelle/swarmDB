@@ -39,6 +39,8 @@ public:
 
     std::shared_ptr<bzn::audit> audit;
 
+    size_t mem_size = 1000;
+
     audit_test()
     {
         // Here we are depending on the fact that audit.cpp will initialize the leader alive timer before the leader
@@ -58,6 +60,7 @@ public:
                 .WillRepeatedly(Invoke(
                 [&](auto handler){this->leader_alive_timer_callback = handler;}
         ));
+
         EXPECT_CALL(*(this->leader_progress_timer), async_wait(_))
                 .Times(AnyNumber())
                 .WillRepeatedly(Invoke(
@@ -68,14 +71,13 @@ public:
                 .WillOnce(Invoke(
                 [&](){return std::move(this->socket);}
         ));
-
     }
 
     void build_audit()
     {
         // We cannot construct this during our constructor because doing so invalidates our timer pointers,
         // which prevents tests from setting expectations on them
-        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid");
+        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid", this->mem_size);
         this->audit->start();
     }
 
@@ -105,7 +107,6 @@ public:
     }
 
 };
-
 
 TEST_F(audit_test, test_timers_constructed_correctly)
 {
@@ -374,6 +375,91 @@ TEST_F(audit_test, audit_throws_error_when_leader_switch_then_stuck)
     EXPECT_EQ(this->audit->error_count(), 1u);
 }
 
+TEST_F(audit_test, audit_forgets_old_data)
+{
+    this->mem_size = 10;
+    this->build_audit();
+
+    leader_status ls1;
+    ls1.set_leader("joe");
+
+    leader_status ls2;
+    ls2.set_leader("alfred");
+
+    commit_notification com;
+    com.set_operation("Do some stuff!!");
+
+    for(auto i : boost::irange(0, 100))
+    {
+        // Trigger an error, a leader elected, and a commit notification every iteration
+        ls1.set_term(i);
+        ls2.set_term(i);
+        com.set_log_index(i);
+
+        this->audit->handle_leader_status(ls1);
+        this->audit->handle_leader_status(ls2);
+        this->audit->handle_commit(com);
+    }
+
+    // It's allowed to have mem size each of commits, leaders, and errors
+    EXPECT_LE(this->audit->current_memory_size(), 3*this->mem_size);
+}
+
+TEST_F(audit_test, audit_still_detects_new_errors_after_forgetting_old_data)
+{
+    this->mem_size = 10;
+    this->build_audit();
+
+    leader_status ls1;
+    ls1.set_leader("joe");
+
+    commit_notification com;
+    com.set_operation("do exciting things and stuff");
+
+    for(auto i : boost::irange(0, 100))
+    {
+        ls1.set_term(i);
+        com.set_log_index(i);
+
+        this->audit->handle_leader_status(ls1);
+        this->audit->handle_commit(com);
+    }
+
+    EXPECT_EQ(this->audit->error_count(), 0u);
+
+    ls1.set_leader("not joe");
+    com.set_operation("don't do anything");
+
+    this->audit->handle_leader_status(ls1);
+    this->audit->handle_commit(com);
+
+    EXPECT_EQ(this->audit->error_count(), 2u);
+}
+
+TEST_F(audit_test, audit_still_counts_errors_after_forgetting_their_data)
+{
+    this->mem_size = 10;
+    this->build_audit();
+
+    leader_status ls1;
+    ls1.set_leader("joe");
+
+    leader_status ls2;
+    ls2.set_leader("alfred");
+
+    for(auto i : boost::irange(0, 100))
+    {
+        // Trigger an error, a leader elected, and a commit notification every iteration
+        ls1.set_term(i);
+        ls2.set_term(i);
+
+        this->audit->handle_leader_status(ls1);
+        this->audit->handle_leader_status(ls2);
+    }
+
+    EXPECT_GT(this->audit->error_count(), this->audit->error_strings().size());
+    EXPECT_EQ(this->audit->error_strings().size(), this->mem_size);
+}
 
 TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
 {

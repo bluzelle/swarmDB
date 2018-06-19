@@ -45,6 +45,8 @@ namespace bzn
 
         std::chrono::seconds get_ws_idle_timeout() const override;
 
+        size_t get_audit_mem_size() const override;
+
     private:
         bool parse(int argc, const char* argv[]);
 
