@@ -90,13 +90,24 @@ namespace bzn
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto websocket_stream = std::make_shared<NiceMock<bzn::beast::Mockwebsocket_stream_base>>();
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
 
-        EXPECT_CALL(*mock_io_context, make_unique_strand());
+        EXPECT_CALL(*mock_io_context, make_unique_strand()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::move(mock_strand);
+            }));
 
         EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             {
                 return std::move(mock_steady_timer);
+            }));
+
+        EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::read_handler>())).WillRepeatedly(Invoke(
+            [&](bzn::asio::read_handler handler)
+            {
+                return handler;
             }));
 
         auto session = std::make_shared<bzn::session>(mock_io_context, websocket_stream, std::chrono::milliseconds(0));
@@ -179,6 +190,11 @@ namespace bzn
 
         EXPECT_CALL(*mock_websocket_stream, async_write(_,_));
         EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(true)).WillOnce(Return(false));
+
+        // expect a call to binary!
+        boost::asio::io_context io;
+        boost::beast::websocket::stream<boost::asio::ip::tcp::socket> socket(io);
+        EXPECT_CALL(*mock_websocket_stream, get_websocket()).WillRepeatedly(ReturnRef(socket));
 
         // no read exepected...
         session->send_message(std::make_shared<bzn::message>("asdf"), true);

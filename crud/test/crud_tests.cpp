@@ -159,7 +159,7 @@ TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
             .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
 
     // We don't know the leader, maybe this node just started.
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,"","")));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -181,7 +181,7 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49153,"iron maiden",LEADER_UUID)));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49153,8080,"iron maiden",LEADER_UUID)));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -193,6 +193,7 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49153));
             EXPECT_EQ(resp.redirect().leader_name(), "iron maiden");
+            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
         }));
 
     this->mh(msg, mock_session);
@@ -225,7 +226,7 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
     // must respond with error
     auto request = generate_create_request(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==");
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
     EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
 
@@ -317,7 +318,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
 
     EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Return(nullptr));
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillRepeatedly(Return(bzn::peer_address_t("127.0.0.1",49152,"ozzy",LEADER_UUID)));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillRepeatedly(Return(bzn::peer_address_t("127.0.0.1",49152,8080,"ozzy",LEADER_UUID)));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -329,6 +330,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
             EXPECT_EQ(resp.redirect().leader_name(), "ozzy");
+            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
         }));
 
     this->mh(request, this->mock_session);
@@ -392,7 +394,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49152,"punkh",LEADER_UUID)));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49152,8080,"punkh",LEADER_UUID)));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -404,6 +406,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
             EXPECT_EQ(resp.redirect().leader_name(), "punkh");
+            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
         }));
 
     this->mh(request, this->mock_session);
@@ -416,7 +419,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,"","")));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -456,7 +459,7 @@ TEST_F(crud_test, test_that_a_leader_can_update)
     auto request = generate_update_request(USER_UUID, key, TEST_VALUE);
 
     // This node is in the leader state.
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
     EXPECT_CALL( *this->mock_storage, has(USER_UUID, key)).WillOnce(Return(true));
 
@@ -507,7 +510,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,"","")));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -529,7 +532,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
 
     // We don't know the leader, maybe this node just started.
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1", 49152,"Pantera",LEADER_UUID)));
+    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1", 49152,8080,"Pantera",LEADER_UUID)));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -541,6 +544,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
             EXPECT_EQ(resp.redirect().leader_name(), "Pantera");
+            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
         }));
 
     this->mh(request, this->mock_session);
@@ -580,7 +584,7 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     auto request = generate_delete_request(USER_UUID, key);
 
     // We tell CRUD that we are the leader
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
     // we fake a call to storage->has and tell CRUD that the record exists
     EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(true));
@@ -615,7 +619,7 @@ TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
     auto request = generate_delete_request(USER_UUID, key);
 
     // We tell CRUD that we are the leader
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
     // we fake a call to storage->has and tell CRUD that the record exists
     EXPECT_CALL(*this->mock_storage, has(USER_UUID, key)).WillOnce(Return(false));
@@ -869,7 +873,7 @@ TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
 {
     bzn::message request = generate_create_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'));
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
     EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
 

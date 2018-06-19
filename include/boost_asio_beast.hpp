@@ -276,10 +276,60 @@ namespace bzn::beast
 {
     // types...
     using handshake_handler = std::function<void(const boost::system::error_code& ec)>;
+    using read_handler  = std::function<void(const boost::beast::error_code& ec, std::size_t bytes_transferred)>;
+    using write_handler = std::function<void(const boost::beast::error_code& ec, std::size_t bytes_transferred)>;
     using close_handler = std::function<void(const boost::system::error_code& ec)>;
 
     ///////////////////////////////////////////////////////////////////////////
     // mockable interfaces...
+
+    class http_socket_base
+    {
+    public:
+        virtual ~http_socket_base() = default;
+
+        virtual boost::asio::ip::tcp::socket& get_socket() = 0;
+
+        virtual void async_read(boost::beast::flat_buffer& buffer, boost::beast::http::request<boost::beast::http::dynamic_body>& request, bzn::beast::read_handler handler) = 0;
+
+        virtual void async_write(boost::beast::http::response<boost::beast::http::dynamic_body>& response, bzn::beast::write_handler handler) = 0;
+
+        virtual void close() = 0;
+    };
+
+    class http_socket final : public http_socket_base
+    {
+    public:
+        explicit http_socket(boost::asio::ip::tcp::socket socket)
+            : socket(std::move(socket))
+        {
+        }
+
+        boost::asio::ip::tcp::socket& get_socket() override
+        {
+            return this->socket;
+        }
+
+        void async_read(boost::beast::flat_buffer& buffer, boost::beast::http::request<boost::beast::http::dynamic_body>& request, bzn::beast::read_handler handler) override
+        {
+            boost::beast::http::async_read(this->socket, buffer, request, std::move(handler));
+        }
+
+        void async_write(boost::beast::http::response<boost::beast::http::dynamic_body>& response, bzn::beast::write_handler handler) override
+        {
+            boost::beast::http::async_write(this->socket, response, std::move(handler));
+        }
+
+        void close() override
+        {
+            this->socket.close();
+        }
+
+    private:
+        boost::asio::ip::tcp::socket socket;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
 
     class websocket_stream_base
     {
