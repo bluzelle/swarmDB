@@ -183,7 +183,6 @@ crud::handle_get_keys(const bzn::message& /*msg*/, const database_msg& request, 
 
     if (keys.empty())
     {
-        response.mutable_resp()->add_keys();
         return;
     }
 
