@@ -34,6 +34,8 @@ namespace bzn
         bool ingest_json(std::istream& peers);
 
         bzn::peers_list_t peer_addresses;
+
+        size_t initialize_peer_list(const Json::Value& root, bzn::peers_list_t& peer_addresses);
     };
 
 } // namespace bzn

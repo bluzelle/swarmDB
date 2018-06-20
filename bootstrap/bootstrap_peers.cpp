@@ -56,24 +56,10 @@ bootstrap_peers::get_peers() const
 }
 
 
-bool 
-bootstrap_peers::ingest_json(std::istream& peers)
+size_t
+bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t& /*peer_addresses*/)
 {
-    size_t addresses_before = this->peer_addresses.size();
     size_t valid_addresses_read = 0;
-
-    Json::Value root;
-
-    try
-    {
-        peers >> root;
-    }
-    catch (const std::exception& e)
-    {
-        LOG(error) << "Failed to parse peer JSON (" << e.what() << ")";
-        return false;
-    }
-
     // Expect the read json to be an array of peer objects
     for (const auto& peer : root)
     {
@@ -123,6 +109,29 @@ bootstrap_peers::ingest_json(std::istream& peers)
 
         valid_addresses_read++;
     }
+    return valid_addresses_read;
+}
+
+
+bool
+bootstrap_peers::ingest_json(std::istream& peers)
+{
+    size_t addresses_before = this->peer_addresses.size();
+    size_t valid_addresses_read = 0;
+
+    Json::Value root;
+
+    try
+    {
+        peers >> root;
+    }
+    catch (const std::exception& e)
+    {
+        LOG(error) << "Failed to parse peer JSON (" << e.what() << ")";
+        return false;
+    }
+
+    valid_addresses_read = this->initialize_peer_list(root, this->peer_addresses);
 
     size_t new_addresses = this->peer_addresses.size() - addresses_before;
     size_t duplicate_addresses = new_addresses - valid_addresses_read;

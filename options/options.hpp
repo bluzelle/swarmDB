@@ -41,6 +41,8 @@ namespace bzn
 
         bzn::uuid_t get_uuid() const override;
 
+        bzn::uuid_t get_swarm_uuid() const override;
+
         std::chrono::seconds get_ws_idle_timeout() const override;
 
     private:

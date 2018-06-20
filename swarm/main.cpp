@@ -168,6 +168,8 @@ main(int argc, const char* argv[])
     {
         bzn::options options;
 
+        ///////////////
+
         if (!options.parse_command_line(argc, argv))
         {
             return 0;
@@ -180,6 +182,8 @@ main(int argc, const char* argv[])
 
         set_logging_level(options);
 
+
+        ///////////////////////////////////////////////////////////////////////
         // todo: right now we just want to check that an account "has" a balance...
         double eth_balance = bzn::ethereum().get_ether_balance(options.get_ethererum_address(), options.get_ethererum_io_api_token());
 
@@ -188,6 +192,7 @@ main(int argc, const char* argv[])
             LOG(error) << "No ETH balance found";
             return 0;
         }
+        ///////////////////////////////////////////////////////////////////////
 
         bzn::bootstrap_peers peers;
         init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url());
@@ -216,7 +221,7 @@ main(int argc, const char* argv[])
 
         // get our http listener port...
         uint16_t http_port;
-        if (!get_http_listener_port(options, init_peers, http_port))
+        if (!get_http_listener_port(options, peers, http_port))
         {
             LOG(error) << "could not find our http port setting!";
             return 0;

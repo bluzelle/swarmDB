@@ -33,6 +33,8 @@ namespace
     const std::string DEBUG_LOGGING_KEY          = "debug_logging";
     const std::string LOG_TO_STDOUT_KEY          = "log_to_stdout";
     const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
+    const std::string NODE_UUID                  = "uuid";
+    const std::string SWARM_UUID                 = "swarm-uuid";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -110,11 +112,17 @@ options::get_bootstrap_peers_url() const
     return this->config_data[BOOTSTRAP_PEERS_URL_KEY].asString();
 }
 
-
 bzn::uuid_t
 options::get_uuid() const
 {
-    return this->config_data["uuid"].asString();
+    return this->config_data[NODE_UUID].asString();
+}
+
+
+bzn::uuid_t
+options::get_swarm_uuid() const
+{
+    return this->config_data[SWARM_UUID].asString();
 }
 
 

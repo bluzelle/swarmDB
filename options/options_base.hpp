@@ -75,6 +75,12 @@ namespace bzn
          */
         virtual bzn::uuid_t get_uuid() const = 0;
 
+        /**
+         * Get the swarm's unique id
+         * @return uuid
+         */
+        virtual bzn::uuid_t get_swarm_uuid() const = 0;
+
 
         /**
          * Get the websocket activity timeout
