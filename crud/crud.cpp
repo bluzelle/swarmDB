@@ -105,11 +105,9 @@ crud::handle_create(const bzn::message& msg, const database_msg& request, databa
 
     if (this->raft->get_state() == bzn::raft_state::leader)
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::log_entry);
         return;
     }
-
-    this->set_leader_info(response);
 }
 
 
@@ -149,7 +147,7 @@ crud::handle_update(const bzn::message& msg, const database_msg& request, databa
 
     if (this->raft->get_state() == bzn::raft_state::leader)
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::log_entry);
         return;
     }
 
@@ -168,7 +166,7 @@ crud::handle_delete(const bzn::message& msg, const database_msg& request, databa
 
     if (this->storage->has(request.header().db_uuid(), request.delete_().key()))
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::log_entry);
         return;
     }
 

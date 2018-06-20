@@ -48,3 +48,4 @@ namespace bzn::utils
 
 // logging
 #define LOG(x) BOOST_LOG_TRIVIAL(x) << "(" << bzn::utils::basename(__FILE__) << ":"  << __LINE__ << ") - "
+const uint16_t MAX_MESSAGE_SIZE = 1024;

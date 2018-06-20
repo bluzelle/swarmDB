@@ -228,7 +228,7 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
-    EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
+    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -463,7 +463,7 @@ TEST_F(crud_test, test_that_a_leader_can_update)
 
     EXPECT_CALL( *this->mock_storage, has(USER_UUID, key)).WillOnce(Return(true));
 
-    EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
+    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
@@ -590,7 +590,7 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(true));
 
     // since we do have a valid record to delete, we tell raft, raft will be cool with it...
-    EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
+    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
 
     // we respond to the user with OK.
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
@@ -875,7 +875,7 @@ TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
-    EXPECT_CALL(*this->mock_raft, append_log(_)).WillOnce(Return(true));
+    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
         [&](std::shared_ptr<std::string> msg, auto)
