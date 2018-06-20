@@ -1,0 +1,155 @@
+#!/usr/bin/python2.7
+
+# Copyright (C) 2018 Bluzelle
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License, version 3,
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+# To generate Python bindings:
+#
+# cd proto
+# protoc --python_out=../scripts ./bluzelle.proto ./database.proto
+#
+
+import websocket
+import json
+import base64
+import sys
+import random
+from argparse import ArgumentParser
+from argparse import RawDescriptionHelpFormatter
+
+try:
+    import bluzelle_pb2
+    import database_pb2
+except ImportError:
+    raise ImportError("\n\nPlease generate Bluzelle protobuf modules:\n"
+                      "\n"
+                      "$ cd proto\n"
+                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n")
+
+def send_request(ws, uuid, msg):
+    msg.db.header.db_uuid = uuid
+    msg.db.header.transaction_id = random.randint(1,sys.maxint)
+
+    req = {}
+    req["bzn-api"] = "database";
+    req["msg"] = base64.b64encode(msg.SerializeToString())
+
+    print msg
+    print "-" * 60 + '\n'
+
+    ws.send(json.dumps(req))
+    resp = database_pb2.database_response()
+    resp.ParseFromString(ws.recv())
+    print resp
+
+
+def create_request(key, value):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.create.key = key
+    msg.db.create.value = value
+    return msg
+
+
+def read_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.read.key = key
+    return msg
+
+
+def update_request(key, value):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.update.key = key
+    msg.db.update.value = value
+    return msg
+
+
+def delete_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.delete.key = key
+    return msg
+
+
+def has_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.has.key = key
+    return msg
+
+
+def keys_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.keys.SetInParent()
+    return msg
+
+
+def size_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.size.SetInParent()
+    return msg
+
+
+if __name__ == "__main__":
+
+    parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
+
+    parser.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)")
+
+    parser.add_argument("-c", "--command", type=str, choices=["create", "read", "update", "delete", "has", "keys", "size"],
+                        default=None, help="command [default: %(default)s]")
+
+    parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid")
+    parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    parser.add_argument("-v", "--value", type=str, default=None, help="value")
+
+    args = parser.parse_args()
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        exit(1)
+
+    if not args.command:
+        print "no command given"
+        exit(1)
+
+    if not args.uuid:
+        print "no uuid given"
+        exit(1)
+
+    if not args.node:
+        print "no node address given"
+        exit(1)
+
+    ws = websocket.WebSocket()
+    ws.connect("ws://" + args.node)
+
+    if args.command == "create":
+        if args.key == None or args.value == None: print "no key or value given"; exit(1)
+        send_request(ws, args.uuid, create_request(args.key, args.value))
+    elif args.command == "read":
+        if args.key == None: print "no key given"; exit(1)
+        send_request(ws, args.uuid, read_request(args.key))
+    elif args.command == "update":
+        if args.key == None or args.value == None: print "no key or value given"; exit(1)
+        send_request(ws, args.uuid, update_request(args.key, args.value))
+    elif args.command == "delete":
+        if args.key == None == None: print "no key given"; exit(1)
+        send_request(ws, args.uuid, delete_request(args.key))
+    elif args.command == "has":
+        if args.key == None: print "no key given"; exit(1)
+        send_request(ws, args.uuid, has_request(args.key))
+    elif args.command == "keys":
+        send_request(ws, args.uuid, keys_request())
+    elif args.command == "size":
+        send_request(ws, args.uuid, size_request())
+
+    ws.close()
