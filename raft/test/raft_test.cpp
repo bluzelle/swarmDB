@@ -1189,8 +1189,6 @@ namespace bzn
         bzn::message msg = make_add_peer_request();
         mh(msg,this->mock_session);
 
-
-        // the end result will be the appending of a joint quorum to the log entries
         bzn::log_entry entry = raft->last_quorum();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
