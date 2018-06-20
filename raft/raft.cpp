@@ -496,7 +496,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         bzn::message joint_quorum;
         joint_quorum["old"] = joint_quorum["new"] = last_quorum_entry.msg;
         joint_quorum["new"].append(msg["data"]["peer"]);
-        this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
+        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
         return;
     }
     else if(msg["cmd"].asString() == "remove_peer" )
@@ -529,10 +529,10 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
                               joint_quorum["new"].append(p);
                           }
                       });
-        this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
+        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
         return;
     }
-    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     uint32_t term = msg["data"]["term"].asUInt();
 
     if (this->current_term == term)
