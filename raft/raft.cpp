@@ -532,14 +532,6 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         return;
     }
 
-
-    // TODO: Handle add_peer and remove_peer handlers here.
-    // - only the leader can do this
-    // - the current last quorum is not a joint quorum
-
-
-
-
     uint32_t term = msg["data"]["term"].asUInt();
 
     if (this->current_term == term)
