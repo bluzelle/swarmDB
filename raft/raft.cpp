@@ -485,7 +485,6 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     // - only the leader can do this
     // - the current last quorum is not a joint quorum
 
-
     if(msg["cmd"].asString()=="add_peer")
     {
         if(this->get_state() != bzn::raft_state::leader)
@@ -495,10 +494,21 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             session->send_message(std::make_shared<bzn::message>(response), true);
             return;
         }
+
+        bzn::log_entry last_quorum_entry = this->last_quorum();
+        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+        {
+            bzn::message response;
+            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
         bzn::message joint_quorum;
-        joint_quorum["old"] = joint_quorum["new"] = this->last_quorum().msg;
+        joint_quorum["old"] = joint_quorum["new"] = last_quorum_entry.msg;
         joint_quorum["new"].append(msg["data"]["peer"]);
         this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
+        return;
     }
     else if(msg["cmd"].asString() == "remove_peer" )
     {
@@ -509,6 +519,29 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             session->send_message(std::make_shared<bzn::message>(response), true);
             return;
         }
+
+        bzn::log_entry last_quorum_entry = this->last_quorum();
+        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+        {
+            bzn::message response;
+            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        const auto uuid = msg["data"]["uuid"].asString();
+        bzn::message joint_quorum;
+        joint_quorum["old"] = last_quorum_entry.msg;
+        std::for_each(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
+                      [&](const auto& p)
+                      {
+                          if(p["uuid"]!=uuid)
+                          {
+                              joint_quorum["new"].append(p);
+                          }
+                      });
+        this->append_log(joint_quorum, bzn::log_entry_type::joint_quorum);
+        return;
     }
     std::lock_guard<std::mutex> lock(this->raft_lock);
     uint32_t term = msg["data"]["term"].asUInt();
