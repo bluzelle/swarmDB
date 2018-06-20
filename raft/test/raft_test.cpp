@@ -29,9 +29,9 @@ namespace
 {
     const bzn::uuid_t TEST_NODE_UUID{"f0645cc2-476b-485d-b589-217be3ca87d5"};
 
-    const bzn::peers_list_t TEST_PEER_LIST{{"127.0.0.1", 8081, "name1", "uuid1"},
-                                           {"127.0.0.1", 8082, "name2", "uuid2"},
-                                           {"127.0.0.1", 8084, "name3", TEST_NODE_UUID}};
+    const bzn::peers_list_t TEST_PEER_LIST{{"127.0.0.1", 8081, 80, "name1", "uuid1"},
+                                           {"127.0.0.1", 8082, 81, "name2", "uuid2"},
+                                           {"127.0.0.1", 8084, 82, "name3", TEST_NODE_UUID}};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 

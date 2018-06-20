@@ -84,6 +84,7 @@ session::do_read()
     this->start_idle_timeout();
 
     this->websocket->async_read(this->buffer,
+        this->strand->wrap(
         [self = shared_from_this()](boost::system::error_code ec, auto /*bytes_transferred*/)
         {
             if (ec)
@@ -114,7 +115,7 @@ session::do_read()
 
             // call subscriber...
             self->handler(msg, self);
-        });
+        }));
 }
 
 
@@ -129,6 +130,8 @@ void
 session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 {
     this->idle_timer->cancel(); // kill timer for duration of write...
+
+    this->websocket->get_websocket().binary(true);
 
     this->websocket->async_write(
         boost::asio::buffer(*msg),

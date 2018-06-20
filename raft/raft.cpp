@@ -666,7 +666,7 @@ raft::get_leader()
         }
     }
 
-    return bzn::peer_address_t("",0,"","");
+    return bzn::peer_address_t("",0,0,"","");
 }
 
 
