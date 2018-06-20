@@ -41,19 +41,24 @@ namespace
     {
         if(entries.size() != sz)
         {
-            entries.resize(sz);
+            entries.resize(entries.size() + sz);
         }
 
         uint16_t index = 1;
 
-        for(auto& entry : entries)
-        {
-            entry.log_index = index;
-            entry.term = std::div(index, 5).quot;
-            std::string data(200 * (index%3 +1),'s');
-            entry.msg["data"]["value"] = data;
-            index ++;
-        }
+        std::vector<bzn::log_entry>::iterator start = entries.begin() + (entries.front().entry_type == bzn::log_entry_type::single_quorum ? 1 : 0);
+
+        std::for_each(start,
+                      entries.end(),
+                      [&](auto &entry)
+                      {
+                          entry.log_index = index;
+                          entry.term = std::div(index, 5).quot;
+                          entry.entry_type = bzn::log_entry_type::log_entry;
+                          std::string data(200 * (index % 3 + 1), 's');
+                          entry.msg["data"]["value"] = data;
+                          index++;
+                      });
     }
 
 
@@ -69,6 +74,24 @@ namespace
     }
 
 
+    void
+    clean_state_folder()
+    {
+        try
+        {
+            if(boost::filesystem::exists("./.state"))
+            {
+                boost::filesystem::remove_all("./.state");
+            }
+            boost::filesystem::create_directory("./.state");
+        }
+        catch(boost::filesystem::filesystem_error const& e)
+        {
+            LOG(error) << "Error while attempting to clean the state folder:" << e.what();
+        }
+    }
+
+
     auto equality_test = [](const bzn::log_entry &rhs, const bzn::log_entry &lhs) -> bool
     {
         return rhs.log_index == lhs.log_index
@@ -80,11 +103,36 @@ namespace
 class MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_IN_LOG;
 namespace bzn
 {
+    class raft_test : public Test
+    {
+    public:
+        raft_test()
+        {}
+
+        void SetUp() final
+        {
+            clean_state_folder();
+            this->mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+            this->mock_node = std::make_shared<bzn::Mocknode_base>();
+            this->mock_session = std::make_shared<bzn::Mocksession_base>();
+        }
+
+        void TearDown() final
+        {
+            clean_state_folder();
+        }
+
+        std::shared_ptr<bzn::Mocknode_base> mock_node;
+        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context;
+        std::shared_ptr<bzn::Mocksession_base> mock_session;
+    };
 
     TEST(raft, test_that_default_raft_state_is_follower)
     {
+        clean_state_folder();
         EXPECT_EQ(bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
             nullptr, TEST_PEER_LIST, TEST_NODE_UUID).get_state(), bzn::raft_state::follower);
+        clean_state_folder();
     }
 
 
@@ -98,12 +146,9 @@ namespace bzn
     }
 
 
-    TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins)
+    TEST_F(raft_test, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins)
     {
         auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<bzn::Mocknode_base>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // timer expectations...
         EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(3);
@@ -115,38 +160,35 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
-        EXPECT_CALL(*mock_node, register_for_message("raft", _));
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
 
         // and away we go...
         raft->start();
 
         // we should see requests for votes... and then the Append Requests
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         // expire timer...
         wh(boost::system::error_code());
 
         // now send in each vote...
-        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), mock_session);
-        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), this->mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), this->mock_session);
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
     }
 
 
-    TEST(raft, test_that_request_for_vote_response_while_candidate_is_no)
+    TEST_F(raft_test, test_that_request_for_vote_response_while_candidate_is_no)
     {
         auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<bzn::Mocknode_base>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // timer expectations...
         EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
@@ -158,16 +200,16 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
 
         // intercept the node raft registration handler...
         bzn::message_handler mh;
-        EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _)).WillOnce(Invoke(
             [&](const auto&, auto handler)
             {
                 mh = handler;
@@ -178,7 +220,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
 
         // expire timer...
         wh(boost::system::error_code());
@@ -191,7 +233,7 @@ namespace bzn
             { resp = *msg; }));
 
         // send a message through the registered "node message" callback...
-        mh(bzn::create_request_vote_request("uuid1", 2, 0, 0), mock_session);
+        mh(bzn::create_request_vote_request("uuid1", 1, 0, 0), mock_session);
 
         // we expect a "no" response in this state...
         EXPECT_EQ(resp["cmd"].asString(), "ResponseVote");
@@ -199,12 +241,9 @@ namespace bzn
     }
 
 
-    TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers)
+    TEST_F(raft_test, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers)
     {
         auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<bzn::Mocknode_base>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // timer expectations...
         EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(4);
@@ -216,21 +255,21 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
-        EXPECT_CALL(*mock_node, register_for_message("raft", _));
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
 
         // and away we go...
         raft->start();
 
         // we should see requests for votes...
         std::vector<bzn::message_handler> mh_req;
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
             [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "RequestVote");
@@ -241,7 +280,7 @@ namespace bzn
 
         // heartbeat timer expired and we should be sending requests...
         std::vector<bzn::message_handler> mh_resp;
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
             [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "AppendEntries");
@@ -258,12 +297,9 @@ namespace bzn
     }
 
 
-    TEST(raft, test_that_as_follower_append_entries_is_answered)
+    TEST_F(raft_test, test_that_as_follower_append_entries_is_answered)
     {
         auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<bzn::Mocknode_base>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // timer expectations...
         EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
@@ -275,24 +311,24 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
         bzn::message_handler mh;
-        EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _)).WillOnce(Invoke(
             [&](const auto&, auto handler)
             {
                 mh = handler;
                 return true;
             }));
 
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
 
         raft->start();
 
         bzn::message resp;
-        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
             [&](const auto& msg, auto)
             { resp = *msg; }));
 
@@ -306,14 +342,9 @@ namespace bzn
     }
 
 
-    TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them)
+    TEST_F(raft_test, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // intercept the timeout callback...
         bzn::asio::wait_handler wh;
@@ -321,14 +352,14 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
-        EXPECT_CALL(*mock_node, register_for_message("raft", _));
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
 
         // and away we go...
         raft->start();
@@ -356,8 +387,6 @@ namespace bzn
 
         EXPECT_EQ(raft->get_leader().uuid, TEST_NODE_UUID);
 
-        ///////////////////////////////////////////////////////////////////////////
-
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
@@ -382,13 +411,13 @@ namespace bzn
         wh(boost::system::error_code());
 
         // send false so second peer will achieve consensus and leader will commit the entries..
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 2, false, 0), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, false, 0), mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 0);
         ASSERT_FALSE(commit_handler_called);
 
         // enough peers have stored the first entry
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 1), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 1), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
 
@@ -398,7 +427,7 @@ namespace bzn
         // enough peers have stored the first entry
         commit_handler_times_called = 0;
         commit_handler_called = false;
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 2, true, 2), mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 2), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 1);
         ASSERT_TRUE(commit_handler_called);
@@ -407,18 +436,12 @@ namespace bzn
         wh(boost::system::error_code());
 
         // todo: verify append entry contents
-
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
     }
 
 
-    TEST(raft, test_that_follower_stores_append_entries_and_responds)
+    TEST_F(raft_test, test_that_follower_stores_append_entries_and_responds)
     {
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
-        auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-        auto mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
         // intercept the timeout callback...
         bzn::asio::wait_handler wh;
@@ -426,14 +449,11 @@ namespace bzn
             [&](auto handler)
             { wh = handler; }));
 
-        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             { return std::move(mock_steady_timer); }));
 
-        // create raft...
-        boost::filesystem::remove("./.state/uuid1.dat");
-        boost::filesystem::remove("./.state/uuid1.state");
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, "uuid1");
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, "uuid1");
 
         bzn::message_handler mh;
         EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
@@ -456,7 +476,7 @@ namespace bzn
         ///////////////////////////////////////////////////////////////////////////
 
         bzn::message resp;
-        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillRepeatedly(Invoke(
             [&](const auto& msg, auto /*handler*/)
             {
                 resp = *msg;
@@ -476,14 +496,14 @@ namespace bzn
         entry["bzn-api"] = "utest";
 
         auto msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 0, 0, 0, 0, bzn::message());
-        mh(msg, mock_session);
+        mh(msg, this->mock_session);
         ASSERT_TRUE(resp["data"]["success"].asBool());
 
         resp.clear();
 
         // send append entry with commit index of 1... and follower commits and updates its match index
         msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 1, 0, 0, 2, entry);
-        mh(msg, mock_session);
+        mh(msg, this->mock_session);
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
         ASSERT_TRUE(resp["data"]["success"].asBool());
         EXPECT_EQ(commit_handler_times_called, 1);
@@ -500,13 +520,9 @@ namespace bzn
 
         // put back append entries - bad append entry
         msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 1, 0, 0, 2, entry);
-        mh(msg, mock_session);
+        mh(msg, this->mock_session);
         ASSERT_FALSE(resp["data"]["success"].asBool());
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
-
-
-        boost::filesystem::remove("./.state/uuid1.dat");
-        boost::filesystem::remove("./.state/uuid1.state");
     }
 
 
@@ -537,9 +553,9 @@ namespace bzn
 
     TEST(raft, test_log_entry_serialization)
     {
-        const size_t number_of_entries = 300;
+        const size_t number_of_entries = 3;
         const std::string path{"./.state/test_data.dat"};
-        boost::filesystem::remove(path);
+        clean_state_folder();
 
         std::vector<bzn::log_entry> entries_source(number_of_entries);
         fill_entries_with_test_data(number_of_entries, entries_source);
@@ -562,36 +578,38 @@ namespace bzn
         EXPECT_EQ(number_of_entries, entries_target.size());
         EXPECT_TRUE(std::equal(entries_source.begin(), entries_source.end(), entries_target.begin(), equality_test));
 
-        boost::filesystem::remove(path);
+        clean_state_folder();
     }
 
 
     TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        clean_state_folder();
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
         auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
 
-        size_t number_of_entries = 300;
+        const size_t number_of_entries = 300;
 
         fill_entries_with_test_data(number_of_entries, raft_source->log_entries);
 
         // TODO: this should be done via RAFT, not by cheating. That is, I'd like to simulate the append entry process to ensure that append_entry_to_log gets called
-        for(const auto& log_entry : raft_source->log_entries)
-        {
-            raft_source->append_entry_to_log(log_entry);
-        }
+        std::for_each(raft_source->log_entries.begin(), raft_source->log_entries.end(),
+                      [&](const auto &log_entry)
+                      {
+                          if (log_entry.log_index > 0)
+                          {
+                              raft_source->append_entry_to_log(log_entry);
+                          }
+                      });
 
-        raft_source->last_log_index = number_of_entries;
-        raft_source->last_log_term = 60;
-        raft_source->commit_index = number_of_entries - 22;
-        raft_source->current_term = 60;
+        raft_source->last_log_index = raft_source->log_entries.back().log_index;
+        raft_source->last_log_term = raft_source->log_entries.back().term;
+        raft_source->commit_index = raft_source->log_entries.back().log_index;
+        raft_source->current_term = raft_source->last_log_term;
 
         // TODO: This should be done via RAFT, not by cheating.
         raft_source->save_state();
-
 
         // instantiate a raft with the same uuid
         auto raft_target = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
@@ -600,7 +618,6 @@ namespace bzn
         EXPECT_EQ(raft_target->last_log_term, raft_source->last_log_term);
         EXPECT_EQ(raft_target->commit_index, raft_source->commit_index);
         EXPECT_EQ(raft_target->current_term, raft_source->current_term);
-
 
         auto source_entries = raft_source->log_entries;
         auto target_entries = raft_target->log_entries;
@@ -620,17 +637,15 @@ namespace bzn
                 }
         ));
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
-
+        clean_state_folder();
     }
 
     
     TEST(raft, test_that_raft_can_rehydrate_storage)
     {
         const size_t number_of_entries = 300;
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+
+        clean_state_folder();
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
         auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
@@ -731,33 +746,29 @@ namespace bzn
             EXPECT_EQ(rec_1->value, rec_2->value);
         }
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        clean_state_folder();
     }
 
 
     TEST(raft, test_that_raft_bails_on_bad_rehydrate)
     {
-        std::string good_state{"1 0 1 4"};
-        std::string bad_state{"X 0 X X"};
+        const std::string state_path{"./.state/" + TEST_NODE_UUID + ".state"};
+        const std::string log_path{"./.state/" + TEST_NODE_UUID + ".dat"};
 
-        std::string bad_entry_00{"1 4 THIS_IS_BADeyJiem4tYXB0K"};
-        std::string valid_entry{"1 2 eyJiem4tYXBpIjoiY3J1ZCIsImNtZCI6ImNyZWF0ZSIsImRhdGEiOnsia2V5Ijoia2V5MCIsInZhbHVlIjoidmFsdWVfZm9yX2tleTAifSwiZGItdXVpZCI6Im15LXV1aWQiLCJyZXF1ZXN0LWlkIjowfQo="};
+        const std::string good_state{"1 0 1 4"};
+        const std::string bad_state{"X 0 X X"};
 
-        boost::filesystem::path log_path{"./.state/" + TEST_NODE_UUID + ".dat"};
-        boost::filesystem::path state_path{"./.state/" + TEST_NODE_UUID + ".state"};
+        const std::string bad_entry_00{"1 4 THIS_IS_BADeyJiem4tYXB0K"};
+        const std::string valid_entry{"1 2 eyJiem4tYXBpIjoiY3J1ZCIsImNtZCI6ImNyZWF0ZSIsImRhdGEiOnsia2V5Ijoia2V5MCIsInZhbHVlIjoidmFsdWVfZm9yX2tleTAifSwiZGItdXVpZCI6Im15LXV1aWQiLCJyZXF1ZXN0LWlkIjowfQo="};
 
-        boost::filesystem::create_directory(log_path.parent_path());
-
-        boost::filesystem::remove(log_path);
-        boost::filesystem::remove(state_path);
+        clean_state_folder();
 
         // good state/ empty entry
-        std::ofstream out(state_path.string(), std::ios::out | std::ios::binary);
+        std::ofstream out(state_path, std::ios::out | std::ios::binary);
         out << good_state;
         out.close();
 
-        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out.open(log_path, std::ios::out | std::ios::binary);
         out << "";
         out.close();
 
@@ -766,7 +777,7 @@ namespace bzn
                         , std::runtime_error);
 
         // good state/bad entry
-        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out.open(log_path, std::ios::out | std::ios::binary);
         out << bad_entry_00;
         out.close();
 
@@ -775,7 +786,7 @@ namespace bzn
                         , std::runtime_error);
 
         // good state/good entry/mis-matched
-        out.open(log_path.string(), std::ios::out | std::ios::binary);
+        out.open(log_path, std::ios::out | std::ios::binary);
         out << valid_entry;
         out.close();
 
@@ -783,13 +794,13 @@ namespace bzn
                 std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
                         , std::runtime_error);
 
-        boost::filesystem::remove(log_path);
-        boost::filesystem::remove(state_path);
+        clean_state_folder();
     }
 
 
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
     {
+        clean_state_folder();
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
 
         bzn::message msg;
@@ -829,13 +840,30 @@ namespace bzn
         EXPECT_EQ(quorum.entry_type, bzn::log_entry_type::joint_quorum);
         EXPECT_EQ((uint32_t)10, quorum.log_index);
         EXPECT_EQ((uint32_t)89, quorum.term);
+
+        clean_state_folder();
+    }
+
+
+    TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
+    {
+        bzn::message expected;
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        EXPECT_EQ(raft.log_entries.size(), static_cast<size_t>(1));
+        EXPECT_EQ(raft.log_entries.front().entry_type, bzn::log_entry_type::single_quorum);
+        bzn::message msg = raft.log_entries.front().msg;
+
+        for (const auto& p : msg)
+        {
+            bzn::peer_address_t peer_address(p["host"].asString(), (uint16_t)p["port"].asUInt(), p["name"].asString(), p["uuid"].asString());
+            EXPECT_TRUE(TEST_PEER_LIST.find(peer_address) != TEST_PEER_LIST.end());
+        }
     }
 
 
     TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        clean_state_folder();
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
 
         raft.log_entries.clear();
@@ -849,8 +877,6 @@ namespace bzn
         raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 5, 8, msg});
 
         EXPECT_THROW( raft.last_quorum(), std::runtime_error);
-
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        clean_state_folder();
     }
 } // bzn

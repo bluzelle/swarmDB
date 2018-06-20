@@ -22,12 +22,14 @@
 namespace bzn
 {
     const std::string MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_IN_LOG{"ENCOUNTERED_INVALID_ENTRY_IN_LOG"};
+    const std::string MSG_ERROR_ENCOUNTERED_INVALID_ENTRY_TYPE_IN_LOG{"ENCOUNTERED_INVALID_ENTRY_TYPE_IN_LOG"};
 
     enum class log_entry_type : uint8_t
     {
         log_entry,
         single_quorum,
-        joint_quorum
+        joint_quorum,
+        undefined
     };
 
 
@@ -35,7 +37,7 @@ namespace bzn
     {
         friend std::ostream &operator<<(std::ostream& out, const log_entry& obj)
         {
-            out << obj.log_index << " " << obj.term << " " << boost::beast::detail::base64_encode(obj.json_to_string(obj.msg)) << "\n";
+            out << static_cast<uint8_t >(obj.entry_type) << " " << obj.log_index << " " << obj.term << " " << boost::beast::detail::base64_encode(obj.json_to_string(obj.msg)) << "\n";
             return out;
         }
 
@@ -45,8 +47,11 @@ namespace bzn
             std::string msg_string;
             obj.log_index = std::numeric_limits<uint32_t>::max();
             obj.term = std::numeric_limits<uint32_t>::max();
-            obj.msg.clear();
-            in >> obj.log_index >> obj.term >> msg_string;
+
+            auto entry_type = static_cast<uint8_t>(bzn::log_entry_type::undefined);
+            in >> entry_type >> obj.log_index >> obj.term >> msg_string;
+            obj.entry_type = static_cast<log_entry_type >(entry_type);
+            
             if (!msg_string.empty())
             {
                 Json::Reader reader;
