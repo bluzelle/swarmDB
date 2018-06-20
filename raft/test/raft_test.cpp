@@ -798,54 +798,6 @@ namespace bzn
     }
 
 
-
-
-
-
-//    TEST(raft, test_raft_can_find_last_quorum_log_entry)
-//    {
-//        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
-//
-//        bzn::message msg;
-//
-//        msg["data"] = "data";
-//
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::single_quorum, 1, 1, msg});
-//
-//        auto quorum = raft.last_quorum();
-//        EXPECT_EQ(quorum.entry_type, bzn::log_entry_type::single_quorum);
-//        EXPECT_EQ((uint32_t)1, quorum.log_index);
-//        EXPECT_EQ((uint32_t)1, quorum.term);
-//
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 2, 2, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 3, 3, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 4, 5, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 5, 8, msg});
-//
-//        quorum = raft.last_quorum();
-//        EXPECT_EQ(quorum.entry_type, bzn::log_entry_type::single_quorum);
-//        EXPECT_EQ((uint32_t)1, quorum.log_index);
-//        EXPECT_EQ((uint32_t)1, quorum.term);
-//
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::joint_quorum, 6, 13, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 7, 21, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 8, 34, msg});
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, 9, 55, msg});
-//
-//        quorum = raft.last_quorum();
-//        EXPECT_EQ(quorum.entry_type, bzn::log_entry_type::joint_quorum);
-//        EXPECT_EQ((uint32_t)6, quorum.log_index);
-//        EXPECT_EQ((uint32_t)13, quorum.term);
-//
-//        raft.log_entries.emplace_back(log_entry{bzn::log_entry_type::joint_quorum, 10, 89, msg});
-//
-//        quorum = raft.last_quorum();
-//        EXPECT_EQ(quorum.entry_type, bzn::log_entry_type::joint_quorum);
-//        EXPECT_EQ((uint32_t)10, quorum.log_index);
-//        EXPECT_EQ((uint32_t)89, quorum.term);
-//    }
-
-
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
     {
         clean_state_folder();
@@ -891,9 +843,6 @@ namespace bzn
 
         clean_state_folder();
     }
-
-
-
 
 
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
