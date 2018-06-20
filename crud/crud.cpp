@@ -183,8 +183,7 @@ crud::handle_get_keys(const bzn::message& /*msg*/, const database_msg& request, 
 
     if (keys.empty())
     {
-        // todo: how to deal with no keys found
-        response.mutable_resp()->set_error(bzn::MSG_INVALID_ARGUMENTS);
+        response.mutable_resp()->add_keys();
         return;
     }
 
