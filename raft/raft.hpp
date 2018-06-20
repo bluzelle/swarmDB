@@ -133,6 +133,10 @@ namespace bzn
 
         bzn::log_entry last_quorum();
 
+        bool is_majority(const std::set<bzn::uuid_t>& votes);
+        uint32_t last_majority_replicated_log_index();
+        std::list<std::set<bzn::uuid_t>> get_active_quorum();
+
         bzn::log_entry last_quorum();
 
         // raft state...
