@@ -163,8 +163,9 @@ raft::request_vote_request()
 
     // update raft state...
     this->voted_for = this->uuid;
-    this->yes_votes = 1;
-    this->no_votes = 0;
+    this->yes_votes.clear();
+    this->yes_votes.emplace(this->uuid);
+    this->no_votes.clear();
     ++this->current_term;
     this->update_raft_state(this->current_term, bzn::raft_state::candidate);
     this->leader.clear();
@@ -227,7 +228,8 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     // tally the votes...
     if (msg["data"]["granted"].asBool())
     {
-        if (++this->yes_votes > this->peers.size()/2)
+        this->yes_votes.emplace(msg["data"]["from"].asString());
+        if(this->is_majority(this->yes_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::leader);
 
@@ -244,7 +246,8 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     }
     else
     {
-        if (++this->no_votes > this->peers.size()/2)
+        this->no_votes.emplace(msg["data"]["from"].asString());
+        if(this->is_majority(this->no_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::follower);
 
@@ -722,16 +725,8 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         return;
     }
 
-    // copy over match_log_index
-    std::vector<uint32_t> match_indexes;
-    for(const auto& match_index : this->peer_match_index)
-    {
-        match_indexes.push_back(match_index.second);
-    }
-    std::sort(match_indexes.begin(), match_indexes.end());
-    size_t consensus_commit_index = match_indexes[uint32_t(std::ceil(match_indexes.size()/2.0))];
-
-    while (this->commit_index < consensus_commit_index)
+    uint32_t consensus_match_index = this->last_majority_replicated_log_index();
+    while (this->commit_index < consensus_match_index)
     {
         this->perform_commit(this->commit_index, this->log_entries[this->commit_index]);
     }
@@ -948,6 +943,82 @@ raft::last_quorum()
         throw std::runtime_error(MSG_NO_PEERS_IN_LOG);
     }
     return *result;
+}
+
+uint32_t
+raft::last_majority_replicated_log_index()
+{
+    uint32_t result = UINT32_MAX;
+
+    for(const auto& uuids: this->get_active_quorum())
+    {
+        std::vector<size_t> match_indices;
+        std::transform(uuids.begin(), uuids.end(),
+                       std::back_inserter(match_indices),
+                       [&](const auto& uuid) {
+                           return this->peer_match_index[uuid];
+                       });
+
+        std::sort(match_indices.begin(), match_indices.end());
+        uint32_t median = match_indices[uint32_t(std::ceil(match_indices.size()/2.0))];
+        result = std::min(result, median);
+    }
+
+    return result;
+}
+
+std::list<std::set<bzn::uuid_t>>
+raft::get_active_quorum()
+{
+    // TODO: cache this method when the active quorum is updated
+
+    auto extract_uuid = [](const auto& node_json) -> bzn::uuid_t
+        {
+            return node_json["uuid"].asString();
+        };
+
+    bzn::log_entry log_entry = this->last_quorum();
+    switch(log_entry.entry_type) {
+        case bzn::log_entry_type::single_quorum: {
+            std::set<bzn::uuid_t> result;
+            std::transform(log_entry.msg.begin(), log_entry.msg.end(), std::inserter(result, result.begin()),
+                           extract_uuid);
+
+            return std::list<std::set<bzn::uuid_t>>{result};
+        }
+        case bzn::log_entry_type::joint_quorum: {
+            std::set<bzn::uuid_t> result_old, result_new;
+            std::transform(log_entry.msg["old"].begin(), log_entry.msg["old"].end(),
+                           std::inserter(result_old, result_old.begin()),
+                           extract_uuid);
+            std::transform(log_entry.msg["new"].begin(), log_entry.msg["new"].end(),
+                           std::inserter(result_new, result_new.begin()),
+                           extract_uuid);
+
+            return std::list<std::set<bzn::uuid_t>>{result_old, result_new};
+        }
+        default:
+            throw std::runtime_error("last_quorum gave something that's not a quorum");
+    }
+    return std::list<std::set<bzn::uuid_t>>();
+}
+
+bool
+raft::is_majority(const std::set<bzn::uuid_t>& votes)
+{
+    for(const auto& s : this->get_active_quorum())
+    {
+        std::set<bzn::uuid_t> intersect;
+        std::set_intersection(s.begin(), s.end(), votes.begin(), votes.end(),
+                              std::inserter(intersect, intersect.begin()));
+
+        if(intersect.size() * 2 <= s.size())
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 

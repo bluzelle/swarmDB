@@ -122,13 +122,17 @@ namespace bzn
 
         bzn::log_entry last_quorum();
 
+        bool is_majority(const std::set<bzn::uuid_t>& votes);
+        uint32_t last_majority_replicated_log_index();
+        std::list<std::set<bzn::uuid_t>> get_active_quorum();
+
         bzn::log_entry last_quorum();
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;
-        std::size_t     yes_votes = 0;
-        std::size_t     no_votes  = 0;
+        std::set<bzn::uuid_t> yes_votes;
+        std::set<bzn::uuid_t> no_votes;
 #ifndef __APPLE__
         std::optional<bzn::uuid_t> voted_for;
 #else
