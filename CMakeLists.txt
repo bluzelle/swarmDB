@@ -51,10 +51,9 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_search_module(JSONCPP REQUIRED jsoncpp)
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+include(cmake/jsoncpp.cmake)
 
 # googletest (todo: we may want to have a flag enabling/disabling tests?)
 include(cmake/googletest.cmake)
