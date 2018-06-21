@@ -1247,7 +1247,6 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
         bzn::message msg = make_add_peer_request();
-        std::cout << msg.toStyledString() << "\n";
         mh(msg,this->mock_session);
 
         // the end result will be the appending of a joint quorum to the log entries
