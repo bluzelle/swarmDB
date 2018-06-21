@@ -110,7 +110,9 @@ namespace
         msg["cmd"] = "add_peer";
         msg["data"]["peer"]["name"] = new_peer.name;
         msg["data"]["peer"]["host"] = new_peer.host;
+        msg["data"]["peer"]["host"] = new_peer.host;
         msg["data"]["peer"]["port"] = new_peer.port;
+        msg["data"]["peer"]["http_port"] = new_peer.http_port;
         msg["data"]["peer"]["uuid"] = new_peer.uuid;
         return msg;
     }
@@ -119,12 +121,7 @@ namespace
     bzn::message
     make_duplicate_add_peer_request()
     {
-        bzn::message  msg;
-        msg["bzn-api"] = "raft";
-        msg["cmd"] = "add_peer";
-        msg["data"]["peer"]["name"] = new_peer.name;
-        msg["data"]["peer"]["host"] = new_peer.host;
-        msg["data"]["peer"]["port"] = new_peer.port;
+        bzn::message  msg{make_add_peer_request()};
         msg["data"]["peer"]["uuid"] = TEST_PEER_LIST.begin()->uuid;
         return msg;
     }
@@ -162,6 +159,7 @@ namespace
                           peers_list.emplace(
                                   p["host"].asString(),
                                   uint16_t(p["port"].asUInt()),
+                                  uint16_t(p["http_port"].asUInt()),
                                   p["name"].asString(),
                                   p["uuid"].asString());
                       });
