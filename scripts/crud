@@ -37,7 +37,8 @@ except ImportError:
                       "$ cd proto\n"
                       "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n")
 
-def send_request(ws, uuid, msg):
+
+def send_request(ws, uuid, msg, save=None):
     msg.db.header.db_uuid = uuid
     msg.db.header.transaction_id = random.randint(1,sys.maxint)
 
@@ -52,6 +53,10 @@ def send_request(ws, uuid, msg):
     resp = database_pb2.database_response()
     resp.ParseFromString(ws.recv())
     print resp
+
+    # save to a file...
+    if save:
+        open(save, "w").write(resp.resp.value)
 
 
 def create_request(key, value):
@@ -110,6 +115,8 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid")
     parser.add_argument("-k", "--key",   type=str, default=None, help="key")
     parser.add_argument("-v", "--value", type=str, default=None, help="value")
+    parser.add_argument("-f", "--file",  type=str, default=None, help="file to upload")
+    parser.add_argument("-s", "--save",  type=str, default=None, help="save to file")
 
     args = parser.parse_args()
 
@@ -129,6 +136,9 @@ if __name__ == "__main__":
         print "no node address given"
         exit(1)
 
+    if args.file:
+        args.value = open(args.file).read()
+
     ws = websocket.WebSocket()
     ws.connect("ws://" + args.node)
 
@@ -137,7 +147,7 @@ if __name__ == "__main__":
         send_request(ws, args.uuid, create_request(args.key, args.value))
     elif args.command == "read":
         if args.key == None: print "no key given"; exit(1)
-        send_request(ws, args.uuid, read_request(args.key))
+        send_request(ws, args.uuid, read_request(args.key), args.save)
     elif args.command == "update":
         if args.key == None or args.value == None: print "no key or value given"; exit(1)
         send_request(ws, args.uuid, update_request(args.key, args.value))
