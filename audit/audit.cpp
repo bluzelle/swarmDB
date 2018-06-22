@@ -38,9 +38,10 @@ audit::error_count() const
 void
 audit::start()
 {
-    this->node->register_for_message("audit"
-                                     , std::bind(&audit::handle, shared_from_this(),
-                                                        std::placeholders::_1, std::placeholders::_2));
+    this->node->register_for_message("audit", std::bind(&audit::handle
+                                                        , shared_from_this()
+                                                        , std::placeholders::_1
+                                                        , std::placeholders::_2));
     LOG(info) << "Audit module running";
 }
 

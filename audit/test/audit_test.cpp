@@ -23,7 +23,7 @@ TEST(audit_test, no_errors_initially){
     EXPECT_EQ(a.error_strings().size(), 0u);
 }
 
-TEST(audit_test, conflicting_leaders)
+TEST(audit_test, audit_throws_error_when_leaders_conflict)
 {
     leader_status a, b, c;
 
@@ -46,7 +46,7 @@ TEST(audit_test, conflicting_leaders)
     EXPECT_EQ(audit.error_count(), 1u);
 }
 
-TEST(audit_test, conflicting_commits)
+TEST(audit_test, audit_throws_error_when_commits_conflict)
 {
     commit_notification a, b, c;
 

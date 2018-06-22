@@ -492,13 +492,12 @@ raft::notify_leader_status()
     msg.mutable_leader_status()->set_term(this->current_term);
     msg.mutable_leader_status()->set_leader(this->uuid);
 
-    bzn::message json;
-    json["bzn-api"] = "audit";
-    json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+    auto json_ptr = std::make_shared<bzn::message>();
+    (*json_ptr)["bzn-api"] = "audit";
+    (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
 
-    auto json_ptr = std::make_shared<bzn::message>(json);
-
-    for (const auto& peer : this->peers) {
+    for (const auto& peer : this->peers)
+    {
         auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
         this->node->send_message(ep, json_ptr);
     }
@@ -516,13 +515,13 @@ raft::notify_commit(size_t log_index, const std::string& operation)
     msg.mutable_commit()->set_log_index(log_index);
     msg.mutable_commit()->set_operation(operation);
 
-    bzn::message json;
-    json["bzn-api"] = "audit";
-    json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+    auto json_ptr = std::make_shared<bzn::message>();
+    (*json_ptr)["bzn-api"] = "audit";
+    (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
 
-    auto json_ptr = std::make_shared<bzn::message>(json);
 
-    for (const auto& peer : this->peers) {
+    for (const auto& peer : this->peers) 
+    {
         auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
         this->node->send_message(ep, json_ptr);
     }
