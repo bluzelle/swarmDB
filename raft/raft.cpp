@@ -893,6 +893,7 @@ raft::create_state_files()
         bzn::message peer;
         peer["host"] = p.host;
         peer["port"] = p.port;
+        peer["http_port"] = p.http_port;
         peer["name"] = p.name;
         peer["uuid"] = p.uuid;
         root.append(peer);

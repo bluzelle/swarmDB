@@ -927,13 +927,18 @@ namespace bzn
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
         EXPECT_EQ(raft.log_entries.size(), static_cast<size_t>(1));
         EXPECT_EQ(raft.log_entries.front().entry_type, bzn::log_entry_type::single_quorum);
-        bzn::message msg = raft.log_entries.front().msg;
+        bzn::message json_quorum = raft.log_entries.front().msg;
+        EXPECT_EQ(json_quorum.size(), TEST_PEER_LIST.size());
 
-        for (const auto& p : msg)
-        {
-            bzn::peer_address_t peer_address(p["host"].asString(), (uint16_t)p["port"].asUInt(), p["name"].asString(), p["uuid"].asString());
-            EXPECT_TRUE(TEST_PEER_LIST.find(peer_address) != TEST_PEER_LIST.end());
-        }
+        std::for_each(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer) {
+            EXPECT_TRUE(
+                    std::find_if(json_quorum.begin(), json_quorum.end(), [&](const auto& jp)
+                    {
+                        return peer.uuid == jp["uuid"].asString();
+                    })
+                    != json_quorum.end()
+            );
+        });
     }
 
 
