@@ -28,6 +28,15 @@
 #include <experimental/optional>
 #endif
 
+namespace
+{
+    const std::string ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER";
+    const std::string ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER";
+    const std::string MSG_ERROR_CURRENT_QUORUM_IS_JOINT = "A peer cannot be added or removed until the last quorum change request has been processed.";
+    const std::string ERROR_PEER_ALREADY_EXISTS = "ERROR_PEER_ALREADY_EXISTS";
+    const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
+}
+
 
 namespace bzn
 {
@@ -40,7 +49,7 @@ namespace bzn
 
         bzn::raft_state get_state() override;
 
-        bool append_log(const bzn::message& msg) override;
+        bool append_log(const bzn::message& msg, const bzn::log_entry_type entry_type) override;
 
         void register_commit_handler(commit_handler handler) override;
 
@@ -67,6 +76,11 @@ namespace bzn
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
         FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
         FRIEND_TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log);
+        FRIEND_TEST(raft_test, test_that_add_peer_request_to_leader_results_in_correct_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_add_or_remove_peer_fails_if_current_quorum_is_a_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_remove_peer_request_to_leader_results_in_correct_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_add_peer_fails_when_the_peer_uuid_is_already_in_the_single_quorum);
+        FRIEND_TEST(raft_test, test_that_remove_peer_fails_when_the_peer_uuid_is_not_in_the_single_quorum);
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
         FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
 
@@ -97,8 +111,14 @@ namespace bzn
         std::string state_path();
         void save_state();
         void load_state();
+        void import_state_files();
+        void create_state_files();
+        bool state_files_exist();
 
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
+        bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
+        bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
+        bzn::message create_joint_quorum_by_removing_peer(const bzn::message &last_quorum_message, const bzn::uuid_t& peer_uuid);
 
         bzn::log_entry last_quorum();
 

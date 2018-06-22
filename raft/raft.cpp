@@ -27,6 +27,7 @@ namespace
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
 
+
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
 
@@ -57,39 +58,8 @@ raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
 
     this->get_raft_timeout_scale();
 
-    if (boost::filesystem::exists(this->state_path()) && boost::filesystem::exists(this->entries_log_path()))
-    {
-        this->load_state();
-        this->load_log_entries();
-    }
-    else
-    {
-        bzn::message root;
-        for(const auto& p : this->peers)
-        {
-            bzn::message peer;
-            peer["host"] = p.host;
-            peer["port"] = p.port;
-            peer["name"] = p.name;
-            peer["uuid"] = p.uuid;
-            root.append(peer);
-        }
-        const bzn::log_entry entry{
-            bzn::log_entry_type::single_quorum,
-            0,
-            0,
-            root};
-
-
-        this->log_entries.emplace_back(entry);
-        this->append_entry_to_log(entry);
-        this->save_state();
-    }
-        const auto& last_entry = this->log_entries.back();
-        if (last_entry.log_index!=this->last_log_index || last_entry.term!=this->current_term)
-        {
-            throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
-        }
+    this->state_files_exist() ? this->import_state_files()
+                               : this->create_state_files();
 }
 
 
@@ -225,7 +195,7 @@ raft::request_vote_request()
 void
 raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    LOG(debug) << '\n' << msg.toStyledString().substr(0, 60) << "...";
+    LOG(debug) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
     // If I'm the leader and my term is less than vote request then I should step down and become a follower.
     if (this->current_state == bzn::raft_state::leader)
@@ -369,7 +339,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 
     auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, this->last_log_index));
 
-    LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, 60) << "...";
+    LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
     session->send_message(resp_msg, true);
 
@@ -392,12 +362,109 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 }
 
 
+bzn::message
+raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer)
+{
+    bzn::message joint_quorum;
+    joint_quorum["old"] = joint_quorum["new"] = last_quorum_message;
+    joint_quorum["new"].append(new_peer);
+    return joint_quorum;
+}
+
+bzn::message
+raft::create_joint_quorum_by_removing_peer(const bzn::message &last_quorum_message, const bzn::uuid_t& peer_uuid)
+{
+    bzn::message joint_quorum;
+    joint_quorum["old"] = last_quorum_message;
+    std::for_each(last_quorum_message.begin(), last_quorum_message.end(),
+                  [&](const auto& p)
+                  {
+                      if(p["uuid"]!=peer_uuid)
+                      {
+                          joint_quorum["new"].append(p);
+                      }
+                  });
+    return joint_quorum;
+}
+
+
 void
 raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
     std::lock_guard<std::mutex> lock(this->raft_lock);
+    LOG(debug) << "Received WS message:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
-    LOG(debug) << "Received WS message:\n" << msg.toStyledString().substr(0, 60) << "...";
+    // TODO: refactor add/remove peers to move the functionality into handlers
+    if(msg["cmd"].asString()=="add_peer")
+    {
+        if(this->get_state() != bzn::raft_state::leader)
+        {
+            bzn::message response;
+            response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        bzn::log_entry last_quorum_entry = this->last_quorum();
+        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+        {
+            bzn::message response;
+            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        const auto& same_peer = std::find_if(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
+                [&](const auto& p)
+                {
+                    return p["uuid"].asString() == msg["data"]["peer"]["uuid"].asString();
+                });
+        if(same_peer != last_quorum_entry.msg.end())
+        {
+            bzn::message response;
+            response["error"] = ERROR_PEER_ALREADY_EXISTS;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, msg["data"]["peer"]), bzn::log_entry_type::joint_quorum);
+        return;
+    }
+    else if(msg["cmd"].asString() == "remove_peer" )
+    {
+        if(this->get_state() != bzn::raft_state::leader)
+        {
+            bzn::message response;
+            response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        bzn::log_entry last_quorum_entry = this->last_quorum();
+        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+        {
+            bzn::message response;
+            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        const auto& same_peer = std::find_if(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
+                                             [&](const auto& p)
+                                             {
+                                                 return p["uuid"].asString() == msg["data"]["uuid"].asString();
+                                             });
+        if(same_peer == last_quorum_entry.msg.end())
+        {
+            bzn::message response;
+            response["error"] = ERROR_PEER_NOT_FOUND;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
+        this->append_log_unsafe(this->create_joint_quorum_by_removing_peer(last_quorum_entry.msg, msg["data"]["uuid"].asString()), bzn::log_entry_type::joint_quorum);
+        return;
+    }
 
     uint32_t term = msg["data"]["term"].asUInt();
 
@@ -447,7 +514,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
                 auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, true, this->last_log_index));
 
-                LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, 60) << "...";
+                LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
                 session->send_message(resp_msg, true);
             }
@@ -548,7 +615,7 @@ raft::request_append_entries()
 
             auto req = std::make_shared<bzn::message>(bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg));
 
-            LOG(debug) << "Sending request:\n" << req->toStyledString().substr(0, 60) << "...";
+            LOG(debug) << "Sending request:\n" << req->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
             this->node->send_message(ep, req);
         }
@@ -576,7 +643,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
     if (msg["data"]["matchIndex"].asUInt() > this->log_entries.size() ||
         msg["data"]["term"].asUInt() != this->current_term)
     {
-        LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, 60) << "...";
+        LOG(error) << "received bad match index or term: \n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
         return;
     }
 
@@ -605,19 +672,26 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 
 
 bool
-raft::append_log(const bzn::message& msg)
+raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type)
 {
-    std::lock_guard<std::mutex> lock(this->raft_lock);
-
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "not the leader, can't append log_entries!";
         return false;
     }
 
-    this->log_entries.emplace_back(log_entry{bzn::log_entry_type::log_entry, ++this->last_log_index, this->current_term, msg});
+    this->log_entries.emplace_back(log_entry{entry_type, ++this->last_log_index, this->current_term, msg});
 
     return true;
+}
+
+
+
+bool
+raft::append_log(const bzn::message& msg, const bzn::log_entry_type entry_type)
+{
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+    return this->append_log_unsafe(msg, entry_type);
 }
 
 
@@ -806,4 +880,51 @@ raft::last_quorum()
         throw std::runtime_error(MSG_NO_PEERS_IN_LOG);
     }
     return *result;
+}
+
+
+void
+raft::create_state_files()
+{
+    bzn::message root;
+    for(const auto& p : this->peers)
+    {
+        bzn::message peer;
+        peer["host"] = p.host;
+        peer["port"] = p.port;
+        peer["http_port"] = p.http_port;
+        peer["name"] = p.name;
+        peer["uuid"] = p.uuid;
+        root.append(peer);
+    }
+    const bzn::log_entry entry{
+            bzn::log_entry_type::single_quorum,
+            0,
+            0,
+            root};
+
+    this->log_entries.emplace_back(entry);
+    this->append_entry_to_log(entry);
+    this->save_state();
+}
+
+
+void
+raft::import_state_files()
+{
+    this->load_state();
+    this->load_log_entries();
+    const auto& last_entry = this->log_entries.back();
+    if (last_entry.log_index!=this->last_log_index || last_entry.term!=this->current_term)
+    {
+        throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
+    }
+}
+
+
+bool
+raft::state_files_exist()
+{
+    return boost::filesystem::exists(this->state_path())
+           && boost::filesystem::exists(this->entries_log_path());
 }

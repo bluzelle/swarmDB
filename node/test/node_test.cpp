@@ -217,7 +217,7 @@ namespace  bzn
         node->register_for_message("crud",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
-                LOG(info) << '\n' << msg.toStyledString().substr(0, 60) << "...";
+                LOG(info) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
                 // echo back what the client sent...
                 session->send_message(std::make_shared<bzn::message>(msg), true);

@@ -192,7 +192,6 @@ main(int argc, const char* argv[])
             LOG(error) << "No ETH balance found";
             return 0;
         }
-        ///////////////////////////////////////////////////////////////////////
 
         bzn::bootstrap_peers peers;
         init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url());
@@ -238,7 +237,7 @@ main(int argc, const char* argv[])
         node->register_for_message("ping",
             [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
             {
-                LOG(debug) << '\n' << msg.toStyledString().substr(0, 60) << "...";
+                LOG(debug) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
                 auto reply = std::make_shared<bzn::message>(msg);
                 (*reply)["bzn-api"] = "pong";
