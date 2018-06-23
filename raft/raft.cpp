@@ -26,11 +26,6 @@ namespace
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
-    const std::string ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER";
-    const std::string ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER";
-    const std::string MSG_ERROR_CURRENT_QUORUM_IS_JOINT = "A peer cannot be added or removed until the last quorum change request has been processed.";
-
-
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
 
@@ -41,28 +36,34 @@ namespace
 using namespace bzn;
 
 
-raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node, const bzn::peers_list_t& peers, bzn::uuid_t uuid)
+raft::raft(
+        std::shared_ptr<bzn::asio::io_context_base> io_context
+        , std::shared_ptr<bzn::node_base> node
+        , const bzn::peers_list_t& peers
+        , bzn::uuid_t uuid)
     : timer(io_context->make_unique_steady_timer())
-    , peers(peers)
     , uuid(std::move(uuid))
     , node(std::move(node))
 {
     // we must have a list of peers!
-    if (this->peers.empty())
+    if (peers.empty())
     {
         throw std::runtime_error(NO_PEERS_ERRORS_MGS);
     }
-
-    // setup peer tracking...
-    for (const auto& peer : this->peers)
-    {
-        this->peer_match_index[peer.uuid] = 0;
-    }
-
+    this->setup_peer_tracking(peers);
     this->get_raft_timeout_scale();
 
     this->state_files_exist() ? this->import_state_files()
-                               : this->create_state_files();
+                               : this->create_state_files(peers);
+}
+
+void
+raft::setup_peer_tracking(const bzn::peers_list_t& peers)
+{
+    for (const auto& peer : peers)
+    {
+        this->peer_match_index[peer.uuid] = 0;
+    }
 }
 
 
@@ -170,7 +171,7 @@ raft::request_vote_request()
     this->update_raft_state(this->current_term, bzn::raft_state::candidate);
     this->leader.clear();
 
-    for (const auto& peer : this->peers)
+    for (const auto& peer : this->get_all_peers())
     {
         // skip ourselves...
         if (peer.uuid == this->uuid)
@@ -433,6 +434,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
+        this->peer_match_index[msg["data"]["peer"]["uuid"].asString()] = 0;
         this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, msg["data"]["peer"]), bzn::log_entry_type::joint_quorum);
         return;
     }
@@ -472,63 +474,9 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         return;
     }
 
-
-    if(msg["cmd"].asString()=="add_peer")
+    // check that the message is from a node in the most recent quorum
+    if(!in_quorum(msg["data"]["from"].asString()))
     {
-        if(this->get_state() != bzn::raft_state::leader)
-        {
-            bzn::message response;
-            response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::log_entry last_quorum_entry = this->last_quorum();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::message joint_quorum;
-        joint_quorum["old"] = joint_quorum["new"] = last_quorum_entry.msg;
-        joint_quorum["new"].append(msg["data"]["peer"]);
-        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
-        return;
-    }
-    else if(msg["cmd"].asString() == "remove_peer" )
-    {
-        if(this->get_state() != bzn::raft_state::leader)
-        {
-            bzn::message response;
-            response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::log_entry last_quorum_entry = this->last_quorum();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        const auto uuid = msg["data"]["uuid"].asString();
-        bzn::message joint_quorum;
-        joint_quorum["old"] = last_quorum_entry.msg;
-        std::for_each(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
-                      [&](const auto& p)
-                      {
-                          if(p["uuid"]!=uuid)
-                          {
-                              joint_quorum["new"].append(p);
-                          }
-                      });
-        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
         return;
     }
 
@@ -637,7 +585,7 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
 void
 raft::request_append_entries()
 {
-    for (const auto& peer : this->peers)
+    for (const auto& peer : this->get_all_peers())
     {
         // skip ourselves...
         if (peer.uuid == this->uuid)
@@ -790,7 +738,7 @@ raft::get_leader()
 {
     std::lock_guard<std::mutex> lock(this->raft_lock);
 
-    for(auto& peer : this->peers)
+    for(auto& peer : this->get_all_peers())
     {
         if (peer.uuid == this->leader)
         {
@@ -822,7 +770,7 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
             }
             else if (command == "delete")
             {
-                storage->remove(db_uuid, key);}
+                storage->remove(db_uuid, key);
             }
         }
     }
@@ -963,6 +911,7 @@ raft::last_majority_replicated_log_index()
     return result;
 }
 
+
 std::list<std::set<bzn::uuid_t>>
 raft::get_active_quorum()
 {
@@ -999,6 +948,7 @@ raft::get_active_quorum()
     return std::list<std::set<bzn::uuid_t>>();
 }
 
+
 bool
 raft::is_majority(const std::set<bzn::uuid_t>& votes)
 {
@@ -1018,11 +968,59 @@ raft::is_majority(const std::set<bzn::uuid_t>& votes)
 }
 
 
+bool
+raft::in_quorum(const bzn::uuid_t& uuid)
+{
+    const auto quorums = this->get_active_quorum();
+    for(const auto q : quorums)
+    {
+        if (std::find(q.begin(), q.end(),uuid) != q.end())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bzn::peers_list_t
+raft::get_all_peers()
+{
+    bzn::peers_list_t result;
+    std::vector<std::reference_wrapper<bzn::message>> all_peers;
+    bzn::log_entry log_entry = this->last_quorum();
+
+    if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
+    {
+        all_peers.emplace_back(log_entry.msg);
+    }
+    else
+    {
+        all_peers.emplace_back(log_entry.msg["old"]);
+        all_peers.emplace_back(log_entry.msg["new"]);
+    }
+
+    for(std::reference_wrapper<bzn::message> jpeers   : all_peers)
+    {
+        for(const bzn::message& p : jpeers.get())
+        {
+            result.emplace(p["host"].asString(),
+                           uint16_t(p["port"].asUInt()),
+                           uint16_t(p["http_port"].asUInt()),
+                           p["name"].asString(),
+                           p["uuid"].asString());
+        }
+
+    }
+    return result;
+}
+
+
 void
-raft::create_state_files()
+raft::create_state_files(const bzn::peers_list_t& peers)
 {
     bzn::message root;
-    for(const auto& p : this->peers)
+    for(const auto& p : peers)
     {
         bzn::message peer;
         peer["host"] = p.host;
