@@ -198,8 +198,12 @@ if __name__ == "__main__":
     try:
         # if user gave us a file we need to read it as our value
         args.value = open(args.file).read()
-    except:
-        pass
+    except IOError as e:
+        print("failed to read value from file: {}".format(e.strerror))
+        exit(1)
+
+
+
 
     resp = args.func(args)
 
