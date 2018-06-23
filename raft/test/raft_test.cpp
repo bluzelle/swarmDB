@@ -224,6 +224,7 @@ namespace bzn
 
         // create raft...
         auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        raft->enable_audit = false;
 
         // and away we go...
         raft->start();
@@ -329,6 +330,7 @@ namespace bzn
 
         // create raft...
         auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        raft->enable_audit = false;
 
         // and away we go...
         raft->start();
