@@ -31,14 +31,15 @@ from argparse import RawDescriptionHelpFormatter
 try:
     import bluzelle_pb2
     import database_pb2
-except ImportError:
-    raise ImportError("\n\nPlease generate Bluzelle protobuf modules:\n"
+except ImportError as e:
+    raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
                       "\n"
                       "$ cd proto\n"
-                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n")
+                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n".format(e.message))
 
 
-def send_request(ws, uuid, msg, save=None):
+def send_request(node, uuid, msg):
+    ws = websocket.create_connection("ws://" + node)
     msg.db.header.db_uuid = uuid
     msg.db.header.transaction_id = random.randint(1,sys.maxint)
 
@@ -46,17 +47,24 @@ def send_request(ws, uuid, msg, save=None):
     req["bzn-api"] = "database";
     req["msg"] = base64.b64encode(msg.SerializeToString())
 
-    print msg
-    print "-" * 60 + '\n'
+    print("Sending: {}".format(msg))
+    print("-" * 60 + '\n')
 
     ws.send(json.dumps(req))
     resp = database_pb2.database_response()
     resp.ParseFromString(ws.recv())
-    print resp
 
-    # save to a file...
-    if save:
-        open(save, "w").write(resp.resp.value)
+    if resp.WhichOneof('success') == 'redirect':
+        redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
+        print("redirecting to leader at {}...\n".format(redirect_node))
+        resp = send_request(redirect_node, uuid, msg)
+    else:
+        print("Response: \n{}".format(resp))
+        print("-" * 60 + '\n')
+
+    ws.close()
+
+    return resp
 
 
 def create_request(key, value):
@@ -103,63 +111,94 @@ def size_request():
     return msg
 
 
+def create_handler(args):
+    return send_request(args.node, args.uuid, create_request(args.key, args.value))
+
+
+def read_handler(args):
+    return send_request(args.node, args.uuid, read_request(args.key))
+
+
+def delete_handler(args):
+    return send_request(args.node, args.uuid, delete_request(args.key))
+
+
+def has_handler(args):
+    return send_request(args.node, args.uuid, has_request(args.key))
+
+
+def keys_handler(args):
+    return send_request(args.node, args.uuid, keys_request())
+
+
+def size_handler(args):
+    return send_request(args.node, args.uuid, size_request())
+
+
 if __name__ == "__main__":
 
     parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
 
-    parser.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)")
+    required = parser.add_argument_group('required arguments')
 
-    parser.add_argument("-c", "--command", type=str, choices=["create", "read", "update", "delete", "has", "keys", "size"],
-                        default=None, help="command [default: %(default)s]")
+    required.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)", required=True)
+    required.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
 
-    parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid")
-    parser.add_argument("-k", "--key",   type=str, default=None, help="key")
-    parser.add_argument("-v", "--value", type=str, default=None, help="value")
-    parser.add_argument("-f", "--file",  type=str, default=None, help="file to upload")
-    parser.add_argument("-s", "--save",  type=str, default=None, help="save to file")
+    subparsers = parser.add_subparsers()
+
+    # Create
+    create_parser = subparsers.add_parser('create', help="Create k/v")
+    create_parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    group = create_parser.add_mutually_exclusive_group()
+    group.add_argument("-v", "--value", type=str, default=None, help="value")
+    group.add_argument("-f", "--file",  type=str, default=None, help="file to upload")
+    create_parser.set_defaults(func=create_handler)
+
+    # Read
+    read_parser = subparsers.add_parser('read', help="Read k/v")
+    read_parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    read_parser.set_defaults(func=read_handler)
+
+    # Update
+    update_parser = subparsers.add_parser('create', help="Update k/v")
+    update_parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    update_group = update_parser.add_mutually_exclusive_group()
+    update_group.add_argument("-v", "--value", type=str, default=None, help="value")
+    update_group.add_argument("-f", "--file",  type=str, default=None,  help="file to upload")
+    update_parser.set_defaults(func=create_handler)
+
+    # delete
+    delete_parser = subparsers.add_parser('delete', help="Delete k/v")
+    delete_parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    delete_parser.set_defaults(func=delete_handler)
+
+    # has
+    has_parser = subparsers.add_parser('has', help="Determine whether a key exists within a DB by UUID")
+    has_parser.add_argument("-k", "--key",   type=str, default=None, help="key")
+    has_parser.set_defaults(func=delete_handler)
+
+    # keys
+    keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")
+    keys_parser.set_defaults(func=keys_handler)
+
+    # size
+    size_parser = subparsers.add_parser('size', help="Determine the size of the DB by UUID")
+    size_parser.set_defaults(func=size_handler)
 
     args = parser.parse_args()
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-        exit(1)
-
-    if not args.command:
-        print "no command given"
-        exit(1)
-
-    if not args.uuid:
-        print "no uuid given"
-        exit(1)
-
-    if not args.node:
-        print "no node address given"
-        exit(1)
-
-    if args.file:
+    try:
+        # if user gave us a file we need to read it as our value
         args.value = open(args.file).read()
+    except:
+        pass
 
-    ws = websocket.WebSocket()
-    ws.connect("ws://" + args.node)
+    resp = args.func(args)
 
-    if args.command == "create":
-        if args.key == None or args.value == None: print "no key or value given"; exit(1)
-        send_request(ws, args.uuid, create_request(args.key, args.value))
-    elif args.command == "read":
-        if args.key == None: print "no key given"; exit(1)
-        send_request(ws, args.uuid, read_request(args.key), args.save)
-    elif args.command == "update":
-        if args.key == None or args.value == None: print "no key or value given"; exit(1)
-        send_request(ws, args.uuid, update_request(args.key, args.value))
-    elif args.command == "delete":
-        if args.key == None == None: print "no key given"; exit(1)
-        send_request(ws, args.uuid, delete_request(args.key))
-    elif args.command == "has":
-        if args.key == None: print "no key given"; exit(1)
-        send_request(ws, args.uuid, has_request(args.key))
-    elif args.command == "keys":
-        send_request(ws, args.uuid, keys_request())
-    elif args.command == "size":
-        send_request(ws, args.uuid, size_request())
+    # save to a file...
+    if args.save:
+        with open(args.save, "w") as outfile:
+            outfile.write(str(resp))
 
-    ws.close()
+    exit(0)
