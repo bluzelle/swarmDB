@@ -21,6 +21,7 @@
 #include <include/bluzelle.hpp>
 #include <node/node_base.hpp>
 #include <node/session_base.hpp>
+#include <proto/bluzelle.pb.h>
 
 namespace bzn
 {
@@ -34,6 +35,10 @@ namespace bzn
         virtual const std::list<std::string> &error_strings() const = 0;
 
         virtual void handle(const bzn::message& msg, std::shared_ptr<bzn::session_base> session) = 0;
+
+        virtual void handle_commit(const commit_notification&) = 0;
+
+        virtual void handle_leader_status(const leader_status&) = 0;
     };
 
 }

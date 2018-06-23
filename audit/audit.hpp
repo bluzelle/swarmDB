@@ -16,7 +16,6 @@
 
 #include <audit/audit_base.hpp>
 #include <node/node_base.hpp>
-#include <proto/bluzelle.pb.h>
 #include <mutex>
 
 namespace bzn
@@ -32,8 +31,8 @@ namespace bzn
         const std::list<std::string>& error_strings() const override;
 
         void handle(const bzn::message& message, std::shared_ptr<bzn::session_base> session) override;
-        void handle_commit(const commit_notification&);
-        void handle_leader_status(const leader_status&);
+        void handle_commit(const commit_notification&) override;
+        void handle_leader_status(const leader_status&) override;
 
         void start() override;
 

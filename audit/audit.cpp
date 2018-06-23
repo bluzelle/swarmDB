@@ -19,7 +19,7 @@
 using namespace bzn;
 
 audit::audit(std::shared_ptr<bzn::node_base> node)
-        : node(node)
+        : node(std::move(node))
 {
 
 }
