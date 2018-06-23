@@ -483,60 +483,6 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
 
     if(msg["cmd"].asString()=="add_peer")
     {
-        if(this->get_state() != bzn::raft_state::leader)
-        {
-            bzn::message response;
-            response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::log_entry last_quorum_entry = this->last_quorum();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::message joint_quorum;
-        joint_quorum["old"] = joint_quorum["new"] = last_quorum_entry.msg;
-        joint_quorum["new"].append(msg["data"]["peer"]);
-        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
-        return;
-    }
-    else if(msg["cmd"].asString() == "remove_peer" )
-    {
-        if(this->get_state() != bzn::raft_state::leader)
-        {
-            bzn::message response;
-            response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::log_entry last_quorum_entry = this->last_quorum();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        const auto uuid = msg["data"]["uuid"].asString();
-        bzn::message joint_quorum;
-        joint_quorum["old"] = last_quorum_entry.msg;
-        std::for_each(last_quorum_entry.msg.begin(), last_quorum_entry.msg.end(),
-                      [&](const auto& p)
-                      {
-                          if(p["uuid"]!=uuid)
-                          {
-                              joint_quorum["new"].append(p);
-                          }
-                      });
-        this->append_log_unsafe(joint_quorum, bzn::log_entry_type::joint_quorum);
         return;
     }
 
@@ -1071,6 +1017,54 @@ raft::get_all_peers()
                            p["name"].asString(),
                            p["uuid"].asString());
         }
+    }
+    return result;
+}
+
+
+bool
+raft::in_quorum(const bzn::uuid_t& uuid)
+{
+    const auto quorums = this->get_active_quorum();
+    for(const auto q : quorums)
+    {
+        if (std::find(q.begin(), q.end(),uuid) != q.end())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bzn::peers_list_t
+raft::get_all_peers()
+{
+    bzn::peers_list_t result;
+    std::vector<std::reference_wrapper<bzn::message>> all_peers;
+    bzn::log_entry log_entry = this->last_quorum();
+
+    if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
+    {
+        all_peers.emplace_back(log_entry.msg);
+    }
+    else
+    {
+        all_peers.emplace_back(log_entry.msg["old"]);
+        all_peers.emplace_back(log_entry.msg["new"]);
+    }
+
+    for(std::reference_wrapper<bzn::message> jpeers   : all_peers)
+    {
+        for(const bzn::message& p : jpeers.get())
+        {
+            result.emplace(p["host"].asString(),
+                           uint16_t(p["port"].asUInt()),
+                           uint16_t(p["http_port"].asUInt()),
+                           p["name"].asString(),
+                           p["uuid"].asString());
+        }
+
     }
     return result;
 }
