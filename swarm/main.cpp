@@ -26,6 +26,7 @@
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <audit/audit.hpp>
 #include <thread>
 
 
@@ -210,6 +211,7 @@ main(int argc, const char* argv[])
         auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
+        auto audit = std::make_shared<bzn::audit>(node);
 
         // get our http listener port...
         uint16_t http_port;
@@ -224,6 +226,7 @@ main(int argc, const char* argv[])
         ep.port(http_port);
         auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
 
+        
         raft->initialize_storage_from_log(storage);
         
         // todo: just for testing...
@@ -243,6 +246,7 @@ main(int argc, const char* argv[])
         crud->start();
         raft->start();
         http_server->start();
+        audit->start();
 
         print_banner(options, eth_balance);
 
