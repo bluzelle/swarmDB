@@ -17,6 +17,7 @@
 #include <audit/audit_base.hpp>
 #include <node/node_base.hpp>
 #include <proto/bluzelle.pb.h>
+#include <mutex>
 
 namespace bzn
 {
@@ -26,7 +27,7 @@ namespace bzn
     public:
         audit(std::shared_ptr<bzn::node_base> node);
 
-        uint error_count() const override;
+        size_t error_count() const override;
 
         const std::list<std::string>& error_strings() const override;
 
@@ -43,6 +44,8 @@ namespace bzn
 
         std::map<uint64_t, bzn::uuid_t> recorded_leaders;
         std::map<uint64_t, std::string> recorded_commits;
+
+        std::once_flag start_once;
     };
 
 }

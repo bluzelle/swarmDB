@@ -18,7 +18,8 @@
 
 using namespace bzn;
 
-audit::audit(std::shared_ptr<bzn::node_base> node): node(node)
+audit::audit(std::shared_ptr<bzn::node_base> node)
+        : node(node)
 {
 
 }
@@ -29,7 +30,7 @@ audit::error_strings() const
     return this->recorded_errors;
 }
 
-uint
+size_t
 audit::error_count() const
 {
     return this->recorded_errors.size();
@@ -38,11 +39,14 @@ audit::error_count() const
 void
 audit::start()
 {
-    this->node->register_for_message("audit", std::bind(&audit::handle
-                                                        , shared_from_this()
-                                                        , std::placeholders::_1
-                                                        , std::placeholders::_2));
-    LOG(info) << "Audit module running";
+    std::call_once(this->start_once, [this]()
+    {
+        this->node->register_for_message("audit", std::bind(&audit::handle
+                                                            , shared_from_this()
+                                                            , std::placeholders::_1
+                                                            , std::placeholders::_2));
+        LOG(info) << "Audit module running";
+    });
 }
 
 void

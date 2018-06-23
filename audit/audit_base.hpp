@@ -29,7 +29,7 @@ namespace bzn
     {
         virtual void start() = 0;
 
-        virtual uint error_count() const = 0;
+        virtual size_t error_count() const = 0;
 
         virtual const std::list<std::string> &error_strings() const = 0;
 
