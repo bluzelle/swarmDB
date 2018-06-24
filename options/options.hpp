@@ -27,6 +27,8 @@ namespace bzn
 
         boost::asio::ip::tcp::endpoint get_listener() const override;
 
+        bzn::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint() const override;
+
         std::string get_ethererum_address() const override;
 
         std::string get_bootstrap_peers_file() const override;
@@ -51,6 +53,7 @@ namespace bzn
         bool validate();
 
         Json::Value config_data;
+
     };
 
 } // bzn

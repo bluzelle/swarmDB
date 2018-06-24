@@ -33,6 +33,8 @@ namespace
     const std::string DEBUG_LOGGING_KEY          = "debug_logging";
     const std::string LOG_TO_STDOUT_KEY          = "log_to_stdout";
     const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
+    const std::string MONITOR_ADDRESS_KEY        = "monitor_address";
+    const std::string MONITOR_PORT_KEY           = "monitor_port";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -83,6 +85,29 @@ options::get_listener() const
     }
 }
 
+bzn::optional<boost::asio::ip::udp::endpoint>
+options::get_monitor_endpoint() const
+{
+    if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
+    {
+        try
+        {
+            auto ep = boost::asio::ip::udp::endpoint{boost::asio::ip::address::from_string(
+                    this->config_data[MONITOR_ADDRESS_KEY].asString())
+                    , uint16_t(this->config_data[MONITOR_PORT_KEY].asUInt())};
+            return bzn::optional<boost::asio::ip::udp::endpoint>{ep};
+        }
+        catch(std::exception& ex)
+        {
+            throw std::runtime_error(std::string("\nCould not create monitor endpoint: ") + ex.what());
+        }
+
+    }
+    else
+    {
+        return bzn::optional<boost::asio::ip::udp::endpoint>{};
+    }
+}
 
 std::string
 options::get_ethererum_address() const
@@ -190,6 +215,11 @@ options::validate()
     {
         std::cerr << "Missing Ethereum IO API token entry!" << '\n';
         return false;
+    }
+
+    if (!this->get_monitor_endpoint())
+    {
+        LOG(info) << "No monitor address provided; will not send monitor packets";
     }
 
     return true;

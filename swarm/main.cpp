@@ -211,7 +211,7 @@ main(int argc, const char* argv[])
         auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
-        auto audit = std::make_shared<bzn::audit>(io_context, node);
+        auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint());
 
         // get our http listener port...
         uint16_t http_port;

@@ -14,14 +14,21 @@
 
 #include <audit/audit.hpp>
 #include <boost/beast/core/detail/base64.hpp>
+#include <boost/asio/ip/udp.hpp>
 #include <boost/format.hpp>
 
 using namespace bzn;
 
-audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node)
+audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
+        , std::shared_ptr<bzn::node_base> node
+        , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint)
+
         : node(node)
+        , io_context(io_context)
         , leader_alive_timer(io_context->make_unique_steady_timer())
         , leader_progress_timer(io_context->make_unique_steady_timer())
+        , monitor_endpoint(monitor_endpoint)
+        , socket(io_context->make_unique_udp_socket())
 {
 
 }
@@ -47,6 +54,17 @@ audit::start()
                                                             , shared_from_this()
                                                             , std::placeholders::_1
                                                             , std::placeholders::_2));
+        if(this->monitor_endpoint)
+        {
+            LOG(info) << boost::format("Audit module running, will send stats to %1%:%2%")
+                % this->monitor_endpoint->address().to_string()
+                % this->monitor_endpoint->port();
+        }
+        else
+        {
+            LOG(info) "Audit module running, but not sending stats anywhere because no monitor configured";
+        }
+         
         LOG(info) << "Audit module running";
         this->reset_leader_alive_timer();
     });
@@ -71,7 +89,7 @@ audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
         return;
     }
 
-    this->report_error("noleader", str(boost::format("No leader alive [%1%]") % ++(this->leader_dead_count)));
+    this->report_error(bzn::NO_LEADER_METRIC_NAME, str(boost::format("No leader alive [%1%]") % ++(this->leader_dead_count)));
     this->clear_leader_progress_timer();
     this->leader_has_uncommitted_entries = false;
     this->leader_alive_timer->expires_from_now(this->leader_timeout);
@@ -103,7 +121,7 @@ void audit::handle_leader_progress_timeout(const boost::system::error_code& ec)
         return;
     }
 
-    this->report_error("leaderstuck", str(boost::format("Leader alive but not making progress [%1%]") % ++(this->leader_stuck_count)));
+    this->report_error(bzn::LEADER_STUCK_METRIC_NAME, str(boost::format("Leader alive but not making progress [%1%]") % ++(this->leader_stuck_count)));
     this->leader_progress_timer->expires_from_now(this->leader_timeout);
     this->leader_progress_timer->async_wait(std::bind(&audit::handle_leader_progress_timeout, shared_from_this(), std::placeholders::_1));
 }
@@ -113,7 +131,23 @@ audit::report_error(const std::string& short_name, const std::string& descriptio
 {
     this->recorded_errors.push_back(description);
     LOG(fatal) << boost::format("[%1%]: %2%") % short_name % description;
-    // TODO: Push to stats.d goes here
+    this->send_to_monitor(str(boost::format("%1%:1|c") % short_name));
+}
+
+void
+audit::send_to_monitor(const std::string& stat)
+{
+    if(!this->monitor_endpoint)
+    {
+        return;
+    }
+
+    LOG(debug) << boost::format("Sending stat '%1%' to monitor at %2%:%3%")
+                  % stat
+                  % this->monitor_endpoint->address().to_string()
+                  % this->monitor_endpoint->port();
+
+    this->socket->send_to(stat, *(this->monitor_endpoint));
 }
 
 void
@@ -146,6 +180,7 @@ audit::handle_leader_status(const leader_status& leader_status)
     if(this->recorded_leaders.count(leader_status.term()) == 0)
     {
         LOG(info) << "audit recording that leader of term " << leader_status.term() << " is '" << leader_status.leader() << "'";
+        this->send_to_monitor(bzn::NEW_LEADER_METRIC_NAME+":1|c");
         this->recorded_leaders[leader_status.term()] = leader_status.leader();
     }
     else if(this->recorded_leaders[leader_status.term()] != leader_status.leader())
@@ -155,7 +190,7 @@ audit::handle_leader_status(const leader_status& leader_status)
                                              % this->recorded_leaders[leader_status.term()]
                                              % leader_status.term()
                                              % leader_status.leader());
-        this->report_error("leaderconflict", err);
+        this->report_error(bzn::LEADER_CONFLICT_METRIC_NAME, err);
     }
 
     this->reset_leader_alive_timer();
@@ -214,6 +249,8 @@ audit::handle_commit(const commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
+    this->send_to_monitor(bzn::COMMIT_METRIC_NAME + ":1|c");
+
     if(this->recorded_commits.count(commit.log_index()) == 0)
     {
         LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at index " << commit.log_index();
@@ -226,6 +263,6 @@ audit::handle_commit(const commit_notification& commit)
                               % this->recorded_commits[commit.log_index()]
                               % commit.log_index()
                               % commit.operation());
-        this->report_error("commitconflict", err);
+        this->report_error(bzn::COMMIT_CONFLICT_METRIC_NAME, err);
     }
 }

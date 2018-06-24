@@ -46,6 +46,16 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
 
+    class udp_socket_base
+    {
+    public:
+        virtual ~udp_socket_base() = default;
+
+        virtual void send_to(const std::string& msg, boost::asio::ip::udp::endpoint ep) = 0;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
     class tcp_acceptor_base
     {
     public:
@@ -97,6 +107,8 @@ namespace bzn::asio
 
         virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() = 0;
 
+        virtual std::unique_ptr<bzn::asio::udp_socket_base> make_unique_udp_socket() = 0;
+
         virtual std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() = 0;
 
         virtual std::unique_ptr<bzn::asio::strand_base> make_unique_strand() = 0;
@@ -110,6 +122,25 @@ namespace bzn::asio
 
     ///////////////////////////////////////////////////////////////////////////
     // the real thing...
+
+    class udp_socket final : public udp_socket_base
+    {
+    public:
+        explicit udp_socket(boost::asio::io_context& io_context)
+            : socket(io_context)
+        {
+            this->socket.open(boost::asio::ip::udp::v4());
+        }
+
+        void send_to(const std::string& msg, boost::asio::ip::udp::endpoint ep)
+        {
+            this->socket.send_to(boost::asio::buffer(msg), ep);
+        }
+    private:
+        boost::asio::ip::udp::socket socket;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
 
     class tcp_socket final : public tcp_socket_base
     {
@@ -238,6 +269,11 @@ namespace bzn::asio
         std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() override
         {
             return std::make_unique<bzn::asio::tcp_socket>(this->io_context);
+        }
+
+        std::unique_ptr<bzn::asio::udp_socket_base> make_unique_udp_socket() override
+        {
+            return std::make_unique<bzn::asio::udp_socket>(this->io_context);
         }
 
         std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() override

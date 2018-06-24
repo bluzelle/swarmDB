@@ -25,6 +25,12 @@
 
 namespace bzn
 {
+    const std::string LEADER_CONFLICT_METRIC_NAME = "safety.leader_conflict";
+    const std::string COMMIT_CONFLICT_METRIC_NAME = "safety.commit_conflict";
+    const std::string LEADER_STUCK_METRIC_NAME = "liveness.leader_stuck";
+    const std::string NO_LEADER_METRIC_NAME = "liveness.no_leader";
+    const std::string COMMIT_METRIC_NAME = "stats.commit_heard";
+    const std::string NEW_LEADER_METRIC_NAME = "stats.new_leader_heard";
 
     class audit_base
     {

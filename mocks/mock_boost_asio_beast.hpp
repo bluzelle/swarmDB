@@ -37,6 +37,17 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
+    class Mockudp_socket_base : public udp_socket_base {
+    public:
+        MOCK_METHOD2(send_to,
+                    void(const std::string& msg, boost::asio::ip::udp::endpoint ep));
+    };
+
+}  // namespace bzn::asio
+
+
+namespace bzn::asio {
+
     class Mocktcp_acceptor_base : public tcp_acceptor_base {
     public:
         MOCK_METHOD2(async_accept,
@@ -88,6 +99,8 @@ namespace bzn::asio {
             std::unique_ptr<bzn::asio::tcp_acceptor_base>(const boost::asio::ip::tcp::endpoint& ep));
         MOCK_METHOD0(make_unique_tcp_socket,
             std::unique_ptr<bzn::asio::tcp_socket_base>());
+        MOCK_METHOD0(make_unique_udp_socket,
+                     std::unique_ptr<bzn::asio::udp_socket_base>());
         MOCK_METHOD0(make_unique_steady_timer,
             std::unique_ptr<bzn::asio::steady_timer_base>());
         MOCK_METHOD0(make_unique_strand,
