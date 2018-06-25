@@ -26,8 +26,6 @@ namespace
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
-
-
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
 
@@ -38,28 +36,34 @@ namespace
 using namespace bzn;
 
 
-raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node, const bzn::peers_list_t& peers, bzn::uuid_t uuid)
+raft::raft(
+        std::shared_ptr<bzn::asio::io_context_base> io_context
+        , std::shared_ptr<bzn::node_base> node
+        , const bzn::peers_list_t& peers
+        , bzn::uuid_t uuid)
     : timer(io_context->make_unique_steady_timer())
-    , peers(peers)
     , uuid(std::move(uuid))
     , node(std::move(node))
 {
     // we must have a list of peers!
-    if (this->peers.empty())
+    if (peers.empty())
     {
         throw std::runtime_error(NO_PEERS_ERRORS_MGS);
     }
-
-    // setup peer tracking...
-    for (const auto& peer : this->peers)
-    {
-        this->peer_match_index[peer.uuid] = 0;
-    }
-
+    this->setup_peer_tracking(peers);
     this->get_raft_timeout_scale();
 
     this->state_files_exist() ? this->import_state_files()
-                               : this->create_state_files();
+                               : this->create_state_files(peers);
+}
+
+void
+raft::setup_peer_tracking(const bzn::peers_list_t& peers)
+{
+    for (const auto& peer : peers)
+    {
+        this->peer_match_index[peer.uuid] = 0;
+    }
 }
 
 
@@ -160,13 +164,14 @@ raft::request_vote_request()
 
     // update raft state...
     this->voted_for = this->uuid;
-    this->yes_votes = 1;
-    this->no_votes = 0;
+    this->yes_votes.clear();
+    this->yes_votes.emplace(this->uuid);
+    this->no_votes.clear();
     ++this->current_term;
     this->update_raft_state(this->current_term, bzn::raft_state::candidate);
     this->leader.clear();
 
-    for (const auto& peer : this->peers)
+    for (const auto& peer : this->get_all_peers())
     {
         // skip ourselves...
         if (peer.uuid == this->uuid)
@@ -224,7 +229,8 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     // tally the votes...
     if (msg["data"]["granted"].asBool())
     {
-        if (++this->yes_votes > this->peers.size()/2)
+        this->yes_votes.emplace(msg["data"]["from"].asString());
+        if(this->is_majority(this->yes_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::leader);
 
@@ -241,7 +247,8 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     }
     else
     {
-        if (++this->no_votes > this->peers.size()/2)
+        this->no_votes.emplace(msg["data"]["from"].asString());
+        if(this->is_majority(this->no_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::follower);
 
@@ -427,6 +434,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
+        this->peer_match_index[msg["data"]["peer"]["uuid"].asString()] = 0;
         this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, msg["data"]["peer"]), bzn::log_entry_type::joint_quorum);
         return;
     }
@@ -463,6 +471,12 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         }
 
         this->append_log_unsafe(this->create_joint_quorum_by_removing_peer(last_quorum_entry.msg, msg["data"]["uuid"].asString()), bzn::log_entry_type::joint_quorum);
+        return;
+    }
+
+    // check that the message is from a node in the most recent quorum
+    if(!in_quorum(msg["data"]["from"].asString()))
+    {
         return;
     }
 
@@ -571,7 +585,7 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
 void
 raft::request_append_entries()
 {
-    for (const auto& peer : this->peers)
+    for (const auto& peer : this->get_all_peers())
     {
         // skip ourselves...
         if (peer.uuid == this->uuid)
@@ -655,16 +669,8 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         return;
     }
 
-    // copy over match_log_index
-    std::vector<uint32_t> match_indexes;
-    for(const auto& match_index : this->peer_match_index)
-    {
-        match_indexes.push_back(match_index.second);
-    }
-    std::sort(match_indexes.begin(), match_indexes.end());
-    size_t consensus_commit_index = match_indexes[uint32_t(std::ceil(match_indexes.size()/2.0))];
-
-    while (this->commit_index < consensus_commit_index)
+    uint32_t consensus_match_index = this->last_majority_replicated_log_index();
+    while (this->commit_index < consensus_match_index)
     {
         this->perform_commit(this->commit_index, this->log_entries[this->commit_index]);
     }
@@ -732,7 +738,7 @@ raft::get_leader()
 {
     std::lock_guard<std::mutex> lock(this->raft_lock);
 
-    for(auto& peer : this->peers)
+    for(auto& peer : this->get_all_peers())
     {
         if (peer.uuid == this->leader)
         {
@@ -751,20 +757,21 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
     {
         if(log_entry.entry_type == bzn::log_entry_type::log_entry)
         {
-        const auto command = log_entry.msg["cmd"].asString();
-        const auto db_uuid = log_entry.msg["db-uuid"].asString();
-        const auto key = log_entry.msg["data"]["key"].asString();
-        if (command == "create")
-        {
-            storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "update")
-        {
-            storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
-        }
-        else if (command == "delete")
-        {
-            storage->remove(db_uuid, key);}
+            const auto command = log_entry.msg["cmd"].asString();
+            const auto db_uuid = log_entry.msg["db-uuid"].asString();
+            const auto key = log_entry.msg["data"]["key"].asString();
+            if (command == "create")
+            {
+                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "update")
+            {
+                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+            }
+            else if (command == "delete")
+            {
+                storage->remove(db_uuid, key);
+            }
         }
     }
 }
@@ -882,12 +889,137 @@ raft::last_quorum()
     return *result;
 }
 
+uint32_t
+raft::last_majority_replicated_log_index()
+{
+    uint32_t result = UINT32_MAX;
+
+    for(const auto& uuids: this->get_active_quorum())
+    {
+        std::vector<size_t> match_indices;
+        std::transform(uuids.begin(), uuids.end(),
+                       std::back_inserter(match_indices),
+                       [&](const auto& uuid) {
+                           return this->peer_match_index[uuid];
+                       });
+
+        std::sort(match_indices.begin(), match_indices.end());
+        uint32_t median = match_indices[uint32_t(std::ceil(match_indices.size()/2.0))];
+        result = std::min(result, median);
+    }
+
+    return result;
+}
+
+
+std::list<std::set<bzn::uuid_t>>
+raft::get_active_quorum()
+{
+    // TODO: cache this method when the active quorum is updated
+
+    auto extract_uuid = [](const auto& node_json) -> bzn::uuid_t
+        {
+            return node_json["uuid"].asString();
+        };
+
+    bzn::log_entry log_entry = this->last_quorum();
+    switch(log_entry.entry_type) {
+        case bzn::log_entry_type::single_quorum: {
+            std::set<bzn::uuid_t> result;
+            std::transform(log_entry.msg.begin(), log_entry.msg.end(), std::inserter(result, result.begin()),
+                           extract_uuid);
+
+            return std::list<std::set<bzn::uuid_t>>{result};
+        }
+        case bzn::log_entry_type::joint_quorum: {
+            std::set<bzn::uuid_t> result_old, result_new;
+            std::transform(log_entry.msg["old"].begin(), log_entry.msg["old"].end(),
+                           std::inserter(result_old, result_old.begin()),
+                           extract_uuid);
+            std::transform(log_entry.msg["new"].begin(), log_entry.msg["new"].end(),
+                           std::inserter(result_new, result_new.begin()),
+                           extract_uuid);
+
+            return std::list<std::set<bzn::uuid_t>>{result_old, result_new};
+        }
+        default:
+            throw std::runtime_error("last_quorum gave something that's not a quorum");
+    }
+    return std::list<std::set<bzn::uuid_t>>();
+}
+
+
+bool
+raft::is_majority(const std::set<bzn::uuid_t>& votes)
+{
+    for(const auto& s : this->get_active_quorum())
+    {
+        std::set<bzn::uuid_t> intersect;
+        std::set_intersection(s.begin(), s.end(), votes.begin(), votes.end(),
+                              std::inserter(intersect, intersect.begin()));
+
+        if(intersect.size() * 2 <= s.size())
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+bool
+raft::in_quorum(const bzn::uuid_t& uuid)
+{
+    const auto quorums = this->get_active_quorum();
+    for(const auto q : quorums)
+    {
+        if (std::find(q.begin(), q.end(),uuid) != q.end())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bzn::peers_list_t
+raft::get_all_peers()
+{
+    bzn::peers_list_t result;
+    std::vector<std::reference_wrapper<bzn::message>> all_peers;
+    bzn::log_entry log_entry = this->last_quorum();
+
+    if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
+    {
+        all_peers.emplace_back(log_entry.msg);
+    }
+    else
+    {
+        all_peers.emplace_back(log_entry.msg["old"]);
+        all_peers.emplace_back(log_entry.msg["new"]);
+    }
+
+    for(auto jpeers : all_peers)
+    {
+        for(const bzn::message& p : jpeers.get())
+        {
+            result.emplace(p["host"].asString(),
+                           uint16_t(p["port"].asUInt()),
+                           uint16_t(p["http_port"].asUInt()),
+                           p["name"].asString(),
+                           p["uuid"].asString());
+        }
+    }
+    return result;
+}
+
 
 void
-raft::create_state_files()
+raft::create_state_files(const bzn::peers_list_t& peers)
 {
     bzn::message root;
-    for(const auto& p : this->peers)
+    for(const auto& p : peers)
     {
         bzn::message peer;
         peer["host"] = p.host;
@@ -907,7 +1039,6 @@ raft::create_state_files()
     this->append_entry_to_log(entry);
     this->save_state();
 }
-
 
 void
 raft::import_state_files()

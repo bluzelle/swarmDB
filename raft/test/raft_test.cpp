@@ -408,7 +408,7 @@ namespace bzn
 
         // send a message through the registered "node message" callback...
         bzn::message msg;
-        mh(bzn::create_append_entries_request("uuid", 1, 0, 0, 0, 0, msg), mock_session);
+        mh(bzn::create_append_entries_request("uuid2", 1, 0, 0, 0, 0, msg), mock_session);
 
         // we expect a "no" response in this state...
         EXPECT_EQ(resp["cmd"].asString(), "AppendEntriesReply");
@@ -917,7 +917,8 @@ namespace bzn
 
         clean_state_folder();
     }
-    
+
+
 
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
     {
@@ -1120,11 +1121,10 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-        // TODO: Handle add_peer and remove_peer handlers here.
-        // - only the leader can do this
-        // - the current last quorum is not a joint quorum
-
         mh( make_add_peer_request(),this->mock_session);
+
+        EXPECT_TRUE(raft->peer_match_index.find( new_peer.uuid ) != raft->peer_match_index.end());
+        EXPECT_EQ(raft->peer_match_index[new_peer.uuid], size_t(0));
 
         // the end result will be the appending of a joint quorum to the log entries
         bzn::log_entry entry = raft->last_quorum();
@@ -1188,7 +1188,6 @@ namespace bzn
         bzn::message msg = make_add_peer_request();
         mh(msg,this->mock_session);
 
-        // the end result will be the appending of a joint quorum to the log entries
         bzn::log_entry entry = raft->last_quorum();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
@@ -1394,4 +1393,110 @@ namespace bzn
         mh(make_remove_nonexisting_peer_request(), this->mock_session);
     }
 
+
+    TEST(raft, test_that_get_all_peers_returns_correct_peers_list_based_on_current_quorum)
+    {
+        clean_state_folder();
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto peers = raft.get_all_peers();
+
+        EXPECT_EQ(TEST_PEER_LIST.size(), peers.size());
+        EXPECT_EQ(TEST_PEER_LIST,peers);
+
+        // replace the last quorum with a joint quorum
+        bzn::message add_peer = make_add_peer_request();
+        raft.current_state = bzn::raft_state::leader;
+        raft.handle_ws_raft_messages(add_peer, nullptr);
+
+        EXPECT_EQ(raft.get_active_quorum().size(), size_t(2));
+
+        peers = raft.get_all_peers();
+        EXPECT_EQ(peers.size(), TEST_PEER_LIST.size() + 1);
+
+        clean_state_folder();
+    }
+
+
+    TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately)
+    {
+        clean_state_folder();
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+
+        EXPECT_EQ(bzn::log_entry_type::single_quorum, raft.last_quorum().entry_type);
+
+        auto active_list = raft.get_active_quorum();
+
+        EXPECT_EQ(active_list.size(), size_t(1));
+
+        std::set<bzn::uuid_t> peers = active_list.front();
+        std::set<bzn::uuid_t> expected_peers;
+        std::transform(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), std::inserter(expected_peers, expected_peers.begin())
+                , [](const auto& peer)
+                       {
+                           return peer.uuid;
+                       });
+
+        std::set<bzn::uuid_t> peer_set;
+        std::set_intersection(expected_peers.begin(), expected_peers.end(), peers.begin(), peers.end(), std::inserter(peer_set,peer_set.begin()));
+        EXPECT_EQ(peer_set.size(), TEST_PEER_LIST.size());
+
+        // replace the last quorum with a joint quorum
+        bzn::message add_peer = make_add_peer_request();
+        raft.current_state = bzn::raft_state::leader;
+        raft.handle_ws_raft_messages(add_peer, nullptr);
+
+        active_list = raft.get_active_quorum();
+        EXPECT_EQ(active_list.size(), size_t(2));
+        const auto old_peers = active_list.front();
+        const auto new_peers = active_list.back();
+
+        EXPECT_EQ(old_peers.size(), size_t(3));
+        EXPECT_EQ(new_peers.size(), size_t(4));
+
+        peer_set.clear();
+
+        std::set_difference(new_peers.begin(), new_peers.end()
+                , old_peers.begin(), old_peers.end()
+                , std::inserter(peer_set,peer_set.begin()));
+
+        EXPECT_EQ(peer_set.size(), size_t(1));
+
+        EXPECT_EQ(new_peer.uuid, *peer_set.find(new_peer.uuid));
+
+        clean_state_folder();
+    }
+
+
+    TEST(raft, test_that_is_majority_returns_expected_result_for_single_and_joint_quorums)
+    {
+        clean_state_folder();
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+
+        EXPECT_EQ(bzn::log_entry_type::single_quorum, raft.last_quorum().entry_type);
+
+        std::set<bzn::uuid_t> yes_votes;
+        auto peer_iter = TEST_PEER_LIST.begin();
+        yes_votes.emplace(peer_iter->uuid);
+        EXPECT_FALSE(raft.is_majority(yes_votes));
+
+        ++peer_iter;
+        yes_votes.emplace(peer_iter->uuid);
+        EXPECT_TRUE(raft.is_majority(yes_votes));
+
+        ++peer_iter;
+        yes_votes.emplace(peer_iter->uuid);
+        EXPECT_TRUE(raft.is_majority(yes_votes));
+
+        raft.current_state = bzn::raft_state::leader;
+        raft.handle_ws_raft_messages(make_add_peer_request(), nullptr);
+
+        yes_votes.clear();
+        yes_votes.emplace(new_peer.uuid);
+        EXPECT_FALSE(raft.is_majority(yes_votes));
+
+        peer_iter = TEST_PEER_LIST.begin();
+        yes_votes.emplace(peer_iter->uuid);
+        EXPECT_FALSE(raft.is_majority(yes_votes));
+        clean_state_folder();
+    }
 } // bzn

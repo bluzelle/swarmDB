@@ -83,6 +83,11 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_remove_peer_fails_when_the_peer_uuid_is_not_in_the_single_quorum);
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
         FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
+        FRIEND_TEST(raft, test_that_get_all_peers_returns_correct_peers_list_based_on_current_quorum);
+        FRIEND_TEST(raft, test_that_is_majority_returns_expected_result_for_single_and_joint_quorums);
+        FRIEND_TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately);
+
+        void setup_peer_tracking(const bzn::peers_list_t& peers);
 
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
@@ -112,7 +117,7 @@ namespace bzn
         void save_state();
         void load_state();
         void import_state_files();
-        void create_state_files();
+        void create_state_files(const bzn::peers_list_t& peers);
         bool state_files_exist();
 
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
@@ -120,13 +125,19 @@ namespace bzn
         bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
         bzn::message create_joint_quorum_by_removing_peer(const bzn::message &last_quorum_message, const bzn::uuid_t& peer_uuid);
 
+        bool is_majority(const std::set<bzn::uuid_t>& votes);
+        uint32_t last_majority_replicated_log_index();
+        std::list<std::set<bzn::uuid_t>> get_active_quorum();
+        bool in_quorum(const bzn::uuid_t& uuid);
+        bzn::peers_list_t get_all_peers();
+
         bzn::log_entry last_quorum();
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;
-        std::size_t     yes_votes = 0;
-        std::size_t     no_votes  = 0;
+        std::set<bzn::uuid_t> yes_votes;
+        std::set<bzn::uuid_t> no_votes;
 #ifndef __APPLE__
         std::optional<bzn::uuid_t> voted_for;
 #else
@@ -147,7 +158,6 @@ namespace bzn
         std::map<bzn::uuid_t, uint32_t> peer_match_index;
 
         // misc...
-        const bzn::peers_list_t peers;
         bzn::uuid_t uuid;
         bzn::uuid_t leader;
         std::shared_ptr<bzn::node_base> node;
