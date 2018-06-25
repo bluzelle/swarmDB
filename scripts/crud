@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     required.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)", required=True)
     required.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
-    parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
+
 
     subparsers = parser.add_subparsers()
 
@@ -162,6 +162,7 @@ if __name__ == "__main__":
     read_parser = subparsers.add_parser('read', help="Read k/v")
     read_group = read_parser.add_argument_group('required arguments')
     read_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    read_parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
     read_parser.set_defaults(func=read_handler)
 
     # Update
@@ -196,20 +197,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        # if user gave us a file we need to read it as our value
-        args.value = open(args.file).read()
+        if args.file:
+            # if user gave us a file we need to read it as our value
+            args.value = open(args.file).read()
     except IOError as e:
         print("failed to read value from file: {}".format(e.strerror))
         exit(1)
-
-
-
+    except AttributeError:
+        # no input file specified. Value was passed via command line
+        pass
 
     resp = args.func(args)
 
     # save to a file...
     if args.save:
         with open(args.save, "w") as outfile:
-            outfile.write(str(resp))
+            outfile.write(str(resp.resp.value))
 
     exit(0)
