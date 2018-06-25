@@ -62,7 +62,7 @@ raft::setup_peer_tracking(const bzn::peers_list_t& peers)
 {
     for (const auto& peer : peers)
     {
-        this->peer_match_index[peer.uuid] = 0;
+        this->peer_match_index[peer.uuid] = 1;
     }
 }
 
@@ -237,7 +237,7 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
             // clear any previous peer state...
             for (auto& entry : this->peer_match_index)
             {
-                entry.second = 0;
+                entry.second = 1;
             }
 
             this->request_append_entries();
@@ -378,6 +378,14 @@ raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message
     return joint_quorum;
 }
 
+
+bzn::message
+raft::create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum)
+{
+    return joint_quorum["new"];
+}
+
+
 bzn::message
 raft::create_joint_quorum_by_removing_peer(const bzn::message &last_quorum_message, const bzn::uuid_t& peer_uuid)
 {
@@ -434,7 +442,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             return;
         }
 
-        this->peer_match_index[msg["data"]["peer"]["uuid"].asString()] = 0;
+        this->peer_match_index[msg["data"]["peer"]["uuid"].asString()] = 1;
         this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, msg["data"]["peer"]), bzn::log_entry_type::joint_quorum);
         return;
     }
@@ -674,6 +682,13 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
     {
         this->perform_commit(this->commit_index, this->log_entries[this->commit_index]);
     }
+
+
+    // if the last currnt quorum is a joint quorum then create a single quorum and add it to the log
+
+
+
+
 }
 
 
@@ -868,6 +883,13 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
     this->append_entry_to_log(log_entry);
     commit_index++;
     this->save_state();
+
+    if(log_entry.entry_type == bzn::log_entry_type::joint_quorum)
+    {
+        this->append_log_unsafe(
+                this->create_single_quorum_from_joint_quorum(log_entry.msg),
+                bzn::log_entry_type::single_quorum);
+    }
 }
 
 
@@ -888,6 +910,7 @@ raft::last_quorum()
     }
     return *result;
 }
+
 
 uint32_t
 raft::last_majority_replicated_log_index()

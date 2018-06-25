@@ -86,6 +86,7 @@ namespace bzn
         FRIEND_TEST(raft, test_that_get_all_peers_returns_correct_peers_list_based_on_current_quorum);
         FRIEND_TEST(raft, test_that_is_majority_returns_expected_result_for_single_and_joint_quorums);
         FRIEND_TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately);
+        FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
 
@@ -124,6 +125,7 @@ namespace bzn
         bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
         bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
         bzn::message create_joint_quorum_by_removing_peer(const bzn::message &last_quorum_message, const bzn::uuid_t& peer_uuid);
+        bzn::message create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum);
 
         bool is_majority(const std::set<bzn::uuid_t>& votes);
         uint32_t last_majority_replicated_log_index();
@@ -148,7 +150,7 @@ namespace bzn
         // indexes...
         uint32_t last_log_index = 0;
         uint32_t last_log_term  = 0; // not sure if we need this
-        uint32_t commit_index   = 0;
+        uint32_t commit_index   = 1;
         uint32_t timeout_scale  = 1;
 
         std::vector<log_entry> log_entries;
