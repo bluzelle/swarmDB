@@ -114,8 +114,10 @@ def size_request():
 def create_handler(args):
     return send_request(args.node, args.uuid, create_request(args.key, args.value))
 
+
 def update_handler(args):
     return send_request(args.node, args.uuid, update_request(args.key, args.value))
+
 
 def read_handler(args):
     return send_request(args.node, args.uuid, read_request(args.key))
