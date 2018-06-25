@@ -67,7 +67,7 @@ audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
 {
     if(ec)
     {
-        LOG(debug) << "Leader alive timeout canceled " << ec;
+        LOG(debug) << "Leader alive timeout canceled " << ec.message();
         return;
     }
 
@@ -99,7 +99,7 @@ void audit::handle_leader_progress_timeout(const boost::system::error_code& ec)
 {
     if(ec)
     {
-        LOG(debug) << "Leader progress timeout canceled " << ec;
+        LOG(debug) << "Leader progress timeout canceled " << ec.message();
         return;
     }
 

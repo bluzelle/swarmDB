@@ -68,8 +68,8 @@ namespace bzn
 
         std::chrono::milliseconds leader_timeout{std::chrono::milliseconds(30000)};
 
-        bzn::uuid_t last_leader;
-        uint64_t last_leader_commit_index;
+        bzn::uuid_t last_leader = "";
+        uint64_t last_leader_commit_index = 0;
         bool leader_has_uncommitted_entries = false;
     };
 
