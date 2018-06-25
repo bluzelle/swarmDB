@@ -18,6 +18,7 @@
 #include <random>
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include <proto/bluzelle.pb.h>
 
 namespace
 {
@@ -476,8 +477,55 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
     std::lock_guard<std::mutex> lock(this->raft_lock);
 
     this->request_append_entries();
+    this->notify_leader_status();
 }
 
+void
+raft::notify_leader_status()
+{
+    if(!this->enable_audit)
+    {
+        return;
+    }
+
+    audit_message msg;
+    msg.mutable_leader_status()->set_term(this->current_term);
+    msg.mutable_leader_status()->set_leader(this->uuid);
+
+    auto json_ptr = std::make_shared<bzn::message>();
+    (*json_ptr)["bzn-api"] = "audit";
+    (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+
+    for (const auto& peer : this->peers)
+    {
+        auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
+        this->node->send_message(ep, json_ptr);
+    }
+}
+
+void
+raft::notify_commit(size_t log_index, const std::string& operation)
+{
+    if(!this->enable_audit)
+    {
+        return;
+    }
+
+    audit_message msg;
+    msg.mutable_commit()->set_log_index(log_index);
+    msg.mutable_commit()->set_operation(operation);
+
+    auto json_ptr = std::make_shared<bzn::message>();
+    (*json_ptr)["bzn-api"] = "audit";
+    (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+
+
+    for (const auto& peer : this->peers) 
+    {
+        auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
+        this->node->send_message(ep, json_ptr);
+    }
+}
 
 void
 raft::request_append_entries()
@@ -760,6 +808,7 @@ raft::load_log_entries()
 void
 raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
 {
+    this->notify_commit(commit_index, log_entry.json_to_string(log_entry.msg));
     this->commit_handler(log_entry.msg);
     this->append_entry_to_log(log_entry);
     commit_index++;
