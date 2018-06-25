@@ -209,9 +209,13 @@ if __name__ == "__main__":
 
     resp = args.func(args)
 
-    # save to a file...
-    if args.save:
-        with open(args.save, "w") as outfile:
-            outfile.write(str(resp.resp.value))
+    try:
+        # save to a file...
+        if args.save:
+            with open(args.save, "w") as outfile:
+                outfile.write(str(resp.resp.value))
+    except AttributeError:
+        # no output file specified. Result will be printed to console
+        pass
 
     exit(0)
