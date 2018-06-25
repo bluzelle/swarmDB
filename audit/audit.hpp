@@ -66,6 +66,7 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> leader_alive_timer;
         std::unique_ptr<bzn::asio::steady_timer_base> leader_progress_timer;
 
+        // TODO: Make this configurable
         std::chrono::milliseconds leader_timeout{std::chrono::milliseconds(30000)};
 
         bzn::uuid_t last_leader = "";
