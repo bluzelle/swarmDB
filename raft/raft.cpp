@@ -1054,7 +1054,7 @@ raft::get_all_peers()
         all_peers.emplace_back(log_entry.msg["new"]);
     }
 
-    for(std::reference_wrapper<bzn::message> jpeers   : all_peers)
+    for(auto jpeers : all_peers)
     {
         for(const bzn::message& p : jpeers.get())
         {
@@ -1064,7 +1064,6 @@ raft::get_all_peers()
                            p["name"].asString(),
                            p["uuid"].asString());
         }
-
     }
     return result;
 }
