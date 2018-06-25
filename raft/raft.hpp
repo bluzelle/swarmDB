@@ -18,6 +18,7 @@
 #include <bootstrap/bootstrap_peers.hpp>
 #include <raft/raft_base.hpp>
 #include <raft/log_entry.hpp>
+#include <raft/raft_log.hpp>
 #include <storage/storage.hpp>
 #include <gtest/gtest_prod.h>
 #include <fstream>
@@ -27,6 +28,16 @@
 #else
 #include <experimental/optional>
 #endif
+
+namespace
+{
+    const std::string ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER";
+    const std::string ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER";
+    const std::string MSG_ERROR_CURRENT_QUORUM_IS_JOINT = "A peer cannot be added or removed until the last quorum change request has been processed.";
+    const std::string ERROR_PEER_ALREADY_EXISTS = "ERROR_PEER_ALREADY_EXISTS";
+    const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
+    const std::string ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING = "Unable to open log file for writing: ";
+}
 
 
 namespace bzn
@@ -40,7 +51,7 @@ namespace bzn
 
         bzn::raft_state get_state() override;
 
-        bool append_log(const bzn::message& msg) override;
+        bool append_log(const bzn::message& msg, const bzn::log_entry_type entry_type) override;
 
         void register_commit_handler(commit_handler handler) override;
 
@@ -58,12 +69,28 @@ namespace bzn
         FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
         FRIEND_TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries);
         FRIEND_TEST(raft, test_that_raft_can_rehydrate_storage);
-        FRIEND_TEST(raft, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers);
-        FRIEND_TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
-        FRIEND_TEST(raft, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
+        FRIEND_TEST(raft_test, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers);
+        FRIEND_TEST(raft_test, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
+        FRIEND_TEST(raft_test, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
         FRIEND_TEST(raft, test_that_raft_bails_on_bad_rehydrate);
         FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
+        FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
         FRIEND_TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log);
+        FRIEND_TEST(raft_test, test_that_add_peer_request_to_leader_results_in_correct_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_add_or_remove_peer_fails_if_current_quorum_is_a_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_remove_peer_request_to_leader_results_in_correct_joint_quorum);
+        FRIEND_TEST(raft_test, test_that_add_peer_fails_when_the_peer_uuid_is_already_in_the_single_quorum);
+        FRIEND_TEST(raft_test, test_that_remove_peer_fails_when_the_peer_uuid_is_not_in_the_single_quorum);
+        FRIEND_TEST(raft, test_raft_can_find_last_quorum_log_entry);
+        FRIEND_TEST(raft_test, test_that_raft_first_log_entry_is_the_quorum);
+        FRIEND_TEST(raft, test_that_get_all_peers_returns_correct_peers_list_based_on_current_quorum);
+        FRIEND_TEST(raft, test_that_is_majority_returns_expected_result_for_single_and_joint_quorums);
+        FRIEND_TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately);
+        FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
+
+        void setup_peer_tracking(const bzn::peers_list_t& peers);
 
         void start_heartbeat_timer();
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
@@ -86,25 +113,34 @@ namespace bzn
         // helpers...
         void get_raft_timeout_scale();
 
-        void append_entry_to_log(const bzn::log_entry& log_entry);
         std::string entries_log_path();
-        void load_log_entries();
         std::string state_path();
         void save_state();
         void load_state();
-
+        void import_state_files();
+        void create_state_files(const std::string& log_path, const bzn::peers_list_t& peers);
+        bool state_files_exist();
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
+        bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
+        bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
+        bzn::message create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_message, const bzn::uuid_t& peer_uuid);
+        bzn::message create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum);
 
-        bzn::log_entry last_quorum();
+        bool is_majority(const std::set<bzn::uuid_t>& votes);
+        uint32_t last_majority_replicated_log_index();
+        std::list<std::set<bzn::uuid_t>> get_active_quorum();
+        bool in_quorum(const bzn::uuid_t& uuid);
+        bzn::peers_list_t get_all_peers();
 
         void notify_leader_status();
         void notify_commit(size_t log_index, const std::string& operation);
+        bzn::log_entry_type deduce_type_from_message(const bzn::message& message);
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
-        uint32_t        current_term = 1;
-        std::size_t     yes_votes = 0;
-        std::size_t     no_votes  = 0;
+        uint32_t        current_term = 0;
+        std::set<bzn::uuid_t> yes_votes;
+        std::set<bzn::uuid_t> no_votes;
 #ifndef __APPLE__
         std::optional<bzn::uuid_t> voted_for;
 #else
@@ -113,19 +149,16 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> timer;
 
         // indexes...
-        uint32_t last_log_index = 0;
         uint32_t last_log_term  = 0; // not sure if we need this
-        uint32_t commit_index   = 0;
+        uint32_t commit_index   = 1;
         uint32_t timeout_scale  = 1;
 
-        std::vector<log_entry> log_entries;
         bzn::raft_base::commit_handler commit_handler;
 
         // track peer's match index...
         std::map<bzn::uuid_t, uint32_t> peer_match_index;
 
         // misc...
-        const bzn::peers_list_t peers;
         bzn::uuid_t uuid;
         bzn::uuid_t leader;
         std::shared_ptr<bzn::node_base> node;
@@ -134,7 +167,7 @@ namespace bzn
 
         std::mutex raft_lock;
 
-        std::ofstream log_entry_out_stream;
+        std::shared_ptr<bzn::raft_log> raft_log;
 
         const std::string state_dir;
 

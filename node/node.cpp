@@ -109,7 +109,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
         }
     }
 
-    LOG(debug) << "no handler for:\n" << msg.toStyledString().substr(0, 60) << "...";
+    LOG(debug) << "no handler for:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
     session->close();
 }

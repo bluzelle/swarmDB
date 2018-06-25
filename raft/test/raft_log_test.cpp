@@ -12,30 +12,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+#include <mocks/mock_boost_asio_beast.hpp>
+#include <mocks/mock_node_base.hpp>
+#include <mocks/mock_session_base.hpp>
 
-#include <bootstrap/peer_address.hpp>
-#include <bootstrap/bootstrap_peers_base.hpp>
-
+using namespace ::testing;
 
 namespace bzn
 {
-
-    class bootstrap_peers final : public bzn::bootstrap_peers_base
-    {
-    public:
-        bool fetch_peers_from_file(const std::string& filename) override;
-
-        bool fetch_peers_from_url(const std::string& url) override;
-
-        const bzn::peers_list_t& get_peers() const override;
-
-    private:
-        bool ingest_json(std::istream& peers);
-
-        bzn::peers_list_t peer_addresses;
-
-        size_t initialize_peer_list(const Json::Value& root, bzn::peers_list_t& peer_addresses);
-    };
-
-} // namespace bzn
+    // TODO: pull logging tests out of raft tests.
+//    TEST(raft_log, test_that_something)
+//    {
+//        EXPECT_TRUE(false);
+//    }
+}

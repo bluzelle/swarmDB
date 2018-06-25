@@ -27,8 +27,8 @@ namespace bzn
                      void());
         MOCK_METHOD0(get_leader,
                      bzn::peer_address_t());
-        MOCK_METHOD1(append_log,
-                     bool(const bzn::message& msg));
+        MOCK_METHOD2(append_log,
+                     bool(const bzn::message& msg, const bzn::log_entry_type entry_type));
         MOCK_METHOD1(register_commit_handler,
                      void(bzn::raft_base::commit_handler handler));
     };

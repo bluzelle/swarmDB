@@ -15,6 +15,7 @@
 #pragma once
 
 #include <bootstrap/peer_address.hpp>
+#include <raft/log_entry.hpp>
 
 namespace bzn
 {
@@ -100,7 +101,6 @@ namespace bzn
         return msg;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
 
     class raft_base
     {
@@ -130,7 +130,7 @@ namespace bzn
          * Appends entry to leader's log via CRUD
          * @param msg message received
          */
-        virtual bool append_log(const bzn::message& msg) = 0;
+        virtual bool append_log(const bzn::message& msg, bzn::log_entry_type entry_type) = 0;
 
         /**
          * Storage commit handler called once concensus has been achieved

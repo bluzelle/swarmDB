@@ -54,6 +54,13 @@ crud::start()
                 {
                     bzn_msg msg;
 
+                    // This is to avoid trying to process encoded protobuf messages where we just want to commit this
+                    // index, but not alter storage at all.
+                    if(!ws_msg["msg"].isString())
+                    {
+                        return true;
+                    }
+
                     if (msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
                     {
                         if (msg.msg_case() == bzn_msg::kDb)
@@ -105,11 +112,9 @@ crud::handle_create(const bzn::message& msg, const database_msg& request, databa
 
     if (this->raft->get_state() == bzn::raft_state::leader)
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::database);
         return;
     }
-
-    this->set_leader_info(response);
 }
 
 
@@ -149,7 +154,7 @@ crud::handle_update(const bzn::message& msg, const database_msg& request, databa
 
     if (this->raft->get_state() == bzn::raft_state::leader)
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::database);
         return;
     }
 
@@ -168,7 +173,7 @@ crud::handle_delete(const bzn::message& msg, const database_msg& request, databa
 
     if (this->storage->has(request.header().db_uuid(), request.delete_().key()))
     {
-        this->raft->append_log(msg);
+        this->raft->append_log(msg, bzn::log_entry_type::database);
         return;
     }
 

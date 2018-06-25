@@ -84,7 +84,6 @@ namespace bzn
          */
         virtual bzn::uuid_t get_uuid() const = 0;
 
-
         /**
          * Get the websocket activity timeout
          * @return seconds
