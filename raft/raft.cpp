@@ -480,12 +480,6 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         return;
     }
 
-
-    if(msg["cmd"].asString()=="add_peer")
-    {
-        return;
-    }
-
     uint32_t term = msg["data"]["term"].asUInt();
 
     if (this->current_term == term)
@@ -781,7 +775,6 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
         }
     }
 }
-}
 
 
 std::string
@@ -975,21 +968,6 @@ raft::is_majority(const std::set<bzn::uuid_t>& votes)
 }
 
 
-bool
-raft::in_quorum(const bzn::uuid_t& uuid)
-{
-    const auto quorums = this->get_active_quorum();
-    for(const auto q : quorums)
-    {
-        if (std::find(q.begin(), q.end(),uuid) != q.end())
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-
 bzn::peers_list_t
 raft::get_all_peers()
 {
@@ -1034,38 +1012,6 @@ raft::in_quorum(const bzn::uuid_t& uuid)
         }
     }
     return false;
-}
-
-
-bzn::peers_list_t
-raft::get_all_peers()
-{
-    bzn::peers_list_t result;
-    std::vector<std::reference_wrapper<bzn::message>> all_peers;
-    bzn::log_entry log_entry = this->last_quorum();
-
-    if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
-    {
-        all_peers.emplace_back(log_entry.msg);
-    }
-    else
-    {
-        all_peers.emplace_back(log_entry.msg["old"]);
-        all_peers.emplace_back(log_entry.msg["new"]);
-    }
-
-    for(auto jpeers : all_peers)
-    {
-        for(const bzn::message& p : jpeers.get())
-        {
-            result.emplace(p["host"].asString(),
-                           uint16_t(p["port"].asUInt()),
-                           uint16_t(p["http_port"].asUInt()),
-                           p["name"].asString(),
-                           p["uuid"].asString());
-        }
-    }
-    return result;
 }
 
 
