@@ -1,0 +1,223 @@
+#!/usr/bin/python2.7
+
+# Copyright (C) 2018 Bluzelle
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License, version 3,
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+# To generate Python bindings:
+#
+# cd proto
+# protoc --python_out=../scripts ./bluzelle.proto ./database.proto
+#
+
+import websocket
+import json
+import base64
+import sys
+import random
+from argparse import ArgumentParser
+from argparse import RawDescriptionHelpFormatter
+
+try:
+    import bluzelle_pb2
+    import database_pb2
+except ImportError as e:
+    raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
+                      "\n"
+                      "$ cd proto\n"
+                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n".format(e.message))
+
+
+def send_request(node, uuid, msg):
+    ws = websocket.create_connection("ws://" + node)
+    msg.db.header.db_uuid = uuid
+    msg.db.header.transaction_id = random.randint(1,sys.maxint)
+
+    req = {}
+    req["bzn-api"] = "database";
+    req["msg"] = base64.b64encode(msg.SerializeToString())
+
+    print("Sending: {}".format(msg))
+    print("-" * 60 + '\n')
+
+    ws.send(json.dumps(req))
+    resp = database_pb2.database_response()
+    resp.ParseFromString(ws.recv())
+
+    if resp.WhichOneof('success') == 'redirect':
+        redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
+        print("redirecting to leader at {}...\n".format(redirect_node))
+        resp = send_request(redirect_node, uuid, msg)
+    else:
+        print("Response: \n{}".format(resp))
+        print("-" * 60 + '\n')
+
+    ws.close()
+
+    return resp
+
+
+def create_request(key, value):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.create.key = key
+    msg.db.create.value = value
+    return msg
+
+
+def read_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.read.key = key
+    return msg
+
+
+def update_request(key, value):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.update.key = key
+    msg.db.update.value = value
+    return msg
+
+
+def delete_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.delete.key = key
+    return msg
+
+
+def has_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.has.key = key
+    return msg
+
+
+def keys_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.keys.SetInParent()
+    return msg
+
+
+def size_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.size.SetInParent()
+    return msg
+
+
+def create_handler(args):
+    return send_request(args.node, args.uuid, create_request(args.key, args.value))
+
+
+def update_handler(args):
+    return send_request(args.node, args.uuid, update_request(args.key, args.value))
+
+
+def read_handler(args):
+    return send_request(args.node, args.uuid, read_request(args.key))
+
+
+def delete_handler(args):
+    return send_request(args.node, args.uuid, delete_request(args.key))
+
+
+def has_handler(args):
+    return send_request(args.node, args.uuid, has_request(args.key))
+
+
+def keys_handler(args):
+    return send_request(args.node, args.uuid, keys_request())
+
+
+def size_handler(args):
+    return send_request(args.node, args.uuid, size_request())
+
+
+if __name__ == "__main__":
+
+    parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
+
+    required = parser.add_argument_group('required arguments')
+
+    required.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)", required=True)
+    required.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+
+
+    subparsers = parser.add_subparsers()
+
+    # Create
+    create_parser = subparsers.add_parser('create', help="Create k/v")
+    create_group = create_parser.add_argument_group('required arguments')
+    create_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    group = create_group.add_mutually_exclusive_group()
+    group.add_argument("-v", "--value", type=str, default="", help="value")
+    group.add_argument("-f", "--file",  type=str, default=None, help="file to upload")
+    create_parser.set_defaults(func=create_handler)
+
+    # Read
+    read_parser = subparsers.add_parser('read', help="Read k/v")
+    read_group = read_parser.add_argument_group('required arguments')
+    read_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    read_parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
+    read_parser.set_defaults(func=read_handler)
+
+    # Update
+    update_parser = subparsers.add_parser('update', help="Update k/v")
+    update_group = update_parser.add_argument_group('required arguments')
+    update_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    update = update_group.add_mutually_exclusive_group()
+    update.add_argument("-v", "--value", type=str, default=None, help="value")
+    update.add_argument("-f", "--file",  type=str, default=None,  help="file to upload")
+    update_parser.set_defaults(func=update_handler)
+
+    # delete
+    delete_parser = subparsers.add_parser('delete', help="Delete k/v")
+    delete_group = delete_parser.add_argument_group('required arguments')
+    delete_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    delete_parser.set_defaults(func=delete_handler)
+
+    # has
+    has_parser = subparsers.add_parser('has', help="Determine whether a key exists within a DB by UUID")
+    has_group = has_parser.add_argument_group('requred arguments')
+    has_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    has_parser.set_defaults(func=delete_handler)
+
+    # keys
+    keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")
+    keys_parser.set_defaults(func=keys_handler)
+
+    # size
+    size_parser = subparsers.add_parser('size', help="Determine the size of the DB by UUID")
+    size_parser.set_defaults(func=size_handler)
+
+    args = parser.parse_args()
+
+    try:
+        if args.file:
+            # if user gave us a file we need to read it as our value
+            args.value = open(args.file).read()
+    except IOError as e:
+        print("failed to read value from file: {}".format(e.strerror))
+        exit(1)
+    except AttributeError:
+        # no input file specified. Value was passed via command line
+        pass
+
+    resp = args.func(args)
+
+    try:
+        # save to a file...
+        if args.save:
+            with open(args.save, "w") as outfile:
+                outfile.write(str(resp.resp.value))
+    except AttributeError:
+        # no output file specified. Result will be printed to console
+        pass
+
+    exit(0)
