@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/bluzelle/swarmDB.svg?branch=devel)](https://travis-ci.org/bluzelle/swarmDB)
 [![License](https://img.shields.io/:license-AGPLv3-blue.svg?style=flat-square)](https://github.com/bluzelle/swarmDB/blob/devel/LICENSE)
 [![Twitter](https://img.shields.io/badge/twitter-@bluzelle-blue.svg?style=flat-square)](https://twitter.com/BluzelleHQ)
-[![Slack chat](https://img.shields.io/badge/slackchat-join%20chat-brightgreen.svg?style=flat-square)](https://bluzelle-swarm.slack.com)
+[![Gitter chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg?style=flat-square)](https://gitter.im/bluzelle)
 
 ## ABOUT SWARMDB
 
@@ -41,10 +41,10 @@ $ toolchain/install-boost.sh
 This will result in a custom Boost install at ```~/myboost/1_67_0/```that will not collide with your system's Boost.
 
 
-##### Other dependencies (JsonCPP, CMake)
+##### Other dependencies (Protobuf, CMake)
 
 ```
-$ brew update && brew install jsoncpp && brew upgrade cmake
+$ brew update && brew install protobuf && brew upgrade cmake
 ```
 
 ##### ccache (Optional) 
@@ -79,10 +79,10 @@ $ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -
 ```
 Again, this will result in a custom cmake install into ```~/mycmake/``` and will not overwrite your system's cmake.
 
-##### JsonCpp
+##### Protobuf (Ver. 3 or greater)
 
 ```
-$ sudo apt-get install pkg-config libjsoncpp-dev 
+$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev
 ```
 
 ##### ccache (Optional)
@@ -196,9 +196,9 @@ Configuration files for Daemon:
  
 // peers.json
 [
-  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
-  {"name": "peer2", "host": "127.0.0.1",  "port": 50001, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
-  {"name": "peer3", "host": "127.0.0.1",  "port": 50002, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
+  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "http_port: : 8080, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
+  {"name": "peer2", "host": "127.0.0.1", "port": 50001, "http_port: : 8081, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
+  {"name": "peer3", "host": "127.0.0.1", "port": 50002, "http_port: : 8082, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
 ]
  
 ```

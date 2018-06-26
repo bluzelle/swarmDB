@@ -19,7 +19,7 @@ Steps to run the Bluzelle SwarmDB test application in a Python Virtual Environme
 
 ### Generate Protobuf Code
     (crud-app)$ cd ../workspace/swarmdb/scripts
-    (crud-app)$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto
+    (crud-app)$ protoc --python_out=../scripts *.proto
     
 ### Run Script
     (crud-app)$ crud -h
