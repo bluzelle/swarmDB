@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python2.7
 
 # Copyright (C) 2018 Bluzelle
 #
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     has_parser = subparsers.add_parser('has', help="Determine whether a key exists within a DB by UUID")
     has_group = has_parser.add_argument_group('requred arguments')
     has_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
-    has_parser.set_defaults(func=delete_handler)
+    has_parser.set_defaults(func=has_handler)
 
     # keys
     keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")
