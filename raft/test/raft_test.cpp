@@ -1183,9 +1183,6 @@ namespace bzn
                     return true;
                 });
 
-
-
-
         // and away we go...
         raft->start();
 
@@ -1231,9 +1228,9 @@ namespace bzn
 
 
         EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
-                [](const auto& /*session*/, const auto& msg)
+                [](const auto& /*session*/, const auto& /*msg*/)
                 {
-                    std::cout << msg->toStyledString();
+                    //std::cout << msg->toStyledString();
                 }));
 
 
@@ -1245,42 +1242,6 @@ namespace bzn
         raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 1), mock_session);
         raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 1), mock_session);
         wh(boost::system::error_code());
-
-
-
-
-
-
-
-        std::cout << " test\n";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 
@@ -1571,6 +1532,7 @@ namespace bzn
 
     TEST_F(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed)
     {
+        // TODO make sure comit i=indexes are correct.
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         // intercept the timeout callback...
@@ -1606,11 +1568,6 @@ namespace bzn
                     return true;
                 });
 
-
-
-
-
-
         // and away we go...
         raft->start();
 
@@ -1619,8 +1576,7 @@ namespace bzn
 
         // we should see requests...
         EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(
-                Invoke([](const auto&, const auto& msg){
-                    std::cout<< "X" << msg->toStyledString() << "\n";
+                Invoke([](const auto&, const auto& /*msg*/){
 
                 })
                 );
@@ -1636,9 +1592,6 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
         // add a peer
-
-
-
         bzn::message msg = make_add_peer_request();
         mh(msg,this->mock_session);
 
@@ -1649,39 +1602,27 @@ namespace bzn
         wh(boost::system::error_code());
 
         // send false so second peer will achieve consensus and leader will commit the entries..
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, false, 0), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 2), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 0);
         ASSERT_FALSE(commit_handler_called);
 
         // enough peers have stored the first entry
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 1), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 2), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 2), this->mock_session);
 
-//        EXPECT_EQ(commit_handler_times_called, 1);
-//
-//        // expire heart beat
-//        wh(boost::system::error_code());
+        EXPECT_EQ(commit_handler_times_called, 1);
 
+        // expire heart beat
+        wh(boost::system::error_code());
 
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 3), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 3), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 3), this->mock_session);
+        EXPECT_EQ(commit_handler_times_called, 2);
 
-
-
-
-
-
-
-        //entry = raft->last_quorum();
-        //EXPECT_EQ(entry.entry_type, bzn::log_entry_type::single_quorum);
-
-
-
-
-
-
+        entry = raft->last_quorum();
+        EXPECT_EQ(entry.entry_type, bzn::log_entry_type::single_quorum);
     }
-
-
-
-
 
 } // bzn
