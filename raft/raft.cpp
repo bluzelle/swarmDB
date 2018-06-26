@@ -491,6 +491,8 @@ raft::notify_leader_status()
     audit_message msg;
     msg.mutable_leader_status()->set_term(this->current_term);
     msg.mutable_leader_status()->set_leader(this->uuid);
+    msg.mutable_leader_status()->set_current_log_index(this->last_log_index);
+    msg.mutable_leader_status()->set_current_commit_index(this->commit_index);
 
     auto json_ptr = std::make_shared<bzn::message>();
     (*json_ptr)["bzn-api"] = "audit";
