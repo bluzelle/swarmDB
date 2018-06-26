@@ -54,7 +54,8 @@ namespace bzn
 
         void report_error(const std::string& short_name, const std::string& error_description);
         void send_to_monitor(const std::string& stat);
-        
+        void handle_udp_send_callback(const boost::system::error_code& error, std::size_t bytes);
+
         void handle_leader_data(const leader_status&);
         void handle_leader_made_progress(const leader_status&);
 

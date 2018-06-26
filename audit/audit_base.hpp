@@ -32,6 +32,8 @@ namespace bzn
     const std::string COMMIT_METRIC_NAME = "stats.commit_heard";
     const std::string NEW_LEADER_METRIC_NAME = "stats.new_leader_heard";
 
+    const std::string STATSD_COUNTER_FORMAT = ":1|c";
+
     class audit_base
     {
         virtual void start() = 0;

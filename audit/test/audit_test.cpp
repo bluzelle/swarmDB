@@ -374,8 +374,8 @@ TEST_F(audit_test, audit_throws_error_when_leader_switch_then_stuck)
 
 TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
 {
-    EXPECT_CALL(*(this->socket), send_to(_,_)).Times(AnyNumber());
-    EXPECT_CALL(*(this->socket), send_to(bzn::LEADER_CONFLICT_METRIC_NAME + ":1|c",_)).Times(Exactly(1));
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).Times(AnyNumber());
+    EXPECT_CALL(*(this->socket), async_send_to(bzn::LEADER_CONFLICT_METRIC_NAME + ":1|c",_,_)).Times(Exactly(1));
 
     auto ep = boost::asio::ip::udp::endpoint{
           boost::asio::ip::address::from_string("127.0.0.1")
@@ -399,8 +399,8 @@ TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
 
 TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
 {
-    EXPECT_CALL(*(this->socket), send_to(_,_)).Times(AnyNumber());
-    EXPECT_CALL(*(this->socket), send_to(bzn::COMMIT_CONFLICT_METRIC_NAME + ":1|c",_)).Times(Exactly(1));
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).Times(AnyNumber());
+    EXPECT_CALL(*(this->socket), async_send_to(bzn::COMMIT_CONFLICT_METRIC_NAME + ":1|c",_,_)).Times(Exactly(1));
 
     auto ep = boost::asio::ip::udp::endpoint{
             boost::asio::ip::address::from_string("127.0.0.1")

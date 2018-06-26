@@ -39,8 +39,10 @@ namespace bzn::asio {
 
     class Mockudp_socket_base : public udp_socket_base {
     public:
-        MOCK_METHOD2(send_to,
-                    void(const std::string& msg, boost::asio::ip::udp::endpoint ep));
+        MOCK_METHOD3(async_send_to,
+                    void(const std::string& msg,
+                            boost::asio::ip::udp::endpoint ep,
+                            std::function<void(const boost::system::error_code&, size_t)>));
     };
 
 }  // namespace bzn::asio

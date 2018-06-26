@@ -51,7 +51,10 @@ namespace bzn::asio
     public:
         virtual ~udp_socket_base() = default;
 
-        virtual void send_to(const std::string& msg, boost::asio::ip::udp::endpoint ep) = 0;
+        virtual void async_send_to(const std::string& msg,
+                                   boost::asio::ip::udp::endpoint ep,
+                                   std::function<void(const boost::system::error_code&, size_t)> handler)
+        = 0;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -132,9 +135,11 @@ namespace bzn::asio
             this->socket.open(boost::asio::ip::udp::v4());
         }
 
-        void send_to(const std::string& msg, boost::asio::ip::udp::endpoint ep)
+        void async_send_to(const std::string& msg,
+                           boost::asio::ip::udp::endpoint ep,
+                           std::function<void(const boost::system::error_code&, size_t)> handler)
         {
-            this->socket.send_to(boost::asio::buffer(msg), ep);
+            this->socket.async_send_to(boost::asio::buffer(msg), ep, handler);
         }
     private:
         boost::asio::ip::udp::socket socket;

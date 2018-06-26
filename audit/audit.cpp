@@ -27,7 +27,7 @@ audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , io_context(io_context)
         , leader_alive_timer(io_context->make_unique_steady_timer())
         , leader_progress_timer(io_context->make_unique_steady_timer())
-        , monitor_endpoint(monitor_endpoint)
+        , monitor_endpoint(std::move(monitor_endpoint))
         , socket(io_context->make_unique_udp_socket())
 {
 
@@ -131,7 +131,7 @@ audit::report_error(const std::string& short_name, const std::string& descriptio
 {
     this->recorded_errors.push_back(description);
     LOG(fatal) << boost::format("[%1%]: %2%") % short_name % description;
-    this->send_to_monitor(str(boost::format("%1%:1|c") % short_name));
+    this->send_to_monitor(short_name + bzn::STATSD_COUNTER_FORMAT);
 }
 
 void
@@ -147,7 +147,20 @@ audit::send_to_monitor(const std::string& stat)
                   % this->monitor_endpoint->address().to_string()
                   % this->monitor_endpoint->port();
 
-    this->socket->send_to(stat, *(this->monitor_endpoint));
+    this->socket->async_send_to(stat, *(this->monitor_endpoint), std::bind(&audit::handle_udp_send_callback,
+                                                                           shared_from_this(),
+                                                                           std::placeholders::_1,
+                                                                           std::placeholders::_2
+    ));
+}
+
+void
+audit::handle_udp_send_callback(const boost::system::error_code& error, std::size_t bytes)
+{
+    if(error)
+    {
+        LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2%'") % bytes % error.message();
+    }
 }
 
 void
@@ -180,7 +193,7 @@ audit::handle_leader_status(const leader_status& leader_status)
     if(this->recorded_leaders.count(leader_status.term()) == 0)
     {
         LOG(info) << "audit recording that leader of term " << leader_status.term() << " is '" << leader_status.leader() << "'";
-        this->send_to_monitor(bzn::NEW_LEADER_METRIC_NAME+":1|c");
+        this->send_to_monitor(bzn::NEW_LEADER_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
         this->recorded_leaders[leader_status.term()] = leader_status.leader();
     }
     else if(this->recorded_leaders[leader_status.term()] != leader_status.leader())
@@ -249,7 +262,7 @@ audit::handle_commit(const commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    this->send_to_monitor(bzn::COMMIT_METRIC_NAME + ":1|c");
+    this->send_to_monitor(bzn::COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
 
     if(this->recorded_commits.count(commit.log_index()) == 0)
     {
