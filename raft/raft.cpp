@@ -534,7 +534,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             {
                 this->leader = msg["data"]["from"].asString();
 
-                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, true, this->last_log_index));
+                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, false, this->last_log_index));
 
                 LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -884,7 +884,7 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
     commit_index++;
     this->save_state();
 
-    if(log_entry.entry_type == bzn::log_entry_type::joint_quorum)
+    if(this->get_state() == bzn::raft_state::leader && log_entry.entry_type == bzn::log_entry_type::joint_quorum)
     {
         this->append_log_unsafe(
                 this->create_single_quorum_from_joint_quorum(log_entry.msg),

@@ -407,9 +407,14 @@ namespace bzn
 
         // send a message through the registered "node message" callback...
         bzn::message msg;
-        mh(bzn::create_append_entries_request("uuid2", 1, 0, 0, 0, 0, msg), mock_session);
+        mh(bzn::create_append_entries_request("uuid2"
+                                              , 0 // current term ok
+                                              , 0 // commit index doesn't matter
+                                              , 0 // previous index ok
+                                              , 0 // previous term ok
+                                              , 0 // entry term doesn't matter
+                                              , msg), mock_session);
 
-        // we expect a "no" response in this state...
         EXPECT_EQ(resp["cmd"].asString(), "AppendEntriesReply");
         EXPECT_EQ(resp["data"]["success"].asBool(), true);
     }
@@ -568,34 +573,54 @@ namespace bzn
         bzn::message entry;
         entry["bzn-api"] = "utest";
 
-        auto msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 0, 0, 0, 0, bzn::message());
+        auto msg = bzn::create_append_entries_request(TEST_NODE_UUID
+                , 2 // current term
+                , 1 // commit index
+                , 0 // previous index
+                , 0 // previous term
+                , 0 // entry term
+                , bzn::message());
         mh(msg, this->mock_session);
-        ASSERT_TRUE(resp["data"]["success"].asBool());
 
+//        ASSERT_TRUE(resp["data"]["success"].asBool());
+//
         resp.clear();
 
         // send append entry with commit index of 3... and follower commits and updates its match index
-        msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 3, 0, 0, 2, entry);
+        msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 2, 0, 0, 2, entry);
         mh(msg, this->mock_session);
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
         ASSERT_TRUE(resp["data"]["success"].asBool());
         EXPECT_EQ(commit_handler_times_called, 1);
 
         resp.clear();
-
         // send invalid entry. peer should return false and not move back past commit index
-        msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 1, 0, 0, 0, entry);
+        msg = bzn::create_append_entries_request(TEST_NODE_UUID
+                , 2 // current term is ok
+                , 3 // commit index is ok
+                , 1 // previous index is ok
+                , 0 // previous term is wrong
+                , 2 // entry term is ok
+                , entry);
         mh(msg, mock_session);
         ASSERT_FALSE(resp["data"]["success"].asBool());
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
+        EXPECT_EQ(commit_handler_times_called, 1);
 
         resp.clear();
 
         // put back append entries - bad append entry
-        msg = bzn::create_append_entries_request(TEST_NODE_UUID, 2, 2, 0, 0, 2, entry);
+        msg = bzn::create_append_entries_request(TEST_NODE_UUID
+                , 0 // current term is wrong
+                , 3 // commit index is OK
+                , 1 // previous index is OK
+                , 2 // previous term is OK
+                , 2 // entry term is OK
+                , entry);
         mh(msg, this->mock_session);
-        ASSERT_FALSE(resp["data"]["success"].asBool());
-        EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
+
+        ASSERT_FALSE( resp["data"].isMember("success") && resp["data"]["success"].asBool());
+        EXPECT_EQ(commit_handler_times_called, 1);
     }
 
 
