@@ -21,9 +21,11 @@ using namespace bzn;
 
 audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , std::shared_ptr<bzn::node_base> node
-        , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint)
+        , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
+        , bzn::uuid_t uuid)
 
-        : node(node)
+        : uuid(std::move(uuid))
+        , node(node)
         , io_context(io_context)
         , leader_alive_timer(io_context->make_unique_steady_timer())
         , leader_progress_timer(io_context->make_unique_steady_timer())
@@ -150,20 +152,15 @@ audit::send_to_monitor(const std::string& stat)
                   % this->monitor_endpoint->address().to_string()
                   % this->monitor_endpoint->port();
 
-    this->socket->async_send_to(stat, *(this->monitor_endpoint), std::bind(&audit::handle_udp_send_callback,
-                                                                           shared_from_this(),
-                                                                           std::placeholders::_1,
-                                                                           std::placeholders::_2
-    ));
-}
+    std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
 
-void
-audit::handle_udp_send_callback(const boost::system::error_code& error, std::size_t bytes)
-{
-    if(error)
-    {
-        LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2%'") % bytes % error.message();
-    }
+    this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
+                                [buffer](const boost::system::error_code& error, std::size_t bytes)
+                                {
+                                    LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2'") % error.message() % bytes;
+                                }
+    );
+
 }
 
 void

@@ -16,6 +16,7 @@
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <boost/range/irange.hpp>
+#include <boost/asio/buffer.hpp>
 
 using namespace ::testing;
 
@@ -74,7 +75,7 @@ public:
     {
         // We cannot construct this during our constructor because doing so invalidates our timer pointers,
         // which prevents tests from setting expectations on them
-        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint);
+        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid");
         this->audit->start();
     }
 
@@ -104,6 +105,7 @@ public:
     }
 
 };
+
 
 TEST_F(audit_test, test_timers_constructed_correctly)
 {
@@ -372,10 +374,24 @@ TEST_F(audit_test, audit_throws_error_when_leader_switch_then_stuck)
     EXPECT_EQ(this->audit->error_count(), 1u);
 }
 
+
 TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
 {
-    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).Times(AnyNumber());
-    EXPECT_CALL(*(this->socket), async_send_to(HasSubstr(bzn::LEADER_CONFLICT_METRIC_NAME),_,_)).Times(Exactly(1));
+    bool error_reported = false;
+
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).WillRepeatedly(Invoke([&](
+         const boost::asio::const_buffer& msg,
+         boost::asio::ip::udp::endpoint /*ep*/,
+         std::function<void(const boost::system::error_code&, size_t)> /*handler*/)
+             {
+                 std::string msg_string(boost::asio::buffer_cast<const char*>(msg), msg.size());
+                 if (msg_string.find(bzn::LEADER_CONFLICT_METRIC_NAME) != std::string::npos)
+                 {
+                     error_reported = true;
+                 }
+             }
+
+    ));
 
     auto ep = boost::asio::ip::udp::endpoint{
           boost::asio::ip::address::from_string("127.0.0.1")
@@ -395,12 +411,28 @@ TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
 
     this->audit->handle_leader_status(ls1);
     this->audit->handle_leader_status(ls2);
+
+    EXPECT_TRUE(error_reported);
 }
+
 
 TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
 {
-    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).Times(AnyNumber());
-    EXPECT_CALL(*(this->socket), async_send_to(HasSubstr(bzn::COMMIT_CONFLICT_METRIC_NAME),_,_)).Times(Exactly(1));
+    bool error_reported = false;
+
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).WillRepeatedly(Invoke([&](
+         const boost::asio::const_buffer& msg,
+         boost::asio::ip::udp::endpoint /*ep*/,
+         std::function<void(const boost::system::error_code&, size_t)> /*handler*/)
+             {
+                 std::string msg_string(boost::asio::buffer_cast<const char*>(msg), msg.size());
+                 if (msg_string.find(bzn::COMMIT_CONFLICT_METRIC_NAME) != std::string::npos)
+                 {
+                     error_reported = true;
+                 }
+             }
+
+    ));
 
     auto ep = boost::asio::ip::udp::endpoint{
             boost::asio::ip::address::from_string("127.0.0.1")
@@ -421,4 +453,6 @@ TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
 
     this->audit->handle_commit(com1);
     this->audit->handle_commit(com2);
+
+    EXPECT_TRUE(error_reported);
 }

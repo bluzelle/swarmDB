@@ -31,7 +31,8 @@ namespace bzn
     public:
         audit(std::shared_ptr<bzn::asio::io_context_base>
                 , std::shared_ptr<bzn::node_base> node
-                , bzn::optional<boost::asio::ip::udp::endpoint>);
+                , bzn::optional<boost::asio::ip::udp::endpoint>
+                , bzn::uuid_t uuid);
 
         size_t error_count() const override;
 
@@ -54,10 +55,11 @@ namespace bzn
 
         void report_error(const std::string& metric_name, const std::string& error_description);
         void send_to_monitor(const std::string& stat);
-        void handle_udp_send_callback(const boost::system::error_code& error, std::size_t bytes);
 
         void handle_leader_data(const leader_status&);
         void handle_leader_made_progress(const leader_status&);
+
+        const bzn::uuid_t uuid;
 
         std::list<std::string> recorded_errors;
         const std::shared_ptr<bzn::node_base> node;
