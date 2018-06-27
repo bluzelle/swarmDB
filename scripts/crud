@@ -66,6 +66,24 @@ def send_request(node, uuid, msg):
 
     return resp
 
+def send_ping_request(node):
+    ws = websocket.create_connection("ws://" + node)
+
+    req = {}
+    req["bzn-api"] = "ping"
+
+    print("Sending : {}".format(req))
+    print("-" * 60 + '\n')
+
+    ws.send(json.dumps(req))
+    resp = ws.recv()
+
+    print("Response: \n{}".format(resp))
+    print("-" * 60 + '\n')
+
+    ws.close()
+
+    return resp
 
 def create_request(key, value):
     msg = bluzelle_pb2.bzn_msg()
@@ -110,6 +128,8 @@ def size_request():
     msg.db.size.SetInParent()
     return msg
 
+def ping_handler(args):
+    return send_ping_request(args.node)
 
 def create_handler(args):
     return send_request(args.node, args.uuid, create_request(args.key, args.value))
@@ -146,14 +166,17 @@ if __name__ == "__main__":
     required = parser.add_argument_group('required arguments')
 
     required.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)", required=True)
-    required.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
-
 
     subparsers = parser.add_subparsers()
+
+    # Ping
+    ping_parser = subparsers.add_parser('ping', help="Ping")
+    ping_parser.set_defaults(func=ping_handler)
 
     # Create
     create_parser = subparsers.add_parser('create', help="Create k/v")
     create_group = create_parser.add_argument_group('required arguments')
+    create_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     create_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
     group = create_group.add_mutually_exclusive_group()
     group.add_argument("-v", "--value", type=str, default="", help="value")
@@ -164,6 +187,7 @@ if __name__ == "__main__":
     read_parser = subparsers.add_parser('read', help="Read k/v")
     read_group = read_parser.add_argument_group('required arguments')
     read_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    read_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     read_parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
     read_parser.set_defaults(func=read_handler)
 
@@ -171,6 +195,7 @@ if __name__ == "__main__":
     update_parser = subparsers.add_parser('update', help="Update k/v")
     update_group = update_parser.add_argument_group('required arguments')
     update_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    update_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     update = update_group.add_mutually_exclusive_group()
     update.add_argument("-v", "--value", type=str, default=None, help="value")
     update.add_argument("-f", "--file",  type=str, default=None,  help="file to upload")
@@ -180,20 +205,24 @@ if __name__ == "__main__":
     delete_parser = subparsers.add_parser('delete', help="Delete k/v")
     delete_group = delete_parser.add_argument_group('required arguments')
     delete_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    delete_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     delete_parser.set_defaults(func=delete_handler)
 
     # has
     has_parser = subparsers.add_parser('has', help="Determine whether a key exists within a DB by UUID")
     has_group = has_parser.add_argument_group('requred arguments')
     has_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    has_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     has_parser.set_defaults(func=has_handler)
 
     # keys
     keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")
+    keys_parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     keys_parser.set_defaults(func=keys_handler)
 
     # size
     size_parser = subparsers.add_parser('size', help="Determine the size of the DB by UUID")
+    size_parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     size_parser.set_defaults(func=size_handler)
 
     args = parser.parse_args()
