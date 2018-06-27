@@ -52,9 +52,7 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
 
         const std::chrono::milliseconds ws_idle_timeout;
-
-        bzn::message_handler       handler;
-        boost::beast::multi_buffer buffer;
+        bzn::message_handler handler;
 
         const bool ignore_json_errors = false;
     };

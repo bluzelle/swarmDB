@@ -49,7 +49,7 @@ namespace bzn
                 wh = handler;
             }));
 
-        EXPECT_CALL(*mock_steady_timer, cancel()).Times(3);
+        EXPECT_CALL(*mock_steady_timer, cancel());
 
         EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
@@ -68,7 +68,7 @@ namespace bzn
         ));
 
         // only one call on success...
-        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(false)).WillOnce(Return(true)).WillOnce(Return(false));
+        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(false));
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
         session->start([](auto&,auto){});
@@ -189,7 +189,7 @@ namespace bzn
         auto session = std::make_shared<bzn::session>(mock_io_context, mock_websocket_stream, std::chrono::milliseconds(0));
 
         EXPECT_CALL(*mock_websocket_stream, async_write(_,_));
-        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(true)).WillOnce(Return(false));
+        EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(true));
 
         // expect a call to binary!
         boost::asio::io_context io;

@@ -35,19 +35,7 @@ session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::sh
 
 session::~session()
 {
-    this->idle_timer->cancel();
-
-    if (this->websocket->is_open())
-    {
-        boost::system::error_code ec;
-
-        this->websocket->get_websocket().close(boost::beast::websocket::close_code::normal, ec);
-
-        if (ec)
-        {
-           LOG(debug) << "failed to close websocket: " << ec.message();
-        }
-    }
+    //LOG(debug) << "shutdown";
 }
 
 
@@ -79,24 +67,25 @@ session::start(bzn::message_handler handler)
 void
 session::do_read()
 {
-    this->buffer.consume(this->buffer.size());
+    auto buffer = std::make_shared<boost::beast::multi_buffer>();
 
     this->start_idle_timeout();
 
-    this->websocket->async_read(this->buffer,
+    this->websocket->async_read(*buffer,
         this->strand->wrap(
-        [self = shared_from_this()](boost::system::error_code ec, auto /*bytes_transferred*/)
+        [self = shared_from_this(), buffer](boost::system::error_code ec, auto /*bytes_transferred*/)
         {
+            self->idle_timer->cancel();
+
             if (ec)
             {
                 LOG(error) << "websocket read failed: " << ec.message();
-                self->close();
                 return;
             }
 
             // get the message...
             std::stringstream ss;
-            ss << boost::beast::buffers(self->buffer.data());
+            ss << boost::beast::buffers(buffer->data());
 
             Json::Value msg;
             Json::Reader reader;
@@ -167,14 +156,13 @@ session::close()
         LOG(info) << "closing session";
 
         this->websocket->async_close(boost::beast::websocket::close_code::normal,
-            this->strand->wrap(
-                [self = shared_from_this()](auto ec)
+            [self = shared_from_this()](auto ec)
+            {
+                if (ec)
                 {
-                    if (ec)
-                    {
-                        LOG(error) << "failed to close websocket: " << ec.message();
-                    }
-                }));
+                    LOG(error) << "failed to close websocket: " << ec.message();
+                }
+            });
     }
 }
 
@@ -193,8 +181,17 @@ session::start_idle_timeout()
         {
             if (!ec)
             {
-                LOG(info) << "reached idle timeout -- closing session";
-                self->close();
+                LOG(info) << "reached idle timeout -- closing session: " << ec.message();
+
+                self->websocket->async_close(boost::beast::websocket::close_code::normal,
+                    [self](auto ec)
+                    {
+                        if (ec)
+                        {
+                            LOG(error) << "failed to close websocket: " << ec.message();
+                        }
+                    });
+
                 return;
             }
         });
