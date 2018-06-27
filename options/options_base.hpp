@@ -18,6 +18,7 @@
 #include <boost/asio/ip/udp.hpp>
 #include <include/bluzelle.hpp>
 #include <include/optional.hpp>
+#include <include/boost_asio_beast.hpp>
 #include <string>
 
 namespace bzn
@@ -38,7 +39,8 @@ namespace bzn
         * The address and port to send stats.d data to, if this is enabled
         * @return optional<endpoint>
         */
-        virtual bzn::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint() const = 0;
+        virtual bzn::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(
+                std::shared_ptr<bzn::asio::io_context_base> context) const = 0;
 
         /**
          * Get the Ethererum address the node will be using

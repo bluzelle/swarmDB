@@ -127,11 +127,14 @@ void audit::handle_leader_progress_timeout(const boost::system::error_code& ec)
 }
 
 void
-audit::report_error(const std::string& short_name, const std::string& description)
+audit::report_error(const std::string& metric_name, const std::string& description)
 {
     this->recorded_errors.push_back(description);
-    LOG(fatal) << boost::format("[%1%]: %2%") % short_name % description;
-    this->send_to_monitor(short_name + bzn::STATSD_COUNTER_FORMAT);
+
+    std::string metric = this->build_statsd_prefix() + "." + metric_name;
+
+    LOG(fatal) << boost::format("[%1%]: %2%") % metric % description;
+    this->send_to_monitor(metric + bzn::STATSD_COUNTER_FORMAT);
 }
 
 void
@@ -278,4 +281,10 @@ audit::handle_commit(const commit_notification& commit)
                               % commit.operation());
         this->report_error(bzn::COMMIT_CONFLICT_METRIC_NAME, err);
     }
+}
+
+std::string
+audit::build_statsd_prefix()
+{
+    return "com.bluzelle.swarm.singleton.node.placeholderuuid";
 }

@@ -52,7 +52,7 @@ namespace bzn
         void reset_leader_progress_timer();
         void clear_leader_progress_timer();
 
-        void report_error(const std::string& short_name, const std::string& error_description);
+        void report_error(const std::string& metric_name, const std::string& error_description);
         void send_to_monitor(const std::string& stat);
         void handle_udp_send_callback(const boost::system::error_code& error, std::size_t bytes);
 
@@ -62,6 +62,8 @@ namespace bzn
         std::list<std::string> recorded_errors;
         const std::shared_ptr<bzn::node_base> node;
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
+
+        std::string build_statsd_prefix();
 
         uint leader_dead_count = 0;
         uint leader_stuck_count = 0;

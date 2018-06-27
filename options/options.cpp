@@ -86,16 +86,18 @@ options::get_listener() const
 }
 
 bzn::optional<boost::asio::ip::udp::endpoint>
-options::get_monitor_endpoint() const
+options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const
 {
     if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
     {
         try
         {
-            auto ep = boost::asio::ip::udp::endpoint{boost::asio::ip::address::from_string(
-                    this->config_data[MONITOR_ADDRESS_KEY].asString())
-                    , uint16_t(this->config_data[MONITOR_PORT_KEY].asUInt())};
-            return bzn::optional<boost::asio::ip::udp::endpoint>{ep};
+            boost::asio::ip::udp::resolver resolver(context->get_io_context());
+            auto eps = resolver.resolve(boost::asio::ip::udp::v4(),
+                                        this->config_data[MONITOR_ADDRESS_KEY].asString(),
+                                        std::to_string(this->config_data[MONITOR_PORT_KEY].asUInt()));
+
+            return bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
         }
         catch(std::exception& ex)
         {
@@ -217,7 +219,7 @@ options::validate()
         return false;
     }
 
-    if (!this->get_monitor_endpoint())
+    if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
     {
         LOG(info) << "No monitor address provided; will not send monitor packets";
     }
