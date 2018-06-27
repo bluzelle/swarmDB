@@ -33,12 +33,6 @@ session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::sh
 }
 
 
-session::~session()
-{
-    //LOG(debug) << "shutdown";
-}
-
-
 void
 session::start(bzn::message_handler handler)
 {
