@@ -47,7 +47,7 @@ def send_request(node, uuid, msg):
     req["bzn-api"] = "database";
     req["msg"] = base64.b64encode(msg.SerializeToString())
 
-    print("Sending: {}".format(msg))
+    print("Sending: \n{}".format(msg))
     print("-" * 60 + '\n')
 
     ws.send(json.dumps(req))
@@ -66,13 +66,14 @@ def send_request(node, uuid, msg):
 
     return resp
 
+
 def send_ping_request(node):
     ws = websocket.create_connection("ws://" + node)
 
     req = {}
     req["bzn-api"] = "ping"
 
-    print("Sending : {}".format(req))
+    print("Sending : \n" + json.dumps(req,indent=4))
     print("-" * 60 + '\n')
 
     ws.send(json.dumps(req))
@@ -84,6 +85,7 @@ def send_ping_request(node):
     ws.close()
 
     return resp
+
 
 def create_request(key, value):
     msg = bluzelle_pb2.bzn_msg()
@@ -128,8 +130,10 @@ def size_request():
     msg.db.size.SetInParent()
     return msg
 
+
 def ping_handler(args):
     return send_ping_request(args.node)
+
 
 def create_handler(args):
     return send_request(args.node, args.uuid, create_request(args.key, args.value))
