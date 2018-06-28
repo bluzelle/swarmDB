@@ -2,15 +2,14 @@
 
 Steps to run the Bluzelle SwarmDB test application in a Python Virtual Environment. **Ensure that you activate your virtualenv each time you want to run the application**.
 
-
 ###Install Virtual Environment
-
 
     $ sudo pip install virtualenv
     $ cd workspace
     $ virtualenv crud-app
 
 ### Activate Virtual Environment
+
     $ . ~/workspace/crud-app/bin/activate
     
 ### Install Dependencies

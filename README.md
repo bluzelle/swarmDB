@@ -227,12 +227,10 @@ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/inst
 ```
 $ brew install node
 ```
-
 #### Yarn
 ```
 $ brew install yarn
 ```
-
 ### Installation - Ubuntu
 
 #### NPM
@@ -250,8 +248,6 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 
 $ sudo apt-get update && sudo apt-get install yarn
 ```
-
-
 ### Running Integration Tests
 
 Script to clone *bluzelle-js* repository and copy template configuration files or run tests with your configuration files.  
@@ -261,3 +257,189 @@ $ qa/integration-tests setup // Sets up template configuration files
 ```
 $ qa/integration-tests // Runs tests with configuration files you've created
 ```
+## Testing Locally
+```
+$ cd scripts
+
+Follow instructions in readme.md 
+```
+#### Connectivity Test
+```
+$ ./crud -n localhost:50000 ping
+
+Sending : {'bzn-api': 'ping'}
+------------------------------------------------------------
+
+Response: 
+{
+	"bzn-api" : "pong"
+}
+
+------------------------------------------------------------
+```
+#### Create
+```
+$ ./crud -n localhost:50000 create -u myuuid -k mykey -v myvalue
+  Sending: db {
+    header {
+      db_uuid: "myuuid"
+      transaction_id: 1149205427773053859
+    }
+    create {
+      key: "mykey"
+      value: "myvalue"
+    }
+  }
+  
+  ------------------------------------------------------------
+  
+  redirecting to leader at 127.0.0.1:50002...
+  
+  Sending: db {
+    header {
+      db_uuid: "myuuid"
+      transaction_id: 8606810256052859786
+    }
+    create {
+      key: "mykey"
+      value: "myvalue"
+    }
+  }
+  
+  ------------------------------------------------------------
+  
+  Response: 
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 8606810256052859786
+  }
+  
+  ------------------------------------------------------------
+```
+#### Read
+```
+$ ./crud -n localhost:50000 read -u myuuid -k mykey
+Sending: db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 638497919636113033
+  }
+  read {
+    key: "mykey"
+  }
+}
+
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  transaction_id: 638497919636113033
+}
+resp {
+  value: "myvalue"
+}
+
+------------------------------------------------------------
+```
+#### Update
+```
+$ ./crud -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
+Sending: db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 7847882878681328930
+  }
+  update {
+    key: "mykey"
+    value: "mynewvalue"
+  }
+}
+
+------------------------------------------------------------
+
+redirecting to leader at 127.0.0.1:50002...
+
+Sending: db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 2491234936151888566
+  }
+  update {
+    key: "mykey"
+    value: "mynewvalue"
+  }
+}
+
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  transaction_id: 2491234936151888566
+}
+
+------------------------------------------------------------
+```
+#### Delete
+```
+$ ./crud -n localhost:50000 delete -u myuuid -k mykey
+Sending: db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 8470321215009858819
+  }
+  delete {
+    key: "mykey"
+  }
+}
+
+------------------------------------------------------------
+
+redirecting to leader at 127.0.0.1:50002...
+
+Sending: db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 8085312586421869529
+  }
+  delete {
+    key: "mykey"
+  }
+}
+
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  transaction_id: 8085312586421869529
+}
+
+------------------------------------------------------------
+```
+#### Help & Options
+```
+$ ./crud --help
+usage: crud [-h] -n NODE {ping,create,read,update,delete,has,keys,size} ...
+
+crud
+
+positional arguments:
+  {ping,create,read,update,delete,has,keys,size}
+    ping                Ping
+    create              Create k/v
+    read                Read k/v
+    update              Update k/v
+    delete              Delete k/v
+    has                 Determine whether a key exists within a DB by UUID
+    keys                Get all keys for a DB by UUID
+    size                Determine the size of the DB by UUID
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+required arguments:
+  -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
+ ```
+ 
