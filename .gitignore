@@ -4,4 +4,5 @@ cmake-build-debug/
 cmake-build-release/
 scripts/bluzelle_pb2.py
 scripts/database_pb2.py
+scripts/audit_pb2.py
 *.pyc
