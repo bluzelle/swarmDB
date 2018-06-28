@@ -65,8 +65,6 @@ namespace bzn
         const std::shared_ptr<bzn::node_base> node;
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
 
-        std::string build_statsd_prefix();
-
         uint leader_dead_count = 0;
         uint leader_stuck_count = 0;
 
@@ -87,6 +85,8 @@ namespace bzn
 
         bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint;
         std::unique_ptr<bzn::asio::udp_socket_base> socket;
+
+        const std::string statsd_namespace_prefix;
     };
 
 }

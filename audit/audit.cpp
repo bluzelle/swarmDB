@@ -25,12 +25,13 @@ audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , bzn::uuid_t uuid)
 
         : uuid(std::move(uuid))
-        , node(node)
-        , io_context(io_context)
+        , node(std::move(node))
+        , io_context(std::move(io_context))
         , leader_alive_timer(io_context->make_unique_steady_timer())
         , leader_progress_timer(io_context->make_unique_steady_timer())
         , monitor_endpoint(std::move(monitor_endpoint))
         , socket(io_context->make_unique_udp_socket())
+        , statsd_namespace_prefix("com.bluzelle.swarm.singleton.node." + this->uuid + ".")
 {
 
 }
@@ -133,7 +134,7 @@ audit::report_error(const std::string& metric_name, const std::string& descripti
 {
     this->recorded_errors.push_back(description);
 
-    std::string metric = this->build_statsd_prefix() + "." + metric_name;
+    std::string metric = this->statsd_namespace_prefix + metric_name;
 
     LOG(fatal) << boost::format("[%1%]: %2%") % metric % description;
     this->send_to_monitor(metric + bzn::STATSD_COUNTER_FORMAT);
@@ -283,5 +284,4 @@ audit::handle_commit(const commit_notification& commit)
 std::string
 audit::build_statsd_prefix()
 {
-    return "com.bluzelle.swarm.singleton.node." + this->uuid;
 }
