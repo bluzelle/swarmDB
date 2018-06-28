@@ -14,14 +14,24 @@
 
 #include <audit/audit.hpp>
 #include <boost/beast/core/detail/base64.hpp>
+#include <boost/asio/ip/udp.hpp>
 #include <boost/format.hpp>
 
 using namespace bzn;
 
-audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node)
-        : node(node)
-        , leader_alive_timer(io_context->make_unique_steady_timer())
-        , leader_progress_timer(io_context->make_unique_steady_timer())
+audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
+        , std::shared_ptr<bzn::node_base> node
+        , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
+        , bzn::uuid_t uuid)
+
+        : uuid(std::move(uuid))
+        , node(std::move(node))
+        , io_context(std::move(io_context))
+        , leader_alive_timer(this->io_context->make_unique_steady_timer())
+        , leader_progress_timer(this->io_context->make_unique_steady_timer())
+        , monitor_endpoint(std::move(monitor_endpoint))
+        , socket(this->io_context->make_unique_udp_socket())
+        , statsd_namespace_prefix("com.bluzelle.swarm.singleton.node." + this->uuid + ".")
 {
 
 }
@@ -47,6 +57,17 @@ audit::start()
                                                             , shared_from_this()
                                                             , std::placeholders::_1
                                                             , std::placeholders::_2));
+        if(this->monitor_endpoint)
+        {
+            LOG(info) << boost::format("Audit module running, will send stats to %1%:%2%")
+                % this->monitor_endpoint->address().to_string()
+                % this->monitor_endpoint->port();
+        }
+        else
+        {
+            LOG(info) "Audit module running, but not sending stats anywhere because no monitor configured";
+        }
+         
         LOG(info) << "Audit module running";
         this->reset_leader_alive_timer();
     });
@@ -71,7 +92,7 @@ audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
         return;
     }
 
-    this->report_error("noleader", str(boost::format("No leader alive [%1%]") % ++(this->leader_dead_count)));
+    this->report_error(bzn::NO_LEADER_METRIC_NAME, str(boost::format("No leader alive [%1%]") % ++(this->leader_dead_count)));
     this->clear_leader_progress_timer();
     this->leader_has_uncommitted_entries = false;
     this->leader_alive_timer->expires_from_now(this->leader_timeout);
@@ -103,17 +124,44 @@ void audit::handle_leader_progress_timeout(const boost::system::error_code& ec)
         return;
     }
 
-    this->report_error("leaderstuck", str(boost::format("Leader alive but not making progress [%1%]") % ++(this->leader_stuck_count)));
+    this->report_error(bzn::LEADER_STUCK_METRIC_NAME, str(boost::format("Leader alive but not making progress [%1%]") % ++(this->leader_stuck_count)));
     this->leader_progress_timer->expires_from_now(this->leader_timeout);
     this->leader_progress_timer->async_wait(std::bind(&audit::handle_leader_progress_timeout, shared_from_this(), std::placeholders::_1));
 }
 
 void
-audit::report_error(const std::string& short_name, const std::string& description)
+audit::report_error(const std::string& metric_name, const std::string& description)
 {
     this->recorded_errors.push_back(description);
-    LOG(fatal) << boost::format("[%1%]: %2%") % short_name % description;
-    // TODO: Push to stats.d goes here
+
+    std::string metric = this->statsd_namespace_prefix + metric_name;
+
+    LOG(fatal) << boost::format("[%1%]: %2%") % metric % description;
+    this->send_to_monitor(metric + bzn::STATSD_COUNTER_FORMAT);
+}
+
+void
+audit::send_to_monitor(const std::string& stat)
+{
+    if(!this->monitor_endpoint)
+    {
+        return;
+    }
+
+    LOG(debug) << boost::format("Sending stat '%1%' to monitor at %2%:%3%")
+                  % stat
+                  % this->monitor_endpoint->address().to_string()
+                  % this->monitor_endpoint->port();
+
+    std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
+
+    this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
+                                [buffer](const boost::system::error_code& error, std::size_t bytes)
+                                {
+                                    LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2'") % error.message() % bytes;
+                                }
+    );
+
 }
 
 void
@@ -148,6 +196,7 @@ audit::handle_leader_status(const leader_status& leader_status)
     if(this->recorded_leaders.count(leader_status.term()) == 0)
     {
         LOG(info) << "audit recording that leader of term " << leader_status.term() << " is '" << leader_status.leader() << "'";
+        this->send_to_monitor(bzn::NEW_LEADER_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
         this->recorded_leaders[leader_status.term()] = leader_status.leader();
     }
     else if(this->recorded_leaders[leader_status.term()] != leader_status.leader())
@@ -157,7 +206,7 @@ audit::handle_leader_status(const leader_status& leader_status)
                                              % this->recorded_leaders[leader_status.term()]
                                              % leader_status.term()
                                              % leader_status.leader());
-        this->report_error("leaderconflict", err);
+        this->report_error(bzn::LEADER_CONFLICT_METRIC_NAME, err);
     }
 
     this->reset_leader_alive_timer();
@@ -216,6 +265,8 @@ audit::handle_commit(const commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
+    this->send_to_monitor(bzn::COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+
     if(this->recorded_commits.count(commit.log_index()) == 0)
     {
         LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at index " << commit.log_index();
@@ -228,6 +279,6 @@ audit::handle_commit(const commit_notification& commit)
                               % this->recorded_commits[commit.log_index()]
                               % commit.log_index()
                               % commit.operation());
-        this->report_error("commitconflict", err);
+        this->report_error(bzn::COMMIT_CONFLICT_METRIC_NAME, err);
     }
 }

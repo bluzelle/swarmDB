@@ -14,9 +14,9 @@
 
 #include <audit/audit.hpp>
 #include <mocks/mock_node_base.hpp>
-#include <mocks/mock_node_base.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <boost/range/irange.hpp>
+#include <boost/asio/buffer.hpp>
 
 using namespace ::testing;
 
@@ -33,6 +33,9 @@ public:
 
     bzn::asio::wait_handler leader_alive_timer_callback;
     bzn::asio::wait_handler leader_progress_timer_callback;
+
+    bzn::optional<boost::asio::ip::udp::endpoint> endpoint;
+    std::unique_ptr<bzn::asio::Mockudp_socket_base> socket = std::make_unique<bzn::asio::Mockudp_socket_base>();
 
     std::shared_ptr<bzn::audit> audit;
 
@@ -60,13 +63,19 @@ public:
                 .WillRepeatedly(Invoke(
                 [&](auto handler){this->leader_progress_timer_callback = handler;}
         ));
+
+        EXPECT_CALL(*(this->mock_io_context), make_unique_udp_socket())
+                .WillOnce(Invoke(
+                [&](){return std::move(this->socket);}
+        ));
+
     }
 
     void build_audit()
     {
         // We cannot construct this during our constructor because doing so invalidates our timer pointers,
         // which prevents tests from setting expectations on them
-        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node);
+        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid");
         this->audit->start();
     }
 
@@ -96,6 +105,7 @@ public:
     }
 
 };
+
 
 TEST_F(audit_test, test_timers_constructed_correctly)
 {
@@ -364,3 +374,85 @@ TEST_F(audit_test, audit_throws_error_when_leader_switch_then_stuck)
     EXPECT_EQ(this->audit->error_count(), 1u);
 }
 
+
+TEST_F(audit_test, audit_sends_monitor_message_when_leader_conflict)
+{
+    bool error_reported = false;
+
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).WillRepeatedly(Invoke([&](
+         const boost::asio::const_buffer& msg,
+         boost::asio::ip::udp::endpoint /*ep*/,
+         std::function<void(const boost::system::error_code&, size_t)> /*handler*/)
+             {
+                 std::string msg_string(boost::asio::buffer_cast<const char*>(msg), msg.size());
+                 if (msg_string.find(bzn::LEADER_CONFLICT_METRIC_NAME) != std::string::npos)
+                 {
+                     error_reported = true;
+                 }
+             }
+
+    ));
+
+    auto ep = boost::asio::ip::udp::endpoint{
+          boost::asio::ip::address::from_string("127.0.0.1")
+        , 8125
+    };
+    auto epopt = bzn::optional<boost::asio::ip::udp::endpoint>{ep};
+    this->endpoint = epopt;
+    this->build_audit();
+
+    leader_status ls1;
+    ls1.set_leader("joe");
+    ls1.set_current_commit_index(5);
+    ls1.set_current_log_index(5);
+
+    leader_status ls2 = ls1;
+    ls2.set_leader("francine");
+
+    this->audit->handle_leader_status(ls1);
+    this->audit->handle_leader_status(ls2);
+
+    EXPECT_TRUE(error_reported);
+}
+
+
+TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
+{
+    bool error_reported = false;
+
+    EXPECT_CALL(*(this->socket), async_send_to(_,_,_)).WillRepeatedly(Invoke([&](
+         const boost::asio::const_buffer& msg,
+         boost::asio::ip::udp::endpoint /*ep*/,
+         std::function<void(const boost::system::error_code&, size_t)> /*handler*/)
+             {
+                 std::string msg_string(boost::asio::buffer_cast<const char*>(msg), msg.size());
+                 if (msg_string.find(bzn::COMMIT_CONFLICT_METRIC_NAME) != std::string::npos)
+                 {
+                     error_reported = true;
+                 }
+             }
+
+    ));
+
+    auto ep = boost::asio::ip::udp::endpoint{
+            boost::asio::ip::address::from_string("127.0.0.1")
+            , 8125
+    };
+    auto epopt = bzn::optional<boost::asio::ip::udp::endpoint>{ep};
+    this->endpoint = epopt;
+
+
+    this->build_audit();
+
+    commit_notification com1;
+    com1.set_log_index(2);
+    com1.set_operation("the first thing");
+
+    commit_notification com2 = com1;
+    com2.set_operation("the second thing");
+
+    this->audit->handle_commit(com1);
+    this->audit->handle_commit(com2);
+
+    EXPECT_TRUE(error_reported);
+}
