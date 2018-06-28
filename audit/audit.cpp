@@ -27,10 +27,10 @@ audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         : uuid(std::move(uuid))
         , node(std::move(node))
         , io_context(std::move(io_context))
-        , leader_alive_timer(io_context->make_unique_steady_timer())
-        , leader_progress_timer(io_context->make_unique_steady_timer())
+        , leader_alive_timer(this->io_context->make_unique_steady_timer())
+        , leader_progress_timer(this->io_context->make_unique_steady_timer())
         , monitor_endpoint(std::move(monitor_endpoint))
-        , socket(io_context->make_unique_udp_socket())
+        , socket(this->io_context->make_unique_udp_socket())
         , statsd_namespace_prefix("com.bluzelle.swarm.singleton.node." + this->uuid + ".")
 {
 
@@ -281,9 +281,4 @@ audit::handle_commit(const commit_notification& commit)
                               % commit.operation());
         this->report_error(bzn::COMMIT_CONFLICT_METRIC_NAME, err);
     }
-}
-
-std::string
-audit::build_statsd_prefix()
-{
 }
