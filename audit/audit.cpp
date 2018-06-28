@@ -165,7 +165,7 @@ audit::send_to_monitor(const std::string& stat)
 }
 
 void
-audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
+audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> session)
 {
     audit_message message;
     message.ParseFromString(boost::beast::detail::base64_decode(json["audit-data"].asString()));
@@ -184,6 +184,8 @@ audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> /*ses
     {
         LOG(error) << "Got an empty audit message?";
     }
+
+    session->close();
 }
 
 void

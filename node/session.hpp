@@ -30,8 +30,6 @@ namespace bzn
     public:
         session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout);
 
-        ~session();
-
         void start(bzn::message_handler handler) override;
 
         void send_message(std::shared_ptr<bzn::message> msg, bool end_session) override;
@@ -52,9 +50,7 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
 
         const std::chrono::milliseconds ws_idle_timeout;
-
-        bzn::message_handler       handler;
-        boost::beast::multi_buffer buffer;
+        bzn::message_handler handler;
 
         const bool ignore_json_errors = false;
     };
