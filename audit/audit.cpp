@@ -283,5 +283,5 @@ audit::handle_commit(const commit_notification& commit)
 std::string
 audit::build_statsd_prefix()
 {
-    return "com.bluzelle.swarm.singleton.node.placeholderuuid";
+    return "com.bluzelle.swarm.singleton.node." + this->uuid;
 }
