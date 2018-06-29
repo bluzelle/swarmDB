@@ -11,7 +11,8 @@ add_library(node STATIC
         ../mocks/mock_session_base.hpp)
 
 target_link_libraries(node)
-add_dependencies(node proto googletest) # for FRIEND_TEST
+add_dependencies(node proto googletest jsoncpp) # for FRIEND_TEST
+
 target_include_directories(node PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 
 add_subdirectory(test)
