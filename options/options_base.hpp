@@ -91,6 +91,13 @@ namespace bzn
          */
          virtual std::chrono::seconds get_ws_idle_timeout() const = 0;
 
+
+        /**
+         * Get the number of entries allowed to be stored in audit's datastructures
+         * @return size
+         */
+         virtual size_t get_audit_mem_size() const = 0;
+
     };
 
 } // bzn
