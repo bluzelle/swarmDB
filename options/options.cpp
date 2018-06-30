@@ -37,6 +37,9 @@ namespace
     const std::string MONITOR_PORT_KEY           = "monitor_port";
     const std::string AUDIT_MEM_SIZE_KEY         = "audit_mem_size";
 
+    const size_t DEFAULT_AUDIT_MEM_SIZE          = 10000;
+    // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
+
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
     {
@@ -268,7 +271,7 @@ options::get_audit_mem_size() const
     }
     else
     {
-        return 10000;
+        return DEFAULT_AUDIT_MEM_SIZE;
     }
 }
 
