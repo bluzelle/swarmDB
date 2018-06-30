@@ -266,8 +266,10 @@ Follow instructions in readme.md
 #### Connectivity Test
 ```
 $ ./crud -n localhost:50000 ping
-
-Sending : {'bzn-api': 'ping'}
+Sending : 
+{
+	"bzn-api": "ping"
+}
 ------------------------------------------------------------
 
 Response: 

@@ -8,6 +8,7 @@ add_library(http STATIC
         )
 
 target_link_libraries(http )
+add_dependencies(http jsoncpp)
 target_include_directories(http PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(test)

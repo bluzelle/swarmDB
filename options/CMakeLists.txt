@@ -7,5 +7,6 @@ add_library(options STATIC
 
 target_link_libraries(options)
 target_include_directories(options PRIVATE ${JSONCPP_INCLUDE_DIRS})
+add_dependencies(options jsoncpp)
 
 add_subdirectory(test)
