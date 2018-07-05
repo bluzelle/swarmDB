@@ -35,6 +35,7 @@ namespace
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 
+    const std::string TEST_STATE_DIR = "./.raft_test_state/";
 
     void
     fill_entries_with_test_data(const size_t sz, std::vector<bzn::log_entry>& entries)
@@ -84,17 +85,17 @@ namespace bzn
     TEST(raft, test_that_default_raft_state_is_follower)
     {
         EXPECT_EQ(bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
-            nullptr, TEST_PEER_LIST, TEST_NODE_UUID).get_state(), bzn::raft_state::follower);
+            nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR).get_state(), bzn::raft_state::follower);
     }
 
 
     TEST(raft, test_that_a_raft_constructor_throws_when_given_empty_peers_list)
     {
         EXPECT_THROW(bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
-            nullptr, {}, TEST_NODE_UUID), std::runtime_error);
+            nullptr, {}, TEST_NODE_UUID, TEST_STATE_DIR), std::runtime_error);
 
         EXPECT_NO_THROW(bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
-            nullptr, TEST_PEER_LIST, TEST_NODE_UUID));
+            nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR));
     }
 
 
@@ -122,7 +123,7 @@ namespace bzn
         EXPECT_CALL(*mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         // and away we go...
         raft->start();
@@ -163,7 +164,7 @@ namespace bzn
             { return std::move(mock_steady_timer); }));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         // intercept the node raft registration handler...
         bzn::message_handler mh;
@@ -223,7 +224,7 @@ namespace bzn
         EXPECT_CALL(*mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
         raft->enable_audit = false;
 
         // and away we go...
@@ -288,7 +289,7 @@ namespace bzn
                 return true;
             }));
 
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         raft->start();
 
@@ -309,8 +310,8 @@ namespace bzn
 
     TEST(raft, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
@@ -329,7 +330,7 @@ namespace bzn
         EXPECT_CALL(*mock_node, register_for_message("raft", _));
 
         // create raft...
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
         raft->enable_audit = false;
 
         // and away we go...
@@ -410,8 +411,8 @@ namespace bzn
 
         // todo: verify append entry contents
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
     }
 
 
@@ -433,9 +434,9 @@ namespace bzn
             { return std::move(mock_steady_timer); }));
 
         // create raft...
-        boost::filesystem::remove("./.state/uuid1.dat");
-        boost::filesystem::remove("./.state/uuid1.state");
-        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, "uuid1");
+        boost::filesystem::remove(TEST_STATE_DIR + "uuid1.dat");
+        boost::filesystem::remove(TEST_STATE_DIR + "uuid1.state");
+        auto raft = std::make_shared<bzn::raft>(mock_io_context, mock_node, TEST_PEER_LIST, "uuid1", TEST_STATE_DIR);
 
         bzn::message_handler mh;
         EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
@@ -507,8 +508,8 @@ namespace bzn
         EXPECT_EQ(resp["data"]["matchIndex"].asUInt(), Json::UInt(1));
 
 
-        boost::filesystem::remove("./.state/uuid1.dat");
-        boost::filesystem::remove("./.state/uuid1.state");
+        boost::filesystem::remove(TEST_STATE_DIR  + "uuid1.dat");
+        boost::filesystem::remove(TEST_STATE_DIR  + "uuid1.state");
     }
 
 
@@ -517,21 +518,21 @@ namespace bzn
         // none set
         {
             unsetenv(RAFT_TIMEOUT_SCALE.c_str());
-            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
             EXPECT_EQ(r.timeout_scale, 1ul);
         }
 
         // valid
         {
             setenv(RAFT_TIMEOUT_SCALE.c_str(), "2", 1);
-            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
             EXPECT_EQ(r.timeout_scale, 2ul);
         }
 
         // invalid
         {
             setenv(RAFT_TIMEOUT_SCALE.c_str(), "asdf", 1);
-            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+            bzn::raft r(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
             EXPECT_EQ(r.timeout_scale, 1ul);
         }
     }
@@ -540,7 +541,7 @@ namespace bzn
     TEST(raft, test_log_entry_serialization)
     {
         const size_t number_of_entries = 300;
-        const std::string path{"./.state/test_data.dat"};
+        const std::string path{TEST_STATE_DIR + "test_data.dat"};
         boost::filesystem::remove(path);
 
         std::vector<bzn::log_entry> entries_source(number_of_entries);
@@ -570,11 +571,11 @@ namespace bzn
 
     TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
-        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         size_t number_of_entries = 300;
 
@@ -596,7 +597,7 @@ namespace bzn
 
 
         // instantiate a raft with the same uuid
-        auto raft_target = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft_target = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         EXPECT_EQ(raft_target->last_log_index, raft_source->last_log_index);
         EXPECT_EQ(raft_target->last_log_term, raft_source->last_log_term);
@@ -622,8 +623,8 @@ namespace bzn
                 }
         ));
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
 
     }
 
@@ -631,12 +632,12 @@ namespace bzn
     TEST(raft, test_that_raft_can_rehydrate_storage)
     {
         const size_t number_of_entries = 300;
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
         auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
-                                                       nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+                                                       nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
         auto storage_source = std::make_shared<bzn::storage>();
 
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -733,8 +734,8 @@ namespace bzn
             EXPECT_EQ(rec_1->value, rec_2->value);
         }
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".state");
     }
 
 
@@ -746,8 +747,8 @@ namespace bzn
         std::string bad_entry_00{"1 4 THIS_IS_BADeyJiem4tYXB0K"};
         std::string valid_entry{"1 2 eyJiem4tYXBpIjoiY3J1ZCIsImNtZCI6ImNyZWF0ZSIsImRhdGEiOnsia2V5Ijoia2V5MCIsInZhbHVlIjoidmFsdWVfZm9yX2tleTAifSwiZGItdXVpZCI6Im15LXV1aWQiLCJyZXF1ZXN0LWlkIjowfQo="};
 
-        boost::filesystem::path log_path{"./.state/" + TEST_NODE_UUID + ".dat"};
-        boost::filesystem::path state_path{"./.state/" + TEST_NODE_UUID + ".state"};
+        boost::filesystem::path log_path{TEST_STATE_DIR + TEST_NODE_UUID + ".dat"};
+        boost::filesystem::path state_path{TEST_STATE_DIR + TEST_NODE_UUID + ".state"};
 
         boost::filesystem::create_directory(log_path.parent_path());
 
@@ -764,7 +765,7 @@ namespace bzn
         out.close();
 
         EXPECT_THROW(
-                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR)
                         , std::runtime_error);
 
         // good state/bad entry
@@ -773,7 +774,7 @@ namespace bzn
         out.close();
 
         EXPECT_THROW(
-                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR)
                         , std::runtime_error);
 
         // good state/good entry/mis-matched
@@ -782,7 +783,7 @@ namespace bzn
         out.close();
 
         EXPECT_THROW(
-                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID)
+                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR)
                         , std::runtime_error);
 
         boost::filesystem::remove(log_path);
@@ -792,7 +793,7 @@ namespace bzn
 
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
     {
-        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         bzn::message msg;
 
@@ -836,9 +837,9 @@ namespace bzn
 
     TEST(raft, test_raft_throws_exception_when_no_quorum_can_be_found_in_log)
     {
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
-        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID);
+        boost::filesystem::remove(TEST_STATE_DIR + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR  + TEST_NODE_UUID + ".state");
+        auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         raft.log_entries.clear();
 
@@ -852,7 +853,7 @@ namespace bzn
 
         EXPECT_THROW( raft.last_quorum(), std::runtime_error);
 
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".dat");
-        boost::filesystem::remove("./.state/" + TEST_NODE_UUID + ".state");
+        boost::filesystem::remove(TEST_STATE_DIR  + TEST_NODE_UUID + ".dat");
+        boost::filesystem::remove(TEST_STATE_DIR  + TEST_NODE_UUID + ".state");
     }
 } // bzn
