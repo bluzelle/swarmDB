@@ -317,17 +317,17 @@ options::parse(int argc, const char* argv[])
     {
         po::store(po::parse_command_line(argc, argv, desc), vm);
 
+        if (vm.count("version"))
+        {
+            std::cout << "Bluzelle" << ": v" << SWARM_VERSION << std::endl;
+            return false;
+        }
+
         if (vm.count("help") || vm.count("config") == 0)
         {
             std::cout << "Usage:" << '\n'
                       << "  " << "bluzelle" << " [OPTION]" << '\n'
                       << '\n' << desc << '\n';
-            return false;
-        }
-
-        if (vm.count("version"))
-        {
-            std::cout << "Bluzelle" << ": v" << SWARM_VERSION << std::endl;
             return false;
         }
 
