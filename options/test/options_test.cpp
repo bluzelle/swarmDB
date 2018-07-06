@@ -35,7 +35,8 @@ namespace
         "  \"bootstrap_file\" : \"peers.json\",\n"
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
         "  \"debug_logging\" : true,"
-        "  \"log_to_stdout\" : true"
+        "  \"log_to_stdout\" : true,"
+        "  \"state_dir\" : \"./daemon_state/\""
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
@@ -72,8 +73,15 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
     ASSERT_EQ(true, options.get_debug_logging());
     ASSERT_EQ(true, options.get_log_to_stdout());
-    //EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
-    //EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
+    EXPECT_EQ("./daemon_state/", options.get_state_dir());
+    EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
+    EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
+
+    // defaults..
+    {
+        bzn::options options;
+        EXPECT_EQ("./.state/", options.get_state_dir());
+    }
 }
 
 

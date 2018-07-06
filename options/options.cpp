@@ -21,6 +21,7 @@
 namespace po = boost::program_options;
 using namespace bzn;
 
+
 namespace
 {
     const std::string DEFAULT_CONFIG_FILE        = "bluzelle.json";
@@ -36,9 +37,12 @@ namespace
     const std::string MONITOR_ADDRESS_KEY        = "monitor_address";
     const std::string MONITOR_PORT_KEY           = "monitor_port";
     const std::string AUDIT_MEM_SIZE_KEY         = "audit_mem_size";
+    const std::string STATE_DIR_KEY              = "state_dir";
 
-    const size_t DEFAULT_AUDIT_MEM_SIZE          = 10000;
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
+    const size_t DEFAULT_AUDIT_MEM_SIZE          = 10000;
+
+    const std::string DEFAULT_STATE_DIR          = "./.state/";
 
     // https://stackoverflow.com/questions/8899069
     bool is_hex_notation(std::string const& s)
@@ -89,6 +93,7 @@ options::get_listener() const
     }
 }
 
+
 bzn::optional<boost::asio::ip::udp::endpoint>
 options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const
 {
@@ -115,6 +120,7 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
     }
 }
 
+
 std::string
 options::get_ethererum_address() const
 {
@@ -134,6 +140,7 @@ options::get_bootstrap_peers_file() const
 {
     return this->config_data[BOOTSTRAP_PEERS_FILE_KEY].asString();
 }
+
 
 std::string
 options::get_bootstrap_peers_url() const
@@ -262,6 +269,7 @@ options::get_ws_idle_timeout() const
     return std::chrono::seconds(this->config_data[WS_IDLE_TIMEOUT_KEY].asUInt64());
 }
 
+
 size_t
 options::get_audit_mem_size() const
 {
@@ -272,6 +280,20 @@ options::get_audit_mem_size() const
     else
     {
         return DEFAULT_AUDIT_MEM_SIZE;
+    }
+}
+
+
+std::string
+options::get_state_dir() const
+{
+    if (this->config_data.isMember(STATE_DIR_KEY))
+    {
+        return this->config_data[STATE_DIR_KEY].asString();
+    }
+    else
+    {
+        return DEFAULT_STATE_DIR;
     }
 }
 

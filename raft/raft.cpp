@@ -22,11 +22,11 @@
 
 namespace
 {
-    const std::string NO_PEERS_ERRORS_MGS = "No peers given!";
+    const std::string NO_PEERS_ERRORS_MGS{"No peers given!"};
     const std::string MSG_ERROR_INVALID_LOG_ENTRY_FILE{"Invalid log entry file. Please Delete .state folder."};
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
-    const std::string MSG_NO_PEERS_IN_LOG = "Unable to find peers in log entries.";
+    const std::string MSG_NO_PEERS_IN_LOG{"Unable to find peers in log entries."};
 
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
@@ -38,11 +38,12 @@ namespace
 using namespace bzn;
 
 
-raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node, const bzn::peers_list_t& peers, bzn::uuid_t uuid)
+raft::raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node, const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir)
     : timer(io_context->make_unique_steady_timer())
     , peers(peers)
     , uuid(std::move(uuid))
     , node(std::move(node))
+    , state_dir(std::move(state_dir))
 {
     // we must have a list of peers!
     if (this->peers.empty())
@@ -726,7 +727,7 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 std::string
 raft::entries_log_path()
 {
-    return "./.state/" + this->get_uuid() +".dat";
+    return this->state_dir  + this->get_uuid() + ".dat";
 }
 
 
@@ -750,7 +751,7 @@ raft::append_entry_to_log(const bzn::log_entry& log_entry)
 std::string
 raft::state_path()
 {
-    return "./.state/" + this->get_uuid() +".state";
+    return this->state_dir + this->get_uuid() + ".state";
 }
 
 
@@ -758,6 +759,7 @@ void
 raft::save_state()
 {
     boost::filesystem::path path{this->state_path()};
+
     if (!boost::filesystem::exists(path.parent_path()))
     {
         boost::filesystem::create_directories(path.parent_path());

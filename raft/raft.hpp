@@ -36,7 +36,7 @@ namespace bzn
     {
     public:
         raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node,
-             const bzn::peers_list_t& peers, bzn::uuid_t uuid);
+             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir);
 
         bzn::raft_state get_state() override;
 
@@ -135,6 +135,8 @@ namespace bzn
         std::mutex raft_lock;
 
         std::ofstream log_entry_out_stream;
+
+        const std::string state_dir;
 
         bool enable_audit = true;
     };

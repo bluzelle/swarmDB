@@ -24,7 +24,7 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - sourceline: 'deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main'
+            - sourceline: 'deb [trusted=yes] http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main'
           packages:
             - g++-7
             - pkg-config
