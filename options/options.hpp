@@ -47,6 +47,8 @@ namespace bzn
 
         size_t get_audit_mem_size() const override;
 
+        std::string get_state_dir() const override;
+
     private:
         bool parse(int argc, const char* argv[]);
 

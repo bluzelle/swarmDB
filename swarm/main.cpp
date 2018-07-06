@@ -208,7 +208,7 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
 
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
-        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid());
+        auto raft = std::make_shared<bzn::raft>(io_context, node, init_peers.get_peers(), options.get_uuid(), options.get_state_dir());
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());

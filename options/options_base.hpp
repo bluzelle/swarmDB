@@ -98,6 +98,13 @@ namespace bzn
          */
          virtual size_t get_audit_mem_size() const = 0;
 
+
+         /**
+          * Get the director for storing swarm state data
+          * @return directory
+          */
+         virtual std::string get_state_dir() const = 0;
+
     };
 
 } // bzn
