@@ -125,6 +125,18 @@ get_http_listener_port(const bzn::options& options, const bzn::bootstrap_peers& 
 }
 
 
+size_t
+get_state_file_size(const bzn::options& options)
+{
+    boost::filesystem::path state_file_path{options.get_state_dir() + "/" + options.get_uuid() + ".dat"};
+    if(boost::filesystem::exists(state_file_path))
+    {
+        return size_t(boost::filesystem::file_size(state_file_path));
+    }
+    return 0;
+}
+
+
 void
 print_banner(const bzn::options& options, double eth_balance)
 {
@@ -135,7 +147,9 @@ print_banner(const bzn::options& options, double eth_balance)
        << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port()    << "\n"
-       << "         Token Balance: " << eth_balance << " ETH\n"
+       << "         Token Balance: " << eth_balance << " ETH" << "\n"
+       << "     Maximimum Storage: " << options.get_max_storage() << " Bytes" << "\n"
+       << "          Used Storage: " << get_state_file_size(options) << " Bytes" << "\n"
        << '\n';
 
     std::cout << ss.str();

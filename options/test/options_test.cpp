@@ -17,6 +17,7 @@
 
 #include <include/bluzelle.hpp>
 #include <options/options.hpp>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <gtest/gtest.h>
 
@@ -51,15 +52,21 @@ class options_file_test : public Test
 public:
     options_file_test()
     {
-
-        std::ofstream ofile(TEST_CONFIG_FILE);
-        ofile.exceptions(std::ios::failbit);
-        ofile << DEFAULT_CONFIG_DATA;
+        this->save_options_file(DEFAULT_CONFIG_DATA);
     }
 
     ~options_file_test()
     {
         unlink(TEST_CONFIG_FILE.c_str());
+    }
+
+    void
+    save_options_file(const std::string& content)
+    {
+        unlink(TEST_CONFIG_FILE.c_str());
+        std::ofstream ofile(TEST_CONFIG_FILE);
+        ofile.exceptions(std::ios::failbit);
+        ofile << content;
     }
 };
 
@@ -76,6 +83,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ("./daemon_state/", options.get_state_dir());
     EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
+    EXPECT_EQ((size_t)(2147483648), options.get_max_storage());
 
     // defaults..
     {
@@ -91,3 +99,55 @@ TEST(options, test_that_missing_default_config_throws_exception)
 
     EXPECT_THROW(options.parse_command_line(1, NO_ARGS), std::runtime_error);
 }
+
+
+TEST_F(options_file_test, test_max_storage_parsing)
+{
+    std::string config_data{DEFAULT_CONFIG_DATA};
+
+    bzn::message json;
+    std::string errors;
+
+    Json::CharReaderBuilder builder;
+    Json::CharReader* reader = builder.newCharReader();
+    reader->parse(
+            DEFAULT_CONFIG_DATA.c_str()
+            , DEFAULT_CONFIG_DATA.c_str() + DEFAULT_CONFIG_DATA.size()
+            , &json
+            , &errors);
+
+    std::for_each(bzn::options::BYTE_SUFFIXES.cbegin()
+            , bzn::options::BYTE_SUFFIXES.cend()
+            , [&](const auto& p)
+                  {
+                      const size_t expected = 3 * 1099511627776; // 3TB in B
+                      {
+                          json["max_storage"] = boost::lexical_cast<std::string>(expected / p.second) + p.first;
+
+                          this->save_options_file(json.toStyledString());
+
+                          bzn::options options;
+                          options.parse_command_line(1, NO_ARGS);
+
+                          EXPECT_EQ(expected, options.get_max_storage());
+                      }
+                      {
+                          std::string max_storage{boost::lexical_cast<std::string>(expected / p.second)};
+                          max_storage = max_storage + p.first;
+                          if(p.first!='B')
+                          {
+                              max_storage = max_storage.append("B");
+                          }
+                          json["max_storage"] = max_storage;
+
+                          this->save_options_file(json.toStyledString());
+
+                          bzn::options options;
+                          options.parse_command_line(1, NO_ARGS);
+
+                          EXPECT_EQ(expected, options.get_max_storage());
+                      }
+                  });
+
+}
+
