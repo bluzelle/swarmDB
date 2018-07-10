@@ -21,10 +21,11 @@
 using namespace bzn;
 
 
-crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage)
-        : raft(std::move(raft))
-        , node(std::move(node))
-        , storage(std::move(storage))
+crud::crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager)
+    : raft(std::move(raft))
+    , node(std::move(node))
+    , storage(std::move(storage))
+    , subscription_manager(std::move(subscription_manager))
 {
     this->register_route_handlers();
     this->register_command_handlers();
@@ -67,7 +68,10 @@ crud::start()
                         {
                             if (auto search = self->commit_handlers.find(msg.db().msg_case()); search != self->commit_handlers.end())
                             {
-                                search->second(msg.db());
+                                if (search->second(msg.db()))
+                                {
+                                    self->subscription_manager->inspect_commit(msg.db());
+                                }
                             }
                         }
                     }
@@ -78,20 +82,44 @@ crud::start()
 
                     return true;
                 });
+
+            this->subscription_manager->start();
         });
 }
 
 
 void
-crud::do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
-    if (auto it = this->route_handlers.find(raft->get_state()); it != this->route_handlers.end())
+    switch (request.msg_case())
     {
-        it->second(msg, request, response);
-        return;
-    }
+        case database_msg::kSubscribe:
+        {
+            this->subscription_manager->subscribe(request.header().db_uuid(), request.subscribe().key(),
+                request.header().transaction_id(), response, session);
+        }
+        break;
 
-    response.mutable_resp()->set_error(bzn::MSG_INVALID_RAFT_STATE);
+        case database_msg::kUnsubscribe:
+        {
+            this->subscription_manager->unsubscribe(request.header().db_uuid(), request.unsubscribe().key(),
+                request.header().transaction_id(), response, session);
+        }
+        break;
+
+        default:
+        {
+            if (auto it = this->route_handlers.find(raft->get_state()); it != this->route_handlers.end())
+            {
+                it->second(msg, request, response);
+            }
+            else
+            {
+                response.mutable_resp()->set_error(bzn::MSG_INVALID_RAFT_STATE);
+            }
+        }
+        break;
+    }
 }
 
 
@@ -214,33 +242,42 @@ crud::handle_size(const bzn::message& /*msg*/, const database_msg& request, data
 }
 
 
-void
+bool
 crud::commit_create(const database_msg& msg)
 {
     if (this->storage->create(msg.header().db_uuid(), msg.create().key(), msg.create().value()) != storage_base::result::ok)
     {
         LOG(error) << "Request:" <<msg.header().transaction_id() << " Create failed";
+        return false;
     }
+
+    return true;
 }
 
 
-void
+bool
 crud::commit_update(const database_msg& msg)
 {
     if (this->storage->update(msg.header().db_uuid(), msg.update().key(), msg.update().value()) != storage_base::result::ok)
     {
         LOG(error) << "Request:" << msg.header().transaction_id() << " Update failed";
+        return false;
     }
+
+    return true;
 }
 
 
-void
+bool
 crud::commit_delete(const database_msg& msg)
 {
     if (this->storage->remove(msg.header().db_uuid(), msg.delete_().key()) != storage_base::result::ok)
     {
         LOG(error) << "Request:" << msg.header().transaction_id() << " Delete failed";
+        return false;
     }
+
+    return true;
 }
 
 
@@ -252,7 +289,7 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
     if (!ws_msg.isMember("msg"))
     {
-        LOG(error) << "Invalid message: " << ws_msg.toStyledString().substr(0,60) << "...";
+        LOG(error) << "Invalid message: " << ws_msg.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
         response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
@@ -260,7 +297,7 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
     if (!msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
     {
-        LOG(error) << "Failed to decode message: " << ws_msg.toStyledString().substr(0,60) << "...";
+        LOG(error) << "Failed to decode message: " << ws_msg.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
         response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
@@ -276,7 +313,7 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
     *response.mutable_header() = msg.db().header();
 
-    this->do_raft_task_routing(ws_msg, msg.db(), response);
+    this->do_raft_task_routing(ws_msg, msg.db(), response, session);
 
     session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
 }

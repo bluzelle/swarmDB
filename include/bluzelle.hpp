@@ -29,6 +29,8 @@ namespace bzn
 
     using uuid_t = std::string;
 
+    using key_t = std::string;
+
 } // bzn
 
 

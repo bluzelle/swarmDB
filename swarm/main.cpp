@@ -14,6 +14,7 @@
 
 #include <bootstrap/bootstrap_peers.hpp>
 #include <crud/crud.hpp>
+#include <crud/subscription_manager.hpp>
 #include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
 #include <http/server.hpp>
@@ -229,7 +230,7 @@ main(int argc, const char* argv[])
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
         auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir());
         auto storage = std::make_shared<bzn::storage>();
-        auto crud = std::make_shared<bzn::crud>(node, raft, storage);
+        auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
 
         // get our http listener port...

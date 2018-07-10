@@ -80,7 +80,9 @@ namespace bzn
         accept_handler(boost::asio::error::operation_aborted);
 
         // expire idle timer (will close connection)
+#if 0
         EXPECT_CALL(*mock_websocket_stream, async_close(_,_));
+#endif
         wh(boost::system::error_code());
     }
 

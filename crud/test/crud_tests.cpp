@@ -21,6 +21,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_raft_base.hpp>
 #include <mocks/mock_storage_base.hpp>
+#include <mocks/mock_subscription_manager_base.hpp>
 
 using namespace ::testing;
 
@@ -109,6 +110,24 @@ namespace
 
         return generate_generic_request(uid, msg);
     }
+
+    bzn::message generate_subscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
+    {
+        bzn_msg msg;
+
+        msg.mutable_db()->mutable_subscribe()->set_key(key);
+
+        return generate_generic_request(uuid, msg);
+    }
+
+    bzn::message generate_unsubscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
+    {
+        bzn_msg msg;
+
+        msg.mutable_db()->mutable_unsubscribe()->set_key(key);
+
+        return generate_generic_request(uuid, msg);
+    }
 }
 
 
@@ -121,6 +140,7 @@ public:
         this->mock_raft = std::make_shared<bzn::Mockraft_base>();
         this->mock_storage = std::make_shared<bzn::Mockstorage_base>();
         this->mock_session = std::make_shared<bzn::Mocksession_base>();
+        this->mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
     }
 
     void SetUp() final
@@ -135,7 +155,9 @@ public:
         EXPECT_CALL(*mock_raft, register_commit_handler(_)).WillOnce(Invoke(
             [&](bzn::raft_base::commit_handler ch) { this->ch = ch; }));
 
-        this->crud = std::make_shared<bzn::crud>(mock_node, mock_raft, mock_storage);
+        EXPECT_CALL(*mock_subscription_manager, start());
+
+        this->crud = std::make_shared<bzn::crud>(mock_node, mock_raft, mock_storage, mock_subscription_manager);
 
         this->crud->start();
     }
@@ -144,6 +166,7 @@ public:
     std::shared_ptr<bzn::Mockraft_base> mock_raft;
     std::shared_ptr<bzn::Mockstorage_base> mock_storage;
     std::shared_ptr<bzn::Mocksession_base> mock_session;
+    std::shared_ptr<bzn::Mocksubscription_manager_base> mock_subscription_manager;
 
     bzn::message_handler mh;
     bzn::raft_base::commit_handler ch;
@@ -247,6 +270,8 @@ TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
         {
             return bzn::storage_base::result::ok;
         }));
+
+    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
 
     this->ch(request);
 }
@@ -477,6 +502,8 @@ TEST_F(crud_test, test_that_a_leader_can_update)
 
     EXPECT_CALL(*this->mock_storage, update(USER_UUID, key, TEST_VALUE));
 
+    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
+
     this->ch(request);
 }
 
@@ -608,6 +635,8 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
     // it's a delete command and sent the command to raft to send to the swarm,
     // apon reaching concensus RAFT will call the commit handler
     EXPECT_CALL(*this->mock_storage, remove(USER_UUID, key));
+
+    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
 
     this->ch(request);
 }
@@ -891,6 +920,8 @@ TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
 
     EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'))).WillOnce(Return(bzn::storage_base::result::ok));
 
+    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
+
     this->ch(request);
 }
 
@@ -913,4 +944,30 @@ TEST_F(crud_test, test_that_a_update_command_fails_when_the_size_of_the_value_ex
         }));
 
     this->mh(request, this->mock_session);
+}
+
+
+TEST_F(crud_test, test_that_subscription_and_unsubscription_requests_are_handled)
+{
+    // subscribe
+    {
+        bzn::message request = generate_subscription_request(USER_UUID, "key0");
+
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
+
+        EXPECT_CALL(*this->mock_subscription_manager, subscribe(USER_UUID, "key0", _, _, _));
+
+        this->mh(request, this->mock_session);
+    }
+
+    // unsubscribe
+    {
+        bzn::message request = generate_unsubscription_request(USER_UUID, "key0");
+
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
+
+        EXPECT_CALL(*this->mock_subscription_manager, unsubscribe(USER_UUID, "key0", _, _, _));
+
+        this->mh(request, this->mock_session);
+    }
 }

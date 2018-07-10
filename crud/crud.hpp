@@ -16,8 +16,9 @@
 
 #include <include/bluzelle.hpp>
 #include <crud/crud_base.hpp>
-#include <raft/raft_base.hpp>
+#include <crud/subscription_manager_base.hpp>
 #include <node/node_base.hpp>
+#include <raft/raft_base.hpp>
 #include <storage/storage_base.hpp>
 #include <unordered_map>
 
@@ -27,7 +28,7 @@ namespace bzn
     class crud final : public bzn::crud_base, public std::enable_shared_from_this<crud>
     {
     public:
-        crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage);
+        crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager);
 
         void handle_create(const bzn::message& msg, const database_msg& request, database_response& response) override;
 
@@ -44,7 +45,7 @@ namespace bzn
 
         void set_leader_info(database_response& msg);
 
-        void do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response);
+        void do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session);
 
         void do_candidate_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
         void  do_follower_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
@@ -54,9 +55,9 @@ namespace bzn
         void      handle_has(const bzn::message& msg, const database_msg& request, database_response& response);
         void     handle_size(const bzn::message& msg, const database_msg& request, database_response& response);
 
-        void commit_create(const database_msg& msg);
-        void commit_update(const database_msg& msg);
-        void commit_delete(const database_msg& msg);
+        bool commit_create(const database_msg& msg);
+        bool commit_update(const database_msg& msg);
+        bool commit_delete(const database_msg& msg);
 
         void register_route_handlers();
         void register_command_handlers();
@@ -70,10 +71,11 @@ namespace bzn
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;
         std::shared_ptr<bzn::storage_base> storage;
+        std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
 
         using route_handler_t   = std::function<void(const bzn::message& msg, const database_msg& request, database_response& response)>;
         using command_handler_t = std::function<void(const bzn::message& msg, const database_msg& request, database_response& response)>;
-        using commit_handler_t  = std::function<void(const database_msg& msg)>;
+        using commit_handler_t  = std::function<bool(const database_msg& msg)>;
 
         std::unordered_map<bzn::raft_state, route_handler_t>         route_handlers;
         std::unordered_map<database_msg::MsgCase, commit_handler_t>  commit_handlers;

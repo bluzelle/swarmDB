@@ -38,8 +38,9 @@ except ImportError as e:
                       "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n".format(e.message))
 
 
-def send_request(node, uuid, msg):
-    ws = websocket.create_connection("ws://" + node)
+def send_request(node, uuid, msg, loop=False, ws=None):
+    if not ws:
+        ws = websocket.create_connection("ws://" + node)
     msg.db.header.db_uuid = uuid
     msg.db.header.transaction_id = random.randint(1,sys.maxint)
 
@@ -61,6 +62,18 @@ def send_request(node, uuid, msg):
     else:
         print("Response: \n{}".format(resp))
         print("-" * 60 + '\n')
+
+    if loop:
+        while 1:
+            try:
+                print("Waiting....\n")
+                resp = database_pb2.database_response()
+                resp.ParseFromString(ws.recv())
+                print("Response: \n{}".format(resp))
+                print("-" * 60 + '\n')
+            except KeyboardInterrupt:
+                break
+        return ws
 
     ws.close()
 
@@ -130,6 +143,17 @@ def size_request():
     msg.db.size.SetInParent()
     return msg
 
+def subscribe_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.subscribe.key = key
+    return msg
+
+
+def unsubscribe_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.unsubscribe.key = key
+    return msg
+
 
 def ping_handler(args):
     return send_ping_request(args.node)
@@ -161,6 +185,11 @@ def keys_handler(args):
 
 def size_handler(args):
     return send_request(args.node, args.uuid, size_request())
+
+
+def subscribe_handler(args):
+    return send_request(args.node, args.uuid, unsubscribe_request(args.key),
+                        ws=send_request(args.node, args.uuid, subscribe_request(args.key), True))
 
 
 if __name__ == "__main__":
@@ -228,6 +257,12 @@ if __name__ == "__main__":
     size_parser = subparsers.add_parser('size', help="Determine the size of the DB by UUID")
     size_parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     size_parser.set_defaults(func=size_handler)
+
+    # subscribe
+    subscribe_parser = subparsers.add_parser('subscribe', help="Subscribe and monitor changes for a key")
+    subscribe_parser.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    subscribe_parser.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    subscribe_parser.set_defaults(func=subscribe_handler)
 
     args = parser.parse_args()
 
