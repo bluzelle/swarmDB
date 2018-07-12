@@ -20,12 +20,16 @@
 #include <include/optional.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <string>
+#include <map>
 
 namespace bzn
 {
+
     class options_base
     {
     public:
+        // Suffixes for the max size parser.
+        static const std::map<char, size_t> BYTE_SUFFIXES;//{{'B', 1}, {'K', 1024}, {'M', 1048576}, {'G', 1073741824}, {'T', 1099511627776}};
 
         virtual ~options_base() = default;
 
@@ -99,10 +103,17 @@ namespace bzn
 
 
          /**
-          * Get the director for storing swarm state data
+          * Get the directory for storing swarm state data
           * @return directory
           */
          virtual std::string get_state_dir() const = 0;
+
+
+         /**
+          * Get the maximum allowed storage for the daemon.
+          * @return
+          */
+         virtual size_t get_max_storage() const = 0;
 
     };
 

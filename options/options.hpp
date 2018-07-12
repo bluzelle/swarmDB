@@ -49,6 +49,8 @@ namespace bzn
 
         std::string get_state_dir() const override;
 
+        size_t get_max_storage() const override;
+
     private:
         bool parse(int argc, const char* argv[]);
 
