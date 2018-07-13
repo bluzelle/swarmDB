@@ -29,11 +29,15 @@ namespace bzn
     const std::string MSG_TRYING_TO_INSERT_INVALID_ENTRY{"Trying to insert an invalid log entry."};
     const std::string MSG_UNABLE_TO_CREATE_LOG_PATH_NAMED{"Unable to create log path: "};
     const std::string MSG_EXITING_DUE_TO_LOG_PATH_CREATION_FAILURE{"MSG_EXITING_DUE_TO_LOG_PATH_CREATION_FAILURE"};
+    const std::string MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED{"Maximum storage has been exceeded, please update the options file."};
 
     class raft_log
     {
     public:
-        raft_log(const std::string& log_path);
+        // The default maximum allowed storage for a node is 2G
+        static const size_t DEFAULT_MAX_STORAGE_SIZE        = 2147483648;
+
+        raft_log(const std::string& log_path, const size_t max_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
 
         const bzn::log_entry& entry_at(size_t i) const;
         const bzn::log_entry& last_quorum_entry() const;
@@ -45,17 +49,27 @@ namespace bzn
 
         size_t size() const;
 
+        inline size_t memory_used() const {return this->total_memory_used;};
+
         inline const std::vector<log_entry>& get_log_entries()
         {
             return this->log_entries;
         }
 
 
+        inline bool maximum_storage_exceeded() const
+        {
+            return this->maximum_storage < this->total_memory_used;
+        }
+
     private:
         void append_log_disk(const bzn::log_entry& log_entry);
         void rewrite_log();
 
         std::vector<log_entry> log_entries;
+        size_t                  total_memory_used = 0;
+        size_t                  maximum_storage;
+
         std::ofstream log_entry_out_stream;
         const std::string entries_log_path;
     };

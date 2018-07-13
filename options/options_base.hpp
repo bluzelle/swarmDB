@@ -29,7 +29,7 @@ namespace bzn
     {
     public:
         // Suffixes for the max size parser.
-        static const std::map<char, size_t> BYTE_SUFFIXES;//{{'B', 1}, {'K', 1024}, {'M', 1048576}, {'G', 1073741824}, {'T', 1099511627776}};
+        static const std::map<char, size_t> BYTE_SUFFIXES;
 
         virtual ~options_base() = default;
 

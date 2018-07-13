@@ -47,7 +47,7 @@ namespace bzn
     {
     public:
         raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node,
-             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir);
+             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir, const size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
 
         bzn::raft_state get_state() override;
 
@@ -109,6 +109,9 @@ namespace bzn
         void handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
         void update_raft_state(uint32_t term, bzn::raft_state state);
+
+        void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message& peer);
+        void handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid);
 
         // helpers...
         void get_raft_timeout_scale();

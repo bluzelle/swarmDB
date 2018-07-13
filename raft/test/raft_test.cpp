@@ -89,10 +89,6 @@ namespace
             }
             boost::filesystem::create_directory(TEST_STATE_DIR);
 
-
-
-
-
             if(boost::filesystem::exists("./.state"))
             {
                 boost::filesystem::remove_all("./.state");
