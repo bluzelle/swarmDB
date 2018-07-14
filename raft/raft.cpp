@@ -450,6 +450,14 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
         return;
     }
 
+    if(!peer.isMember("uuid") || peer["uuid"].asString().empty())
+    {
+        bzn::message response;
+        response["error"] = ERROR_INVALID_UUID;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
     this->peer_match_index[peer["uuid"].asString()] = 1;
     this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, peer),
                             bzn::log_entry_type::joint_quorum);
@@ -478,10 +486,10 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
     }
 
     const auto &peers = last_quorum_entry.msg["msg"]["peers"];
-    const auto &same_peer = std::find_if(
-            peers.begin(), peers.end(), [&](const auto &p)
+    const auto &same_peer = std::find_if(peers.begin(), peers.end(),
+            [&](const auto &peer)
             {
-                return p["uuid"].asString() == uuid;
+                return peer["uuid"].asString() == uuid;
             });
     if (same_peer == peers.end())
     {
@@ -511,6 +519,14 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     }
     else if(msg["cmd"].asString() == "remove_peer" )
     {
+        if (!msg.isMember("data") || !msg["data"].isMember("uuid") || msg["data"]["uuid"].asString().empty())
+        {
+            bzn::message response;
+            response["error"] = ERROR_INVALID_UUID;
+            session->send_message(std::make_shared<bzn::message>(response), true);
+            return;
+        }
+
         this->handle_remove_peer(session, msg["data"]["uuid"].asString());
         return;
     }

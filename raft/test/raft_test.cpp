@@ -1198,6 +1198,92 @@ namespace bzn
     }
 
 
+
+    TEST_F(raft_test, test_that_bad_add_or_remove_peer_requests_fail)
+    {
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+
+        // intercept the timeout callback...
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).WillRepeatedly(Invoke(
+                [&](auto handler)
+                { wh = handler; }));
+
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                { return std::move(mock_steady_timer); }));
+
+        // craft raft...
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID,
+                                                TEST_STATE_DIR);
+
+        bzn::message_handler mh;
+        EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                [&](const auto &, auto handler)
+                {
+                    mh = handler;
+                    return true;
+                }));
+
+        // and away we go...
+        raft->start();
+
+        // lets make this raft the leader by responding to requests for votes
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+
+        wh(boost::system::error_code());
+
+        // send the votes
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), this->mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), this->mock_session);
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
+
+        //////
+        // test add and remove peers with empty or missing UUID values will fail
+
+        {
+            bzn::message bad_add = make_add_peer_request();
+            bad_add["data"]["peer"].removeMember("uuid");
+
+            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                    .Times(2)
+                    .WillRepeatedly(Invoke(
+                            [&](const auto& msg, auto)
+                            {
+                                auto root = *msg.get();
+                                EXPECT_EQ(root["error"].asString(), ERROR_INVALID_UUID);
+                            }));
+
+            mh( bad_add,this->mock_session);
+            bad_add["data"]["uuid"] = "";
+            mh( bad_add,this->mock_session);
+        }
+        {
+
+
+            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                    .Times(3)
+                    .WillRepeatedly(Invoke(
+                            [&](const auto& msg, auto)
+                            {
+                                auto root = *msg.get();
+                                EXPECT_EQ(root["error"].asString(), ERROR_INVALID_UUID);
+                            }));
+
+            bzn::message bad_remove = make_remove_peer_request();
+            // msg["data"]["uuid"] = TEST_NODE_UUID;
+            bad_remove.removeMember("data");
+            mh( bad_remove,this->mock_session);
+            bad_remove["data"] = bzn::message{};
+            mh( bad_remove,this->mock_session);
+
+            bad_remove["data"]["uuid"] = "";
+            mh( bad_remove,this->mock_session);
+        }
+    }
+
+
     TEST_F(raft_test, test_that_add_peer_request_to_leader_results_in_correct_joint_quorum)
     {
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();

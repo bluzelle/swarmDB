@@ -68,7 +68,7 @@ namespace bzn
 
         std::vector<log_entry> log_entries;
         size_t                  total_memory_used = 0;
-        size_t                  maximum_storage;
+        const size_t            maximum_storage;
 
         std::ofstream log_entry_out_stream;
         const std::string entries_log_path;

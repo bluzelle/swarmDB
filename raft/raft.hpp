@@ -35,6 +35,7 @@ namespace
     const std::string ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER = "ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER";
     const std::string MSG_ERROR_CURRENT_QUORUM_IS_JOINT = "A peer cannot be added or removed until the last quorum change request has been processed.";
     const std::string ERROR_PEER_ALREADY_EXISTS = "ERROR_PEER_ALREADY_EXISTS";
+    const std::string ERROR_INVALID_UUID = "ERROR_INVALID_UUID";
     const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
     const std::string ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING = "Unable to open log file for writing: ";
 }
@@ -89,6 +90,7 @@ namespace bzn
         FRIEND_TEST(raft, test_that_is_majority_returns_expected_result_for_single_and_joint_quorums);
         FRIEND_TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately);
         FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
+        FRIEND_TEST(raft_test, test_that_bad_add_or_remove_peer_requests_fail);
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
 
