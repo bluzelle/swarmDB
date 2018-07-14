@@ -27,8 +27,8 @@ namespace
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG{"Unable to find peers in log entries."};
-    const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(1000)};
-    const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(5000)};
+    const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(250)};
+    const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(1250)};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 }

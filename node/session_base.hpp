@@ -15,7 +15,6 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <node/node_base.hpp>
 
 
 namespace bzn
@@ -32,13 +31,13 @@ namespace bzn
 
         /**
          * Start accepting new connections
-         * @param handler   callback to execute when connection is established
+         * @param handler callback to execute when connection is established
          */
         virtual void start(bzn::message_handler handler) = 0;
 
         /**
          * Send a message to the connected node
-         * @param msg       message
+         * @param msg message
          * @param end_session close connection after send
          */
         virtual void send_message(std::shared_ptr<bzn::message> msg, bool end_session) = 0;
@@ -46,11 +45,16 @@ namespace bzn
 
         /**
          * Send a message to the connected node
-         * @param msg       message
+         * @param msg message
          * @param end_session close connection after send
          */
         virtual void send_message(std::shared_ptr<std::string> msg, bool end_session) = 0;
 
+        /**
+         * Send a message with no expected response
+         * @param msg message
+         */
+        virtual void send_datagram(std::shared_ptr<std::string> msg) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.

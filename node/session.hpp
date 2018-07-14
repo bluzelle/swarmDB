@@ -25,7 +25,7 @@
 
 namespace bzn
 {
-    class session : public bzn::session_base, public std::enable_shared_from_this<session>
+    class session final : public bzn::session_base, public std::enable_shared_from_this<session>
     {
     public:
         session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout);
@@ -35,6 +35,8 @@ namespace bzn
         void send_message(std::shared_ptr<bzn::message> msg, bool end_session) override;
 
         void send_message(std::shared_ptr<std::string> msg, bool end_session) override;
+
+        void send_datagram(std::shared_ptr<std::string> msg) override;
 
         void close() override;
 

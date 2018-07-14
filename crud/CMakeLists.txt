@@ -2,6 +2,9 @@ add_library(crud STATIC
         crud.cpp
         crud.hpp
         crud_base.hpp
+        subscription_manager.cpp
+        subscription_manager.hpp
+        subscription_manager_base.hpp
         )
 
 target_link_libraries(crud proto)

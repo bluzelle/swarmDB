@@ -16,6 +16,8 @@ message database_msg
         database_has has = 14;
         database_empty keys = 15;
         database_empty size = 16;
+        database_subscribe subscribe = 17;
+        database_unsubscribe unsubscribe = 18;
     }
 }
 
@@ -45,6 +47,16 @@ message database_read
     string key = 2;
 }
 
+message database_subscribe
+{
+    string key = 2;
+}
+
+message database_unsubscribe
+{
+    string key = 2;
+}
+
 message database_update
 {
     string key = 2;
@@ -63,7 +75,6 @@ message database_has
 
 message database_empty {}
 
-
 message database_response
 {
     database_header header = 1;
@@ -81,5 +92,6 @@ message database_response
         int32 size = 6;
         string error = 7;
         repeated string keys = 8;
+        database_update update = 9;
     }
 }

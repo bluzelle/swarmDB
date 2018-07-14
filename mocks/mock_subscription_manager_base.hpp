@@ -14,24 +14,21 @@
 
 #pragma once
 
-#include <node/session_base.hpp>
+#include <crud/subscription_manager_base.hpp>
 #include <gmock/gmock.h>
 
-
-// gmock_gen.py generated...
-
 namespace bzn {
-    class Mocksession_base : public session_base {
-    public:
-        MOCK_METHOD1(start,
-            void(bzn::message_handler handler));
-        MOCK_METHOD2(send_message,
-            void(std::shared_ptr<bzn::message> msg, bool end_session));
-        MOCK_METHOD2(send_message,
-            void(std::shared_ptr<std::string> msg, bool end_session));
-        MOCK_METHOD1(send_datagram,
-            void(std::shared_ptr<std::string> msg));
-        MOCK_METHOD0(close,
-            void());
-    };
+
+class Mocksubscription_manager_base : public subscription_manager_base {
+ public:
+  MOCK_METHOD0(start,
+      void());
+  MOCK_METHOD5(subscribe,
+      void(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session));
+  MOCK_METHOD5(unsubscribe,
+      void(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session));
+  MOCK_METHOD1(inspect_commit,
+      void(const database_msg& msg));
+};
+
 }  // namespace bzn

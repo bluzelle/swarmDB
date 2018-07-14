@@ -73,7 +73,11 @@ session::do_read()
 
             if (ec)
             {
-                LOG(error) << "websocket read failed: " << ec.message();
+                // don't log close of websocket...
+                if (ec != boost::beast::websocket::error::closed)
+                {
+                    LOG(error) << "websocket read failed: " << ec.message();
+                }
                 return;
             }
 
@@ -141,14 +145,34 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 
 
 void
+session::send_datagram(std::shared_ptr<std::string> msg)
+{
+    this->websocket->get_websocket().binary(true);
+
+    this->websocket->async_write(
+        boost::asio::buffer(*msg),
+        this->strand->wrap(
+            [self = shared_from_this(), msg](auto ec, auto bytes_transferred)
+            {
+                if (ec)
+                {
+                    LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
+
+                    self->close();
+                    return;
+                }
+
+            }));
+}
+
+
+void
 session::close()
 {
     this->idle_timer->cancel();
 
     if (this->websocket->is_open())
     {
-        LOG(info) << "closing session";
-
         this->websocket->async_close(boost::beast::websocket::close_code::normal,
             [self = shared_from_this()](auto ec)
             {
@@ -175,6 +199,7 @@ session::start_idle_timeout()
         {
             if (!ec)
             {
+#if 0
                 LOG(info) << "reached idle timeout -- closing session: " << ec.message();
 
                 self->websocket->async_close(boost::beast::websocket::close_code::normal,
@@ -185,7 +210,9 @@ session::start_idle_timeout()
                             LOG(error) << "failed to close websocket: " << ec.message();
                         }
                     });
-
+#else
+                LOG(info) << "reached idle timeout -- closing session disabled: " << ec.message();
+#endif
                 return;
             }
         });
