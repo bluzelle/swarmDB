@@ -44,7 +44,7 @@ raft::raft(
         , const bzn::peers_list_t& peers
         , bzn::uuid_t uuid
         , const std::string state_dir
-        , const size_t maximum_raft_storage)
+        , size_t maximum_raft_storage)
     : timer(io_context->make_unique_steady_timer())
     , uuid(std::move(uuid))
     , node(std::move(node))

@@ -48,7 +48,7 @@ namespace bzn
     {
     public:
         raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node,
-             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir, const size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
+             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir, size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
 
         bzn::raft_state get_state() override;
 
