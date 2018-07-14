@@ -21,8 +21,8 @@
 
 namespace bzn
 {
-    raft_log::raft_log(const std::string& log_path)
-            : entries_log_path(log_path)
+    raft_log::raft_log(const std::string& log_path, const size_t maximum_storage)
+            :  maximum_storage(maximum_storage), entries_log_path(log_path)
     {
         if(boost::filesystem::exists(this->entries_log_path))
         {
@@ -32,6 +32,7 @@ namespace bzn
             {
                 this->log_entries.emplace_back(log_entry);
             }
+            this->total_memory_used = boost::filesystem::file_size(this->entries_log_path);
         }
 
         if (this->log_entries.empty())
@@ -87,6 +88,7 @@ namespace bzn
         }
         this->log_entry_out_stream << log_entry;
         this->log_entry_out_stream.flush();
+        this->total_memory_used = this->log_entry_out_stream.tellp();
     }
 
 

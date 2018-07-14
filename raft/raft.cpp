@@ -27,6 +27,7 @@ namespace
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_ERROR_INVALID_STATE_FILE{"Invalid state file. Please delete the .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG{"Unable to find peers in log entries."};
+
     const std::chrono::milliseconds DEFAULT_HEARTBEAT_TIMER_LEN{std::chrono::milliseconds(250)};
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(1250)};
 
@@ -42,7 +43,8 @@ raft::raft(
         , std::shared_ptr<bzn::node_base> node
         , const bzn::peers_list_t& peers
         , bzn::uuid_t uuid
-        , const std::string state_dir)
+        , const std::string state_dir
+        , size_t maximum_raft_storage)
     : timer(io_context->make_unique_steady_timer())
     , uuid(std::move(uuid))
     , node(std::move(node))
@@ -60,7 +62,14 @@ raft::raft(
     this->state_files_exist() ? this->load_state()
                                : this->create_state_files(log_path, peers);
 
-    this->raft_log = std::make_shared<bzn::raft_log>(log_path);
+    this->raft_log = std::make_shared<bzn::raft_log>(log_path, maximum_raft_storage);
+
+    // KEP-112 Bail if the raft storage exceeds the max storage
+    if(this->raft_log->maximum_storage_exceeded())
+    {
+        LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
+        throw std::runtime_error(MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED);
+    }
 }
 
 
@@ -407,7 +416,93 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
 }
 
 
+void
+raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
+{
+    if (this->get_state() != bzn::raft_state::leader)
+    {
+        bzn::message response;
+        response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
 
+    bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
+    if (last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+    {
+        bzn::message response;
+        response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    const auto &same_peer = std::find_if(last_quorum_entry.msg["msg"]["peers"].begin(),
+                                         last_quorum_entry.msg["msg"]["peers"].end(),
+                                         [&](const auto &p)
+                                         {
+                                             return p["uuid"].asString() == peer["uuid"].asString();
+                                         });
+    if (same_peer != last_quorum_entry.msg["msg"]["peers"].end())
+    {
+        bzn::message response;
+        response["error"] = ERROR_PEER_ALREADY_EXISTS;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    if(!peer.isMember("uuid") || peer["uuid"].asString().empty())
+    {
+        bzn::message response;
+        response["error"] = ERROR_INVALID_UUID;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    this->peer_match_index[peer["uuid"].asString()] = 1;
+    this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, peer),
+                            bzn::log_entry_type::joint_quorum);
+    return;
+}
+
+
+void
+raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid)
+{
+    if (this->get_state() != bzn::raft_state::leader)
+    {
+        bzn::message response;
+        response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
+    if (last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
+    {
+        bzn::message response;
+        response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    const auto &peers = last_quorum_entry.msg["msg"]["peers"];
+    const auto &same_peer = std::find_if(peers.begin(), peers.end(),
+            [&](const auto &peer)
+            {
+                return peer["uuid"].asString() == uuid;
+            });
+    if (same_peer == peers.end())
+    {
+        bzn::message response;
+        response["error"] = ERROR_PEER_NOT_FOUND;
+        session->send_message(std::make_shared<bzn::message>(response), true);
+        return;
+    }
+
+    this->append_log_unsafe(this->create_joint_quorum_by_removing_peer(last_quorum_entry.msg, uuid),
+                            bzn::log_entry_type::joint_quorum);
+    return;
+}
 
 
 void
@@ -419,76 +514,20 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     // TODO: refactor add/remove peers to move the functionality into handlers
     if(msg["cmd"].asString()=="add_peer")
     {
-        if(this->get_state() != bzn::raft_state::leader)
-        {
-            bzn::message response;
-            response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        const auto& same_peer = std::find_if(last_quorum_entry.msg["msg"]["peers"].begin(), last_quorum_entry.msg["msg"]["peers"].end(),
-                [&](const auto& p)
-                {
-                    return p["uuid"].asString() == msg["data"]["peer"]["uuid"].asString();
-                });
-        if(same_peer != last_quorum_entry.msg["msg"]["peers"].end())
-        {
-            bzn::message response;
-            response["error"] = ERROR_PEER_ALREADY_EXISTS;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        this->peer_match_index[msg["data"]["peer"]["uuid"].asString()] = 1;
-        this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, msg["data"]["peer"]), bzn::log_entry_type::joint_quorum);
+        this->handle_add_peer(session, msg["data"]["peer"]);
         return;
     }
     else if(msg["cmd"].asString() == "remove_peer" )
     {
-        if(this->get_state() != bzn::raft_state::leader)
+        if (!msg.isMember("data") || !msg["data"].isMember("uuid") || msg["data"]["uuid"].asString().empty())
         {
             bzn::message response;
-            response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
+            response["error"] = ERROR_INVALID_UUID;
             session->send_message(std::make_shared<bzn::message>(response), true);
             return;
         }
 
-        bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
-        if(last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
-        {
-            bzn::message response;
-            response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        const auto& peers = last_quorum_entry.msg["msg"]["peers"];
-        const auto& same_peer = std::find_if(
-                peers.begin()
-                , peers.end()
-                , [&](const auto& p)
-                {
-                    return p["uuid"].asString() == msg["data"]["uuid"].asString();
-                });
-        if(same_peer == peers.end())
-        {
-            bzn::message response;
-            response["error"] = ERROR_PEER_NOT_FOUND;
-            session->send_message(std::make_shared<bzn::message>(response), true);
-            return;
-        }
-
-        this->append_log_unsafe(this->create_joint_quorum_by_removing_peer(last_quorum_entry.msg, msg["data"]["uuid"].asString()), bzn::log_entry_type::joint_quorum);
+        this->handle_remove_peer(session, msg["data"]["uuid"].asString());
         return;
     }
 
@@ -738,6 +777,12 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 bool
 raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type)
 {
+    if(this->raft_log->maximum_storage_exceeded())
+    {
+        LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
+        std::raise(SIGINT);
+    }
+
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "not the leader, can't append log_entries!";
@@ -838,14 +883,20 @@ raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 std::string
 raft::entries_log_path()
 {
-    return this->state_dir  + this->get_uuid() + ".dat";
+    // Refactored as the original version was resulting in double '/' occurring
+    boost::filesystem::path out{this->state_dir};
+    out.append(this->get_uuid()+ ".dat");
+    return out.string();
 }
 
 
 std::string
 raft::state_path()
 {
-    return this->state_dir + this->get_uuid() + ".state";
+    // Refactored as the original version was resulting in double '/' occurring
+    boost::filesystem::path out{this->state_dir};
+    out.append(this->get_uuid() + ".state");
+    return out.string();
 }
 
 
