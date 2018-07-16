@@ -420,6 +420,75 @@ header {
 
 ------------------------------------------------------------
 ```
+#### Adding or Removing A Peer
+```
+Nodes are added to, or removed from, the network with the add_peer and
+remove_peer commands, sent to a leader via WebSocket protocol with the
+following JSON objects:
+
+    Adding a peer:
+
+    {
+        "bzn-api":"raft",
+        "cmd":"add_peer",
+        "data":{
+            "peer":{
+                "host":"<HOST-URL>",
+                "http_port":<HTTPPORT>,
+                "name":"<NODE-NAME>",
+                "port":<PORT>,
+                "uuid":"<UUID>"
+            }
+        }
+    }
+
+    The "name" object, <NODE-NAME>, can be a human readable name for the node, "Fluffy" for example.
+    The "uuid" object must be a universally unique identifer that uniquely identifies the node within the swarm, or any
+    other swarm. This value can be generated online at a site like: https://www.uuidgenerator.net/
+
+    Remove an existing peer:
+
+    {
+        "bzn-api":"raft",
+        "cmd":"remove_peer",
+        "data":{
+            "uuid":"<UUID>"
+        }
+    }
+
+Given a swarm of nodes, a new node can be added via the command line with a
+WebSocket client such as wscat (https://www.npmjs.com/package/wscat).
+
+Start the node that you want to add to the swarm, remember that the local peers
+list must include the information for the local node for your node to be able
+to start. When your node does start, it will not be able to participate in the
+swarm.
+
+Create your add_peer JSON object, and use wscat to send it to the swarm leader:
+
+    $ wscat -c  http://<leader-address>:<port>
+    connected (press CTRL+C to quit)
+    >{"bzn-api":"raft","cmd":"add_peer","data":{"peer":{"host":"104.25.178.61","http_port":84,"name":"peer3","port":49154,"uuid":"7dda1fcb-d494-4fc1-8645-a14056d13afd"}}}
+    >
+    disconnected
+    $
+
+the new node will now start participating in the swarm.
+
+To remove the node, create a remove_peer JSON object, and use wscat to send it
+to the swarm leader:
+
+    $ wscat -c  http://<leader-address>:<port>
+    connected (press CTRL+C to quit)
+    >{"bzn-api" : "raft", "cmd" : "remove_peer", "data" : { "uuid" : "7dda1fcb-d494-4fc1-8645-a14056d13afd" }}
+    >
+    disconnected
+    $
+
+and the node will be removed from the peer list.
+
+
+```
 #### Help & Options
 ```
 $ ./crud --help
