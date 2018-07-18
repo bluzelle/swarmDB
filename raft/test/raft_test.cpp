@@ -1730,12 +1730,12 @@ namespace bzn
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
                 [&](const bzn::message& msg)
-                {
+        {
                     LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
-                    commit_handler_called = true;
-                    ++commit_handler_times_called;
-                    return true;
+            commit_handler_called = true;
+            ++commit_handler_times_called;
+            return true;
                 });
 
         // and away we go...
@@ -1749,7 +1749,7 @@ namespace bzn
                 Invoke([](const auto&, const auto& /*msg*/){
 
                 })
-                );
+        );
 
         wh(boost::system::error_code());
 
@@ -1772,22 +1772,26 @@ namespace bzn
         wh(boost::system::error_code());
 
         // send false so second peer will achieve consensus and leader will commit the entries..
-        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 2), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, false, 1), this->mock_session);
 
         EXPECT_EQ(commit_handler_times_called, 0);
         ASSERT_FALSE(commit_handler_called);
 
         // enough peers have stored the first entry
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 2), this->mock_session);
         raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 2), this->mock_session);
         raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 2), this->mock_session);
-
+        
         EXPECT_EQ(commit_handler_times_called, 1);
+
+        EXPECT_EQ((size_t)3, raft->raft_log->size());
 
         // expire heart beat
         wh(boost::system::error_code());
 
         raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 3), this->mock_session);
         raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 3), this->mock_session);
+        raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid_new", 1, true, 3), this->mock_session);
         raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 3), this->mock_session);
         EXPECT_EQ(commit_handler_times_called, 2);
 
@@ -1803,5 +1807,4 @@ namespace bzn
         EXPECT_EQ(bzn::LOG_ENTRY_TYPES[2], bzn::log_entry_type_to_string(bzn::log_entry_type::joint_quorum));
         EXPECT_EQ(bzn::LOG_ENTRY_TYPES[3], bzn::log_entry_type_to_string(bzn::log_entry_type::undefined));
     }
-
 } // bzn
