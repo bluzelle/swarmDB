@@ -318,7 +318,6 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
     uint32_t leader_prev_term  = msg["data"]["prevTerm"].asUInt();
     uint32_t leader_prev_index = msg["data"]["prevIndex"].asUInt();
     uint32_t entry_term = msg["data"]["entryTerm"].asUInt();
-
     uint32_t msg_index = leader_prev_index + 1;
 
     // Accept the message if its previous index and previous term are consistent with our log
@@ -338,7 +337,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
     {
         // We don't agree with or don't have the previous index the leader thinks we have, so saying no will
         // tell the leader to send older data
-        if (leader_prev_index < this->raft_log->size())
+        if (leader_prev_index >= this->raft_log->size())
         {
             LOG(debug) << "Rejecting AppendEntries because I do not have the previous index";
         }
@@ -767,7 +766,18 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
         return;
     }
 
-    while (this->commit_index < this->last_majority_replicated_log_index())
+    uint32_t last_majority_replicated_log_index = this->last_majority_replicated_log_index();
+    // TODO: Review the last_majority_replicated_log_index w.r.t. it's bad return values.
+    // Intermittently the last_majority_replicated_log_index method returns invalid values
+    // that are much larger than the raft log size, this is a hack to stop the leader from
+    // crashing.
+    if(last_majority_replicated_log_index>this->raft_log->size())
+    {
+        LOG(error) << "last_majority_replicated_log_index() returned invalid value: [" << last_majority_replicated_log_index << "] - temporarily ignoring entries";
+        return;
+    }
+
+    while (this->commit_index < last_majority_replicated_log_index)
     {
         this->perform_commit(this->commit_index, this->raft_log->entry_at(this->commit_index));
     }
@@ -961,7 +971,8 @@ raft::last_majority_replicated_log_index()
         std::vector<size_t> match_indices;
         std::transform(uuids.begin(), uuids.end(),
                        std::back_inserter(match_indices),
-                       [&](const auto& uuid) {
+                       [&](const auto& uuid)
+                       {
                            return this->peer_match_index[uuid];
                        });
 
@@ -996,6 +1007,7 @@ raft::get_active_quorum()
                         , peers.end()
                         , std::inserter(result, result.begin()),
                         extract_uuid);
+
                 return std::list<std::set<bzn::uuid_t>>{result};
             }
             break;
@@ -1008,17 +1020,16 @@ raft::get_active_quorum()
                         , old_jpeers.end()
                         , std::inserter(result_old, result_old.begin())
                         , extract_uuid);
-            std::transform(new_jpeers.begin()
-                    , new_jpeers.end()
-                    , std::inserter(result_new, result_new.begin())
-                    , extract_uuid);
-            return std::list<std::set<bzn::uuid_t>>{result_old, result_new};
+                std::transform(new_jpeers.begin()
+                        , new_jpeers.end()
+                        , std::inserter(result_new, result_new.begin())
+                        , extract_uuid);
+                return std::list<std::set<bzn::uuid_t>>{result_old, result_new};
             }
             break;
         default:
             throw std::runtime_error("last_quorum gave something that's not a quorum");
     }
-    return std::list<std::set<bzn::uuid_t>>();
 }
 
 
