@@ -39,14 +39,14 @@ TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_u
         database_response response;
         sm.subscribe(TEST_UUID, TEST_KEY, 0, response, mock_session1);
 
-        ASSERT_TRUE(response.has_resp());
+        ASSERT_EQ(response.response_case(), database_response::RESPONSE_NOT_SET);
     }
 
     {
         database_response response;
         sm.subscribe(TEST_UUID, TEST_KEY, 1, response, mock_session2);
-        
-        ASSERT_TRUE(response.has_resp());
+
+        ASSERT_EQ(response.response_case(), database_response::RESPONSE_NOT_SET);
     }
 
     // duplicate subscription request...
@@ -54,16 +54,16 @@ TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_u
         database_response response;
         sm.subscribe(TEST_UUID, TEST_KEY, 2, response, mock_session1);
 
-        ASSERT_EQ(response.resp().error(), bzn::MSG_DUPLICATE_SUB);
+        ASSERT_EQ(response.response_case(), database_response::kError);
+        ASSERT_EQ(response.error().message(), bzn::MSG_DUPLICATE_SUB);
     }
 
-    // succeed and we should be return an empty response...
+    // succeed and we should be return a success response...
     {
         database_response response;
         sm.unsubscribe(TEST_UUID, TEST_KEY, 3, response, mock_session1);
 
-        ASSERT_TRUE(response.has_resp());
-        ASSERT_EQ(response.resp().error().size(), size_t(0));
+        ASSERT_EQ(response.response_case(), database_response::RESPONSE_NOT_SET);
     }
 
     // should get an unknown subscription error..
@@ -71,7 +71,8 @@ TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_u
         database_response response;
         sm.unsubscribe(TEST_UUID, TEST_KEY, 4, response, mock_session1);
 
-        ASSERT_EQ(response.resp().error(), bzn::MSG_INVALID_SUB);
+        ASSERT_EQ(response.response_case(), database_response::kError);
+        ASSERT_EQ(response.error().message(), bzn::MSG_INVALID_SUB);
     }
 
     // test for invalid uuid...
@@ -79,7 +80,8 @@ TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_u
         database_response response;
         sm.unsubscribe(TEST_UNKOWN_UUID, TEST_KEY, 5, response, mock_session2);
 
-        ASSERT_EQ(response.resp().error(), bzn::MSG_INVALID_UUID);
+        ASSERT_EQ(response.response_case(), database_response::kError);
+        ASSERT_EQ(response.error().message(), bzn::MSG_INVALID_UUID);
     }
 }
 
@@ -104,7 +106,7 @@ TEST(subscription_manager, test_that_session_cannot_unsubscribe_other_sessions)
     // session two will try to unsub session 1...
     sm.unsubscribe(TEST_UUID, "1", 2, response, mock_session2);
 
-    ASSERT_EQ(response.resp().error(), bzn::MSG_INVALID_SUB);
+    ASSERT_EQ(response.error().message(), bzn::MSG_INVALID_SUB);
 }
 
 
@@ -137,9 +139,9 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
                 ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
-                ASSERT_EQ(resp.success_case(), database_response::kResp);
-                ASSERT_EQ(resp.resp().update().key(), "0");
-                ASSERT_EQ(resp.resp().update().value(), "0");
+                ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+                ASSERT_EQ(resp.subscription_update().key(), "0");
+                ASSERT_EQ(resp.subscription_update().value(), "0");
             }));
 
         EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -149,9 +151,9 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
                 ASSERT_EQ(resp.header().transaction_id(), uint64_t(1234));
-                ASSERT_EQ(resp.success_case(), database_response::kResp);
-                ASSERT_EQ(resp.resp().update().key(), "0");
-                ASSERT_EQ(resp.resp().update().value(), "0");
+                ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+                ASSERT_EQ(resp.subscription_update().key(), "0");
+                ASSERT_EQ(resp.subscription_update().value(), "0");
             }));
 
         sm.inspect_commit(msg);
@@ -173,9 +175,9 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
                 ASSERT_EQ(resp.header().transaction_id(), uint64_t(4321));
-                ASSERT_EQ(resp.success_case(), database_response::kResp);
-                ASSERT_EQ(resp.resp().update().key(), "1");
-                ASSERT_EQ(resp.resp().update().value(), "1");
+                ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+                ASSERT_EQ(resp.subscription_update().key(), "1");
+                ASSERT_EQ(resp.subscription_update().value(), "1");
             }));
 
         EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -185,9 +187,9 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
                 ASSERT_EQ(resp.header().transaction_id(), uint64_t(1));
-                ASSERT_EQ(resp.success_case(), database_response::kResp);
-                ASSERT_EQ(resp.resp().update().key(), "1");
-                ASSERT_EQ(resp.resp().update().value(), "1");
+                ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+                ASSERT_EQ(resp.subscription_update().key(), "1");
+                ASSERT_EQ(resp.subscription_update().value(), "1");
             }));
 
         sm.inspect_commit(msg);
@@ -253,9 +255,9 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
             ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
-            ASSERT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_EQ(resp.resp().update().key(), "0");
-            ASSERT_EQ(resp.resp().update().value(), "0");
+            ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+            ASSERT_EQ(resp.subscription_update().key(), "0");
+            ASSERT_EQ(resp.subscription_update().value(), "0");
         }));
 
     EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -265,9 +267,9 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
             ASSERT_EQ(resp.header().transaction_id(), uint64_t(1));
-            ASSERT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_EQ(resp.resp().update().key(), "0");
-            ASSERT_EQ(resp.resp().update().value(), "0");
+            ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+            ASSERT_EQ(resp.subscription_update().key(), "0");
+            ASSERT_EQ(resp.subscription_update().value(), "0");
         }));
 
     sm->inspect_commit(msg);
@@ -286,9 +288,9 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
             ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
-            ASSERT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_EQ(resp.resp().update().key(), "0");
-            ASSERT_EQ(resp.resp().update().value(), "0");
+            ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
+            ASSERT_EQ(resp.subscription_update().key(), "0");
+            ASSERT_EQ(resp.subscription_update().value(), "0");
         }));
 
     sm->inspect_commit(msg);

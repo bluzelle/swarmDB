@@ -36,7 +36,7 @@ except ImportError as e:
     raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
                       "\n"
                       "$ cd proto\n"
-                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n".format(e.message))
+                      "$ protoc --python_out=../scripts ./*.proto\n".format(e.message))
 
 def send_request(node, uuid, msg, loop=False, ws=None):
     if not ws:
@@ -74,7 +74,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     resp = database_pb2.database_response()
     resp.ParseFromString(ws.recv())
 
-    if resp.WhichOneof('success') == 'redirect':
+    if resp.WhichOneof('response') == 'redirect':
         redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
         print("redirecting to leader at {}...\n".format(redirect_node))
         resp = send_request(redirect_node, uuid, msg)

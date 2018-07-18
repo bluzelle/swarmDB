@@ -37,7 +37,7 @@ namespace
 
     void format_http_response(const boost::beast::string_view& target, const database_response& response, boost::beast::http::response<boost::beast::http::dynamic_body>& http_response)
     {
-        if (response.success_case() == database_response::kRedirect)
+        if (response.response_case() == database_response::kRedirect)
         {
             // we have a redirect but the leader was unknown? Nothing we can do but return err in that case.
             if (!response.redirect().leader_host().empty())
@@ -53,13 +53,13 @@ namespace
             return;
         }
 
-        if (response.resp().value().size())
+        if (response.has_read())
         {
-            boost::beast::ostream(http_response.body()) << "ack" << response.resp().value();
+            boost::beast::ostream(http_response.body()) << "ack" << response.read().value();
         }
         else
         {
-            boost::beast::ostream(http_response.body()) << ((response.resp().error().empty()) ? "ack" : "err");
+            boost::beast::ostream(http_response.body()) << ((!response.has_error()) ? "ack" : "err");
         }
     }
 }

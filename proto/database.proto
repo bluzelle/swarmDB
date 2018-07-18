@@ -1,3 +1,17 @@
+// Copyright (C) 2018 Bluzelle
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License, version 3,
+// as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 syntax = "proto3";
 
 
@@ -6,28 +20,22 @@ syntax = "proto3";
 
 message database_msg
 {
-    database_header header = 2;
+    database_header header = 1;
 
-    oneof msg {
-        database_create create = 10;
-        database_read read = 11;
-        database_update update = 12;
-        database_delete delete = 13;
-        database_has has = 14;
-        database_empty keys = 15;
-        database_empty size = 16;
-        database_subscribe subscribe = 17;
-        database_unsubscribe unsubscribe = 18;
+    oneof msg
+    {
+        database_create         create = 2;
+        database_read           read = 3;
+        database_update         update = 4;
+        database_delete         delete = 5;
+
+        database_has            has = 6;
+        database_request        keys = 7;
+        database_request        size = 8;
+
+        database_subscribe      subscribe = 9;
+        database_unsubscribe    unsubscribe = 10;
     }
-}
-
-message database_redirect_response
-{
-    string leader_id = 1;
-    string leader_name = 2;
-    string leader_host = 3;
-    uint32 leader_port = 4;
-    uint32 leader_http_port = 5;
 }
 
 message database_header
@@ -38,60 +46,102 @@ message database_header
 
 message database_create
 {
-    string key = 2;
-    bytes value = 3;
+    string key = 1;
+    bytes value = 2;
 }
 
 message database_read
 {
-    string key = 2;
-}
-
-message database_subscribe
-{
-    string key = 2;
-}
-
-message database_unsubscribe
-{
-    string key = 2;
+    string key = 1;
 }
 
 message database_update
 {
-    string key = 2;
-    bytes value = 3;
+    string key = 1;
+    bytes value = 2;
 }
 
 message database_delete
 {
-    string key = 2;
+    string key = 1;
+}
+
+message database_subscribe
+{
+    string key = 1;
+}
+
+message database_unsubscribe
+{
+    string key = 1;
 }
 
 message database_has
 {
-    string key = 2;
+    string key = 1;
 }
 
-message database_empty {}
+message database_subscription_update
+{
+    string key = 1;
+    bytes value = 2;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+message database_redirect_response
+{
+    database_header header = 1;
+
+    string leader_id = 2;
+    string leader_name = 3;
+    string leader_host = 4;
+    uint32 leader_port = 5;
+    uint32 leader_http_port = 6;
+}
+
+message database_has_response
+{
+    string key = 1;
+    bool has = 2;
+}
+
+message database_keys_response
+{
+    repeated string keys = 1;
+}
+
+message database_read_response
+{
+    string key = 3;
+    bytes value = 4;
+}
+
+message database_size_response
+{
+    int32 bytes = 1;
+    int32 keys = 2;
+}
+
+message database_request {}
+
+message database_error
+{
+    string message = 1;
+}
 
 message database_response
 {
     database_header header = 1;
 
-    oneof success
+    oneof response
     {
-        database_redirect_response redirect = 2;
-        response resp = 3;
-    }
-
-    message response
-    {
-        bytes value = 4;
-        bool has = 5;
-        int32 size = 6;
-        string error = 7;
-        repeated string keys = 8;
-        database_update update = 9;
+        database_redirect_response      redirect = 2;
+        database_subscription_update    subscription_update = 3;
+        database_read_response          read = 4;
+        database_has_response           has = 5;
+        database_keys_response          keys = 6;
+        database_size_response          size = 7;
+        database_error                  error = 8;
     }
 }

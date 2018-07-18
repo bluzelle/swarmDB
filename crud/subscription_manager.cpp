@@ -60,8 +60,6 @@ subscription_manager::start()
 void
 subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
-    response.mutable_resp();
-
     LOG(debug) << "received subscription request: " << uuid << ":" << transaction_id << ":" << key;
 
     std::lock_guard<std::mutex> lock(this->subscribers_lock);
@@ -86,7 +84,7 @@ subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, 
         }
 
         // session already subscribed to this key...
-        response.mutable_resp()->set_error(MSG_DUPLICATE_SUB);
+        response.mutable_error()->set_message(MSG_DUPLICATE_SUB);
 
         LOG(debug) << "session (" << session.get() << ") has already subscribed to: " << uuid << ":" << key;
 
@@ -101,8 +99,6 @@ subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, 
 void
 subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
-    response.mutable_resp();
-
     LOG(debug) << "received unsubscription request: " << uuid << ":" << transaction_id << ":" << key;
 
     std::lock_guard<std::mutex> lock(this->subscribers_lock);
@@ -111,7 +107,7 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
 
     if (database_it == this->subscribers.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_UUID);
+        response.mutable_error()->set_message(MSG_INVALID_UUID);
 
         LOG(debug) << "unknown database & key: " << uuid << ":" << transaction_id << ":" << key;
 
@@ -122,7 +118,7 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
 
     if (key_it == database_it->second.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_KEY);
+        response.mutable_error()->set_message(MSG_INVALID_KEY);
 
         LOG(debug) << "unknown key: " << uuid << ":" << transaction_id << ":" << key;
 
@@ -132,7 +128,7 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
     // check to see if session is already in the list...
     if (auto session_it = find_session(key_it->second, session); session_it == key_it->second.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_SUB);
+        response.mutable_error()->set_message(MSG_INVALID_SUB);
 
         LOG(debug) << "session not subscribed to: " << uuid << ":" << transaction_id << ":" <<  key;
 
@@ -163,8 +159,9 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t&
 
                     resp.mutable_header()->set_db_uuid(uuid);
                     resp.mutable_header()->set_transaction_id(session_pair.first);
-                    resp.mutable_resp()->mutable_update()->set_key(key);
-                    resp.mutable_resp()->mutable_update()->set_value(value);
+
+                    resp.mutable_subscription_update()->set_key(key);
+                    resp.mutable_subscription_update()->set_value(value);
 
                     LOG(debug) << "notifying session (" << session_shared_ptr.get() << ") : " << uuid
                                << ":" << session_pair.first << ":" << key << ":" << value.substr(0, MAX_MESSAGE_SIZE);
@@ -206,7 +203,7 @@ subscription_manager::purge_closed_sessions(const boost::system::error_code& ec)
 
         for (auto& database : this->subscribers)
         {
-            size_t removed{};
+            size_t purged{};
 
             for (auto& key : database.second)
             {
@@ -220,13 +217,13 @@ subscription_manager::purge_closed_sessions(const boost::system::error_code& ec)
 
                         LOG(debug) << "purged closed session for: " << database.first << ":" << entry.first << ":" << key.first;
 
-                        ++removed;
+                        ++purged;
 
                         return true;
                     });
             }
 
-            LOG(info) << "purged " << removed << " closed sessions for database: " << database.first;
+            LOG(info) << "purged " << purged << " closed sessions for database: " << database.first;
         }
 
         // reschedule...
