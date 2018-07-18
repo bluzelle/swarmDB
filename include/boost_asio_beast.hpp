@@ -390,6 +390,8 @@ namespace bzn::beast
 
         virtual void async_write(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler) = 0;
 
+        virtual size_t write(const boost::asio::mutable_buffers_1& buffer, boost::beast::error_code& ec) = 0;
+
         virtual void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler) = 0;
 
         virtual void async_handshake(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler) = 0;
@@ -425,6 +427,11 @@ namespace bzn::beast
         void async_write(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler) override
         {
             this->websocket.async_write(buffer, handler);
+        }
+
+        size_t write(const boost::asio::mutable_buffers_1& buffer, boost::beast::error_code& ec) override
+        {
+            return this->websocket.write(buffer, ec);
         }
 
         void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler) override

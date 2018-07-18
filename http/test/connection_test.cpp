@@ -59,7 +59,7 @@ namespace bzn::http
             {
                 EXPECT_EQ(request.header().db_uuid(), "uuid");
                 EXPECT_EQ(request.read().key(), "key");
-                response.mutable_resp()->set_error("error");
+                response.mutable_error()->set_message("error");
             }));
 
         rh(boost::beast::error_code(), 0);
@@ -107,7 +107,8 @@ namespace bzn::http
             {
                 EXPECT_EQ(request.header().db_uuid(), "uuid");
                 EXPECT_EQ(request.read().key(), "key");
-                response.mutable_resp()->set_value("value");
+                response.mutable_read()->set_key("key");
+                response.mutable_read()->set_value("value");
             }));
 
         rh(boost::beast::error_code(), 0);

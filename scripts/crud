@@ -31,31 +31,58 @@ from argparse import RawDescriptionHelpFormatter
 try:
     import bluzelle_pb2
     import database_pb2
+    import pbft_pb2
 except ImportError as e:
     raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
                       "\n"
                       "$ cd proto\n"
-                      "$ protoc --python_out=../scripts ./bluzelle.proto ./database.proto\n".format(e.message))
+                      "$ protoc --python_out=../scripts ./*.proto\n".format(e.message))
+
+transaction_id = 0
 
 def send_request(node, uuid, msg, loop=False, ws=None):
+    global transaction_id
+
     if not ws:
         ws = websocket.create_connection("ws://" + node)
     msg.db.header.db_uuid = uuid
-    msg.db.header.transaction_id = random.randint(1,sys.maxint)
+
+    # hack!
+    if transaction_id != 0:
+        msg.db.header.transaction_id = transaction_id
+    else:
+        msg.db.header.transaction_id = random.randint(1,sys.maxint)
 
     req = {}
     req["bzn-api"] = "database";
     req["msg"] = base64.b64encode(msg.SerializeToString())
 
-    print("Sending: \n{}".format(msg))
-    ws.send(json.dumps(req))
+    if use_pbft:
+        # TODO: Wrap this more appropriately. Crud should not be hearing these
+        # directly in the first place.
+        msg_outer = pbft_pb2.pbft_msg()
+        msg_outer.type = 1 #request
+        msg_outer.request.operation = json.dumps(req)
+        msg_outer.request.client = "crud cli"
+        msg_outer.request.timestamp = 0 # TODO
+
+        req_outer = {}
+        req_outer["bzn-api"] = "pbft";
+        req_outer["pbft-data"] = base64.b64encode(msg_outer.SerializeToString())
+
+        print("Sending: \n{}".format(msg_outer))
+        ws.send(json.dumps(req_outer))
+
+    else:
+        print("Sending: \n{}".format(msg))
+        ws.send(json.dumps(req))
 
     print("-" * 60 + '\n')
 
     resp = database_pb2.database_response()
     resp.ParseFromString(ws.recv())
 
-    if resp.WhichOneof('success') == 'redirect':
+    if resp.WhichOneof('response') == 'redirect':
         redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
         print("redirecting to leader at {}...\n".format(redirect_node))
         resp = send_request(redirect_node, uuid, msg)
@@ -149,12 +176,12 @@ def subscribe_request(key):
     msg.db.subscribe.key = key
     return msg
 
-
 def unsubscribe_request(key):
+    global transaction_id
     msg = bluzelle_pb2.bzn_msg()
     msg.db.unsubscribe.key = key
+    msg.db.unsubscribe.transaction_id = transaction_id
     return msg
-
 
 def status_handler(args):
     return send_status_request(args.node)
@@ -189,12 +216,16 @@ def size_handler(args):
 
 
 def subscribe_handler(args):
+    global transaction_id
+    transaction_id = random.randint(1,sys.maxint)
     return send_request(args.node, args.uuid, unsubscribe_request(args.key),
                         ws=send_request(args.node, args.uuid, subscribe_request(args.key), True))
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
+
+    parser.add_argument("-p", "--use_pbft", action="store_true", help="Direct message to pbft instead of raft")
 
     required = parser.add_argument_group('required arguments')
 
@@ -266,6 +297,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
+    global use_pbft
+    use_pbft = args.use_pbft
+
     try:
         if args.file:
             # if user gave us a file we need to read it as our value

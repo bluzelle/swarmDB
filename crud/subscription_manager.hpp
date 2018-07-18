@@ -30,7 +30,7 @@ namespace bzn
 
         void start() override;
 
-        void  subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session) override;
+        void   subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session) override;
 
         void unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session) override;
 
@@ -42,7 +42,8 @@ namespace bzn
 
         void notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t& key, const std::string& value);
 
-        std::unordered_map<bzn::uuid_t, std::unordered_map<bzn::key_t, std::list<std::pair<uint64_t, std::weak_ptr<bzn::session_base>>>>> subscribers;
+        std::unordered_map<bzn::uuid_t, std::unordered_map<bzn::key_t, std::unordered_map<bzn::session_id, std::unordered_map<uint64_t, std::weak_ptr<bzn::session_base>>>>> subscribers;
+
         std::mutex subscribers_lock;
 
         std::unique_ptr<bzn::asio::steady_timer_base> purge_timer;
