@@ -120,12 +120,12 @@ namespace bzn
         void get_raft_timeout_scale();
 
         std::string entries_log_path();
+
         std::string state_path();
-        void save_state();
-        void load_state();
+
         void import_state_files();
-        void create_state_files(const std::string& log_path, const bzn::peers_list_t& peers);
-        bool state_files_exist();
+        void create_dat_file(const std::string& log_path, const bzn::peers_list_t& peers);
+
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
         bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
         bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);

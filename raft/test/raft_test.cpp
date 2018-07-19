@@ -924,62 +924,12 @@ namespace bzn
     }
 
 
-    TEST(raft, test_that_raft_bails_on_bad_rehydrate)
-    {
-        const std::string state_path{TEST_STATE_DIR + TEST_NODE_UUID + ".state"};
-        const std::string log_path{TEST_STATE_DIR + TEST_NODE_UUID + ".dat"};
-
-        const std::string good_state{"1 0 1 4"};
-        const std::string bad_state{"X 0 X X"};
-
-        const std::string bad_entry_00{"1 4 THIS_IS_BADeyJiem4tYXB0K"};
-
-        bzn::message sq_msg;
-        sq_msg["msg"]["peers"].append(make_dummy_peer());
-        const bzn::log_entry valid_entry{bzn::log_entry_type::single_quorum, 0, 0, sq_msg};
-
-        clean_state_folder();
-
-        // good state/ empty entry
-        std::ofstream out(state_path, std::ios::out | std::ios::binary);
-        out << good_state;
-        out.close();
-
-        out.open(log_path, std::ios::out | std::ios::binary);
-        out << "";
-        out.close();
-
-        EXPECT_THROW(std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR)
-                        , std::runtime_error);
-
-        // good state/bad entry
-        out.open(log_path, std::ios::out | std::ios::binary);
-        out << bad_entry_00;
-        out.close();
-
-        bzn::peers_list_t empty_peers;
-
-        EXPECT_THROW(
-                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, empty_peers, TEST_NODE_UUID, TEST_STATE_DIR)
-                        , std::runtime_error);
-
-        // TODO: Revist this test
-//        // good state/good entry/mis-matched
-//        out.open(log_path, std::ios::out | std::ios::binary);
-//        out << valid_entry;
-//        out.close();
-//
-//        EXPECT_THROW(
-//                std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR)
-//                        , std::runtime_error);
-
-        clean_state_folder();
-    }
+    // removed TEST(raft, test_that_raft_bails_on_bad_rehydrate) as we no longer use the .state file
 
 
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
     {
-        const std::string log_path = TEST_STATE_DIR + "/" + TEST_NODE_UUID + ".dat";
+        const std::string log_path = TEST_STATE_DIR + TEST_NODE_UUID + ".dat";
         bzn::message  msg;
         msg["data"] = "asd;lkfa;lsdfjafs;dlfk";
 
@@ -1011,6 +961,7 @@ namespace bzn
         {
             // add a joint quorum, and then a few more log entries
             std::ofstream log(log_path, std::ios::out | std::ios::binary | std::ios::app);
+
             bzn::message jq_msg;
             jq_msg["msg"]["peers"]["new"].append(make_dummy_peer());
             jq_msg["msg"]["peers"]["old"].append(make_dummy_peer());

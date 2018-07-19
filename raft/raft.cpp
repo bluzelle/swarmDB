@@ -58,11 +58,12 @@ raft::raft(
     this->setup_peer_tracking(peers);
     this->get_raft_timeout_scale();
 
-    const std::string log_path(state_dir + "/" + this->uuid + ".dat");
-    this->state_files_exist() ? this->load_state()
-                               : this->create_state_files(log_path, peers);
+    if(!boost::filesystem::exists(this->entries_log_path()))
+    {
+        this->create_dat_file(this->entries_log_path(), peers);
+    }
 
-    this->raft_log = std::make_shared<bzn::raft_log>(log_path, maximum_raft_storage);
+    this->raft_log = std::make_shared<bzn::raft_log>(this->entries_log_path(), maximum_raft_storage);
 
     // KEP-112 Bail if the raft storage exceeds the max storage
     if(this->raft_log->maximum_storage_exceeded())
@@ -911,46 +912,11 @@ raft::state_path()
 
 
 void
-raft::save_state()
-{
-    boost::filesystem::path path{this->state_path()};
-
-    if (!boost::filesystem::exists(path.parent_path()))
-    {
-        boost::filesystem::create_directories(path.parent_path());
-    }
-
-    std::ofstream os( path.string() ,std::ios::out | std::ios::binary);
-    os << this->last_log_term << " " << this->commit_index << " " <<  this->current_term;
-    os.close();
-}
-
-
-void
-raft::load_state()
-{
-    this->last_log_term = std::numeric_limits<uint32_t>::max();
-    this->commit_index = std::numeric_limits<uint32_t>::max();
-    this->current_term = std::numeric_limits<uint32_t>::max();
-    std::ifstream is(this->state_path(), std::ios::in | std::ios::binary);
-    is >> this->last_log_term >> this->commit_index >> this->current_term;
-    if (std::numeric_limits<uint32_t>::max()==this->last_log_term
-        || std::numeric_limits<uint32_t>::max()==this->commit_index
-        || std::numeric_limits<uint32_t>::max()==this->current_term)
-    {
-        throw std::runtime_error(MSG_ERROR_INVALID_STATE_FILE);
-    }
-    is.close();
-}
-
-
-void
 raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
 {
     this->notify_commit(commit_index, log_entry.json_to_string(log_entry.msg));
     this->commit_handler(log_entry.msg);
     commit_index++;
-    this->save_state();
 
     if(this->get_state() == bzn::raft_state::leader && log_entry.entry_type == bzn::log_entry_type::joint_quorum)
     {
@@ -1101,7 +1067,7 @@ raft::in_quorum(const bzn::uuid_t& uuid)
 
 
 void
-raft::create_state_files(const std::string& log_path, const bzn::peers_list_t& peers)
+raft::create_dat_file(const std::string& log_path, const bzn::peers_list_t& peers)
 {
     const boost::filesystem::path path(log_path);
     if(!boost::filesystem::exists(path.parent_path()))
@@ -1131,27 +1097,17 @@ raft::create_state_files(const std::string& log_path, const bzn::peers_list_t& p
     }
     os << entry;
     os.close();
-    this->save_state();
 }
 
 
 void
 raft::import_state_files()
 {
-    this->load_state();
     const auto& last_entry = this->raft_log->get_log_entries().back();
     if (last_entry.log_index!=this->raft_log->size()-1 || last_entry.term!=this->current_term)
     {
         throw std::runtime_error(MSG_ERROR_INVALID_LOG_ENTRY_FILE);
     }
-}
-
-
-bool
-raft::state_files_exist()
-{
-    return boost::filesystem::exists(this->state_path())
-           && boost::filesystem::exists(this->entries_log_path());
 }
 
 
