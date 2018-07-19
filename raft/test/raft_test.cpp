@@ -36,6 +36,11 @@ namespace
                                            {"127.0.0.1", 8082, 81, "name2", "uuid2"},
                                            {"127.0.0.1", 8084, 82, "name3", TEST_NODE_UUID}};
 
+    const bzn::peers_list_t TEST_FOUR_PEER_LIST{ {"127.0.0.1", 8081, 81, "name0", TEST_NODE_UUID},
+                                                 {"127.0.0.1", 8082, 82, "name1", "uuid1"},
+                                                 {"127.0.0.1", 8083, 83, "name2", "uuid2"},
+                                                 {"127.0.0.1", 8084, 84, "name3", "uuid3"}};
+
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
 
     const std::string TEST_STATE_DIR = "./.raft_test_state/";
@@ -207,6 +212,46 @@ namespace bzn
         void TearDown() final
         {
             clean_state_folder();
+        }
+
+        std::shared_ptr<bzn::raft>
+        start_raft(const bzn::peers_list_t& peer_list, bzn::asio::wait_handler& asio_wait_handler, bzn::message_handler bzn_msg_handler)
+        {
+            auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+
+            // intercept the timeout callback...
+           //bzn::asio::wait_handler wh;
+
+            EXPECT_CALL(*mock_steady_timer, async_wait(_))
+                    .WillRepeatedly(Invoke(
+                            [&](auto handler)
+                            { asio_wait_handler = handler; }));
+
+            EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer())
+                    .WillOnce(Invoke(
+                            [&]()
+                            { return std::move(mock_steady_timer); }));
+
+            // craft raft...
+            auto raft = std::make_shared<bzn::raft>(
+                    this->mock_io_context
+                    , this->mock_node
+                    , peer_list
+                    , TEST_NODE_UUID
+                    , TEST_STATE_DIR);
+
+            //bzn::message_handler mh;
+            EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                    [&](const auto&, auto handler)
+                    {
+                        bzn_msg_handler = handler;
+                        return true;
+                    }));
+
+            // and away we go...
+            raft->start();
+
+            return raft;
         }
 
         std::shared_ptr<bzn::Mocknode_base> mock_node;
@@ -1730,12 +1775,11 @@ namespace bzn
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
                 [&](const bzn::message& msg)
-        {
+                {
                     LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
-
-            commit_handler_called = true;
-            ++commit_handler_times_called;
-            return true;
+                    commit_handler_called = true;
+                    ++commit_handler_times_called;
+                    return true;
                 });
 
         // and away we go...
@@ -1806,5 +1850,42 @@ namespace bzn
         EXPECT_EQ(bzn::LOG_ENTRY_TYPES[1], bzn::log_entry_type_to_string(bzn::log_entry_type::single_quorum));
         EXPECT_EQ(bzn::LOG_ENTRY_TYPES[2], bzn::log_entry_type_to_string(bzn::log_entry_type::joint_quorum));
         EXPECT_EQ(bzn::LOG_ENTRY_TYPES[3], bzn::log_entry_type_to_string(bzn::log_entry_type::undefined));
+    }
+
+
+    TEST_F(raft_test, test_that_a_four_node_swarm_cannot_reach_consensus_with_two_nodes)
+    {
+        size_t vote_requests{0};
+        bzn::asio::wait_handler asio_wait_handler;
+        bzn::message_handler bzn_msg_handler;
+
+        // default raft state is follower
+        auto raft = this->start_raft(TEST_FOUR_PEER_LIST, asio_wait_handler, bzn_msg_handler);
+
+        // we should see 3 vote requests once the raft under test becomes a candidate...
+        EXPECT_CALL(*mock_node, send_message(_, _))
+                .WillRepeatedly(Invoke(
+                        [&](const auto&, const auto& msg)
+                        {
+                            vote_requests += (*msg)["cmd"].asString()=="RequestVote" ? 1 : 0;
+                        }));
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
+
+        // after the election timer elapses, we are a candidate
+        vote_requests = 0;
+        asio_wait_handler(boost::system::error_code());
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
+
+        // lets make sure we do not become leader after only 2 of four nodes vote for the node
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, false), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid3", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid4", 1, false), mock_session);
+
+        // we expect 3 vote requests, node TEST_NODE_UUID will vote yes
+        EXPECT_EQ(vote_requests, size_t(3));
+        EXPECT_EQ(raft->yes_votes.size(),size_t(2));
+        EXPECT_EQ(raft->no_votes.size(),size_t(2));
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
     }
 } // bzn

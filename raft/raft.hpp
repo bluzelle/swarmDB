@@ -91,6 +91,7 @@ namespace bzn
         FRIEND_TEST(raft, test_get_active_quorum_returns_single_or_joint_quorum_appropriately);
         FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
         FRIEND_TEST(raft_test, test_that_bad_add_or_remove_peer_requests_fail);
+        FRIEND_TEST(raft_test, test_that_a_four_node_swarm_cannot_reach_consensus_with_two_nodes);
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
 
