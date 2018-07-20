@@ -37,7 +37,10 @@ namespace
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
         "  \"debug_logging\" : true,"
         "  \"log_to_stdout\" : true,"
-        "  \"state_dir\" : \"./daemon_state/\""
+        "  \"state_dir\" : \"./daemon_state/\","
+        "  \"logfile_max_size\" : \"1M\","
+        "  \"logfile_rotation_size\" : \"2M\","
+        "  \"logfile_dir\" : \".\""
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
@@ -83,12 +86,18 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ("./daemon_state/", options.get_state_dir());
     EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
-    EXPECT_EQ((size_t)(2147483648), options.get_max_storage());
+    EXPECT_EQ(size_t(2147483648), options.get_max_storage());
+    EXPECT_EQ(size_t(1048576), options.get_logfile_max_size());
+    EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
+    EXPECT_EQ(".", options.get_logfile_dir());
 
     // defaults..
     {
         bzn::options options;
         EXPECT_EQ("./.state/", options.get_state_dir());
+        EXPECT_EQ(size_t(524288), options.get_logfile_max_size());
+        EXPECT_EQ(size_t(65536), options.get_logfile_rotation_size());
+        EXPECT_EQ("logs/", options.get_logfile_dir());
     }
 }
 
@@ -116,8 +125,8 @@ TEST_F(options_file_test, test_max_storage_parsing)
             , &json
             , &errors);
 
-    std::for_each(bzn::options::BYTE_SUFFIXES.cbegin()
-            , bzn::options::BYTE_SUFFIXES.cend()
+    std::for_each(bzn::utils::BYTE_SUFFIXES.cbegin()
+            , bzn::utils::BYTE_SUFFIXES.cend()
             , [&](const auto& p)
                   {
                       const size_t expected = 3 * 1099511627776; // 3TB in B
@@ -150,4 +159,3 @@ TEST_F(options_file_test, test_max_storage_parsing)
                   });
 
 }
-

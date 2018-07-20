@@ -20,43 +20,58 @@
 #include <fstream>
 #include <swarm_version.hpp>
 
+#ifndef __APPLE__
+#include <optional>
+#else
+#include <experimental/optional>
+#endif
+
 namespace po = boost::program_options;
 using namespace bzn;
 
 
-const std::map<char, size_t> options_base::BYTE_SUFFIXES = std::map<char, size_t>({{'B', 1}, {'K', 1024}, {'M', 1048576}, {'G', 1073741824}, {'T', 1099511627776}});
-
-
 namespace
 {
-    const std::string DEFAULT_CONFIG_FILE        = "bluzelle.json";
-    const std::string LISTENER_ADDRESS_KEY       = "listener_address";
-    const std::string LISTENER_PORT_KEY          = "listener_port";
-    const std::string ETHERERUM_KEY              = "ethereum";
+    const std::string DEFAULT_CONFIG_FILE = "bluzelle.json";
+    const std::string LISTENER_ADDRESS_KEY = "listener_address";
+    const std::string LISTENER_PORT_KEY = "listener_port";
+    const std::string ETHERERUM_KEY = "ethereum";
     const std::string ETHERERUM_IO_API_TOKEN_KEY = "ethereum_io_api_token";
-    const std::string BOOTSTRAP_PEERS_FILE_KEY   = "bootstrap_file";
-    const std::string BOOTSTRAP_PEERS_URL_KEY    = "bootstrap_url";
-    const std::string DEBUG_LOGGING_KEY          = "debug_logging";
-    const std::string LOG_TO_STDOUT_KEY          = "log_to_stdout";
-    const std::string WS_IDLE_TIMEOUT_KEY        = "ws_idle_timeout";
-    const std::string MONITOR_ADDRESS_KEY        = "monitor_address";
-    const std::string MONITOR_PORT_KEY           = "monitor_port";
-    const std::string NODE_UUID                  = "uuid";
-    const std::string AUDIT_MEM_SIZE_KEY         = "audit_mem_size";
-    const std::string STATE_DIR_KEY              = "state_dir";
-    const std::string MAX_STORAGE_KEY            = "max_storage";
+    const std::string BOOTSTRAP_PEERS_FILE_KEY = "bootstrap_file";
+    const std::string BOOTSTRAP_PEERS_URL_KEY = "bootstrap_url";
+    const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
+    const std::string MONITOR_ADDRESS_KEY = "monitor_address";
+    const std::string MONITOR_PORT_KEY = "monitor_port";
+    const std::string NODE_UUID = "uuid";
+    const std::string AUDIT_MEM_SIZE_KEY = "audit_mem_size";
+    const std::string STATE_DIR_KEY = "state_dir";
+    const std::string MAX_STORAGE_KEY = "max_storage";
+    const std::string LOGFILE_DIR_KEY = "logfile_dir";
+    const std::string LOGFILE_ROTATION_SIZE_KEY = "logfile_rotation_size";
+    const std::string LOGFILE_MAX_SIZE_KEY = "logfile_max_size";
+    const std::string DEBUG_LOGGING_KEY = "debug_logging";
+    const std::string LOG_TO_STDOUT_KEY = "log_to_stdout";
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
-    const size_t DEFAULT_AUDIT_MEM_SIZE          = 10000;
+    const size_t DEFAULT_AUDIT_MEM_SIZE = 10000;
 
-    const std::string DEFAULT_STATE_DIR          = "./.state/";
+    const std::string DEFAULT_STATE_DIR = "./.state/";
+
+    // Default logfile director
+    const std::string DEFAULT_LOGFILE_DIR = "logs/";
 
     // The default maximum allowed storage for a node is 2G
-    const size_t DEFAULT_MAX_STORAGE_SIZE        = 2147483648;
-    
-    
+    const size_t DEFAULT_MAX_STORAGE_SIZE = 2147483648;
+
+    // Default log size before rotation
+    const size_t DEFAULT_LOGFILE_ROATION_SIZE = 65536;
+
+    // Default max log files before deletion
+    const size_t DEFAULT_LOGFILE_MAX_SIZE = 524288;
+
     // https://stackoverflow.com/questions/8899069
-    bool is_hex_notation(std::string const& s)
+    bool
+    is_hex_notation(std::string const& s)
     {
         return s.compare(0, 2, "0x") == 0
                && s.size() > 2
@@ -97,7 +112,7 @@ options::get_listener() const
 
         return ep;
     }
-    catch(std::exception& ex)
+    catch (std::exception& ex)
     {
         throw std::runtime_error(std::string("\nCould not create listener: ") + ex.what());
     }
@@ -107,7 +122,7 @@ options::get_listener() const
 bzn::optional<boost::asio::ip::udp::endpoint>
 options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const
 {
-    if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
+    if (this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
     {
         try
         {
@@ -118,7 +133,7 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
 
             return bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
         }
-        catch(std::exception& ex)
+        catch (std::exception& ex)
         {
             throw std::runtime_error(std::string("\nCould not create monitor endpoint: ") + ex.what());
         }
@@ -168,8 +183,6 @@ options::get_uuid() const
 void
 options::load(const std::string& config_file)
 {
-    LOG(debug) << "Loading: " << config_file;
-
     try
     {
         std::ifstream ifile(config_file);
@@ -181,7 +194,7 @@ options::load(const std::string& config_file)
             throw std::runtime_error("Failed to parse: " + config_file + " : " + reader.getFormattedErrorMessages());
         }
     }
-    catch(std::exception& /*e*/)
+    catch (std::exception& /*e*/)
     {
         throw std::runtime_error("Failed to load: " + config_file + " : " + strerror(errno));
     }
@@ -191,8 +204,6 @@ options::load(const std::string& config_file)
 bool
 options::validate()
 {
-    LOG(info) << '\n' << this->config_data.toStyledString();
-
     // validate listener...
     if (!this->config_data.isMember(LISTENER_ADDRESS_KEY))
     {
@@ -286,10 +297,8 @@ options::get_audit_mem_size() const
     {
         return this->config_data[AUDIT_MEM_SIZE_KEY].asUInt();
     }
-    else
-    {
-        return DEFAULT_AUDIT_MEM_SIZE;
-    }
+
+    return DEFAULT_AUDIT_MEM_SIZE;
 }
 
 
@@ -300,10 +309,20 @@ options::get_state_dir() const
     {
         return this->config_data[STATE_DIR_KEY].asString();
     }
-    else
+
+    return DEFAULT_STATE_DIR;
+}
+
+
+std::string
+options::get_logfile_dir() const
+{
+    if (this->config_data.isMember(LOGFILE_DIR_KEY))
     {
-        return DEFAULT_STATE_DIR;
+        return this->config_data[LOGFILE_DIR_KEY].asString();
     }
+
+    return DEFAULT_LOGFILE_DIR;
 }
 
 
@@ -345,13 +364,13 @@ options::parse(int argc, const char* argv[])
         this->load(config_file);
         return true;
     }
-    catch(po::error& e)
+    catch (po::error& e)
     {
         std::cerr << "ERROR: " << e.what() << std::endl << std::endl;
         std::cerr << desc << std::endl;
         return false;
     }
-    catch(std::exception& e)
+    catch (std::exception& e)
     {
         std::cerr << "Unhandled Exception: " << e.what() << ", application will now exit" << std::endl;
         return false;
@@ -366,22 +385,67 @@ options::get_max_storage() const
 {
     size_t value = DEFAULT_MAX_STORAGE_SIZE;
 
-    if(this->config_data.isMember(MAX_STORAGE_KEY))
+    if (auto conf_value = this->parse_size(MAX_STORAGE_KEY))
     {
-        const std::string max_storage{this->config_data[MAX_STORAGE_KEY].asString()};
-        const std::regex expr{"(\\d+)([K,M,G,T]?[B]?)"};
-        std::smatch base_match;
-
-        if(std::regex_match(max_storage, base_match, expr))
-        {
-            std::string suffix = base_match[2];
-            value = boost::lexical_cast<size_t>(base_match[1])
-                    * this->BYTE_SUFFIXES.at(suffix.empty() ? 'B' : suffix[0]);
-        }
-        else
-        {
-            throw std::runtime_error(std::string("\nUnable to parse max storage value from options: " + max_storage));
-        }
+        // todo: use operator* to workaround clang bug...
+        value = *conf_value;
     }
     return value;
+}
+
+
+size_t
+options::get_logfile_rotation_size() const
+{
+    size_t value = DEFAULT_LOGFILE_ROATION_SIZE;
+
+    if (auto conf_value = this->parse_size(LOGFILE_ROTATION_SIZE_KEY))
+    {
+        // todo: use operator* to workaround clang bug...
+        value = *conf_value;
+    }
+    return value;
+}
+
+
+size_t
+options::get_logfile_max_size() const
+{
+    size_t value = DEFAULT_LOGFILE_MAX_SIZE;
+
+    if (auto conf_value = this->parse_size(LOGFILE_MAX_SIZE_KEY))
+    {
+        // todo: use operator* to workaround clang bug...
+        value = *conf_value;
+    }
+    return value;
+}
+
+
+#ifndef __APPLE__
+std::optional<size_t>
+#else
+std::experimental::optional<size_t>
+#endif
+options::parse_size(const std::string& key) const
+{
+    if (this->config_data.isMember(key))
+    {
+        const std::string max_value{this->config_data[key].asString()};
+
+        const std::regex expr{"(\\d+)([K,M,G,T]?[B]?)"};
+
+        std::smatch base_match;
+        if (std::regex_match(max_value, base_match, expr))
+        {
+            std::string suffix = base_match[2];
+
+            return boost::lexical_cast<size_t>(base_match[1])
+                   * utils::BYTE_SUFFIXES.at(suffix.empty() ? 'B' : suffix[0]);
+        }
+
+        throw std::runtime_error(std::string("\nUnable to parse \"" + key + "\" value from options: " + max_value));
+    }
+
+    return {}; /*std::nullopt*/
 }
