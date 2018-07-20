@@ -124,6 +124,101 @@ $ sudo make install
 
 ### Deploying the Daemons
 
+#### The Bluzelle Configuration File
+
+The Bluzelle daemon is configured by setting the properties of a JSON
+configuration file provided by the user. This file is usually called
+*bluzelle.json* and resides in the current working directory. To specify a
+different configuration file the daemon can be executed with the -c command
+line argument:
+
+    $ swarm -c peer0.json
+
+The configuration file is a JSON format file, as seen in the following example:
+
+    {
+        "bootstrap_file": "./peers.json",
+        "ethereum": "0xddbd<...>121a",
+        "ethereum_io_api_token": "53IW57FSZSZS3QXJUEBYT8F4YZ9IZFXBPQ",
+        "http_port": 9082,
+        "listener_address": "127.0.0.1",
+        "listener_port": 49152,
+        "log_to_stdout": true,
+        "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5",
+        "max_storage" : "2GB",
+        "logfile_dir" : "logs/",
+        "logfile_rotation_size" : "64K"
+        "logfile_max_size" : "640K",
+        "debug_logging" : false
+    }
+
+where the properties are:
+
+- "bootstrap_file" - the path to a file containing the list of peers in the swarm that this node will be participating in. See below.
+- "debug_logging" - set this value to true to include debug level log messages in the logs
+- "ethereum" - is your Etherium block chain address, used to pay for transactions.
+- "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
+- "http_port" - the socket address where SwarmDB will listen for HTTP client requests.
+- "listener_address" - the ip address that SwarmDB will use
+- "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
+- "log_to_stdout" - directs SwarmDB to log output to stdout when true.
+- "logfile_dir" - location of log files (default: logs/)
+- "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs
+- "logfile_rotation_size" - approximate size of log file must be before rotation (default: 64K)
+- "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance.
+- "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
+
+All size entries use the same notation as storage: B, K, M, G & T or none
+(bytes)
+
+
+#### The Bluzelle Bootstrap File
+
+The bootstrap file, identified in the config file by the "bootstrap_file"
+parameter, see above, provides a list of other nodes in the the swarm that the
+local instance of the SwarmDB daemon can communicate with. Note that this may
+not represent the current quorum so if it is sufficently out of date, you may
+need to find the current list of nodes.
+
+The booststrap file format a JSON array, containing JSON objects describing
+nodes as seen in the following example:
+
+    [
+        {
+            "host": "127.0.0.1",
+            "http_port": 9082,
+            "name": "peer0",
+            "port": 49152,
+            "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5"
+        },
+        {
+            "host": "127.0.0.1",
+            "http_port": 9083,
+            "name": "peer1",
+            "port": 49153,
+            "uuid": "5c63dfdc-e251-4b9c-8c36-404972c9b4ec"
+        },
+        ...
+        {
+            "host": "127.0.0.1",
+            "http_port": 9083,
+            "name": "peer1",
+            "port": 49153,
+            "uuid": "ce4bfdc-63c7-5b9d-1c37-567978e9b893a"
+        }
+    ]
+
+where the Peer object parameters are:
+- "host" - the IP address associated with the external node
+- "http_port" - the HTTP port on which the external node listens for HTTP client requests.
+- "name" - the human readable name that the external node uses
+- "port" - the socket address that the external node will listen for protobuf and web socket requests.
+- "uuid" - the universally unique identifier that the external node uses to uniquely identify itself.
+
+Please ensure that a JSON object representing the local node is also included
+in the array of peers.
+
+
 #### Steps to setup Daemon configuration files:
 
 1. Create each of the JSON files below in swarmDB/build/output/, where the swarm executable resides. \(bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json\).
