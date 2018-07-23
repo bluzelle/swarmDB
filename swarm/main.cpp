@@ -23,6 +23,7 @@
 #include <storage/storage.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
+#include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/program_options.hpp>
@@ -32,36 +33,53 @@
 
 
 void
-init_logging()
+init_logging(const bzn::options& options)
 {
     namespace keywords = boost::log::keywords;
 
+    const auto format = boost::log::expressions::stream
+            << boost::log::expressions::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f]")
+            << " [" << boost::log::expressions::attr< boost::log::attributes::current_thread_id::value_type >("ThreadID")
+            << "] [" << std::setw(5) << std::left << boost::log::trivial::severity << "] " <<  boost::log::expressions::smessage;
+
     auto sink = boost::log::add_file_log
         (
-            keywords::file_name = "bluzelle-%5N.log",
-            keywords::rotation_size = 1024 * 64, // 64K logs
+            keywords::file_name = options.get_logfile_dir() + "/bluzelle-%5N.log",
+            keywords::rotation_size = options.get_logfile_rotation_size(),
             keywords::open_mode = std::ios_base::app,
             keywords::auto_flush = true,
-            keywords::format =
-                (
-                    boost::log::expressions::stream
-                        << boost::log::expressions::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f]")
-                        << " [" << boost::log::expressions::attr< boost::log::attributes::current_thread_id::value_type >("ThreadID")
-                        << "] [" << std::setw(5) << std::left << boost::log::trivial::severity << "] " <<  boost::log::expressions::smessage
-                )
+            keywords::format = format
         );
+
+    if (options.get_log_to_stdout())
+    {
+        boost::log::add_console_log(std::cout, boost::log::keywords::format = format);
+    }
 
     boost::log::add_common_attributes();
 
     sink->locked_backend()->set_file_collector(boost::log::sinks::file::make_collector
         (
-            keywords::target = "logs/",
-            keywords::max_size = 1024 * 512 // ~512K of logs
+            keywords::target = options.get_logfile_dir(),
+            keywords::max_size = options.get_logfile_max_size()
         ));
 
     sink->locked_backend()->scan_for_files();
 
     boost::log::core::get()->add_sink(sink);
+
+    if (options.get_debug_logging())
+    {
+        LOG(info) << "debug logging enabled";
+
+        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+    }
+    else
+    {
+        LOG(info) << "debug logging disabled";
+
+        boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
+    }
 }
 
 
@@ -90,24 +108,6 @@ init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std
         return false;
     }
     return true;
-}
-
-
-void
-set_logging_level(const bzn::options& options)
-{
-    if (options.get_debug_logging())
-    {
-        LOG(info) << "debug logging enabled";
-
-        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
-    }
-    else
-    {
-        LOG(info) << "debug logging disabled";
-
-        boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
-    }
 }
 
 
@@ -154,7 +154,11 @@ print_banner(const bzn::options& options, double eth_balance)
        << '\n';
 
     std::cout << ss.str();
-    LOG(info) << ss.str();
+
+    if (!options.get_log_to_stdout())
+    {
+        LOG(info) << ss.str();
+    }
 }
 
 
@@ -187,15 +191,10 @@ main(int argc, const char* argv[])
         bzn::options options;
         if (!options.parse_command_line(argc, argv))
         {
-            return 0;
+            return 1;
         }
 
-        if (!options.get_log_to_stdout())
-        {
-            init_logging();
-        }
-
-        set_logging_level(options);
+        init_logging(options);
 
         // todo: right now we just want to check that an account "has" a balance...
         double eth_balance = bzn::ethereum().get_ether_balance(options.get_ethererum_address(), options.get_ethererum_io_api_token());
@@ -238,7 +237,7 @@ main(int argc, const char* argv[])
         if (!get_http_listener_port(options, peers, http_port))
         {
             LOG(error) << "could not find our http port setting!";
-            return 0;
+            return 1;
         }
 
         // create http server using our configured listener address & peer listen port number...
@@ -246,7 +245,6 @@ main(int argc, const char* argv[])
         ep.port(http_port);
         auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
 
-        
         raft->initialize_storage_from_log(storage);
         
         // todo: just for testing...

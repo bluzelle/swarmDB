@@ -24,13 +24,19 @@
 
 namespace bzn
 {
+    // Suffixes for the max size parser.
+    namespace utils
+    {
+        const std::map<char, size_t> BYTE_SUFFIXES = std::map<char, size_t>({{'B', 1},
+                                                                             {'K', 1024},
+                                                                             {'M', 1048576},
+                                                                             {'G', 1073741824},
+                                                                             {'T', 1099511627776}});
+    }
 
     class options_base
     {
     public:
-        // Suffixes for the max size parser.
-        static const std::map<char, size_t> BYTE_SUFFIXES;
-
         virtual ~options_base() = default;
 
         /**
@@ -39,12 +45,12 @@ namespace bzn
          */
         virtual boost::asio::ip::tcp::endpoint get_listener() const = 0;
 
-       /**
-        * The address and port to send stats.d data to, if this is enabled
-        * @return optional<endpoint>
-        */
+        /**
+         * The address and port to send stats.d data to, if this is enabled
+         * @return optional<endpoint>
+         */
         virtual bzn::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(
-                std::shared_ptr<bzn::asio::io_context_base> context) const = 0;
+            std::shared_ptr<bzn::asio::io_context_base> context) const = 0;
 
         /**
          * Get the Ethererum address the node will be using
@@ -92,29 +98,49 @@ namespace bzn
          * Get the websocket activity timeout
          * @return seconds
          */
-         virtual std::chrono::seconds get_ws_idle_timeout() const = 0;
+        virtual std::chrono::seconds get_ws_idle_timeout() const = 0;
 
 
         /**
          * Get the number of entries allowed to be stored in audit's datastructures
          * @return size
          */
-         virtual size_t get_audit_mem_size() const = 0;
+        virtual size_t get_audit_mem_size() const = 0;
 
 
-         /**
-          * Get the directory for storing swarm state data
-          * @return directory
-          */
-         virtual std::string get_state_dir() const = 0;
+        /**
+         * Get the directory for storing swarm state data
+         * @return directory
+         */
+        virtual std::string get_state_dir() const = 0;
 
 
-         /**
-          * Get the maximum allowed storage for the daemon.
-          * @return
-          */
-         virtual size_t get_max_storage() const = 0;
+        /**
+         * Get the director to log into
+         * @return directory
+         */
+        virtual std::string get_logfile_dir() const = 0;
 
+
+        /**
+         * Get the maximum allowed storage for the daemon.
+         * @return size
+         */
+        virtual size_t get_max_storage() const = 0;
+
+
+        /**
+         * Get the size of a log file to rotate
+         * @return size
+         */
+        virtual size_t get_logfile_rotation_size() const = 0;
+
+
+        /**
+         * Get the total size of logs before deletion
+         * @return size
+         */
+        virtual size_t get_logfile_max_size() const = 0;
     };
 
 } // bzn

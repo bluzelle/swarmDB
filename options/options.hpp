@@ -49,7 +49,13 @@ namespace bzn
 
         std::string get_state_dir() const override;
 
+        std::string get_logfile_dir() const override;
+
         size_t get_max_storage() const override;
+
+        size_t get_logfile_rotation_size() const override ;
+
+        size_t get_logfile_max_size() const override;
 
     private:
         bool parse(int argc, const char* argv[]);
@@ -57,6 +63,14 @@ namespace bzn
         void load(const std::string& config_file);
 
         bool validate();
+
+        // todo: nuke once Apple updates clang!
+#ifndef __APPLE__
+        std::optional<size_t>
+#else
+        std::experimental::optional<size_t>
+#endif
+        parse_size(const std::string& key) const;
 
         Json::Value config_data;
 
