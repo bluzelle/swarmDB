@@ -27,6 +27,8 @@ namespace bzn
 
         virtual void commit_request(uint64_t sequence, const pbft_request& request) = 0;
 
+        virtual ~pbft_service_base() = default;
+
     };
 
 }

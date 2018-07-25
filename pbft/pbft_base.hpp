@@ -40,5 +40,7 @@ namespace bzn
 
         virtual const bzn::uuid_t& get_uuid() const = 0;
 
+        virtual ~pbft_base() = default;
+
     };
 }
