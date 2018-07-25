@@ -46,7 +46,7 @@ namespace
         bzn::pbft_operation op;
 
         pbft_operation_test()
-                : op(view, sequence, request, TEST_PEER_LIST)
+                : op(view, sequence, request, std::make_shared<bzn::peers_list_t>(TEST_PEER_LIST))
         {
         }
     };

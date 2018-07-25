@@ -17,7 +17,7 @@
 
 using namespace bzn;
 
-pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request request, const peers_list_t& peers)
+pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request request, std::shared_ptr<const peers_list_t> peers)
         : view(std::move(view))
           , sequence(std::move(sequence))
           , request(std::move(request))
@@ -43,11 +43,16 @@ pbft_operation::record_prepare(const pbft_msg& prepare)
     this->prepares_seen.insert(prepare.sender());
 }
 
+size_t
+pbft_operation::faulty_nodes_bound() const
+{
+    return (this->peers->size() - 1) / 3;
+}
+
 bool
 pbft_operation::is_prepared()
 {
-    size_t f = (this->peers.size() - 1) / 3;
-    return this->has_preprepare() && this->prepares_seen.size() >= (2 * f + 1);
+    return this->has_preprepare() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 void
@@ -59,8 +64,7 @@ pbft_operation::record_commit(const pbft_msg& commit)
 bool
 pbft_operation::is_committed()
 {
-    size_t f = (this->peers.size() - 1) / 3;
-    return this->is_prepared() && this->commits_seen.size() >= (2 * f + 1);
+    return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 void
@@ -68,7 +72,7 @@ pbft_operation::begin_commit_phase()
 {
     if (!this->is_prepared() || this->state != pbft_operation_state::prepare)
     {
-        throw "Illegaly tried to move to commit phase";
+        throw std::runtime_error("Illegaly tried to move to commit phase");
     }
 
     this->state = pbft_operation_state::commit;
@@ -79,7 +83,7 @@ pbft_operation::end_commit_phase()
 {
     if (!this->is_committed() || this->state != pbft_operation_state::commit)
     {
-        throw "Illegally tried to end the commit phase";
+        throw std::runtime_error("Illegally tried to end the commit phase");
     }
 
     this->state = pbft_operation_state::committed;

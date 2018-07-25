@@ -38,15 +38,19 @@ pbft::pbft(
         throw std::runtime_error("No peers found!");
     }
 
-    std::transform(
-            this->peers.begin(), this->peers.end(), std::back_inserter(this->peer_index), [](auto& peer)
-            { return std::reference_wrapper<const peer_address_t>{peer}; }
+    std::transform(this->peers.begin(), this->peers.end(), std::back_inserter(this->peer_index),
+            [](auto& peer)
+            {
+                return std::reference_wrapper<const peer_address_t>{peer};
+            }
     );
 
     std::copy(peers.begin(), peers.end(), std::back_inserter(peer_index));
-    std::sort(
-            peer_index.begin(), peer_index.end(), [](const auto& peer1, const auto& peer2)
-            { return peer1.get().uuid < peer2.get().uuid; }
+    std::sort(peer_index.begin(), peer_index.end(),
+            [](const auto& peer1, const auto& peer2)
+            {
+                return peer1.get().uuid < peer2.get().uuid;
+            }
     );
 
 }
@@ -54,30 +58,29 @@ pbft::pbft(
 void
 pbft::start()
 {
-    this->node
-        ->register_for_message(
-                "pbft", std::bind(
-                        &pbft::unwrap_message
-                        , shared_from_this()
-                        , std::placeholders::_1
-                        , std::placeholders::_2
-                ));
+    this->node->register_for_message("pbft",
+            std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
 void
 pbft::unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
 {
     pbft_msg msg;
-    msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString()));
-
-    this->handle_message(msg);
+    if (msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString())))
+    {
+        this->handle_message(msg);
+    }
+    else
+    {
+        LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
+    }
 }
 
 void
 pbft::handle_message(const pbft_msg& msg)
 {
 
-    LOG(debug) << "Recieved message: " << msg.ShortDebugString();
+    LOG(debug) << "Recieved message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     if (!this->preliminary_filter_msg(msg))
     {
@@ -101,7 +104,7 @@ pbft::handle_message(const pbft_msg& msg)
             this->handle_commit(msg);
             break;
         default :
-            throw "Unsupported message type";
+            throw std::runtime_error("Unsupported message type");
     }
 }
 
@@ -150,9 +153,8 @@ pbft::handle_request(const pbft_msg& msg)
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
-    uint64_t request_view = this->view;
     uint64_t request_seq = this->next_issued_sequence_number++;
-    pbft_operation& op = this->find_operation(request_view, request_seq, msg.request());
+    pbft_operation& op = this->find_operation(this->view, request_seq, msg.request());
 
     this->do_preprepare(op);
 }
@@ -163,10 +165,10 @@ pbft::handle_preprepare(const pbft_msg& msg)
 
     // If we've already accepted a preprepare for this view+sequence, and it's not this one, then we should reject this one
     // Note that if we get the same preprepare more than once, we can still accept it
-    log_key_t log_key(msg.view(), msg.sequence());
-    auto lookup = this->accepted_preprepares.find(log_key);
+    const log_key_t log_key(msg.view(), msg.sequence());
 
-    if (lookup != this->accepted_preprepares.end()
+    if (auto lookup = this->accepted_preprepares.find(log_key);
+        lookup != this->accepted_preprepares.end()
         && std::get<2>(lookup->second) != pbft_operation::request_hash(msg.request()))
     {
 
@@ -330,15 +332,13 @@ pbft::find_operation(const uint64_t& view, const uint64_t& sequence, const pbft_
                         view
                         , sequence
                         , request
-                        , this->peers
+                        , std::make_shared<peers_list_t>(this->peers)
                 ));
         assert(result.second);
         return result.first->second;
     }
-    else
-    {
-        return lookup->second;
-    }
+
+    return lookup->second;
 }
 
 bzn::message
@@ -353,7 +353,7 @@ pbft::wrap_message(const pbft_msg& msg)
 }
 
 const bzn::uuid_t&
-pbft::get_uuid()
+pbft::get_uuid() const
 {
     return this->uuid;
 }

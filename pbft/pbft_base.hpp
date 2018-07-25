@@ -38,5 +38,7 @@ namespace bzn
 
         virtual const peer_address_t& get_primary() const = 0;
 
+        virtual const bzn::uuid_t& get_uuid() const = 0;
+
     };
 }

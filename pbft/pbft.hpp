@@ -42,7 +42,7 @@ namespace bzn
 
         const peer_address_t& get_primary() const override;
 
-        const bzn::uuid_t& get_uuid();
+        const bzn::uuid_t& get_uuid() const override;
 
         using request_hash_t = std::string;
 

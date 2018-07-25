@@ -247,8 +247,7 @@ main(int argc, const char* argv[])
 
         if(options.pbft_enabled())
         {
-            auto service = std::make_shared<bzn::pbft_service>();
-            auto pbft = std::make_shared<bzn::pbft>(node, peers.get_peers(), options.get_uuid(), service);
+            auto pbft = std::make_shared<bzn::pbft>(node, peers.get_peers(), options.get_uuid(), std::make_shared<bzn::pbft_service>());
 
             pbft->start();
         }

@@ -149,14 +149,7 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
 bool
 options::pbft_enabled() const
 {
-    if (this->config_data.isMember(PBFT_ENABLED_KEY))
-    {
-        return this->config_data[PBFT_ENABLED_KEY].asBool();
-    }
-    else
-    {
-        return false;
-    }
+    return this->config_data.isMember(PBFT_ENABLED_KEY) && this->config_data[PBFT_ENABLED_KEY].asBool();
 }
 
 

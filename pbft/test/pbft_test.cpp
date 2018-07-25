@@ -50,8 +50,8 @@ namespace
         bzn::pbft pbft;
 
         pbft_test()
-                : mock_node(std::make_shared<bzn::Mocknode_base>())
-                , service(std::make_shared<bzn::pbft_service>())
+                : mock_node(std::make_shared<NiceMock<bzn::Mocknode_base>>())
+                , service(std::make_shared<NiceMock<bzn::pbft_service>>())
                 , pbft(mock_node, TEST_PEER_LIST, TEST_NODE_UUID, this->service)
         {
             request_msg.mutable_request()->set_operation("do some stuff");
