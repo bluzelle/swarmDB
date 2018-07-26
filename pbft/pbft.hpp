@@ -89,6 +89,8 @@ namespace bzn
 
         std::map<bzn::operation_key_t, bzn::pbft_operation> operations;
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
+
+        std::once_flag start_once;
     };
 
 } // namespace bzn

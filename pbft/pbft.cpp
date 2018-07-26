@@ -58,8 +58,11 @@ pbft::pbft(
 void
 pbft::start()
 {
-    this->node->register_for_message("pbft",
-            std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    std::call_once(this->start_once, [this]()
+    {
+        this->node->register_for_message("pbft",
+                std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    });
 }
 
 void
