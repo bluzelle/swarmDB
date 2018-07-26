@@ -18,6 +18,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <regex>
 #include <string>
 
@@ -52,11 +53,14 @@ namespace bzn::utils::http
             throw std::runtime_error("could not parse url " + url);
         }
 
-        std::string host = what[1];
-        std::string target = what[2];
+        const std::string host{what[1]};
+        const std::string target{what[2]};
 
-        auto const results = resolver.resolve(host, "80");
-        boost::asio::connect(socket, results.begin(), results.end());
+        auto const endpoint_iterator = resolver.resolve(host, "80");
+
+        LOG(info) << "Connecting to: " << host << "...";
+
+        boost::asio::connect(socket, endpoint_iterator);
 
         http::request<http::string_body> req{http::verb::get, target, 11};
         req.set(http::field::host, host);
