@@ -140,7 +140,6 @@ The configuration file is a JSON format file, as seen in the following example:
         "bootstrap_file": "./peers.json",
         "ethereum": "0xddbd<...>121a",
         "ethereum_io_api_token": "53IW57FSZSZS3QXJUEBYT8F4YZ9IZFXBPQ",
-        "http_port": 9082,
         "listener_address": "127.0.0.1",
         "listener_port": 49152,
         "log_to_stdout": true,
@@ -158,14 +157,13 @@ where the properties are:
 - "debug_logging" - set this value to true to include debug level log messages in the logs
 - "ethereum" - is your Etherium block chain address, used to pay for transactions.
 - "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
-- "http_port" - the socket address where SwarmDB will listen for HTTP client requests.
 - "listener_address" - the ip address that SwarmDB will use
 - "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
 - "log_to_stdout" - directs SwarmDB to log output to stdout when true.
 - "logfile_dir" - location of log files (default: logs/)
-- "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs
+- "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs (default: 512K)
 - "logfile_rotation_size" - approximate size of log file must be before rotation (default: 64K)
-- "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance.
+- "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
 
 All size entries use the same notation as storage: B, K, M, G & T or none
