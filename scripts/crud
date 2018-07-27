@@ -80,11 +80,12 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     return resp
 
 
-def send_ping_request(node):
+def send_status_request(node):
     ws = websocket.create_connection("ws://" + node)
 
     req = {}
-    req["bzn-api"] = "ping"
+    req["bzn-api"] = "status"
+    req["transaction_id"] = random.randint(1,sys.maxint);
 
     print("Sending : \n" + json.dumps(req,indent=4))
     print("-" * 60 + '\n')
@@ -155,8 +156,8 @@ def unsubscribe_request(key):
     return msg
 
 
-def ping_handler(args):
-    return send_ping_request(args.node)
+def status_handler(args):
+    return send_status_request(args.node)
 
 
 def create_handler(args):
@@ -202,9 +203,9 @@ if __name__ == "__main__":
 
     subparsers = parser.add_subparsers()
 
-    # Ping
-    ping_parser = subparsers.add_parser('ping', help="Ping")
-    ping_parser.set_defaults(func=ping_handler)
+    # Status
+    status_parser = subparsers.add_parser('status', help="Status")
+    status_parser.set_defaults(func=status_handler)
 
     # Create
     create_parser = subparsers.add_parser('create', help="Create k/v")
