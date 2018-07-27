@@ -867,27 +867,44 @@ raft::get_leader()
 void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
+    LOG(info) << "Initializng storage from log entries";
     for (const auto& log_entry : this->raft_log->get_log_entries())
     {
         if(log_entry.entry_type == bzn::log_entry_type::database)
         {
-            const auto command = log_entry.msg["cmd"].asString();
-            const auto db_uuid = log_entry.msg["db-uuid"].asString();
-            const auto key = log_entry.msg["data"]["key"].asString();
-            if (command == "create")
+            bzn_msg msg;
+
+            if(!msg.ParseFromString(boost::beast::detail::base64_decode(log_entry.msg["msg"].asString())))
             {
-                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+                LOG(error) << "Failed to decode message: " << boost::beast::detail::base64_decode(log_entry.msg["msg"].asString()).substr(0,MAX_MESSAGE_SIZE) << "...";
+                continue;
             }
-            else if (command == "update")
+
+            bzn::uuid_t uuid = msg.db().header().db_uuid();
+
+            if(msg.db().has_create())
             {
-                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+                const database_create& create_command = msg.db().create();
+                storage->create(uuid, create_command.key(), create_command.value());
+                continue;
             }
-            else if (command == "delete")
+
+            if(msg.db().has_update())
             {
-                storage->remove(db_uuid, key);
+                const database_update& update_command = msg.db().update();
+                storage->update(uuid, update_command.key(), update_command.value());
+                continue;
+            }
+
+            if(msg.db().has_delete_())
+            {
+                const database_delete& delete_command = msg.db().delete_();
+                storage->remove(uuid,delete_command.key());
+                continue;
             }
         }
     }
+    LOG(info) << "Storage initialized from log entries";
 }
 
 
