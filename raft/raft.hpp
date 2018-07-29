@@ -69,7 +69,7 @@ namespace bzn
         friend class raft_log;
         FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
         FRIEND_TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries);
-        FRIEND_TEST(raft, test_that_raft_can_rehydrate_storage);
+        FRIEND_TEST(raft_test, test_that_raft_can_rehydrate_storage);
         FRIEND_TEST(raft_test, test_that_in_a_leader_state_will_send_a_heartbeat_to_its_peers);
         FRIEND_TEST(raft_test, test_that_leader_sends_entries_and_commits_when_enough_peers_have_saved_them);
         FRIEND_TEST(raft_test, test_that_start_randomly_schedules_callback_for_starting_an_election_and_wins);
@@ -92,6 +92,7 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
         FRIEND_TEST(raft_test, test_that_bad_add_or_remove_peer_requests_fail);
         FRIEND_TEST(raft_test, test_that_a_four_node_swarm_cannot_reach_consensus_with_two_nodes);
+
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
 

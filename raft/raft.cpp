@@ -58,7 +58,7 @@ raft::raft(
     this->setup_peer_tracking(peers);
     this->get_raft_timeout_scale();
 
-    if(!boost::filesystem::exists(this->entries_log_path()))
+    if (!boost::filesystem::exists(this->entries_log_path()))
     {
         this->create_dat_file(this->entries_log_path(), peers);
     }
@@ -66,7 +66,7 @@ raft::raft(
     this->raft_log = std::make_shared<bzn::raft_log>(this->entries_log_path(), maximum_raft_storage);
 
     // KEP-112 Bail if the raft storage exceeds the max storage
-    if(this->raft_log->maximum_storage_exceeded())
+    if (this->raft_log->maximum_storage_exceeded())
     {
         LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
         throw std::runtime_error(MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED);
@@ -237,7 +237,7 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
         }
     }
 
-    if(this->current_state != bzn::raft_state::candidate)
+    if (this->current_state != bzn::raft_state::candidate)
     {
         LOG(warning) << "No longer a candidate. Ignoring message from peer: " << msg["data"]["from"].asString();
 
@@ -248,7 +248,7 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     if (msg["data"]["granted"].asBool())
     {
         this->yes_votes.emplace(msg["data"]["from"].asString());
-        if(this->is_majority(this->yes_votes))
+        if (this->is_majority(this->yes_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::leader);
 
@@ -266,7 +266,7 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
     else
     {
         this->no_votes.emplace(msg["data"]["from"].asString());
-        if(this->is_majority(this->no_votes))
+        if (this->is_majority(this->no_votes))
         {
             this->update_raft_state(this->current_term, bzn::raft_state::follower);
 
@@ -407,7 +407,7 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
     std::for_each(peers.begin(), peers.end(),
                   [&](const auto& p)
                   {
-                      if(p["uuid"]!=peer_uuid)
+                      if (p["uuid"]!=peer_uuid)
                       {
                           joint_quorum["msg"]["peers"]["new"].append(p);
                       }
@@ -450,7 +450,7 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
         return;
     }
 
-    if(!peer.isMember("uuid") || peer["uuid"].asString().empty())
+    if (!peer.isMember("uuid") || peer["uuid"].asString().empty())
     {
         bzn::message response;
         response["error"] = ERROR_INVALID_UUID;
@@ -512,12 +512,12 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     LOG(debug) << "Received WS message:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
     // TODO: refactor add/remove peers to move the functionality into handlers
-    if(msg["cmd"].asString()=="add_peer")
+    if (msg["cmd"].asString()=="add_peer")
     {
         this->handle_add_peer(session, msg["data"]["peer"]);
         return;
     }
-    else if(msg["cmd"].asString() == "remove_peer" )
+    else if (msg["cmd"].asString() == "remove_peer" )
     {
         if (!msg.isMember("data") || !msg["data"].isMember("uuid") || msg["data"]["uuid"].asString().empty())
         {
@@ -532,7 +532,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     }
 
     // check that the message is from a node in the most recent quorum
-    if(!in_quorum(msg["data"]["from"].asString()))
+    if (!in_quorum(msg["data"]["from"].asString()))
     {
         return;
     }
@@ -643,7 +643,7 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
 void
 raft::notify_leader_status()
 {
-    if(!this->enable_audit)
+    if (!this->enable_audit)
     {
         return;
     }
@@ -668,7 +668,7 @@ raft::notify_leader_status()
 void
 raft::notify_commit(size_t log_index, const std::string& operation)
 {
-    if(!this->enable_audit)
+    if (!this->enable_audit)
     {
         return;
     }
@@ -772,7 +772,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
     // Intermittently the last_majority_replicated_log_index method returns invalid values
     // that are much larger than the raft log size, this is a hack to stop the leader from
     // crashing.
-    if(last_majority_replicated_log_index>this->raft_log->size())
+    if (last_majority_replicated_log_index>this->raft_log->size())
     {
         LOG(error) << "last_majority_replicated_log_index() returned invalid value: [" << last_majority_replicated_log_index << "] - temporarily ignoring entries";
         return;
@@ -788,7 +788,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 bool
 raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type)
 {
-    if(this->raft_log->maximum_storage_exceeded())
+    if (this->raft_log->maximum_storage_exceeded())
     {
         LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
         std::raise(SIGINT);
@@ -867,27 +867,44 @@ raft::get_leader()
 void
 raft::initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage)
 {
+    LOG(info) << "Initializng storage from log entries";
     for (const auto& log_entry : this->raft_log->get_log_entries())
     {
-        if(log_entry.entry_type == bzn::log_entry_type::database)
+        if (log_entry.entry_type == bzn::log_entry_type::database)
         {
-            const auto command = log_entry.msg["cmd"].asString();
-            const auto db_uuid = log_entry.msg["db-uuid"].asString();
-            const auto key = log_entry.msg["data"]["key"].asString();
-            if (command == "create")
+            bzn_msg msg;
+
+            if (!msg.ParseFromString(boost::beast::detail::base64_decode(log_entry.msg["msg"].asString())))
             {
-                storage->create(db_uuid, key, log_entry.msg["data"]["value"].asString());
+                LOG(error) << "Failed to decode message: " << boost::beast::detail::base64_decode(log_entry.msg["msg"].asString()).substr(0,MAX_MESSAGE_SIZE) << "...";
+                continue;
             }
-            else if (command == "update")
+
+            const bzn::uuid_t uuid = msg.db().header().db_uuid();
+
+            if (msg.db().has_create())
             {
-                storage->update(db_uuid, key, log_entry.msg["data"]["value"].asString());
+                const database_create& create_command = msg.db().create();
+                storage->create(uuid, create_command.key(), create_command.value());
+                continue;
             }
-            else if (command == "delete")
+
+            if (msg.db().has_update())
             {
-                storage->remove(db_uuid, key);
+                const database_update& update_command = msg.db().update();
+                storage->update(uuid, update_command.key(), update_command.value());
+                continue;
+            }
+
+            if (msg.db().has_delete_())
+            {
+                const database_delete& delete_command = msg.db().delete_();
+                storage->remove(uuid,delete_command.key());
+                continue;
             }
         }
     }
+    LOG(info) << "Storage initialized from log entries";
 }
 
 
@@ -918,7 +935,7 @@ raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
     this->commit_handler(log_entry.msg);
     commit_index++;
 
-    if(this->get_state() == bzn::raft_state::leader && log_entry.entry_type == bzn::log_entry_type::joint_quorum)
+    if (this->get_state() == bzn::raft_state::leader && log_entry.entry_type == bzn::log_entry_type::joint_quorum)
     {
         this->append_log_unsafe(
                 this->create_single_quorum_from_joint_quorum(log_entry.msg),
@@ -1010,7 +1027,7 @@ raft::is_majority(const std::set<bzn::uuid_t>& votes)
         std::set_intersection(s.begin(), s.end(), votes.begin(), votes.end(),
                               std::inserter(intersect, intersect.begin()));
 
-        if(intersect.size() * 2 <= s.size())
+        if (intersect.size() * 2 <= s.size())
         {
             return false;
         }
@@ -1027,7 +1044,7 @@ raft::get_all_peers()
     std::vector<std::reference_wrapper<bzn::message>> all_peers;
     bzn::log_entry log_entry = this->raft_log->last_quorum_entry();
 
-    if(log_entry.entry_type == bzn::log_entry_type::single_quorum)
+    if (log_entry.entry_type == bzn::log_entry_type::single_quorum)
     {
         all_peers.emplace_back(log_entry.msg["msg"]["peers"]);
     }
@@ -1070,7 +1087,7 @@ void
 raft::create_dat_file(const std::string& log_path, const bzn::peers_list_t& peers)
 {
     const boost::filesystem::path path(log_path);
-    if(!boost::filesystem::exists(path.parent_path()))
+    if (!boost::filesystem::exists(path.parent_path()))
     {
         boost::filesystem::create_directories(path.parent_path());
     }
@@ -1091,7 +1108,7 @@ raft::create_dat_file(const std::string& log_path, const bzn::peers_list_t& peer
     const bzn::log_entry entry{bzn::log_entry_type::single_quorum, 0, 0, root};
 
     std::ofstream os( log_path ,std::ios::out | std::ios::binary);
-    if(!os)
+    if (!os)
     {
         throw std::runtime_error(ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING + log_path);
     }
@@ -1114,17 +1131,17 @@ raft::import_state_files()
 bzn::log_entry_type
 raft::deduce_type_from_message(const bzn::message& message)
 {
-    if(message["msg"].isString())
+    if (message["msg"].isString())
     {
         return bzn::log_entry_type::database;
     }
 
-    if(message["msg"]["peers"].isArray())
+    if (message["msg"]["peers"].isArray())
     {
         return bzn::log_entry_type::single_quorum;
     }
 
-    if(message["msg"]["peers"].isMember("new"))
+    if (message["msg"]["peers"].isMember("new"))
     {
         return bzn::log_entry_type::joint_quorum;
     }

@@ -20,9 +20,11 @@
 #include <raft/raft_log.hpp>
 #include <storage/storage.hpp>
 #include <boost/filesystem.hpp>
+#include <algorithm>
 #include <vector>
 #include <random>
 #include <stdlib.h>
+#include <proto/bluzelle.pb.h>
 
 using namespace ::testing;
 
@@ -188,6 +190,87 @@ namespace
         peer["name"] = "tux";
         peer["uuid"] = TEST_NODE_UUID;
         return peer;
+    }
+
+
+    database_header*
+    make_header(const std::string& uuid, uint64_t transaction_id)
+    {
+        database_header* db_header = new database_header;
+        db_header->set_db_uuid(uuid);
+        db_header->set_transaction_id(transaction_id);
+        return db_header;
+    }
+
+
+    database_create*
+    make_create(const std::string& key, const std::string& value)
+    {
+        database_create* db_create = new database_create;
+        db_create->set_key(key);
+        db_create->set_value(value);
+        return db_create;
+    }
+
+    database_update*
+    make_update(const std::string& key, const std::string& value)
+    {
+        database_update* db_update = new database_update;
+        db_update->set_key(key);
+        db_update->set_value(value);
+        return db_update;
+    }
+
+    database_delete*
+    make_delete_(const std::string& key)
+    {
+        database_delete* db_delete_ = new database_delete;
+        db_delete_->set_key(key);
+        return db_delete_;
+    }
+
+
+    // "db {\n  header {\n    db_uuid: \"fea3de28-72b1-4ed8-8469-f664d2ddb81f\"\n    transaction_id: 3116780088929561137\n  }\n  create {\n    key: \"temp\"\n    value: \"38493\"\n  }\n}\n"
+    bzn_msg build_create_bzn_msg(const std::string& uuid, uint64_t transaction_id, const std::string& key, const std::string& value)
+    {
+        bzn_msg proto_message;
+        database_msg* db = new database_msg;
+        // the "allocate" functions require pointers to "new"-ed objects as the
+        // protobuf objects that will delete them (unless we do it ourselves
+        // with the release functions.
+        db->set_allocated_header(make_header(uuid, transaction_id));
+        db->set_allocated_create(make_create(key, value));
+        proto_message.set_allocated_db(db);
+        return proto_message;
+    }
+
+    bzn_msg build_update_bzn_msg(const std::string& uuid, uint64_t transaction_id, const std::string& key, const std::string& value)
+    {
+        bzn_msg proto_message;
+        database_msg* db = new database_msg;
+        db->set_allocated_header(make_header(uuid, transaction_id));
+        db->set_allocated_update(make_update(key, value));
+        proto_message.set_allocated_db(db);
+        return proto_message;
+    }
+
+    bzn_msg build_delete_bzn_msg(const std::string& uuid, uint64_t transaction_id, const std::string& key)
+    {
+        bzn_msg proto_message;
+        database_msg* db = new database_msg;
+        db->set_allocated_header(make_header(uuid, transaction_id));
+        db->set_allocated_delete_(make_delete_(key));
+        proto_message.set_allocated_db(db);
+        return proto_message;
+    }
+
+
+    bzn::message make_bzn_message(const bzn_msg& msg)
+    {
+        bzn::message message;
+        message["bzn-api"] = "database";
+        message["msg"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+        return message;
     }
 }
 
@@ -757,174 +840,85 @@ namespace bzn
         clean_state_folder();
     }
 
-    // TODO: The following test needs to be rewritten
-//    TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries)
-//    {
-//        clean_state_folder();
-//
-//        auto mock_session = std::make_shared<bzn::Mocksession_base>();
-//        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
-//
-//        const size_t number_of_entries = 300;
-//        // fill_entries_with_test_data(number_of_entries, raft_source->raft_log.get_log_entries());
-//        initilialize_raft_log(number_of_entries, raft_source);
-//        // TODO: this should be done via RAFT, not by cheating. That is, I'd like to simulate the append entry process to ensure that append_entry_to_log gets called
-//        std::for_each(raft_source->raft_log->get_log_entries().begin(), raft_source->raft_log->get_log_entries().end(),
-//                      [&](const auto &database)
-//                      {
-//                          if (database.log_index > 0)
-//                          {
-//                              raft_source->append_log(database.msg, database.entry_type);
-//                          }
-//                      });
-//
-//        raft_source->last_log_term = raft_source->raft_log->get_log_entries().back().term;
-//        raft_source->commit_index = raft_source->raft_log->get_log_entries().back().log_index;
-//        raft_source->current_term = raft_source->last_log_term;
-//
-//        // TODO: This should be done via RAFT, not by cheating.
-//        raft_source->save_state();
-//
-//        // instantiate a raft with the same uuid
-//        auto raft_target = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
-//
-//        EXPECT_EQ(raft_target->raft_log->get_log_entries().size(), raft_source->raft_log->get_log_entries().size());
-//        EXPECT_EQ(raft_target->last_log_term, raft_source->last_log_term);
-//        EXPECT_EQ(raft_target->commit_index, raft_source->commit_index);
-//        EXPECT_EQ(raft_target->current_term, raft_source->current_term);
-//
-//        auto source_entries = raft_source->raft_log->get_log_entries();
-//        auto target_entries = raft_target->raft_log->get_log_entries();
-//
-//        EXPECT_TRUE(target_entries.size()>0);
-//        EXPECT_EQ(target_entries.size(),source_entries.size());
-//
-//        EXPECT_TRUE(std::equal(
-//                std::begin(target_entries), std::end(target_entries),
-//                std::begin(source_entries),
-//                [](const bzn::database &rhs, const bzn::database &lhs) -> bool
-//                {
-//                    return (rhs.log_index == lhs.log_index
-//                            && rhs.term == lhs.term
-//                            && rhs.msg.toStyledString() == lhs.msg.toStyledString()
-//                    );
-//                }
-//        ));
-//
-//        clean_state_folder();
-//    }
 
-    
-    TEST(raft, test_that_raft_can_rehydrate_storage)
+    TEST_F(raft_test, test_that_raft_can_rehydrate_storage)
     {
-        const size_t number_of_entries = 300;
+        const size_t number_of_entries = 30;
+        const bzn::uuid_t db_uuid{"66fa99f9-a397-4ec2-8bcd-63f9784966f3"};
+        const std::string I_AM_CREATED{"I am created"};
+        const std::string I_AM_UPDATED{"I am updated"};
 
-        clean_state_folder();
 
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
-        auto raft_source = std::make_shared<bzn::raft>(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(),
-                                                       nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
-        auto storage_source = std::make_shared<bzn::storage>();
+        bzn::asio::wait_handler asio_wait_handler;
+        bzn::message_handler bzn_msg_handler;
 
-        std::random_device rd;  //Will be used to obtain a seed for the random number engine
-        std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-        std::uniform_int_distribution<> dis(0, 6);
+        auto raft = this->start_raft(TEST_PEER_LIST, asio_wait_handler, bzn_msg_handler);
+        raft->current_state = bzn::raft_state::leader;
 
-        bzn::message message;
-        Json::Reader reader;
-        std::string crud_msg;
-        uint16_t index = 0;
+        // create a lot of log entries, undate some of them and delete some of them.
+        std::vector<std::string> deleted_keys;
+        std::vector<std::string> updated_keys;
 
-        raft_source->current_state = bzn::raft_state::leader;
+        size_t entry_count{0};
 
-        while (storage_source->get_keys(TEST_NODE_UUID).size() < number_of_entries)
+        for(size_t i = 0; i<number_of_entries; ++i)
         {
-            uint8_t command = dis(gen);
-            if (command <= 3)
+            bzn_msg msg;
+            std::string key{"test_key_" + std::to_string(i)};
+            switch (i % 6)
             {
-                // create
-                const std::string key = "key" + std::to_string(index);
-                const std::string value = "value_for_" + key + "==";
-
-                crud_msg = R"({"bzn-api":"crud","cmd":"create","data":{"key": ")"
-                           + key
-                           + R"(","value":")"
-                           + value
-                           + R"("},"db-uuid":")"
-                           + TEST_NODE_UUID
-                           + R"(","request-id":"0"}")";
-
-                reader.parse(crud_msg, message);
-                raft_source->append_log(message, bzn::log_entry_type::database);
-                storage_source->create(TEST_NODE_UUID, key, value);
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                    msg = build_create_bzn_msg(db_uuid, 395769494 + i, key, I_AM_CREATED);
+                    entry_count++;
+                    break;
+                case 4:
+                    {
+                        key = "test_key_" + std::to_string(i-3);
+                        updated_keys.emplace_back(key);
+                        msg = build_update_bzn_msg(db_uuid, 395769494 + i, key, I_AM_UPDATED);
+                    }
+                    break;
+                case 5:
+                    {
+                        key = "test_key_" + std::to_string(i-3);
+                        deleted_keys.emplace_back(key);
+                        msg = build_delete_bzn_msg(db_uuid, 395769494 + i, key);
+                        entry_count--;
+                    }
+                    break;
             }
-            else if (command < 5)
-            {
-                // update an existing record
-                const auto keys = storage_source->get_keys(TEST_NODE_UUID);
-                if (keys.size() > 10)
-                {
-                    std::uniform_int_distribution<> dis(0, keys.size() - 1);
-                    const size_t i = dis(gen);
-                    const auto key = keys[i];
-                    const auto value = "updated_value_for_" + key;
-                    crud_msg = R"({"bzn-api":"crud","cmd":"update","data":{"key": ")"
-                               + key
-                               + R"(","value":")"
-                               + value
-                               + R"("},"db-uuid":")"
-                               + TEST_NODE_UUID
-                               + R"(","request-id":"0"}")";
-
-                    reader.parse(crud_msg, message);
-                    raft_source->append_log(message, bzn::log_entry_type::database);
-                    storage_source->update(TEST_NODE_UUID, key, value);
-                }
-            }
-            else
-            {
-                // delete an existing record
-                const auto keys = storage_source->get_keys(TEST_NODE_UUID);
-                if (keys.size() > 10)
-                {
-                    std::uniform_int_distribution<> dis(0, keys.size() - 1);
-                    const auto key_index = dis(gen);
-                    const auto key = keys[key_index];
-                    crud_msg = R"({"bzn-api":"crud","cmd":"delete","data":{"key": ")"
-                               + key
-                               + R"("},"db-uuid":")"
-                               + TEST_NODE_UUID
-                               + R"(","request-id":"0"}")";
-
-                    reader.parse(crud_msg, message);
-                    raft_source->append_log(message, bzn::log_entry_type::database);
-                    storage_source->remove(TEST_NODE_UUID, key);
-                }
-            }
-            index++;
+            EXPECT_TRUE(raft->append_log_unsafe(make_bzn_message(msg), bzn::log_entry_type::database));
         }
 
-        EXPECT_EQ(storage_source->get_keys(TEST_NODE_UUID).size(), number_of_entries);
+        // We've got a number of entries in the log, now we can load them into storage.
+        auto storage = std::make_shared<bzn::storage>();
+        raft->initialize_storage_from_log(storage);
 
-        auto storage_target = std::make_shared<bzn::storage>();
+        // lets make sure we got them all
+        auto keys_in_storage = storage->get_keys(db_uuid);
+        EXPECT_EQ(entry_count, keys_in_storage.size());
 
-        raft_source->initialize_storage_from_log(storage_target);
+        // there must be no deleted keys in storage
+        std::vector<std::string> deleted_in_storage; // should be empty
+        std::set_intersection(deleted_keys.begin(), deleted_keys.end(),
+                keys_in_storage.begin(), keys_in_storage.end(),
+                std::back_inserter(deleted_in_storage));
+        EXPECT_EQ(size_t(0), deleted_in_storage.size());
 
-        EXPECT_TRUE(storage_target->get_keys(TEST_NODE_UUID).size() > 0);
-        EXPECT_EQ(storage_source->get_keys(TEST_NODE_UUID).size(), storage_target->get_keys(TEST_NODE_UUID).size());
-
-        for (auto& key : storage_source->get_keys(TEST_NODE_UUID))
+        // there should only be created and updated keys in storage
+        for(const auto& key : keys_in_storage)
         {
-            auto rec_1 = storage_source->read(TEST_NODE_UUID, key);
-            auto rec_2 = storage_target->read(TEST_NODE_UUID, key);
-            EXPECT_EQ(rec_1->value, rec_2->value);
+            if(std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
+            {
+                EXPECT_EQ(I_AM_CREATED, storage->read(db_uuid, key)->value);
+                continue;
+            }
+            EXPECT_EQ(I_AM_UPDATED, storage->read(db_uuid, key)->value);
         }
-
-        clean_state_folder();
     }
-
-
-    // removed TEST(raft, test_that_raft_bails_on_bad_rehydrate) as we no longer use the .state file
 
 
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
