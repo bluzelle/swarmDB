@@ -1147,3 +1147,40 @@ raft::deduce_type_from_message(const bzn::message& message)
     }
     return bzn::log_entry_type::undefined;
 }
+
+
+std::string
+raft::get_name()
+{
+    return "raft";
+}
+
+
+bzn::message
+raft::get_status()
+{
+    bzn::message status;
+
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
+    switch(this->current_state)
+    {
+        case bzn::raft_state::candidate:
+            status["state"] = "candidate";
+            break;
+
+        case bzn::raft_state::follower:
+            status["state"] = "follower";
+            break;
+
+        case bzn::raft_state::leader:
+            status["state"] = "leader";
+            break;
+
+        default:
+            status["state"] = "unknown";
+            break;
+    }
+
+    return status;
+}

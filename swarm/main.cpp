@@ -15,6 +15,7 @@
 #include <bootstrap/bootstrap_peers.hpp>
 #include <crud/crud.hpp>
 #include <crud/subscription_manager.hpp>
+#include <status/status.hpp>
 #include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
 #include <http/server.hpp>
@@ -231,6 +232,7 @@ main(int argc, const char* argv[])
         auto storage = std::make_shared<bzn::storage>();
         auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
+        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
         // get our http listener port...
         uint16_t http_port;
@@ -247,24 +249,12 @@ main(int argc, const char* argv[])
 
         raft->initialize_storage_from_log(storage);
         
-        // todo: just for testing...
-        node->register_for_message("ping",
-            [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
-            {
-                LOG(debug) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
-
-                auto reply = std::make_shared<bzn::message>(msg);
-                (*reply)["bzn-api"] = "pong";
-
-                // echo back what the client sent...
-                session->send_message(reply, false);
-            });
-
         node->start();
         crud->start();
         raft->start();
         http_server->start();
         audit->start();
+        status->start();
 
         print_banner(options, eth_balance);
 
