@@ -15,6 +15,7 @@
 #include <bootstrap/bootstrap_peers.hpp>
 #include <crud/crud.hpp>
 #include <crud/subscription_manager.hpp>
+#include <status/status.hpp>
 #include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
 #include <http/server.hpp>
@@ -228,22 +229,11 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
-
-        // todo: just for testing...
-        node->register_for_message("ping",
-            [](const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
-            {
-                LOG(debug) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
-
-                auto reply = std::make_shared<bzn::message>(msg);
-                (*reply)["bzn-api"] = "pong";
-
-                // echo back what the client sent...
-                session->send_message(reply, false);
-            });
+        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
         node->start();
         audit->start();
+        status->start();
 
         if(options.pbft_enabled())
         {

@@ -16,6 +16,7 @@
 
 #include <include/boost_asio_beast.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
+#include <status/status_provider_base.hpp>
 #include <raft/raft_base.hpp>
 #include <raft/log_entry.hpp>
 #include <raft/raft_log.hpp>
@@ -44,7 +45,7 @@ namespace
 namespace bzn
 {
 
-    class raft final : public bzn::raft_base, public std::enable_shared_from_this<raft>
+    class raft final : public bzn::raft_base, public bzn::status_provider_base, public std::enable_shared_from_this<raft>
     {
     public:
         raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node,
@@ -63,6 +64,10 @@ namespace bzn
         void initialize_storage_from_log(std::shared_ptr<bzn::storage_base> storage);
 
         bzn::uuid_t get_uuid() { return this->uuid; }
+
+        std::string get_name() override;
+
+        bzn::message get_status() override;
 
     private:
         friend class raft_log_base;

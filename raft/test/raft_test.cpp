@@ -353,6 +353,9 @@ namespace bzn
                 , TEST_STATE_DIR
         );
         EXPECT_EQ(sut.get_state(), bzn::raft_state::follower);
+        EXPECT_EQ(sut.get_status()["state"].asString(), "follower");
+        EXPECT_EQ(sut.get_name(), "raft");
+
         clean_state_folder();
     }
 
@@ -454,6 +457,7 @@ namespace bzn
         wh(boost::system::error_code());
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
+        EXPECT_EQ(raft->get_status()["state"].asString(), "candidate");
 
         bzn::message resp;
         EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
@@ -607,6 +611,7 @@ namespace bzn
         ASSERT_FALSE(raft->append_log(bzn::message(), bzn::log_entry_type::database));
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
+        EXPECT_EQ(raft->get_status()["state"].asString(), "follower");
 
         // we should see requests...
         EXPECT_CALL(*mock_node, send_message(_, _)).Times(10);
