@@ -1161,6 +1161,8 @@ raft::get_status()
 {
     bzn::message status;
 
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+
     switch(this->current_state)
     {
         case bzn::raft_state::candidate:
@@ -1176,7 +1178,7 @@ raft::get_status()
             break;
 
         default:
-            status["state"] = "unkown";
+            status["state"] = "unknown";
             break;
     }
 
