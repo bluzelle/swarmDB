@@ -14,14 +14,15 @@
 
 #include "pbft_operation.hpp"
 #include <boost/format.hpp>
+#include <string>
 
 using namespace bzn;
 
-pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request request, std::shared_ptr<const peers_list_t> peers)
-        : view(std::move(view))
-          , sequence(std::move(sequence))
+pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request request, std::shared_ptr<const std::vector<peer_address_t>> peers)
+        : view(view)
+          , sequence(sequence)
           , request(std::move(request))
-          , peers(peers)
+          , peers(std::move(peers))
 {
 }
 
@@ -104,7 +105,7 @@ pbft_operation::get_state()
 std::string
 pbft_operation::debug_string()
 {
-    return str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
+    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
 }
 
 bzn::request_hash_t

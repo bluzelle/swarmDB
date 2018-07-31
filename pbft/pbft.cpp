@@ -19,6 +19,7 @@
 #include <memory>
 #include <boost/beast/core/detail/base64.hpp>
 #include <algorithm>
+#include <numeric>
 
 using namespace bzn;
 
@@ -29,40 +30,45 @@ pbft::pbft(
         , std::shared_ptr<pbft_service_base> service
 )
         : node(std::move(node))
-        , peers(std::move(peers))
         , uuid(std::move(uuid))
         , service(service)
 {
-    if (this->peers.empty())
+    if (peers.empty())
     {
         throw std::runtime_error("No peers found!");
     }
 
-    std::transform(this->peers.begin(), this->peers.end(), std::back_inserter(this->peer_index),
-            [](auto& peer)
+    // We cannot directly sort the peers list or a copy of it because peer addresses have const members
+    std::vector<peer_address_t> unordered_peers_list;
+    std::copy(peers.begin(), peers.end(), std::back_inserter(unordered_peers_list));
+
+    std::vector<size_t> indicies(peers.size());
+    std::iota(indicies.begin(), indicies.end(), 0);
+
+    std::sort(indicies.begin(), indicies.end(),
+            [&unordered_peers_list](const auto& i1, const auto& i2)
             {
-                return std::reference_wrapper<const peer_address_t>{peer};
+                return unordered_peers_list[i1].uuid < unordered_peers_list[i2].uuid;
             }
     );
 
-    std::copy(peers.begin(), peers.end(), std::back_inserter(peer_index));
-    std::sort(peer_index.begin(), peer_index.end(),
-            [](const auto& peer1, const auto& peer2)
+    std::transform(indicies.begin(), indicies.end(), std::back_inserter(this->peer_index),
+            [&unordered_peers_list](auto& peer_index)
             {
-                return peer1.get().uuid < peer2.get().uuid;
+                return unordered_peers_list[peer_index];
             }
     );
-
 }
 
 void
 pbft::start()
 {
-    std::call_once(this->start_once, [this]()
-    {
-        this->node->register_for_message("pbft",
-                std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
-    });
+    std::call_once(this->start_once,
+            [this]()
+            {
+                this->node->register_for_message("pbft",
+                        std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+            });
 }
 
 void
@@ -73,17 +79,14 @@ pbft::unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base
     {
         this->handle_message(msg);
     }
-    else
-    {
-        LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
-    }
+    LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
 }
 
 void
 pbft::handle_message(const pbft_msg& msg)
 {
 
-    LOG(debug) << "Recieved message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     if (!this->preliminary_filter_msg(msg))
     {
@@ -94,16 +97,16 @@ pbft::handle_message(const pbft_msg& msg)
 
     switch (msg.type())
     {
-        case PBFT_MSG_TYPE_REQUEST :
+        case PBFT_MSG_REQUEST :
             this->handle_request(msg);
             break;
-        case PBFT_MSG_TYPE_PREPREPARE :
+        case PBFT_MSG_PREPREPARE :
             this->handle_preprepare(msg);
             break;
-        case PBFT_MSG_TYPE_PREPARE :
+        case PBFT_MSG_PREPARE :
             this->handle_prepare(msg);
             break;
-        case PBFT_MSG_TYPE_COMMIT :
+        case PBFT_MSG_COMMIT :
             this->handle_commit(msg);
             break;
         default :
@@ -118,7 +121,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
     // TODO: Crypto verification goes here - KEP-331, KEP-345
 
     auto t = msg.type();
-    if (t == PBFT_MSG_TYPE_PREPREPARE || t == PBFT_MSG_TYPE_PREPARE || t == PBFT_MSG_TYPE_COMMIT)
+    if (t == PBFT_MSG_PREPREPARE || t == PBFT_MSG_PREPARE || t == PBFT_MSG_COMMIT)
     {
         if (msg.view() != this->view)
         {
@@ -147,7 +150,7 @@ pbft::handle_request(const pbft_msg& msg)
 {
     if (!this->is_primary())
     {
-        LOG(error) << "Ignoring client request because I am not the leader";
+        LOG(error) << "Ignoring client request because I am not the primary";
         // TODO - KEP-327
         return;
     }
@@ -156,7 +159,7 @@ pbft::handle_request(const pbft_msg& msg)
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
-    uint64_t request_seq = this->next_issued_sequence_number++;
+    const uint64_t request_seq = this->next_issued_sequence_number++;
     pbft_operation& op = this->find_operation(this->view, request_seq, msg.request());
 
     this->do_preprepare(op);
@@ -218,7 +221,7 @@ pbft::broadcast(const pbft_msg& msg)
 {
     auto json_ptr = std::make_shared<bzn::message>(this->wrap_message(msg));
 
-    for (const auto& peer : this->peers)
+    for (const auto& peer : this->peer_index)
     {
         this->node->send_message(make_endpoint(peer), json_ptr);
     }
@@ -239,12 +242,14 @@ pbft::maybe_advance_operation_state(pbft_operation& op)
 }
 
 pbft_msg
-pbft::common_message_setup(const pbft_operation& op)
+pbft::common_message_setup(const pbft_operation& op, pbft_msg_type type)
 {
     pbft_msg msg;
     msg.set_view(op.view);
     msg.set_sequence(op.sequence);
     msg.set_allocated_request(new pbft_request(op.request));
+    msg.set_type(type);
+
 
     // Some message types don't need this, but it's cleaner to always include it
     msg.set_sender(this->uuid);
@@ -257,8 +262,7 @@ pbft::do_preprepare(pbft_operation& op)
 {
     LOG(debug) << "Doing preprepare for operation " << op.debug_string();
 
-    pbft_msg msg = this->common_message_setup(op);
-    msg.set_type(PBFT_MSG_TYPE_PREPREPARE);
+    pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
 
     this->broadcast(msg);
 }
@@ -268,8 +272,7 @@ pbft::do_preprepared(pbft_operation& op)
 {
     LOG(debug) << "Entering prepare phase for operation " << op.debug_string();
 
-    pbft_msg msg = this->common_message_setup(op);
-    msg.set_type(PBFT_MSG_TYPE_PREPARE);
+    pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
     this->broadcast(msg);
 }
@@ -280,8 +283,7 @@ pbft::do_prepared(pbft_operation& op)
     LOG(debug) << "Entering commit phase for operation " << op.debug_string();
     op.begin_commit_phase();
 
-    pbft_msg msg = this->common_message_setup(op);
-    msg.set_type(PBFT_MSG_TYPE_COMMIT);
+    pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
     this->broadcast(msg);
 }
@@ -321,7 +323,7 @@ pbft::find_operation(const pbft_msg& msg)
 }
 
 pbft_operation&
-pbft::find_operation(const uint64_t& view, const uint64_t& sequence, const pbft_request& request)
+pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& request)
 {
     auto key = bzn::operation_key_t(view, sequence, pbft_operation::request_hash(request));
 
@@ -335,7 +337,7 @@ pbft::find_operation(const uint64_t& view, const uint64_t& sequence, const pbft_
                         view
                         , sequence
                         , request
-                        , std::make_shared<peers_list_t>(this->peers)
+                        , std::make_shared<std::vector<peer_address_t>>(this->peer_index)
                 ));
         assert(result.second);
         return result.first->second;

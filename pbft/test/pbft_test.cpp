@@ -30,10 +30,10 @@ using namespace ::testing;
 namespace
 {
 
-    const bzn::uuid_t TEST_NODE_UUID{"uuid0"};
-    const bzn::uuid_t SECOND_NODE_UUID{"uuid1"};
+    const bzn::uuid_t TEST_NODE_UUID{"uuid1"};
+    const bzn::uuid_t SECOND_NODE_UUID{"uuid0"};
 
-    const bzn::peers_list_t TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
+    const bzn::peers_list_t TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid0"}
                                            , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
                                            , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
                                            , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
@@ -57,10 +57,10 @@ namespace
             request_msg.mutable_request()->set_operation("do some stuff");
             request_msg.mutable_request()->set_client("bob");
             request_msg.mutable_request()->set_timestamp(1);
-            request_msg.set_type(PBFT_MSG_TYPE_REQUEST);
+            request_msg.set_type(PBFT_MSG_REQUEST);
 
             preprepare_msg = pbft_msg(request_msg);
-            preprepare_msg.set_type(PBFT_MSG_TYPE_PREPREPARE);
+            preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
             preprepare_msg.set_sequence(19);
             preprepare_msg.set_view(1);
         }
@@ -78,6 +78,7 @@ namespace
 
     TEST_F(pbft_test, test_requests_create_operations)
     {
+        ASSERT_TRUE(pbft.is_primary());
         ASSERT_EQ(0u, pbft.outstanding_operations_count());
         pbft.handle_message(request_msg);
         ASSERT_EQ(1u, pbft.outstanding_operations_count());
@@ -88,7 +89,7 @@ namespace
     {
         pbft_msg msg = extract_pbft_msg(json);
 
-        return msg.type() == PBFT_MSG_TYPE_PREPREPARE && msg.view() > 0 && msg.sequence() > 0;
+        return msg.type() == PBFT_MSG_PREPREPARE && msg.view() > 0 && msg.sequence() > 0;
     }
 
 
@@ -141,7 +142,7 @@ namespace
     {
         pbft_msg msg = extract_pbft_msg(json);
 
-        return msg.type() == PBFT_MSG_TYPE_PREPARE && msg.view() > 0 && msg.sequence() > 0;
+        return msg.type() == PBFT_MSG_PREPARE && msg.view() > 0 && msg.sequence() > 0;
     }
 
 
@@ -203,7 +204,7 @@ namespace
     {
         pbft_msg msg = extract_pbft_msg(json);
 
-        return msg.type() == PBFT_MSG_TYPE_COMMIT && msg.view() > 0 && msg.sequence() > 0;
+        return msg.type() == PBFT_MSG_COMMIT && msg.view() > 0 && msg.sequence() > 0;
     }
 
 
@@ -218,7 +219,7 @@ namespace
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg prepare = pbft_msg(this->preprepare_msg);
-            prepare.set_type(PBFT_MSG_TYPE_PREPARE);
+            prepare.set_type(PBFT_MSG_PREPARE);
             prepare.set_sender(peer.uuid);
             this->pbft.handle_message(prepare);
         }
@@ -236,9 +237,9 @@ namespace
         {
             pbft_msg prepare = pbft_msg(preprepare);
             pbft_msg commit = pbft_msg(preprepare);
-            prepare.set_type(PBFT_MSG_TYPE_PREPARE);
+            prepare.set_type(PBFT_MSG_PREPARE);
             prepare.set_sender(peer.uuid);
-            commit.set_type(PBFT_MSG_TYPE_COMMIT);
+            commit.set_type(PBFT_MSG_COMMIT);
             commit.set_sender(peer.uuid);
             this->pbft.handle_message(prepare);
             this->pbft.handle_message(commit);

@@ -19,9 +19,9 @@ using namespace bzn;
 void
 pbft_service::commit_request(uint64_t sequence, const pbft_request& request)
 {
-    waiting_requests[sequence] = request;
+    this->waiting_requests[sequence] = request;
 
-    while (waiting_requests.count(this->next_request_sequence) > 0)
+    while (this->waiting_requests.count(this->next_request_sequence) > 0)
     {
         const pbft_request& req = waiting_requests[sequence];
 
@@ -29,7 +29,7 @@ pbft_service::commit_request(uint64_t sequence, const pbft_request& request)
                   << "\n";
         this->remembered_request = req;
 
-        waiting_requests.erase(this->next_request_sequence);
+        this->waiting_requests.erase(this->next_request_sequence);
         this->next_request_sequence++;
     }
 }

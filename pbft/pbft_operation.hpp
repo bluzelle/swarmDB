@@ -40,7 +40,7 @@ namespace bzn
     {
     public:
 
-        pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const peers_list_t> peers);
+        pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
         static request_hash_t request_hash(const pbft_request& req);
 
@@ -68,7 +68,7 @@ namespace bzn
         size_t faulty_nodes_bound() const;
 
     private:
-        const std::shared_ptr<const peers_list_t> peers;
+        const std::shared_ptr<const std::vector<peer_address_t>> peers;
 
         pbft_operation_state state = pbft_operation_state::prepare;
 

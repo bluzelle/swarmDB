@@ -15,11 +15,11 @@ message pbft_msg
 }
 
 enum pbft_msg_type {
-    PBFT_MSG_TYPE_UNDEFINED = 0;
-    PBFT_MSG_TYPE_REQUEST = 1;
-    PBFT_MSG_TYPE_PREPREPARE = 2;
-    PBFT_MSG_TYPE_PREPARE = 3;
-    PBFT_MSG_TYPE_COMMIT = 4;
+    PBFT_MSG_UNDEFINED = 0;
+    PBFT_MSG_REQUEST = 1;
+    PBFT_MSG_PREPREPARE = 2;
+    PBFT_MSG_PREPARE = 3;
+    PBFT_MSG_COMMIT = 4;
 }
 
 message pbft_request

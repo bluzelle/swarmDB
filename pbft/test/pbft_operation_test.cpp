@@ -23,15 +23,15 @@ namespace
 
     const bzn::uuid_t TEST_NODE_UUID{"uuid4"};
 
-    const bzn::peers_list_t TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
+    const std::vector<bzn::peer_address_t> TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
                                            , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
                                            , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
                                            , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
 
-    const bzn::peers_list_t TEST_2F_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
+    const std::vector<bzn::peer_address_t> TEST_2F_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
                                               , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
 
-    const bzn::peers_list_t TEST_2F_PLUS_1_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
+    const std::vector<bzn::peer_address_t> TEST_2F_PLUS_1_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
                                                      , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
                                                      , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
 
@@ -46,7 +46,7 @@ namespace
         bzn::pbft_operation op;
 
         pbft_operation_test()
-                : op(view, sequence, request, std::make_shared<bzn::peers_list_t>(TEST_PEER_LIST))
+                : op(view, sequence, request, std::make_shared<std::vector<bzn::peer_address_t>>(TEST_PEER_LIST))
         {
         }
     };

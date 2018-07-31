@@ -47,7 +47,7 @@ namespace bzn
         using request_hash_t = std::string;
 
     private:
-        pbft_operation& find_operation(const uint64_t& view, const uint64_t& sequence, const pbft_request& request);
+        pbft_operation& find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         pbft_operation& find_operation(const pbft_msg& msg);
 
         bzn::request_hash_t request_hash(const pbft_request& req);
@@ -67,7 +67,7 @@ namespace bzn
 
         void unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
         bzn::message wrap_message(const pbft_msg& message);
-        pbft_msg common_message_setup(const pbft_operation& op);
+        pbft_msg common_message_setup(const pbft_operation& op, pbft_msg_type type);
         void broadcast(const pbft_msg& message);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
@@ -79,8 +79,7 @@ namespace bzn
 
         std::shared_ptr<bzn::node_base> node;
 
-        const bzn::peers_list_t peers;
-        std::vector<std::reference_wrapper<const bzn::peer_address_t>> peer_index;
+        std::vector<bzn::peer_address_t> peer_index;
 
         const bzn::uuid_t uuid;
         std::shared_ptr<pbft_service_base> service;
