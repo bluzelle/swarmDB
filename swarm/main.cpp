@@ -229,11 +229,9 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
-        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
         node->start();
         audit->start();
-        status->start();
 
         if(options.pbft_enabled())
         {
@@ -258,6 +256,7 @@ main(int argc, const char* argv[])
             auto storage = std::make_shared<bzn::storage>();
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
+            auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
             raft->initialize_storage_from_log(storage);
 
@@ -265,9 +264,8 @@ main(int argc, const char* argv[])
             // These are here because they are not yet integrated with pbft
             http_server->start();
             crud->start();
-
-
             raft->start();
+            status->start();
         }
         
         print_banner(options, eth_balance);
