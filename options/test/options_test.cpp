@@ -40,7 +40,8 @@ namespace
         "  \"state_dir\" : \"./daemon_state/\","
         "  \"logfile_max_size\" : \"1M\","
         "  \"logfile_rotation_size\" : \"2M\","
-        "  \"logfile_dir\" : \".\""
+        "  \"logfile_dir\" : \".\","
+        "  \"http_port\" : 80"
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
@@ -90,6 +91,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(size_t(1048576), options.get_logfile_max_size());
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
+    EXPECT_EQ(uint16_t(80), options.get_http_port());
 
     // defaults..
     {
@@ -98,6 +100,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
         EXPECT_EQ(size_t(524288), options.get_logfile_max_size());
         EXPECT_EQ(size_t(65536), options.get_logfile_rotation_size());
         EXPECT_EQ("logs/", options.get_logfile_dir());
+        EXPECT_EQ(uint16_t(8080), options.get_http_port());
     }
 }
 
