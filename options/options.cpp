@@ -33,25 +33,26 @@ using namespace bzn;
 namespace
 {
     const std::string DEFAULT_CONFIG_FILE = "bluzelle.json";
-    const std::string LISTENER_ADDRESS_KEY = "listener_address";
-    const std::string LISTENER_PORT_KEY = "listener_port";
-    const std::string ETHERERUM_KEY = "ethereum";
-    const std::string ETHERERUM_IO_API_TOKEN_KEY = "ethereum_io_api_token";
+    const std::string AUDIT_MEM_SIZE_KEY = "audit_mem_size";
     const std::string BOOTSTRAP_PEERS_FILE_KEY = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL_KEY = "bootstrap_url";
-    const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
+    const std::string DEBUG_LOGGING_KEY = "debug_logging";
+    const std::string ETHERERUM_IO_API_TOKEN_KEY = "ethereum_io_api_token";
+    const std::string ETHERERUM_KEY = "ethereum";
+    const std::string HTTP_PORT_KEY = "http_port";
+    const std::string LISTENER_ADDRESS_KEY = "listener_address";
+    const std::string LISTENER_PORT_KEY = "listener_port";
+    const std::string LOG_TO_STDOUT_KEY = "log_to_stdout";
+    const std::string LOGFILE_DIR_KEY = "logfile_dir";
+    const std::string LOGFILE_MAX_SIZE_KEY = "logfile_max_size";
+    const std::string LOGFILE_ROTATION_SIZE_KEY = "logfile_rotation_size";
+    const std::string MAX_STORAGE_KEY = "max_storage";
     const std::string MONITOR_ADDRESS_KEY = "monitor_address";
     const std::string MONITOR_PORT_KEY = "monitor_port";
     const std::string NODE_UUID = "uuid";
-    const std::string AUDIT_MEM_SIZE_KEY = "audit_mem_size";
-    const std::string STATE_DIR_KEY = "state_dir";
-    const std::string MAX_STORAGE_KEY = "max_storage";
-    const std::string LOGFILE_DIR_KEY = "logfile_dir";
-    const std::string LOGFILE_ROTATION_SIZE_KEY = "logfile_rotation_size";
-    const std::string LOGFILE_MAX_SIZE_KEY = "logfile_max_size";
-    const std::string DEBUG_LOGGING_KEY = "debug_logging";
-    const std::string LOG_TO_STDOUT_KEY = "log_to_stdout";
     const std::string PBFT_ENABLED_KEY = "use_pbft";
+    const std::string STATE_DIR_KEY = "state_dir";
+    const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
     const size_t DEFAULT_AUDIT_MEM_SIZE = 10000;
@@ -69,6 +70,9 @@ namespace
 
     // Default max log files before deletion
     const size_t DEFAULT_LOGFILE_MAX_SIZE = 524288;
+
+    // Default http server port
+    const uint16_t DEFAULT_HTTP_PORT = 8080;
 
     // https://stackoverflow.com/questions/8899069
     bool
@@ -455,4 +459,16 @@ options::parse_size(const std::string& key) const
     }
 
     return {}; /*std::nullopt*/
+}
+
+
+uint16_t
+options::get_http_port() const
+{
+    if (this->config_data.isMember(HTTP_PORT_KEY))
+    {
+        return this->config_data[HTTP_PORT_KEY].asInt();
+    }
+
+    return DEFAULT_HTTP_PORT;
 }
