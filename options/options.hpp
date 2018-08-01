@@ -57,6 +57,8 @@ namespace bzn
 
         size_t get_logfile_max_size() const override;
 
+        bool pbft_enabled() const override;
+
     private:
         bool parse(int argc, const char* argv[]);
 

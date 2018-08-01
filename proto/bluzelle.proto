@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "database.proto";
 import "audit.proto";
+import "pbft.proto";
 
 message bzn_msg
 {
@@ -9,5 +10,6 @@ message bzn_msg
         database_msg db = 10;
         string json = 11;
         audit_message audit_message = 12;
+        pbft_msg pbft = 13;
     }
 }
