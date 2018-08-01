@@ -113,21 +113,6 @@ init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std
 }
 
 
-bool
-get_http_listener_port(const bzn::options& options, const bzn::bootstrap_peers& peers, uint16_t& http_port)
-{
-    for (const auto& peer : peers.get_peers())
-    {
-        if (peer.uuid == options.get_uuid())
-        {
-            http_port = peer.http_port;
-            return true;
-        }
-    }
-    return false;
-}
-
-
 size_t
 get_state_file_size(const bzn::options& options)
 {
@@ -149,7 +134,8 @@ print_banner(const bzn::options& options, double eth_balance)
     ss << "  Running node with ID: " << options.get_uuid() << "\n"
        << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
-       << "               On port: " << options.get_listener().port()    << "\n"
+       << "               On port: " << options.get_listener().port() << "\n"
+       << "             HTTP port: " << options.get_http_port()  << "\n"
        << "         Token Balance: " << eth_balance << " ETH" << "\n"
        << "     Maximimum Storage: " << options.get_max_storage() << " Bytes" << "\n"
        << "          Used Storage: " << get_state_file_size(options) << " Bytes" << "\n"
@@ -241,16 +227,9 @@ main(int argc, const char* argv[])
         }
         else
         {
-            uint16_t http_port;
-            if (!get_http_listener_port(options, peers, http_port))
-            {
-                LOG(error) << "could not find our http port setting!";
-                return 1;
-            }
-
-            // create http server using our configured listener address & peer listen port number...
+            // create http server using our configured listener address & http port number...
             auto ep = options.get_listener();
-            ep.port(http_port);
+            ep.port(options.get_http_port());
 
             auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage());
             auto storage = std::make_shared<bzn::storage>();

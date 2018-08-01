@@ -142,10 +142,18 @@ namespace bzn
          */
         virtual size_t get_logfile_max_size() const = 0;
 
+
          /**
           * Are we using pbft
           */
          virtual bool pbft_enabled() const = 0;
+
+
+         /**
+          * HTTP server port
+          * @return port
+          */
+         virtual uint16_t get_http_port() const = 0;
 
     };
 
