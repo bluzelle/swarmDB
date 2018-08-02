@@ -372,16 +372,29 @@ Follow instructions in readme.md
 #### Connectivity Test
 
 ```text
-$ ./crud -n localhost:50000 ping
+$ ./crud -n localhost:50000 status
 Sending : 
 {
-    "bzn-api": "ping"
+    "transaction_id": 4283375944065669395, 
+    "bzn-api": "status"
 }
 ------------------------------------------------------------
 
 Response: 
 {
-    "bzn-api" : "pong"
+	"bzn-api" : "status",
+	"module" : 
+	[
+		{
+			"name" : "raft",
+			"status" : 
+			{
+				"state" : "candidate"
+			}
+		}
+	],
+	"transaction_id" : 4283375944065669395,
+	"version" : "0.0.0-desk"
 }
 
 ------------------------------------------------------------
@@ -535,7 +548,50 @@ header {
 
 ------------------------------------------------------------
 ```
+### Subscribe
+```text
+$ ./crud -n localhost:50000 subscribe -u myuuid -k mykey
+Sending: 
+db {
+  header {
+    db_uuid: "myuuid"
+    transaction_id: 2808384922078102053
+  }
+  subscribe {
+    key: "mykey"
+  }
+}
 
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  transaction_id: 2808384922078102053
+}
+resp {
+}
+
+------------------------------------------------------------
+
+Waiting....
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  transaction_id: 2808384922078102053
+}
+resp {
+  update {
+    key: "mykey"
+    value: "mynewvalue"
+  }
+}
+
+------------------------------------------------------------
+
+Waiting....
+```
 #### Adding or Removing A Peer
 
 ```text
@@ -609,13 +665,14 @@ and the node will be removed from the peer list.
 
 ```text
 $ ./crud --help
-usage: crud [-h] -n NODE {ping,create,read,update,delete,has,keys,size} ...
+usage: crud [-h] [-p] -n NODE
+            {status,create,read,update,delete,has,keys,size,subscribe} ...
 
 crud
 
 positional arguments:
-  {ping,create,read,update,delete,has,keys,size}
-    ping                Ping
+  {status,create,read,update,delete,has,keys,size,subscribe}
+    status              Status
     create              Create k/v
     read                Read k/v
     update              Update k/v
@@ -623,11 +680,12 @@ positional arguments:
     has                 Determine whether a key exists within a DB by UUID
     keys                Get all keys for a DB by UUID
     size                Determine the size of the DB by UUID
+    subscribe           Subscribe and monitor changes for a key
 
 optional arguments:
   -h, --help            show this help message and exit
+  -p, --use_pbft        Direct message to pbft instead of raft
 
 required arguments:
   -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
 ```
-
