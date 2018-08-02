@@ -46,6 +46,20 @@ namespace
         "}";
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
+
+    void config_text_to_json(bzn::message& json)
+    {
+        std::string config_data{DEFAULT_CONFIG_DATA};
+        std::string errors;
+
+        Json::CharReaderBuilder builder;
+        Json::CharReader* reader = builder.newCharReader();
+        reader->parse(
+                DEFAULT_CONFIG_DATA.c_str()
+                , DEFAULT_CONFIG_DATA.c_str() + DEFAULT_CONFIG_DATA.size()
+                , &json
+                , &errors);
+    }
 }
 
 using namespace ::testing;
@@ -95,6 +109,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
+    EXPECT_FALSE(options.whitelist_enabled());
 
     // defaults..
     {
@@ -118,18 +133,8 @@ TEST(options, test_that_missing_default_config_throws_exception)
 
 TEST_F(options_file_test, test_max_storage_parsing)
 {
-    std::string config_data{DEFAULT_CONFIG_DATA};
-
     bzn::message json;
-    std::string errors;
-
-    Json::CharReaderBuilder builder;
-    Json::CharReader* reader = builder.newCharReader();
-    reader->parse(
-            DEFAULT_CONFIG_DATA.c_str()
-            , DEFAULT_CONFIG_DATA.c_str() + DEFAULT_CONFIG_DATA.size()
-            , &json
-            , &errors);
+    config_text_to_json(json);
 
     std::for_each(bzn::utils::BYTE_SUFFIXES.cbegin()
             , bzn::utils::BYTE_SUFFIXES.cend()
@@ -164,4 +169,47 @@ TEST_F(options_file_test, test_max_storage_parsing)
                       }
                   });
 
+}
+
+
+TEST_F(options_file_test, test_enable_whitlelist_temporary)
+{
+    bzn::message json;
+    config_text_to_json(json);
+    {
+        json["enable_whitelist"] = false;
+        this->save_options_file(json.toStyledString());
+        bzn::options options;
+        options.parse_command_line(1, NO_ARGS);
+        EXPECT_FALSE(options.whitelist_enabled());
+    }
+    {
+        json["enable_whitelist"] = true;
+        this->save_options_file(json.toStyledString());
+        bzn::options options;
+        options.parse_command_line(1, NO_ARGS);
+        EXPECT_TRUE(options.whitelist_enabled());
+    }
+}
+
+
+TEST_F(options_file_test, test_that_command_line_options_work)
+{
+    bzn::options options;
+    const char* ARGS[] = {"swarm", "-c", TEST_CONFIG_FILE.c_str()};
+    options.parse_command_line(3, ARGS);
+    std::cout << options.get_bootstrap_peers_file() << std::endl;
+    EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
+    EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
+    ASSERT_EQ(true, options.get_debug_logging());
+    ASSERT_EQ(true, options.get_log_to_stdout());
+    EXPECT_EQ("./daemon_state/", options.get_state_dir());
+    EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
+    EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
+    EXPECT_EQ(size_t(2147483648), options.get_max_storage());
+    EXPECT_EQ(size_t(1048576), options.get_logfile_max_size());
+    EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
+    EXPECT_EQ(".", options.get_logfile_dir());
+    EXPECT_EQ(uint16_t(80), options.get_http_port());
+    EXPECT_FALSE(options.whitelist_enabled());
 }

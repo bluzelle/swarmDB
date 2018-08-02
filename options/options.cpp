@@ -53,6 +53,7 @@ namespace
     const std::string PBFT_ENABLED_KEY = "use_pbft";
     const std::string STATE_DIR_KEY = "state_dir";
     const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
+    const std::string ENABLE_WHITELIST_KEY = "enable_whitelist"; 
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
     const size_t DEFAULT_AUDIT_MEM_SIZE = 10000;
@@ -92,14 +93,11 @@ options::parse_command_line(int argc, const char* argv[])
     if (argc == 1)
     {
         this->load(DEFAULT_CONFIG_FILE);
-
         return this->validate();
     }
 
     // validate passed args...
-    bool ret = this->parse(argc, argv);
-
-    if (ret)
+    if (this->parse(argc, argv))
     {
         return this->validate();
     }
@@ -484,3 +482,10 @@ options::get_http_port() const
 
     return DEFAULT_HTTP_PORT;
 }
+
+
+bool 
+options::whitelist_enabled() const
+{
+    return this->config_data.isMember(ENABLE_WHITELIST_KEY) && this->config_data[ENABLE_WHITELIST_KEY].asBool();
+} 

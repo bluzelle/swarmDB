@@ -99,7 +99,7 @@ script:
 after_success:
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' --gcov-options '\-lp'
+      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
     fi
   - echo ${TRAVIS_BRANCH}
   - if [ "$TRAVIS_BRANCH" = "master" ] ; then PACKAGE_COMPONENT="stable" ; else PACKAGE_COMPONENT="unstable" ; fi
