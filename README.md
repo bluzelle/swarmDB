@@ -21,26 +21,63 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 5. Create a node server application using our node.js [library](https://github.com/bluzelle/bluzelle-js) and [API](https://bluzelle.github.io/api/)
 6. `CTRL-C` to terminate the docker-compose swarm
 
-## Getting started building from source
+## Building from source
 
-### Installation - macOSX
+### Dependencies - Minimum version requirements. Boost 1.67.0, gcc 7.1, cmake 3.12 and Protocol buffers 3.6.0.
+Note, appropriate versions are in some cases provided by the system's package manager (apt, brew, yum, ect). In other cases, you might need to update your sources.lists to a test branch, or install the dependecies from source to obatin a supported version. 
 
-**Boost**
+### Linux Ubuntu 18.04
+**Install the dependencies listed above**
 
+### Clone devel branch
 ```text
-$ export BOOST_VERSION="1.67.0"
-$ export BOOST_INSTALL_DIR="~/myboost"
-
-$ mkdir -p ~/myboost
-$ toolchain/install-boost.sh
+$ git clone -b devel --single-branch https://github.com/bluzelle/swarmDB.git
+$ cd swarmDB
+$ git checkout devel
 ```
 
-This will result in a custom Boost install at `~/myboost/1_67_0/`that will not collide with your system's Boost.
+### Build and install
+```text
+$ mkdir build
+$ cd build
+$ cmake ..
+$ sudo make install
+```
 
-**Other dependencies \(Protobuf, CMake\)**
+### Other Linux distros
+
+For the time being Ubuntu 18.04 is the only supported distro even though it will most likely build on others. If you receive this error while following the steps above on Debian
 
 ```text
-$ brew update && brew install protobuf && brew upgrade cmake
+make: *** No rule to make target 'install'.  Stop.
+```
+
+Edit the file swarmDB/pkg/CMakeLists.txt and comment out the two lines as per the example below and try again.
+
+```text
+if (UNIX AND NOT APPLE)
+    find_program(LSB_RELEASE lsb_release)
+    execute_process(COMMAND ${LSB_RELEASE} -is
+        OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  #  if (${LSB_RELEASE_ID_SHORT} STREQUAL "Ubuntu")
+        add_subdirectory(debian)
+  #  endif()
+endif()
+
+if (APPLE)
+    add_subdirectory(osx)
+endif()
+```
+
+
+### macOS
+
+**Installing dependencies**
+
+```text
+$ brew update && brew install protobuf && brew install cmake && brew install gcc && brew install git
 ```
 
 **ccache \(Optional\)**
@@ -51,90 +88,34 @@ If available, cmake will attempt to use ccache \([https://ccache.samba.org](http
 $ brew install ccache
 ```
 
-### Installation - Ubuntu
-
-**Boost**
-
-Open up a console and install the compatible version of Boost:
-
+### Clone repository 
 ```text
-$ ENV BOOST_VERSION="1.67.0"
-$ ENV BOOST_INSTALL_DIR="~/myboost"
-
-$ mkdir -p ~/myboost
-$ toolchain/install-boost.sh
+$ git clone -b devel --single-branch https://github.com/bluzelle/swarmDB.git
+$ cd swarmDB
+$ git checkout devel
 ```
 
-This will result in a custom Boost install at `~/myboost/1_67_0/`that will not overwrite your system's Boost.
-
-**CMake**
-
-```text
-$ mkdir -p ~/mycmake
-$ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
-```
-
-Again, this will result in a custom cmake install into `~/mycmake/` and will not overwrite your system's cmake.
-
-**Protobuf \(Ver. 3 or greater\)**
-
-```text
-$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev
-```
-
-**ccache \(Optional\)**
-
-If available, cmake will attempt to use ccache \([https://ccache.samba.org](https://ccache.samba.org)\) to _drastically_ speed up compilation.
-
-```text
-$ sudo apt-get install ccache
-```
-
-### Building the Daemon with CLion IDE
-
-Ensure that you set your cmake args to pass in:
-
-```text
--DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/
-```
-
-The project root can be directly imported into CLion.
-
-### Building the Daemon from Command Line Interface \(CLI\)
-
-Here are the steps to build the Daemon and unit test application from the command line:
-
-#### OSX
-
+### Build and install
 ```text
 $ mkdir build
 $ cd build
-$ cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/ ..
+$ cmake ..
 $ sudo make install
 ```
 
-#### Ubuntu
+### Deploying the Daemon and configuration
 
-```text
-$ mkdir build
-$ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/ ..
-$ sudo make install
-```
+#### The Bluzelle Configuration Files
 
-### Deploying the Daemons
-
-#### The Bluzelle Configuration File
-
-The Bluzelle daemon is configured by setting the properties of a JSON
-configuration file provided by the user. This file is usually called
-*bluzelle.json* and resides in the current working directory. To specify a
+The Bluzelle daemon is configured by setting the properties of two JSON
+configuration files provided by the user. These files are called
+*bluzelle.json* and *peers.json* and reside in the /output dir of the build directory. To specify a
 different configuration file the daemon can be executed with the -c command
 line argument:
 
-    $ swarm -c peer0.json
+    $ swarm -c path/to/config_file
 
-The configuration file is a JSON format file, as seen in the following example:
+The configuration files are JSON format files, as seen in the following example:
 
     {
         "bootstrap_file": "./peers.json",
@@ -151,12 +132,12 @@ The configuration file is a JSON format file, as seen in the following example:
         "debug_logging" : false
     }
 
-where the properties are:
+Explaination of properties
 
 - "bootstrap_file" - the path to a file containing the list of peers in the swarm that this node will be participating in. See below.
 - "debug_logging" - set this value to true to include debug level log messages in the logs
-- "ethereum" - is your Etherium block chain address, used to pay for transactions.
-- "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
+- "ethereum" - is your Ethereum mainnet address.
+- "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis).
 - "listener_address" - the ip address that SwarmDB will use
 - "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
 - "log_to_stdout" - directs SwarmDB to log output to stdout when true.
@@ -176,132 +157,77 @@ The bootstrap file, identified in the config file by the "bootstrap_file"
 parameter, see above, provides a list of other nodes in the the swarm that the
 local instance of the SwarmDB daemon can communicate with. Note that this may
 not represent the current quorum so if it is sufficently out of date, you may
-need to find the current list of nodes.
+need to find the current list of nodes. The easiest way to get the most recent
+list of nodes is to ask in gitter.im/bluzelle
 
 The booststrap file format a JSON array, containing JSON objects describing
 nodes as seen in the following example:
 
-    [
-        {
-            "host": "127.0.0.1",
-            "http_port": 9082,
-            "name": "peer0",
-            "port": 49152,
-            "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5"
-        },
-        {
-            "host": "127.0.0.1",
-            "http_port": 9083,
-            "name": "peer1",
-            "port": 49153,
-            "uuid": "5c63dfdc-e251-4b9c-8c36-404972c9b4ec"
-        },
-        ...
-        {
-            "host": "127.0.0.1",
-            "http_port": 9083,
-            "name": "peer1",
-            "port": 49153,
-            "uuid": "ce4bfdc-63c7-5b9d-1c37-567978e9b893a"
-        }
-    ]
+```
+[{
+  "name": "daemon01",
+  "host": "13.78.131.94",
+  "port": 51010,
+  "uuid": "92b8bac6-3242-452a-9090-1aa48afd71a3",
+  "http_port": 8080
+}, {
+  "name": "daemon02",
+  "host": "13.78.131.94",
+  "port": 51011,
+  "uuid": "c864516b-3c95-4721-ad3e-a8dccd0d8349",
+  "http_port": 8081
+}, {
+  "name": "daemon03",
+  "host": "13.78.131.94",
+  "port": 51012,
+  "uuid": "137a8403-52ec-43b7-8083-91391d4c5e67",
+  "http_port": 8082
+},{
+  "name": "your node,
+  "host": "your public ip",
+  "port": "your port (make sure this port is not blocked by a firewall or router)",
+  "uuid": "your generated uuid",
+  "http_port": 8083
+  }]
+```
 
 where the Peer object parameters are:
-- "host" - the IP address associated with the external node
-- "http_port" - the HTTP port on which the external node listens for HTTP client requests.
 - "name" - the human readable name that the external node uses
+- "host" - the IP address associated with the external node
 - "port" - the socket address that the external node will listen for protobuf and web socket requests.
 - "uuid" - the universally unique identifier that the external node uses to uniquely identify itself.
+- "http_port" - the HTTP port on which the external node listens for HTTP client requests.
 
-Please ensure that a JSON object representing the local node is also included
+Please ensure that a JSON object representing your node is also included
 in the array of peers.
 
 
-#### Steps to setup Daemon configuration files:
+#### Requirements of the configuration files:
 
-1. Create each of the JSON files below in swarmDB/build/output/, where the swarm executable resides. \(bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json\).
-2. Create an account with Etherscan: [https://etherscan.io/register](https://etherscan.io/register)
-3. Create an Etherscan API KEY by clicking Developers -&gt; API-KEYs.
-4. Add your Etherscan API KEY Token to the configuration files.
-5. Modify the `listener_address` to use your local interface IP.
+1. Placed in swarmDB/build/output/, where the swarm executable resides.
+2. Valid Ethereum mainnet address with a balance > 0.
+2. Valid Etherscan API KEY: [https://etherscan.io/register](https://etherscan.io/register)
+    Create an Etherscan API KEY by clicking Developers -&gt; API-KEYs.
+3. `listener_address` in bluzelle.json set to your local IP
+4. `host`in peers.json set to your inet IP
+5. Unique UUID for each daemon.
+6. Listener address and port must match peer list.
 
-   ```text
-   $ ifconfig en1
-   en1: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
-    inet6 fe80::1837:c97f:df86:c36f%en1 prefixlen 64 secured scopeid 0xa
-   -->>inet 192.168.0.34 netmask 0xffffff00 broadcast 192.168.0.255
-    nd6 options=201<PERFORMNUD,DAD>
-    media: autoselect
-    status: active
-   ```
+**Adding your daemon to the network:**
 
-In the above case, the IP address of the local interface is `192.168.0.34`.
-
-If you do not see `inet <ipaddress>`, run `ifconfig` and comb through manually to find your local IP address.
-
-1. Modify the `ethereum` address to be an Ethereum mainnet address that contains tokens or use the sample address provided below.
-
-**Requirements:**
-
-* You must provide a valid Ethereum address with a balance &gt; 0 and an Etherscan API key.
-* A unique ID \(uuid\) must be specified for each daemon.
-* Listener address and port must match peer list.
-
-Configuration files for Daemon:
+Before you can spawn your daemon you need to add it to the network's leader's peers list. The leader is testnet-dev.bluzelle.com on port 51010, 51011, or 51012. Replace PORT below until you find the leader. The none leaders will return ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER, the leader return will not return anything.
 
 ```text
-// debug_logging is an optional setting (default is false)
-
-// bluzelle.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50000,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
-  "debug_logging" : true,
-  "log_to_stdout" : false
-}
-
-// bluzelle2.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50001,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7",
-  "debug_logging" : true,
-  "log_to_stdout" : true
-}
-
-// bluzelle3.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50002,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41",
-  "debug_logging" : true,
-  "log_to_stdout" : true
-}
-
-// peers.json
-[
-  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "http_port: : 8080, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
-  {"name": "peer2", "host": "127.0.0.1", "port": 50001, "http_port: : 8081, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
-  {"name": "peer3", "host": "127.0.0.1", "port": 50002, "http_port: : 8082, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
-]
+$ wscat -c testnet-dev.bluzelle.com:PORT
+{"bzn-api":"raft","cmd":"add_peer","data":{"peer":{"host":"your_ip","http_port":8083,"name":"your_node_name","port":your_port,"uuid":"your_uuid"}}} 
 ```
 
-1. Deploy your swarm of Daemons. From the swarmDB/build/output/ directory, run:
+**Deploying the daemon:**
+
+From the directory where the executable resides.
 
 ```text
 $ ./swarm -c bluzelle.json
-$ ./swarm -c bluzelle2.json
-$ ./swarm -c bluzelle3.json
 ```
 
 ## Integration Tests With Bluzelle's Javascript Client
@@ -372,29 +298,16 @@ Follow instructions in readme.md
 #### Connectivity Test
 
 ```text
-$ ./crud -n localhost:50000 status
+$ ./crud -n localhost:50000 ping
 Sending : 
 {
-    "transaction_id": 4283375944065669395, 
-    "bzn-api": "status"
+    "bzn-api": "ping"
 }
 ------------------------------------------------------------
 
 Response: 
 {
-	"bzn-api" : "status",
-	"module" : 
-	[
-		{
-			"name" : "raft",
-			"status" : 
-			{
-				"state" : "candidate"
-			}
-		}
-	],
-	"transaction_id" : 4283375944065669395,
-	"version" : "0.0.0-desk"
+    "bzn-api" : "pong"
 }
 
 ------------------------------------------------------------
@@ -548,50 +461,7 @@ header {
 
 ------------------------------------------------------------
 ```
-### Subscribe
-```text
-$ ./crud -n localhost:50000 subscribe -u myuuid -k mykey
-Sending: 
-db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 2808384922078102053
-  }
-  subscribe {
-    key: "mykey"
-  }
-}
 
-------------------------------------------------------------
-
-Response: 
-header {
-  db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
-}
-resp {
-}
-
-------------------------------------------------------------
-
-Waiting....
-
-Response: 
-header {
-  db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
-}
-resp {
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
-}
-
-------------------------------------------------------------
-
-Waiting....
-```
 #### Adding or Removing A Peer
 
 ```text
@@ -665,14 +535,13 @@ and the node will be removed from the peer list.
 
 ```text
 $ ./crud --help
-usage: crud [-h] [-p] -n NODE
-            {status,create,read,update,delete,has,keys,size,subscribe} ...
+usage: crud [-h] -n NODE {ping,create,read,update,delete,has,keys,size} ...
 
 crud
 
 positional arguments:
-  {status,create,read,update,delete,has,keys,size,subscribe}
-    status              Status
+  {ping,create,read,update,delete,has,keys,size}
+    ping                Ping
     create              Create k/v
     read                Read k/v
     update              Update k/v
@@ -680,12 +549,11 @@ positional arguments:
     has                 Determine whether a key exists within a DB by UUID
     keys                Get all keys for a DB by UUID
     size                Determine the size of the DB by UUID
-    subscribe           Subscribe and monitor changes for a key
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p, --use_pbft        Direct message to pbft instead of raft
 
 required arguments:
   -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
 ```
+
