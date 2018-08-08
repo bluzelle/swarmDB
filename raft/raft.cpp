@@ -674,8 +674,8 @@ raft::notify_commit(size_t log_index, const std::string& operation)
     }
 
     audit_message msg;
-    msg.mutable_commit()->set_log_index(log_index);
-    msg.mutable_commit()->set_operation(operation);
+    msg.mutable_raft_commit()->set_log_index(log_index);
+    msg.mutable_raft_commit()->set_operation(operation);
 
     auto json_ptr = std::make_shared<bzn::message>();
     (*json_ptr)["bzn-api"] = "audit";

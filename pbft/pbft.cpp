@@ -21,10 +21,16 @@
 #include <algorithm>
 #include <numeric>
 
+namespace
+{
+    const std::chrono::milliseconds heartbeat_interval{std::chrono::milliseconds(5000)};
+}
+
 using namespace bzn;
 
 pbft::pbft(
         std::shared_ptr<bzn::node_base> node
+        , std::shared_ptr<bzn::asio::io_context_base> io_context
         , const bzn::peers_list_t& peers
         , bzn::uuid_t uuid
         , std::shared_ptr<pbft_service_base> service
@@ -32,6 +38,8 @@ pbft::pbft(
         : node(std::move(node))
         , uuid(std::move(uuid))
         , service(service)
+        , io_context(io_context)
+        , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
 {
     if (peers.empty())
     {
@@ -68,7 +76,34 @@ pbft::start()
             {
                 this->node->register_for_message("pbft",
                         std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+
+                this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
+                this->audit_heartbeat_timer->async_wait(
+                        std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
             });
+}
+
+void
+pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
+{
+    if (ec)
+    {
+        LOG(error) << "pbft audit heartbeat canceled? " << ec.message();
+        return;
+    }
+
+    if (this->is_primary() && this->audit_enabled)
+    {
+        audit_message msg;
+        msg.mutable_primary_status()->set_view(this->view);
+        msg.mutable_primary_status()->set_primary(this->uuid);
+
+        this->broadcast(this->wrap_message(msg));
+
+    }
+
+    this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
+    this->audit_heartbeat_timer->async_wait(std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 }
 
 void
@@ -217,9 +252,9 @@ pbft::handle_commit(const pbft_msg& msg)
 }
 
 void
-pbft::broadcast(const pbft_msg& msg)
+pbft::broadcast(const bzn::message& json)
 {
-    auto json_ptr = std::make_shared<bzn::message>(this->wrap_message(msg));
+    auto json_ptr = std::make_shared<bzn::message>(json);
 
     for (const auto& peer : this->peer_index)
     {
@@ -264,7 +299,7 @@ pbft::do_preprepare(pbft_operation& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
 
-    this->broadcast(msg);
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -274,7 +309,7 @@ pbft::do_preprepared(pbft_operation& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
-    this->broadcast(msg);
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -285,7 +320,7 @@ pbft::do_prepared(pbft_operation& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
-    this->broadcast(msg);
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -295,6 +330,16 @@ pbft::do_committed(pbft_operation& op)
     op.end_commit_phase();
 
     this->service->commit_request(op.sequence, op.request);
+
+    if (this->audit_enabled)
+    {
+        audit_message msg;
+        msg.mutable_pbft_commit()->set_operation(pbft_operation::request_hash(op.request));
+        msg.mutable_pbft_commit()->set_sequence_number(op.sequence);
+        msg.mutable_pbft_commit()->set_sender_uuid(this->uuid);
+
+        this->broadcast(this->wrap_message(msg));
+    }
 }
 
 size_t
@@ -357,9 +402,25 @@ pbft::wrap_message(const pbft_msg& msg)
     return json;
 }
 
+bzn::message
+pbft::wrap_message(const audit_message& msg)
+{
+    bzn::message json;
+
+    json["bzn-api"] = "audit";
+    json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+
+    return json;
+}
+
 const bzn::uuid_t&
 pbft::get_uuid() const
 {
     return this->uuid;
 }
 
+void
+pbft::set_audit_enabled(bool setting)
+{
+    this->audit_enabled = setting;
+}
