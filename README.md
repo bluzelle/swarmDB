@@ -160,7 +160,7 @@ where the properties are:
 - "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
 - "listener_address" - the ip address that SwarmDB will use
 - "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
-- "http_port" - the socket address where a HTTP api is exposed for blockchain integration
+- "http_port" - the listen port where a HTTP api is exposed for blockchain integration
 - "log_to_stdout" - directs SwarmDB to log output to stdout when true.
 - "logfile_dir" - location of log files (default: logs/)
 - "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs (default: 512K)
