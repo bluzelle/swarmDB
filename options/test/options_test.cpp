@@ -35,6 +35,7 @@ namespace
         "  \"ethereum_io_api_token\" : \"ASDFASDFASDFASDFSDF\",\n"
         "  \"bootstrap_file\" : \"peers.json\",\n"
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
+        //"  \"uuid\" : \"c05c0dff-3c27-4532-96de-36f53d8a278e\",\n"
         "  \"debug_logging\" : true,"
         "  \"log_to_stdout\" : true,"
         "  \"state_dir\" : \"./daemon_state/\","
@@ -78,7 +79,9 @@ public:
 TEST_F(options_file_test, test_that_loading_of_default_config_file)
 {
     bzn::options options;
-    options.parse_command_line(1, NO_ARGS);
+
+    // no uuid...
+    ASSERT_FALSE(options.parse_command_line(1, NO_ARGS));
 
     EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
