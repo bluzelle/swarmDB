@@ -26,6 +26,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options("-fdiagnostics-color=auto")
 
+if (APPLE)
+    add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+endif(APPLE)
+
 set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic -Wno-extended-offsetof")
 set(CMAKE_CXX_FLAGS ${warnings})
 set(CMAKE_C_FLAGS   ${warnings})
@@ -33,7 +37,7 @@ set(CMAKE_C_FLAGS   ${warnings})
 # find packages
 include(cmake/add_gmock_test.cmake)
 
-set(REQUIRED_BOOST "1.67.0")
+set(REQUIRED_BOOST "1.68.0")
 set(Boost_USE_STATIC_LIBS on)
 
 find_package(
