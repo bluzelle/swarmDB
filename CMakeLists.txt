@@ -54,8 +54,6 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(cmake/jsoncpp.cmake)
-
-# googletest (todo: we may want to have a flag enabling/disabling tests?)
 include(cmake/googletest.cmake)
 enable_testing()
 
