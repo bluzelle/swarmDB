@@ -49,7 +49,7 @@ namespace
     const std::string MAX_STORAGE_KEY = "max_storage";
     const std::string MONITOR_ADDRESS_KEY = "monitor_address";
     const std::string MONITOR_PORT_KEY = "monitor_port";
-    const std::string NODE_UUID = "uuid";
+    const std::string NODE_UUID_KEY = "uuid";
     const std::string PBFT_ENABLED_KEY = "use_pbft";
     const std::string STATE_DIR_KEY = "state_dir";
     const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
@@ -187,7 +187,7 @@ options::get_bootstrap_peers_url() const
 bzn::uuid_t
 options::get_uuid() const
 {
-    return this->config_data[NODE_UUID].asString();
+    return this->config_data[NODE_UUID_KEY].asString();
 }
 
 
@@ -258,6 +258,18 @@ options::validate()
     if (!this->config_data.isMember(ETHERERUM_IO_API_TOKEN_KEY))
     {
         std::cerr << "Missing Ethereum IO API token entry!" << '\n';
+        return false;
+    }
+
+    if (!this->config_data.isMember(NODE_UUID_KEY))
+    {
+        std::cerr << "Missing UUID entry!" << '\n';
+        return false;
+    }
+
+    if (!this->config_data.isMember(BOOTSTRAP_PEERS_URL_KEY) && !this->config_data.isMember(BOOTSTRAP_PEERS_FILE_KEY))
+    {
+        std::cerr << "Missing Bootstrap URL or FILE entry!" << '\n';
         return false;
     }
 

@@ -142,11 +142,12 @@ The configuration file is a JSON format file, as seen in the following example:
         "ethereum_io_api_token": "53IW57FSZSZS3QXJUEBYT8F4YZ9IZFXBPQ",
         "listener_address": "127.0.0.1",
         "listener_port": 49152,
+        "http_port": 8080,
         "log_to_stdout": true,
         "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5",
         "max_storage" : "2GB",
         "logfile_dir" : "logs/",
-        "logfile_rotation_size" : "64K"
+        "logfile_rotation_size" : "64K",
         "logfile_max_size" : "640K",
         "debug_logging" : false
     }
@@ -155,10 +156,11 @@ where the properties are:
 
 - "bootstrap_file" - the path to a file containing the list of peers in the swarm that this node will be participating in. See below.
 - "debug_logging" - set this value to true to include debug level log messages in the logs
-- "ethereum" - is your Etherium block chain address, used to pay for transactions.
+- "ethereum" - is your Ethereum block chain address, used to pay for transactions.
 - "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
 - "listener_address" - the ip address that SwarmDB will use
 - "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
+- "http_port" - the listen port where a HTTP api is exposed for blockchain integration
 - "log_to_stdout" - directs SwarmDB to log output to stdout when true.
 - "logfile_dir" - location of log files (default: logs/)
 - "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs (default: 512K)
