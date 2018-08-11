@@ -31,6 +31,7 @@
 #include <thread>
 #include <pbft/pbft_service.hpp>
 #include <pbft/pbft.hpp>
+#include <pbft/pbft_failure_detector.hpp>
 #include <raft/raft.hpp>
 
 
@@ -221,7 +222,11 @@ main(int argc, const char* argv[])
 
         if(options.pbft_enabled())
         {
-            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options.get_uuid(), std::make_shared<bzn::pbft_service>());
+            auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
+            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options.get_uuid()
+                    , std::make_shared<bzn::pbft_service>(failure_detector)
+                    , failure_detector
+            );
 
             pbft->start();
         }

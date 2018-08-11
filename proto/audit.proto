@@ -7,6 +7,8 @@ message audit_message {
 
         pbft_commit_notification pbft_commit = 3;
         primary_status primary_status = 4;
+
+        failure_detected failure_detected = 5;
     }
 }
 
@@ -34,3 +36,6 @@ message pbft_commit_notification {
     string operation = 3;
 }
 
+message failure_detected {
+    string sender_uuid = 1;
+}

@@ -93,7 +93,7 @@ pbft_operation::end_commit_phase()
 operation_key_t
 pbft_operation::get_operation_key()
 {
-    return std::tuple<uint64_t, uint64_t, request_hash_t>(this->view, this->sequence, request_hash(this->request));
+    return std::tuple<uint64_t, uint64_t, hash_t>(this->view, this->sequence, request_hash(this->request));
 }
 
 pbft_operation_state
@@ -108,9 +108,21 @@ pbft_operation::debug_string()
     return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
 }
 
-bzn::request_hash_t
+bzn::hash_t
 pbft_operation::request_hash(const pbft_request& req)
 {
     // TODO: Actually hash the request; KEP-466
     return req.ShortDebugString();
+}
+
+void
+pbft_operation::record_executed()
+{
+    this->executed = true;
+}
+
+bool
+pbft_operation::is_executed()
+{
+    return this->executed;
 }

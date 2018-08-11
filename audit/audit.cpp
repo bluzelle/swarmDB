@@ -241,9 +241,13 @@ audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> sessi
     {
         this->handle_primary_status(message.primary_status());
     }
+    else if(message.has_failure_detected())
+    {
+        this->handle_failure_detected(message.failure_detected());
+    }
     else
     {
-        LOG(error) << "Got an empty audit message? " << message.ShortDebugString();
+        LOG(error) << "Got an unknown audit message? " << message.ShortDebugString();
     }
 
     session->close();
@@ -273,7 +277,7 @@ void audit::handle_primary_status(const primary_status& primary_status)
                               % this->recorded_primaries[primary_status.view()]
                               % primary_status.view()
                               % primary_status.primary());
-        this->report_error(bzn::LEADER_CONFLICT_METRIC_NAME, err);
+        this->report_error(bzn::PRIMARY_CONFLICT_METRIC_NAME, err);
     }
 
     this->reset_primary_alive_timer();
@@ -416,6 +420,21 @@ audit::handle_pbft_commit(const pbft_commit_notification& commit)
                               % commit.operation());
         this->report_error(bzn::PBFT_COMMIT_CONFLICT_METRIC_NAME, err);
     }
+}
+
+void
+audit::handle_failure_detected(const failure_detected& /*failure*/)
+{
+    // TODO KEP-539: more info in this message
+    std::lock_guard<std::mutex> lock(this->audit_lock);
+
+    if(!this->use_pbft)
+    {
+        LOG(debug) << "audit ignoring pbft failure detected message because we are in raft mode";
+        return;
+    }
+
+    this->send_to_monitor(bzn::FAILURE_DETECTED_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
 }
 
 size_t

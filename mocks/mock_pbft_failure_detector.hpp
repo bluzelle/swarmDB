@@ -14,22 +14,20 @@
 
 #pragma once
 
-#include <cstdint>
-#include <include/bluzelle.hpp>
-#include <proto/bluzelle.pb.h>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/pbft_failure_detector_base.hpp>
+#include <gmock/gmock.h>
+#include <functional>
 
 namespace bzn
 {
-
-    class pbft_service_base
+    class Mockpbft_failure_detector_base : public pbft_failure_detector_base
     {
     public:
+        MOCK_METHOD1(request_seen, void(const pbft_request& req));
 
-        virtual void commit_operation(std::shared_ptr<pbft_operation> operation) = 0;
+        MOCK_METHOD1(request_executed, void(const pbft_request& req));
 
-        virtual ~pbft_service_base() = default;
-
+        MOCK_METHOD1(register_failure_handler, void(std::function<void()> handler));
     };
 
 }

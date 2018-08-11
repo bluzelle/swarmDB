@@ -48,6 +48,8 @@ namespace bzn
         void handle_pbft_commit(const pbft_commit_notification&) override;
         void handle_primary_status(const primary_status&) override;
 
+        void handle_failure_detected(const failure_detected&) override;
+
         size_t current_memory_size();
 
         void start() override;
