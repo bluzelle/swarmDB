@@ -23,23 +23,25 @@ using namespace ::testing;
 class audit_test : public Test
 {
 public:
-    std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<bzn::Mocknode_base>();
+    std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
 
     std::unique_ptr<bzn::asio::Mocksteady_timer_base> leader_alive_timer =
-            std::make_unique<bzn::asio::Mocksteady_timer_base>();
+            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
     std::unique_ptr<bzn::asio::Mocksteady_timer_base> leader_progress_timer =
-            std::make_unique<bzn::asio::Mocksteady_timer_base>();
+            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
     bzn::asio::wait_handler leader_alive_timer_callback;
     bzn::asio::wait_handler leader_progress_timer_callback;
 
     bzn::optional<boost::asio::ip::udp::endpoint> endpoint;
-    std::unique_ptr<bzn::asio::Mockudp_socket_base> socket = std::make_unique<bzn::asio::Mockudp_socket_base>();
+    std::unique_ptr<bzn::asio::Mockudp_socket_base> socket = std::make_unique<NiceMock<bzn::asio::Mockudp_socket_base>>();
 
     std::shared_ptr<bzn::audit> audit;
 
     size_t mem_size = 1000;
+
+    bool use_pbft = false;
 
     audit_test()
     {
@@ -77,7 +79,7 @@ public:
     {
         // We cannot construct this during our constructor because doing so invalidates our timer pointers,
         // which prevents tests from setting expectations on them
-        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid", this->mem_size);
+        this->audit = std::make_shared<bzn::audit>(this->mock_io_context, this->mock_node, this->endpoint, "audit_test_uuid", this->mem_size, this->use_pbft);
         this->audit->start();
     }
 
@@ -143,10 +145,33 @@ TEST_F(audit_test, audit_throws_error_when_leaders_conflict)
     EXPECT_EQ(this->audit->error_count(), 1u);
 }
 
+TEST_F(audit_test, audit_throws_error_when_primaries_conflict)
+{
+    this->use_pbft = true;
+    this->build_audit();
+    primary_status a, b, c;
+
+    a.set_primary("fred");
+    a.set_view(1);
+
+    b.set_primary("smith");
+    b.set_view(2);
+
+    c.set_primary("francheskitoria");
+    c.set_view(1);
+
+    this->audit->handle_primary_status(a);
+    this->audit->handle_primary_status(b);
+    this->audit->handle_primary_status(c);
+    this->audit->handle_primary_status(b);
+
+    EXPECT_EQ(this->audit->error_count(), 1u);
+}
+
 TEST_F(audit_test, audit_throws_error_when_commits_conflict)
 {
     this->build_audit();
-    commit_notification a, b, c;
+    raft_commit_notification a, b, c;
 
     a.set_operation("do something");
     a.set_log_index(1);
@@ -157,17 +182,50 @@ TEST_F(audit_test, audit_throws_error_when_commits_conflict)
     c.set_operation("do something else");
     c.set_log_index(1);
 
-    this->audit->handle_commit(a);
-    this->audit->handle_commit(b);
-    this->audit->handle_commit(c);
-    this->audit->handle_commit(b);
+    this->audit->handle_raft_commit(a);
+    this->audit->handle_raft_commit(b);
+    this->audit->handle_raft_commit(c);
+    this->audit->handle_raft_commit(b);
 
     EXPECT_EQ(this->audit->error_count(), 1u);
 }
 
+TEST_F(audit_test, audit_throws_error_when_pbft_commits_conflict)
+{
+    this->use_pbft = true;
+    this->build_audit();
+
+    pbft_commit_notification a, b, c;
+
+    a.set_operation("do something");
+    a.set_sequence_number(1);
+
+    b.set_operation("do a different thing");
+    b.set_sequence_number(2);
+
+    c.set_operation("do something else");
+    c.set_sequence_number(1);
+
+    this->audit->handle_pbft_commit(a);
+    this->audit->handle_pbft_commit(b);
+    this->audit->handle_pbft_commit(c);
+    this->audit->handle_pbft_commit(b);
+
+    EXPECT_EQ(this->audit->error_count(), 1u);
+}
 
 TEST_F(audit_test, audit_throws_error_when_no_leader_alive)
 {
+    EXPECT_CALL(*(this->leader_alive_timer), expires_from_now(_)).Times(AtLeast(1));
+    this->build_audit();
+
+    this->leader_alive_timer_callback(boost::system::error_code());
+    EXPECT_EQ(this->audit->error_count(), 1u);
+}
+
+TEST_F(audit_test, audit_throws_error_when_no_primary_alive)
+{
+    this->use_pbft = true;
     EXPECT_CALL(*(this->leader_alive_timer), expires_from_now(_)).Times(AtLeast(1));
     this->build_audit();
 
@@ -246,6 +304,29 @@ TEST_F(audit_test, audit_resets_leader_alive_on_message)
 
 }
 
+TEST_F(audit_test, audit_resets_primary_alive_on_message)
+{
+    bool reset;
+    EXPECT_CALL(*(this->leader_alive_timer), cancel()).WillRepeatedly(Invoke(
+            [&](){reset = true;}
+    ));
+
+    this->use_pbft = true;
+    this->build_audit();
+
+    primary_status ls1;
+    ls1.set_primary("fred");
+
+    reset = false;
+    this->audit->handle_primary_status(ls1);
+    EXPECT_TRUE(reset);
+    EXPECT_EQ(this->audit->error_count(), 0u);
+
+    this->leader_alive_timer_callback(boost::system::error_code());
+
+    EXPECT_EQ(this->audit->error_count(), 1u);
+
+}
 TEST_F(audit_test, audit_no_error_or_timer_when_leader_idle)
 {
     this->progress_timer_status_expectations();
@@ -386,7 +467,7 @@ TEST_F(audit_test, audit_forgets_old_data)
     leader_status ls2;
     ls2.set_leader("alfred");
 
-    commit_notification com;
+    raft_commit_notification com;
     com.set_operation("Do some stuff!!");
 
     for(auto i : boost::irange(0, 100))
@@ -398,7 +479,7 @@ TEST_F(audit_test, audit_forgets_old_data)
 
         this->audit->handle_leader_status(ls1);
         this->audit->handle_leader_status(ls2);
-        this->audit->handle_commit(com);
+        this->audit->handle_raft_commit(com);
     }
 
     // It's allowed to have mem size each of commits, leaders, and errors
@@ -413,7 +494,7 @@ TEST_F(audit_test, audit_still_detects_new_errors_after_forgetting_old_data)
     leader_status ls1;
     ls1.set_leader("joe");
 
-    commit_notification com;
+    raft_commit_notification com;
     com.set_operation("do exciting things and stuff");
 
     for(auto i : boost::irange(0, 100))
@@ -422,7 +503,7 @@ TEST_F(audit_test, audit_still_detects_new_errors_after_forgetting_old_data)
         com.set_log_index(i);
 
         this->audit->handle_leader_status(ls1);
-        this->audit->handle_commit(com);
+        this->audit->handle_raft_commit(com);
     }
 
     EXPECT_EQ(this->audit->error_count(), 0u);
@@ -431,7 +512,7 @@ TEST_F(audit_test, audit_still_detects_new_errors_after_forgetting_old_data)
     com.set_operation("don't do anything");
 
     this->audit->handle_leader_status(ls1);
-    this->audit->handle_commit(com);
+    this->audit->handle_raft_commit(com);
 
     EXPECT_EQ(this->audit->error_count(), 2u);
 }
@@ -512,7 +593,7 @@ TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
          std::function<void(const boost::system::error_code&, size_t)> /*handler*/)
              {
                  std::string msg_string(boost::asio::buffer_cast<const char*>(msg), msg.size());
-                 if (msg_string.find(bzn::COMMIT_CONFLICT_METRIC_NAME) != std::string::npos)
+                 if (msg_string.find(bzn::RAFT_COMMIT_CONFLICT_METRIC_NAME) != std::string::npos)
                  {
                      error_reported = true;
                  }
@@ -530,15 +611,15 @@ TEST_F(audit_test, audit_sends_monitor_message_when_commit_conflict)
 
     this->build_audit();
 
-    commit_notification com1;
+    raft_commit_notification com1;
     com1.set_log_index(2);
     com1.set_operation("the first thing");
 
-    commit_notification com2 = com1;
+    raft_commit_notification com2 = com1;
     com2.set_operation("the second thing");
 
-    this->audit->handle_commit(com1);
-    this->audit->handle_commit(com2);
+    this->audit->handle_raft_commit(com1);
+    this->audit->handle_raft_commit(com2);
 
     EXPECT_TRUE(error_reported);
 }

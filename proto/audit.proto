@@ -2,8 +2,11 @@ syntax = "proto3";
 
 message audit_message {
     oneof msg {
-        commit_notification commit = 1;
+        raft_commit_notification raft_commit = 1;
         leader_status leader_status = 2;
+
+        pbft_commit_notification pbft_commit = 3;
+        primary_status primary_status = 4;
     }
 }
 
@@ -14,8 +17,20 @@ message leader_status {
     uint64 current_commit_index = 4;
 }
 
-message commit_notification {
+message raft_commit_notification {
     string sender_uuid = 1;
     uint64 log_index = 2;
     string operation = 3;
 }
+
+message primary_status {
+    uint64 view = 1;
+    string primary = 2;
+}
+
+message pbft_commit_notification {
+    string sender_uuid = 1;
+    uint64 sequence_number = 2;
+    string operation = 3;
+}
+

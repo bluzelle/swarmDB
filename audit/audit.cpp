@@ -23,7 +23,8 @@ audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , std::shared_ptr<bzn::node_base> node
         , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
         , bzn::uuid_t uuid
-	, size_t mem_size)
+        , size_t mem_size
+        , bool use_pbft)
 
         : uuid(std::move(uuid))
         , node(std::move(node))
@@ -34,6 +35,7 @@ audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , socket(this->io_context->make_unique_udp_socket())
         , statsd_namespace_prefix("com.bluzelle.swarm.singleton.node." + this->uuid + ".")
         , mem_size(mem_size)
+        , use_pbft(use_pbft)
 {
 
 }
@@ -71,8 +73,41 @@ audit::start()
         }
          
         LOG(info) << "Audit module running";
-        this->reset_leader_alive_timer();
+
+
+        if(this->use_pbft)
+        {
+            this->pbft_specific_init();
+        }
+        else
+        {
+            this->raft_specific_init();
+        }
     });
+}
+
+void
+audit::raft_specific_init()
+{
+    this->reset_leader_alive_timer();
+}
+
+void
+audit::pbft_specific_init()
+{
+    this->reset_primary_alive_timer();
+}
+
+void
+audit::reset_primary_alive_timer()
+{
+    LOG(debug) << "starting primary alive timer";
+    this->primary_dead_count = 0;
+
+    // We use the leader_alive_timer here because introducing a new timer would make the tests annoyingly complex
+    this->leader_alive_timer->cancel();
+    this->leader_alive_timer->expires_from_now(this->primary_timeout);
+    this->leader_alive_timer->async_wait(std::bind(&audit::handle_primary_alive_timeout, shared_from_this(), std::placeholders::_1));
 }
 
 void
@@ -99,6 +134,20 @@ audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
     this->leader_has_uncommitted_entries = false;
     this->leader_alive_timer->expires_from_now(this->leader_timeout);
     this->leader_alive_timer->async_wait(std::bind(&audit::handle_leader_alive_timeout, shared_from_this(), std::placeholders::_1));
+}
+
+void
+audit::handle_primary_alive_timeout(const boost::system::error_code& ec)
+{
+    if(ec)
+    {
+        LOG(debug) << "Primary alive timeout canceled " << ec.message();
+        return;
+    }
+
+    this->report_error(bzn::NO_PRIMARY_METRIC_NAME, str(boost::format("No primary alive [%1%]") % ++(this->primary_dead_count)));
+    this->leader_alive_timer->expires_from_now(this->primary_timeout);
+    this->leader_alive_timer->async_wait(std::bind(&audit::handle_primary_alive_timeout, shared_from_this(), std::placeholders::_1));
 }
 
 void
@@ -176,25 +225,69 @@ audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> sessi
 
     LOG(debug) << "Got audit message" << message.DebugString();
 
-    if(message.has_commit())
+    if(message.has_raft_commit())
     {
-        this->handle_commit(message.commit());
+        this->handle_raft_commit(message.raft_commit());
     }
     else if(message.has_leader_status())
     {
         this->handle_leader_status(message.leader_status());
     }
+    else if(message.has_pbft_commit())
+    {
+        this->handle_pbft_commit(message.pbft_commit());
+    }
+    else if(message.has_primary_status())
+    {
+        this->handle_primary_status(message.primary_status());
+    }
     else
     {
-        LOG(error) << "Got an empty audit message?";
+        LOG(error) << "Got an empty audit message? " << message.ShortDebugString();
     }
 
     session->close();
 }
 
+void audit::handle_primary_status(const primary_status& primary_status)
+{
+    if(!this->use_pbft)
+    {
+        LOG(debug) << "audit ignoring primary status message because we are in raft mode";
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(this->audit_lock);
+
+    if(this->recorded_primaries.count(primary_status.view()) == 0)
+    {
+        LOG(info) << "audit recording that primary of view " << primary_status.view() << " is '" << primary_status.primary() << "'";
+        this->send_to_monitor(bzn::PRIMARY_HEARD_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
+        this->recorded_primaries[primary_status.view()] = primary_status.primary();
+        this->trim();
+    }
+    else if(this->recorded_primaries[primary_status.view()] != primary_status.primary())
+    {
+        std::string err = str(boost::format(
+                "Conflicting primary elected! '%1%' is the recorded primary of view %2%, but '%3%' claims to be the primary of the same view.")
+                              % this->recorded_primaries[primary_status.view()]
+                              % primary_status.view()
+                              % primary_status.primary());
+        this->report_error(bzn::LEADER_CONFLICT_METRIC_NAME, err);
+    }
+
+    this->reset_primary_alive_timer();
+}
+
 void
 audit::handle_leader_status(const leader_status& leader_status)
 {
+    if(this->use_pbft)
+    {
+        LOG(debug) << "audit ignoring leader status message because we are in pbft mode";
+        return;
+    }
+
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
     if(this->recorded_leaders.count(leader_status.term()) == 0)
@@ -266,33 +359,69 @@ void audit::handle_leader_made_progress(const leader_status& leader_status)
 }
 
 void
-audit::handle_commit(const commit_notification& commit)
+audit::handle_raft_commit(const raft_commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    this->send_to_monitor(bzn::COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+    if(this->use_pbft)
+    {
+        LOG(debug) << "audit ignoring raft commit message because we are in pbft mode";
+        return;
+    }
 
-    if(this->recorded_commits.count(commit.log_index()) == 0)
+    this->send_to_monitor(bzn::RAFT_COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+
+    if(this->recorded_raft_commits.count(commit.log_index()) == 0)
     {
         LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at index " << commit.log_index();
-        this->recorded_commits[commit.log_index()] = commit.operation();
+        this->recorded_raft_commits[commit.log_index()] = commit.operation();
         this->trim();
     }
-    else if(this->recorded_commits[commit.log_index()] != commit.operation())
+    else if(this->recorded_raft_commits[commit.log_index()] != commit.operation())
     {
         std::string err = str(boost::format(
                 "Conflicting commit detected! '%1%' is the recorded entry at index %2%, but '%3%' has been committed with the same index.")
-                              % this->recorded_commits[commit.log_index()]
+                              % this->recorded_raft_commits[commit.log_index()]
                               % commit.log_index()
                               % commit.operation());
-        this->report_error(bzn::COMMIT_CONFLICT_METRIC_NAME, err);
+        this->report_error(bzn::RAFT_COMMIT_CONFLICT_METRIC_NAME, err);
+    }
+}
+
+void
+audit::handle_pbft_commit(const pbft_commit_notification& commit)
+{
+    std::lock_guard<std::mutex> lock(this->audit_lock);
+
+    if(!this->use_pbft)
+    {
+        LOG(debug) << "audit ignoring pbft commit message because we are in raft mode";
+        return;
+    }
+
+    this->send_to_monitor(bzn::PBFT_COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+
+    if(this->recorded_pbft_commits.count(commit.sequence_number()) == 0)
+    {
+        LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at sequence " << commit.sequence_number();
+        this->recorded_pbft_commits[commit.sequence_number()] = commit.operation();
+        this->trim();
+    }
+    else if(this->recorded_pbft_commits[commit.sequence_number()] != commit.operation())
+    {
+        std::string err = str(boost::format(
+                "Conflicting commit detected! '%1%' is the recorded entry at sequence %2%, but '%3%' has been committed with the same sequence.")
+                              % this->recorded_pbft_commits[commit.sequence_number()]
+                              % commit.sequence_number()
+                              % commit.operation());
+        this->report_error(bzn::PBFT_COMMIT_CONFLICT_METRIC_NAME, err);
     }
 }
 
 size_t
 audit::current_memory_size()
 {
-    return this->recorded_commits.size() + this->recorded_errors.size() + this->recorded_leaders.size();
+    return this->recorded_raft_commits.size() + this->recorded_errors.size() + this->recorded_leaders.size();
 }
 
 void
@@ -313,8 +442,8 @@ audit::trim()
         this->recorded_leaders.erase(this->recorded_leaders.begin());
     }
 
-    while(this->recorded_commits.size() > this->mem_size)
+    while(this->recorded_raft_commits.size() > this->mem_size)
     {
-        this->recorded_commits.erase(this->recorded_commits.begin());
+        this->recorded_raft_commits.erase(this->recorded_raft_commits.begin());
     }
 }
