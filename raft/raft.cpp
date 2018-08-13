@@ -65,12 +65,7 @@ raft::raft(
 
     this->raft_log = std::make_shared<bzn::raft_log>(this->entries_log_path(), maximum_raft_storage);
 
-    // KEP-112 Bail if the raft storage exceeds the max storage
-    if (this->raft_log->maximum_storage_exceeded())
-    {
-        LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
-        throw std::runtime_error(MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED);
-    }
+    this->shutdown_on_exceeded_max_storage(true);
 }
 
 
@@ -508,6 +503,7 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
 void
 raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
+    this->shutdown_on_exceeded_max_storage();
     std::lock_guard<std::mutex> lock(this->raft_lock);
     LOG(debug) << "Received WS message:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -788,12 +784,6 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 bool
 raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type)
 {
-    if (this->raft_log->maximum_storage_exceeded())
-    {
-        LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
-        std::raise(SIGINT);
-    }
-
     if (this->current_state != bzn::raft_state::leader)
     {
         LOG(warning) << "not the leader, can't append log_entries!";
@@ -1183,4 +1173,15 @@ raft::get_status()
     }
 
     return status;
+}
+
+
+void
+raft::shutdown_on_exceeded_max_storage(bool do_throw)
+{
+    if (this->raft_log->maximum_storage_exceeded())
+    {
+        LOG(error) << MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED;
+        do_throw ? throw std::runtime_error(MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED) : raise(SIGINT);
+    }
 }
