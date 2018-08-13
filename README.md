@@ -28,14 +28,14 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 **Boost**
 
 ```text
-$ export BOOST_VERSION="1.67.0"
+$ export BOOST_VERSION="1.68.0"
 $ export BOOST_INSTALL_DIR="~/myboost"
 
 $ mkdir -p ~/myboost
 $ toolchain/install-boost.sh
 ```
 
-This will result in a custom Boost install at `~/myboost/1_67_0/`that will not collide with your system's Boost.
+This will result in a custom Boost install at `~/myboost/1_68_0/`that will not collide with your system's Boost.
 
 **Other dependencies \(Protobuf, CMake\)**
 
@@ -58,14 +58,14 @@ $ brew install ccache
 Open up a console and install the compatible version of Boost:
 
 ```text
-$ ENV BOOST_VERSION="1.67.0"
+$ ENV BOOST_VERSION="1.68.0"
 $ ENV BOOST_INSTALL_DIR="~/myboost"
 
 $ mkdir -p ~/myboost
 $ toolchain/install-boost.sh
 ```
 
-This will result in a custom Boost install at `~/myboost/1_67_0/`that will not overwrite your system's Boost.
+This will result in a custom Boost install at `~/myboost/1_68_0/`that will not overwrite your system's Boost.
 
 **CMake**
 
@@ -95,7 +95,7 @@ $ sudo apt-get install ccache
 Ensure that you set your cmake args to pass in:
 
 ```text
--DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/
+-DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/
 ```
 
 The project root can be directly imported into CLion.
@@ -109,7 +109,7 @@ Here are the steps to build the Daemon and unit test application from the comman
 ```text
 $ mkdir build
 $ cd build
-$ cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/ ..
+$ cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
@@ -118,7 +118,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_67_0/ ..
+$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
