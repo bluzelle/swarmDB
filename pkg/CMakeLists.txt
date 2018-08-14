@@ -1,4 +1,6 @@
 if (UNIX AND NOT APPLE)
+    install(PROGRAMS  "${PROJECT_BINARY_DIR}/output/swarm" DESTINATION "/usr/bin/")
+
     find_program(LSB_RELEASE lsb_release)
     execute_process(COMMAND ${LSB_RELEASE} -is
         OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
@@ -12,4 +14,3 @@ endif()
 if (APPLE)
     add_subdirectory(osx)
 endif()
-

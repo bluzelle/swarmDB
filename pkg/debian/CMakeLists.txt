@@ -18,7 +18,6 @@ set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 
 set(CPACK_DEBIAN_PACKAGE_PRIORITY     "optional")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER   "Bluzelle <devops@bluzelle.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS      "libjsoncpp-dev")
 set(CPACK_GENERATOR                   "DEB")
 set(CPACK_PACKAGE_FILE_NAME            ${CPACK_PACKAGE_NAME}_${PROJECT_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE})
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${PROJECT_SOURCE_DIR}/pkg/debian/postinst;${PROJECT_SOURCE_DIR}/pkg/debian/postrm)
@@ -31,4 +30,3 @@ set(DESTINATION_DIR /usr/bin/swarmdb)
 execute_process(COMMAND chmod 755 ${PROJECT_SOURCE_DIR}/pkg/debian/postinst)
 execute_process(COMMAND chmod 755 ${PROJECT_SOURCE_DIR}/pkg/debian/postrm)
 
-install(PROGRAMS  "${PROJECT_BINARY_DIR}/output/swarm" DESTINATION "/usr/bin/")
