@@ -25,12 +25,18 @@
 
 namespace bzn
 {
-    const std::string LEADER_CONFLICT_METRIC_NAME = "safety.leader_conflict";
-    const std::string COMMIT_CONFLICT_METRIC_NAME = "safety.commit_conflict";
-    const std::string LEADER_STUCK_METRIC_NAME = "liveness.leader_stuck";
-    const std::string NO_LEADER_METRIC_NAME = "liveness.no_leader";
-    const std::string COMMIT_METRIC_NAME = "stats.commit_heard";
-    const std::string NEW_LEADER_METRIC_NAME = "stats.new_leader_heard";
+    const std::string LEADER_CONFLICT_METRIC_NAME = "raft.safety.leader_conflict";
+    const std::string RAFT_COMMIT_CONFLICT_METRIC_NAME = "raft.safety.commit_conflict";
+    const std::string LEADER_STUCK_METRIC_NAME = "raft.liveness.leader_stuck";
+    const std::string NO_LEADER_METRIC_NAME = "raft.liveness.no_leader";
+    const std::string RAFT_COMMIT_METRIC_NAME = "raft.stats.commit_heard";
+    const std::string NEW_LEADER_METRIC_NAME = "raft.stats.new_leader_heard";
+
+    const std::string PBFT_COMMIT_METRIC_NAME = "pbft.stats.commit_heard";
+    const std::string PRIMARY_HEARD_METRIC_NAME = "pbft.stats.primary_heard";
+    const std::string PBFT_COMMIT_CONFLICT_METRIC_NAME = "pbft.safety.commit_conflict";
+    const std::string PRIMARY_CONFLICT_METRIC_NAME = "pbft.safety.primary_conflict";
+    const std::string NO_PRIMARY_METRIC_NAME = "pbft.liveness.no_primary";
 
     const std::string STATSD_COUNTER_FORMAT = ":1|c";
 
@@ -44,9 +50,13 @@ namespace bzn
 
         virtual void handle(const bzn::message& msg, std::shared_ptr<bzn::session_base> session) = 0;
 
-        virtual void handle_commit(const commit_notification&) = 0;
+        virtual void handle_raft_commit(const raft_commit_notification&) = 0;
 
         virtual void handle_leader_status(const leader_status&) = 0;
+
+        virtual void handle_pbft_commit(const pbft_commit_notification&) = 0;
+
+        virtual void handle_primary_status(const primary_status&) = 0;
     };
 
 }

@@ -214,14 +214,14 @@ main(int argc, const char* argv[])
         // startup...
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, options.get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options.get_listener()});
-        auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size());
+        auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size(), options.pbft_enabled());
 
         node->start();
         audit->start();
 
         if(options.pbft_enabled())
         {
-            auto pbft = std::make_shared<bzn::pbft>(node, peers.get_peers(), options.get_uuid(), std::make_shared<bzn::pbft_service>());
+            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options.get_uuid(), std::make_shared<bzn::pbft_service>());
 
             pbft->start();
         }

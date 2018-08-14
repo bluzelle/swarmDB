@@ -4,7 +4,7 @@ language: cpp
 env:
   global:
     - BOOST_INSTALL_DIR="$HOME/.local"
-    - BOOST_VERSION="1.67.0"
+    - BOOST_VERSION="1.68.0"
     - PROJECT_VERSION_MAJOR="0"
     - PROJECT_VERSION_MINOR="1"
     - PROJECT_VERSION_PATCH="${TRAVIS_BUILD_NUMBER}"
@@ -50,7 +50,7 @@ before_install:
     - eval "${MATRIX_EVAL}"
     - mkdir -p $HOME/.local
     - |
-      if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
+      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
         if [ ! -e $HOME/.local/bin/cmake ]; then
           echo "CMake not found in the cache, get and extract it..."
           travis_retry curl -L ${CMAKE_URL} \
