@@ -33,10 +33,10 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
-        - CMAKE_COMMAND="$HOME/.local/bin/cmake"
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh "
 
     - os: osx
-      osx_image: xcode9.3
+      osx_image: xcode9.4
       env:
         - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew upgrade cmake"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
@@ -59,6 +59,19 @@ before_install:
           echo "Using cached CMake"
         fi
       fi
+    - |
+      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+        if [ ! -e $HOME/pmd-bin-6.6.0/bin/run.sh ]; then
+          echo "PMD not found in the cache, get and extract it..."
+          cd $HOME
+          travis_retry curl -OL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F6.6.0/pmd-bin-6.6.0.zip"
+          unzip pmd-bin-6.6.0.zip
+          rm pmd-bin-6.6.0.zip
+        else
+          echo "Using cached PMD"
+        fi
+      fi
+
 compiler:
   - gcc
 
@@ -77,8 +90,9 @@ script:
   - ${CXX} --version
   - echo CXXFLAGS=${CXXFLAGS}
   - make
-  - make package
+  - make static_analysis
   - ctest
+  - make package
 
 after_success:
   - echo ${TRAVIS_BRANCH}
