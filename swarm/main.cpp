@@ -137,7 +137,7 @@ print_banner(const bzn::options& options, double eth_balance)
        << "               On port: " << options.get_listener().port() << "\n"
        << "             HTTP port: " << options.get_http_port()  << "\n"
        << "         Token Balance: " << eth_balance << " ETH" << "\n"
-       << "     Maximimum Storage: " << options.get_max_storage() << " Bytes" << "\n"
+       << "       Maximum Storage: " << options.get_max_storage() << " Bytes" << "\n"
        << "          Used Storage: " << get_state_file_size(options) << " Bytes" << "\n"
        << '\n';
 
