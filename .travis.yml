@@ -16,6 +16,7 @@ env:
     - secure: "vF3zRyPiUm+VOVAq1y6TDGqr5s2XYk7In6Zh8LbX0VNv6ROQ7HEwusbO6tuR4I0Og0m59RplQd3oAr3nxLMN/85YQw1vvVbc+TC1wIenM15bfEgCKjTsiFbIEf7fPgUyqVg/YLGSEsskcXiFrfb5IyFmAj+v37u0N56u4B3/ga82e5RIXvu641z1Ex2sS0L/MhN4TOluI/5ASeg/D6QHKVx59HiX/PjOkWbCKY10p5CzbXgNyik37NrI1ZKnLTtYFCznuPeXpt4Vx0YdCLOaJw4uG2ay2CjayOmOvXlNWb9iHXL5EveovptDhSSqAJjzy+MqwnrjJHsciOBHX2efpeCpSBx6tGw9e8bi6Xg3MJvdPjEcfKoAWBG2MdJUAdGk48eduvdPqnx/Ig7//ez9aYLgbXaac3k09N5SeyPZuRE2mnQoXNcO2ApL3NfOAJ/3WRtFo/scgu8rBfEZrIqy2BAgnOK86TYZwIR1CabQgPDClY9XddcZ+PBQ4a+j/CqDTcjdYR5I7ABV4nPgCU2rheKEhKMv8yw4kFl5U6wFUOtkEdxFJk3+d8oxHPrQf0CDFKovkSEcMzEgcJE1DsVLNzNPlE9y12+Rsopt/fcCNqSvyl22XaI7O9UnE/j+Y2ATlydB+6olEvOEd02K9WYuVUotyeBu4bB8sY0V4VDREUI="
     - secure: "Z4h7T0uHpz3WLtX93NckznB/FujL7LncaZdxJQ5DrWOtIpUJA7REix8oMDyTaXqhsksX5x24CdxuArmFkgE5G1xJK7sIgI7R6RlDG0shRyfMBWaB0Olbsxq9FiZb11Cmguq2ANoPdwFj53BwSjLs+8QW7wWx2NE4TF0JWWNBVVi1hcX5cPc2xW8oEy7657mxCTq6/G8upOonMRHmiB3M+u9Xn0Sv7+SCmtkFw6uUSGfRRkwwRl0haf0qwlOg6o6Aihen0zFEM/Rf3imx5JhyxtlW6KQBG8WZOmv2gQ9AXD9sAZG4H52Klr81QIhKrzlQNEoLvPtkhqTFXCGlBRH7bBXbCYRFYhvm8j1ja2tM46wZHwdIx5gtUqLk5+PcNdFEO335003GeOPewzayk44WWkPQyHPkNLTLAnLJawKkSDsLsWIokl0BGz5m2O08GBoohTd0LaOQrEi3npI92s6OasxPh9wcCwYYwGT5WqLmnKc6XRpI5I+RFN6yjPYCYUwgCd5LVkOG5hpvg8tTYG63gxshPJWSWv5yObMPppmObnpQNjPOdw63m9cpnevo2DbGLZsHedDyqMGhjZnn3CG8ZlRQvdPLo56l2gFRxhw8J2xnk1C2ffil8C9IjiTLBK+Y5ALd17BuI40ZA+ClRHy8Z6MFXgMfFlr/YBrUtY3tvGg="
     - secure: "Hp7Ww6XhkZvzOsktsaL8lyiMbXLP3u/Entj7UXomywDr7gMIAyoIiD122bZ1Wa+sbNfnNd8lKS1AZxMtwxbhAK9hcB6ZvypAE3i4pfoQWxd4jq3pXltJ2oLbXEWzH1aGcTtibf2vI6WBpI8mPGWrykBeQfCzd0qs6t5pNzeA43ta77WCADWJivxe69l4rqxUGmXZVbGzApUgn5UP7FTscuByitQm6KPft63sre6aSC1P9FKWD4VOFlDqol3v+Bsmn05bNc9a/UuLq/C6vSa6BxsJpalMIRtlXE+MRXVpYxnBNS1UlH+8LA6txG3fwisyvwXG5KjO4tDuVLIYzuK1+TBCCnFBbTJ+2aCZ9iR7sA34A+AUbF2JyTfGtR4RnOd2cMgGuWgn1ASoe2c5GE45aK/s+ijDsKpzzHl8gR3QJS7yd0U/KCgnW3bsq4mRq95sjA/5MZuS2gmIpMS0JoprLmjXikZLI3LDQc8VHqK5U2ne/W7xZyszc57IlJI6HiL2v2yw25m8/yna7PXyAYFPsZ8LRzoZJvq/uBVh8sAnhpgMfQ5FxOuJGvhH56UjvcXqIYfz1a4ELIl8b2rLq6M1qUWYHwlTq8xHHhWShQBpfEiZQBncD0+K7LO7KhJb78sqJcbMFcgsWooKqlsElGQwK92BUkECRu8eC4n8uaaJ/GM="
+    - secure: "D3BGFKFKHDG0ajTpvEAP7poQmOvSUq2l7jG9q7hK+xHDRKBhM7YfSUJicz5H358VBKURoURLbykq3WXw/gpzTSVqpusXJ4UjGiAZLRXHlTsyXW0IVGvXXPx53SiJkHbfVC/3MK22rzV9LYR3wxEt7k9xKLfRGBr+tAiTzi/ikox/4ibIx6cb0PQGrVTbeoSJfJfF6VQvzeaoST7K9CREJGb9PuLpiXPRt0CIeY5Y1r7+HCJSzO2XWX+8i+DpMB7ZItQjrt09vaoDoUS5WPxL92+S8nrWNH++LhEzvq1PTtZs0bQkLHG+zfrM/5j2Q34HP6QZceVSixMzEz2l9wE0lZI5d21udnh1CApbaZvHHvLuR7cvZGv6VCNZefZhKTsDAs+GRMYLhZgauqxnOxug0ZO8ErLHJ0K87l/U0krBUCtMTO5FPodEPahXVOe9UXlBnl8FFhihQ4VB23TXWbFy0qa1M1iCV3jT27hpDHCmPuD5KwGWzDITrnaC0+YzQpmOuZKLB/wlQdJD7XmRkV3OCye1ejwFpwCD1SMJLZBTd4rReAgxxgT4f0xq/IuoGORvAXYDbZeYNrISYrxN8u6LAAc56IDQ7F8nZO/l85gPZaSrkzL4zeuDhWsMr/SBysBL2XlwhL9iSYHWEhgr67hJVOzVUqpMCH6nr2Y8hc4cK1w="
 
 matrix:
   include:
@@ -33,7 +34,7 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
-        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh "
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
 
     - os: osx
       osx_image: xcode9.4
@@ -51,6 +52,7 @@ before_install:
     - mkdir -p $HOME/.local
     - |
       if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+        pip install --user cpp-coveralls
         if [ ! -e $HOME/.local/bin/cmake ]; then
           echo "CMake not found in the cache, get and extract it..."
           travis_retry curl -L ${CMAKE_URL} \
@@ -95,6 +97,10 @@ script:
   - make package
 
 after_success:
+  - |
+    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' --gcov-options '\-lp'
+    fi
   - echo ${TRAVIS_BRANCH}
   - if [ "$TRAVIS_BRANCH" = "master" ] ; then PACKAGE_COMPONENT="stable" ; else PACKAGE_COMPONENT="unstable" ; fi
   - |
@@ -111,4 +117,3 @@ after_success:
       git remote add origin-swarm https://${GITHUB_TOKEN}@github.com/bluzelle/swarmdb.git > /dev/null 2>&1
       git push --quiet --set-upstream origin-swarm ${TRAVIS_BRANCH} --tags
     fi
-
