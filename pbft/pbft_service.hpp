@@ -16,7 +16,7 @@
 
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_failure_detector_base.hpp>
-#include <map>
+#include <unordered_map>
 
 namespace bzn
 {
@@ -36,10 +36,11 @@ namespace bzn
 
     private:
         uint64_t next_request_sequence = 1;
-        std::map<uint64_t, std::shared_ptr<pbft_operation>> waiting_requests;
+        std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_requests;
         pbft_request remembered_request;
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
+        std::mutex lock;
     };
 
 }

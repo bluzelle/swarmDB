@@ -215,9 +215,9 @@ pbft::handle_request(const pbft_msg& msg)
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    std::shared_ptr<pbft_operation> op = this->find_operation(this->view, request_seq, msg.request());
+    auto op = this->find_operation(this->view, request_seq, msg.request());
 
-    this->do_preprepare(std::move(op));
+    this->do_preprepare(op);
 }
 
 void
@@ -238,7 +238,7 @@ pbft::handle_preprepare(const pbft_msg& msg)
     }
     else
     {
-        std::shared_ptr<pbft_operation> op = this->find_operation(msg);
+        auto op = this->find_operation(msg);
         op->record_preprepare();
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
@@ -254,10 +254,10 @@ pbft::handle_prepare(const pbft_msg& msg)
 {
 
     // Prepare messages are never rejected, assuming the sanity checks passed
-    std::shared_ptr<pbft_operation> op = this->find_operation(msg);
+    auto op = this->find_operation(msg);
 
     op->record_prepare(msg);
-    this->maybe_advance_operation_state(std::move(op));
+    this->maybe_advance_operation_state(op);
 }
 
 void
@@ -265,10 +265,10 @@ pbft::handle_commit(const pbft_msg& msg)
 {
 
     // Commit messages are never rejected, assuming  the sanity checks passed
-    std::shared_ptr<pbft_operation> op = this->find_operation(msg);
+    auto op = this->find_operation(msg);
 
     op->record_commit(msg);
-    this->maybe_advance_operation_state(std::move(op));
+    this->maybe_advance_operation_state(op);
 }
 
 void
@@ -351,7 +351,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
-    this->service->commit_operation(std::move(op));
+    this->service->commit_operation(op);
 
     if (this->audit_enabled)
     {

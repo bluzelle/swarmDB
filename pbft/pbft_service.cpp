@@ -24,12 +24,14 @@ pbft_service::pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_d
 void
 pbft_service::commit_operation(std::shared_ptr<pbft_operation> operation)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
+
     uint64_t sequence = operation->sequence;
     this->waiting_requests[sequence] = std::move(operation);
 
     while (this->waiting_requests.count(this->next_request_sequence) > 0)
     {
-        std::shared_ptr<pbft_operation>& op = waiting_requests[this->next_request_sequence];
+        std::shared_ptr<pbft_operation> op = waiting_requests[this->next_request_sequence];
 
         LOG(info) << "Executing request " << op->request.ShortDebugString() << ", sequence " << this->next_request_sequence
                   << "\n";
