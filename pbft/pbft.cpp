@@ -83,9 +83,8 @@ pbft::start()
                 this->audit_heartbeat_timer->async_wait(
                         std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 
-                auto weak_this = this->weak_from_this();
                 this->failure_detector->register_failure_handler(
-                        [weak_this]()
+                        [weak_this = this->weak_from_this()]()
                         {
                             auto strong_this = weak_this.lock();
                             if(strong_this)
