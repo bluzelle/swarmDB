@@ -14,21 +14,23 @@
 
 #pragma once
 
-#include <cstdint>
-#include <include/bluzelle.hpp>
 #include <proto/bluzelle.pb.h>
-#include <pbft/pbft_operation.hpp>
+#include <include/boost_asio_beast.hpp>
 
 namespace bzn
 {
 
-    class pbft_service_base
+    class pbft_failure_detector_base
     {
     public:
 
-        virtual void commit_operation(std::shared_ptr<pbft_operation> operation) = 0;
+        virtual void request_seen(const pbft_request& req) = 0;
 
-        virtual ~pbft_service_base() = default;
+        virtual void request_executed(const pbft_request& req) = 0;
+
+        virtual void register_failure_handler(std::function<void()> handler) = 0;
+
+        virtual ~pbft_failure_detector_base() = default;
 
     };
 

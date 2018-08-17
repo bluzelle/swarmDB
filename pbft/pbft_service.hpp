@@ -15,7 +15,8 @@
 #pragma once
 
 #include <pbft/pbft_service_base.hpp>
-#include <map>
+#include <pbft/pbft_failure_detector_base.hpp>
+#include <unordered_map>
 
 namespace bzn
 {
@@ -26,16 +27,20 @@ namespace bzn
     class pbft_service : public pbft_service_base
     {
     public:
-        void commit_request(uint64_t sequence, const pbft_request& request) override;
+        pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector);
+
+        void commit_operation(std::shared_ptr<pbft_operation> operation) override;
 
         const pbft_request& get_last_request();
         uint64_t applied_requests_count();
 
     private:
         uint64_t next_request_sequence = 1;
-        std::map<uint64_t, pbft_request> waiting_requests;
+        std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_requests;
         pbft_request remembered_request;
+        std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
+        std::mutex lock;
     };
 
 }

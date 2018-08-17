@@ -34,10 +34,12 @@ pbft::pbft(
         , const bzn::peers_list_t& peers
         , bzn::uuid_t uuid
         , std::shared_ptr<pbft_service_base> service
+        , std::shared_ptr<pbft_failure_detector_base> failure_detector
 )
         : node(std::move(node))
         , uuid(std::move(uuid))
-        , service(service)
+        , service(std::move(service))
+        , failure_detector(std::move(failure_detector))
         , io_context(io_context)
         , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
 {
@@ -80,6 +82,17 @@ pbft::start()
                 this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
                 this->audit_heartbeat_timer->async_wait(
                         std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
+
+                this->failure_detector->register_failure_handler(
+                        [weak_this = this->weak_from_this()]()
+                        {
+                            auto strong_this = weak_this.lock();
+                            if(strong_this)
+                            {
+                                strong_this->handle_failure();
+                            }
+                        }
+                        );
             });
 }
 
@@ -110,11 +123,12 @@ void
 pbft::unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
 {
     pbft_msg msg;
-    if (msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString())))
+    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString())))
     {
-        this->handle_message(msg);
+        LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
+        return;
     }
-    LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
+    this->handle_message(msg);
 }
 
 void
@@ -126,6 +140,11 @@ pbft::handle_message(const pbft_msg& msg)
     if (!this->preliminary_filter_msg(msg))
     {
         return;
+    }
+
+    if(msg.has_request())
+    {
+        this->failure_detector->request_seen(msg.request());
     }
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
@@ -195,7 +214,7 @@ pbft::handle_request(const pbft_msg& msg)
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    pbft_operation& op = this->find_operation(this->view, request_seq, msg.request());
+    auto op = this->find_operation(this->view, request_seq, msg.request());
 
     this->do_preprepare(op);
 }
@@ -218,11 +237,11 @@ pbft::handle_preprepare(const pbft_msg& msg)
     }
     else
     {
-        pbft_operation& op = this->find_operation(msg);
-        op.record_preprepare();
+        auto op = this->find_operation(msg);
+        op->record_preprepare();
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
-        accepted_preprepares[log_key] = op.get_operation_key();
+        accepted_preprepares[log_key] = op->get_operation_key();
 
         this->do_preprepared(op);
         this->maybe_advance_operation_state(op);
@@ -234,9 +253,9 @@ pbft::handle_prepare(const pbft_msg& msg)
 {
 
     // Prepare messages are never rejected, assuming the sanity checks passed
-    pbft_operation& op = this->find_operation(msg);
+    auto op = this->find_operation(msg);
 
-    op.record_prepare(msg);
+    op->record_prepare(msg);
     this->maybe_advance_operation_state(op);
 }
 
@@ -245,9 +264,9 @@ pbft::handle_commit(const pbft_msg& msg)
 {
 
     // Commit messages are never rejected, assuming  the sanity checks passed
-    pbft_operation& op = this->find_operation(msg);
+    auto op = this->find_operation(msg);
 
-    op.record_commit(msg);
+    op->record_commit(msg);
     this->maybe_advance_operation_state(op);
 }
 
@@ -256,6 +275,8 @@ pbft::broadcast(const bzn::message& json)
 {
     auto json_ptr = std::make_shared<bzn::message>(json);
 
+    LOG(debug) << "Broadcasting message " + json.toStyledString();
+
     for (const auto& peer : this->peer_index)
     {
         this->node->send_message(make_endpoint(peer), json_ptr);
@@ -263,26 +284,26 @@ pbft::broadcast(const bzn::message& json)
 }
 
 void
-pbft::maybe_advance_operation_state(pbft_operation& op)
+pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
-    if (op.get_state() == pbft_operation_state::prepare && op.is_prepared())
+    if (op->get_state() == pbft_operation_state::prepare && op->is_prepared())
     {
         this->do_prepared(op);
     }
 
-    if (op.get_state() == pbft_operation_state::commit && op.is_committed())
+    if (op->get_state() == pbft_operation_state::commit && op->is_committed())
     {
         this->do_committed(op);
     }
 }
 
 pbft_msg
-pbft::common_message_setup(const pbft_operation& op, pbft_msg_type type)
+pbft::common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type)
 {
     pbft_msg msg;
-    msg.set_view(op.view);
-    msg.set_sequence(op.sequence);
-    msg.set_allocated_request(new pbft_request(op.request));
+    msg.set_view(op->view);
+    msg.set_sequence(op->sequence);
+    msg.set_allocated_request(new pbft_request(op->request));
     msg.set_type(type);
 
 
@@ -293,49 +314,49 @@ pbft::common_message_setup(const pbft_operation& op, pbft_msg_type type)
 }
 
 void
-pbft::do_preprepare(pbft_operation& op)
+pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
 {
-    LOG(debug) << "Doing preprepare for operation " << op.debug_string();
+    LOG(debug) << "Doing preprepare for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
 
-    this->broadcast(this->wrap_message(msg));
+    this->broadcast(this->wrap_message(msg, "preprepare"));
 }
 
 void
-pbft::do_preprepared(pbft_operation& op)
+pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 {
-    LOG(debug) << "Entering prepare phase for operation " << op.debug_string();
+    LOG(debug) << "Entering prepare phase for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
-    this->broadcast(this->wrap_message(msg));
+    this->broadcast(this->wrap_message(msg, "prepare"));
 }
 
 void
-pbft::do_prepared(pbft_operation& op)
+pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
-    LOG(debug) << "Entering commit phase for operation " << op.debug_string();
-    op.begin_commit_phase();
+    LOG(debug) << "Entering commit phase for operation " << op->debug_string();
+    op->begin_commit_phase();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
-    this->broadcast(this->wrap_message(msg));
+    this->broadcast(this->wrap_message(msg, "commit"));
 }
 
 void
-pbft::do_committed(pbft_operation& op)
+pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
-    LOG(debug) << "Operation " << op.debug_string() << " is committed-local";
-    op.end_commit_phase();
+    LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
+    op->end_commit_phase();
 
-    this->service->commit_request(op.sequence, op.request);
+    this->service->commit_operation(op);
 
     if (this->audit_enabled)
     {
         audit_message msg;
-        msg.mutable_pbft_commit()->set_operation(pbft_operation::request_hash(op.request));
-        msg.mutable_pbft_commit()->set_sequence_number(op.sequence);
+        msg.mutable_pbft_commit()->set_operation(pbft_operation::request_hash(op->request));
+        msg.mutable_pbft_commit()->set_sequence_number(op->sequence);
         msg.mutable_pbft_commit()->set_sender_uuid(this->uuid);
 
         this->broadcast(this->wrap_message(msg));
@@ -361,13 +382,13 @@ pbft::get_primary() const
 }
 
 // Find this node's record of an operation (creating a new record for it if this is the first time we've heard of it)
-pbft_operation&
+std::shared_ptr<pbft_operation>
 pbft::find_operation(const pbft_msg& msg)
 {
     return this->find_operation(msg.view(), msg.sequence(), msg.request());
 }
 
-pbft_operation&
+std::shared_ptr<pbft_operation>
 pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& request)
 {
     auto key = bzn::operation_key_t(view, sequence, pbft_operation::request_hash(request));
@@ -377,13 +398,11 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
     {
         LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req "
                    << request.ShortDebugString();
-        auto result = operations.emplace(
-                std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(
-                        view
-                        , sequence
-                        , request
-                        , std::make_shared<std::vector<peer_address_t>>(this->peer_index)
-                ));
+
+        std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, request,
+                std::make_shared<std::vector<peer_address_t>>(this->peer_index));
+        auto result = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
+
         assert(result.second);
         return result.first->second;
     }
@@ -392,23 +411,31 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
 }
 
 bzn::message
-pbft::wrap_message(const pbft_msg& msg)
+pbft::wrap_message(const pbft_msg& msg, const std::string& debug_info)
 {
     bzn::message json;
 
     json["bzn-api"] = "pbft";
     json["pbft-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+    if(debug_info.length() > 0)
+    {
+        json["debug-info"] = debug_info;
+    }
 
     return json;
 }
 
 bzn::message
-pbft::wrap_message(const audit_message& msg)
+pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
 {
     bzn::message json;
 
     json["bzn-api"] = "audit";
     json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+    if(debug_info.length() > 0)
+    {
+        json["debug-info"] = debug_info;
+    }
 
     return json;
 }
@@ -423,4 +450,23 @@ void
 pbft::set_audit_enabled(bool setting)
 {
     this->audit_enabled = setting;
+}
+
+void
+pbft::notify_audit_failure_detected()
+{
+    if(this->audit_enabled)
+    {
+        audit_message msg;
+        msg.mutable_failure_detected()->set_sender_uuid(this->uuid);
+        this->broadcast(this->wrap_message(msg));
+    }
+}
+
+void
+pbft::handle_failure()
+{
+    LOG(fatal) << "Failure detected; view changes not yet implemented\n";
+    this->notify_audit_failure_detected();
+    //TODO: KEP-332
 }

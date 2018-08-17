@@ -17,6 +17,7 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft.hpp>
 #include <pbft/pbft_service.hpp>
+#include <pbft/pbft_failure_detector.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <proto/bluzelle.pb.h>
@@ -25,6 +26,7 @@
 #include <google/protobuf/text_format.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <mocks/mock_pbft_failure_detector.hpp>
 
 using namespace ::testing;
 
@@ -46,9 +48,12 @@ namespace
         pbft_msg request_msg;
         pbft_msg preprepare_msg;
 
-        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
+                std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
         std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
-        std::shared_ptr<bzn::pbft_service> service = std::make_shared<bzn::pbft_service>();
+        std::shared_ptr<bzn::pbft_failure_detector_base> mock_failure_detector =
+                std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base>>();
+        std::shared_ptr<bzn::pbft_service> service = std::make_shared<bzn::pbft_service>(mock_failure_detector);
 
         std::shared_ptr<bzn::pbft> pbft;
 
@@ -90,7 +95,7 @@ namespace
 
         void build_pbft()
         {
-            this->pbft = std::make_shared<bzn::pbft>(this->mock_node, this->mock_io_context, TEST_PEER_LIST, this->uuid, this->service);
+            this->pbft = std::make_shared<bzn::pbft>(this->mock_node, this->mock_io_context, TEST_PEER_LIST, this->uuid, this->service, this->mock_failure_detector);
             this->pbft->set_audit_enabled(false);
             this->pbft->start();
 
@@ -140,7 +145,8 @@ namespace
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(0));
 
-        bzn::pbft pbft2(this->mock_node, this->mock_io_context, TEST_PEER_LIST, SECOND_NODE_UUID, this->service);
+        bzn::pbft pbft2(this->mock_node, this->mock_io_context, TEST_PEER_LIST, SECOND_NODE_UUID, this->service
+                        , this->mock_failure_detector);
 
         EXPECT_FALSE(pbft2.is_primary());
         pbft2.handle_message(request_msg);

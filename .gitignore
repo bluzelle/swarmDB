@@ -1,6 +1,7 @@
 .idea/
 .state/
 build/
+logs/
 cmake-build-debug/
 cmake-build-release/
 scripts/bluzelle_pb2.py

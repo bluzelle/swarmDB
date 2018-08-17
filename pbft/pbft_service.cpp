@@ -16,18 +16,30 @@
 
 using namespace bzn;
 
-void
-pbft_service::commit_request(uint64_t sequence, const pbft_request& request)
+pbft_service::pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector)
+        : failure_detector(std::move(failure_detector))
 {
-    this->waiting_requests[sequence] = request;
+}
+
+void
+pbft_service::commit_operation(std::shared_ptr<pbft_operation> operation)
+{
+    std::lock_guard<std::mutex> lock(this->lock);
+
+    uint64_t sequence = operation->sequence;
+    this->waiting_requests[sequence] = std::move(operation);
 
     while (this->waiting_requests.count(this->next_request_sequence) > 0)
     {
-        const pbft_request& req = waiting_requests[sequence];
+        std::shared_ptr<pbft_operation> op = waiting_requests[this->next_request_sequence];
 
-        LOG(info) << "Executing request " << req.ShortDebugString() << ", sequence " << this->next_request_sequence
+        LOG(info) << "Executing request " << op->request.ShortDebugString() << ", sequence " << this->next_request_sequence
                   << "\n";
-        this->remembered_request = req;
+
+        this->failure_detector->request_executed(op->request);
+
+        this->remembered_request = op->request;
+        op->record_executed();
 
         this->waiting_requests.erase(this->next_request_sequence);
         this->next_request_sequence++;

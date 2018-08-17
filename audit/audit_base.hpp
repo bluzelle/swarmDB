@@ -34,6 +34,7 @@ namespace bzn
 
     const std::string PBFT_COMMIT_METRIC_NAME = "pbft.stats.commit_heard";
     const std::string PRIMARY_HEARD_METRIC_NAME = "pbft.stats.primary_heard";
+    const std::string FAILURE_DETECTED_METRIC_NAME = "pbft.stats.failure_detected";
     const std::string PBFT_COMMIT_CONFLICT_METRIC_NAME = "pbft.safety.commit_conflict";
     const std::string PRIMARY_CONFLICT_METRIC_NAME = "pbft.safety.primary_conflict";
     const std::string NO_PRIMARY_METRIC_NAME = "pbft.liveness.no_primary";
@@ -57,6 +58,8 @@ namespace bzn
         virtual void handle_pbft_commit(const pbft_commit_notification&) = 0;
 
         virtual void handle_primary_status(const primary_status&) = 0;
+
+        virtual void handle_failure_detected(const failure_detected&) = 0;
     };
 
 }
