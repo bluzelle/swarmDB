@@ -55,6 +55,8 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
+FIND_PACKAGE(CURL REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(cmake/jsoncpp.cmake)

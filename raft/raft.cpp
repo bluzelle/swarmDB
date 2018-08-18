@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <proto/bluzelle.pb.h>
+#include <utils/is_whitelist_member.hpp>
 
 namespace
 {
@@ -39,16 +40,18 @@ using namespace bzn;
 
 
 raft::raft(
-        std::shared_ptr<bzn::asio::io_context_base> io_context
-        , std::shared_ptr<bzn::node_base> node
-        , const bzn::peers_list_t& peers
-        , bzn::uuid_t uuid
-        , const std::string state_dir
-        , size_t maximum_raft_storage)
-    : timer(io_context->make_unique_steady_timer())
-    , uuid(std::move(uuid))
-    , node(std::move(node))
-    , state_dir(std::move(state_dir))
+        std::shared_ptr<bzn::asio::io_context_base> io_context,
+        std::shared_ptr<bzn::node_base> node,
+        const bzn::peers_list_t& peers,
+        bzn::uuid_t uuid,
+        const std::string state_dir, size_t maximum_raft_storage,
+        bool whitelist_enabled
+        )
+        :timer(io_context->make_unique_steady_timer())
+        ,uuid(std::move(uuid))
+        ,node(std::move(node))
+        ,state_dir(std::move(state_dir))
+        ,whitelist_enabled(whitelist_enabled)
 {
     // we must have a list of peers!
     if (peers.empty())
@@ -412,22 +415,27 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
 
 
 void
+raft::send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message)
+{
+    bzn::message response;
+    response["error"] = error_message;
+    session->send_message(std::make_shared<bzn::message>(response), true);
+}
+
+
+void
 raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
 {
     if (this->get_state() != bzn::raft_state::leader)
     {
-        bzn::message response;
-        response["error"] = ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, ERROR_ADD_PEER_MUST_BE_SENT_TO_LEADER);
         return;
     }
 
     bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
     if (last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
     {
-        bzn::message response;
-        response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, MSG_ERROR_CURRENT_QUORUM_IS_JOINT);
         return;
     }
 
@@ -437,19 +445,22 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
                                          {
                                              return p["uuid"].asString() == peer["uuid"].asString();
                                          });
+
     if (same_peer != last_quorum_entry.msg["msg"]["peers"].end())
     {
-        bzn::message response;
-        response["error"] = ERROR_PEER_ALREADY_EXISTS;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, ERROR_PEER_ALREADY_EXISTS);
         return;
     }
 
     if (!peer.isMember("uuid") || peer["uuid"].asString().empty())
     {
-        bzn::message response;
-        response["error"] = ERROR_INVALID_UUID;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, ERROR_INVALID_UUID);
+        return;
+    }
+
+    if(this->whitelist_enabled && !is_whitelist_member(uuid))
+    {
+        this->send_session_error_message(session, ERROR_PEER_NOT_WHITELISTED);
         return;
     }
 
@@ -465,18 +476,14 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
 {
     if (this->get_state() != bzn::raft_state::leader)
     {
-        bzn::message response;
-        response["error"] = ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, ERROR_REMOVE_PEER_MUST_BE_SENT_TO_LEADER);
         return;
     }
 
     bzn::log_entry last_quorum_entry = this->raft_log->last_quorum_entry();
     if (last_quorum_entry.entry_type == bzn::log_entry_type::joint_quorum)
     {
-        bzn::message response;
-        response["error"] = MSG_ERROR_CURRENT_QUORUM_IS_JOINT;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, MSG_ERROR_CURRENT_QUORUM_IS_JOINT);
         return;
     }
 
@@ -488,9 +495,7 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
             });
     if (same_peer == peers.end())
     {
-        bzn::message response;
-        response["error"] = ERROR_PEER_NOT_FOUND;
-        session->send_message(std::make_shared<bzn::message>(response), true);
+        this->send_session_error_message(session, ERROR_PEER_NOT_FOUND);
         return;
     }
 
@@ -517,9 +522,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
     {
         if (!msg.isMember("data") || !msg["data"].isMember("uuid") || msg["data"]["uuid"].asString().empty())
         {
-            bzn::message response;
-            response["error"] = ERROR_INVALID_UUID;
-            session->send_message(std::make_shared<bzn::message>(response), true);
+            this->send_session_error_message(session, ERROR_INVALID_UUID);
             return;
         }
 
@@ -661,6 +664,7 @@ raft::notify_leader_status()
     }
 }
 
+
 void
 raft::notify_commit(size_t log_index, const std::string& operation)
 {
@@ -684,6 +688,7 @@ raft::notify_commit(size_t log_index, const std::string& operation)
         this->node->send_message(ep, json_ptr);
     }
 }
+
 
 void
 raft::request_append_entries()

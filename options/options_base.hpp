@@ -154,7 +154,11 @@ namespace bzn
           * @return port
           */
          virtual uint16_t get_http_port() const = 0;
-
+         
+         /**
+          * Temporary toggle for the whitelist while in QA. Defaults to false.
+          * @return boolean
+          */
+         virtual bool whitelist_enabled() const = 0;
     };
-
 } // bzn

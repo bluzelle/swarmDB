@@ -39,6 +39,7 @@ namespace
     const std::string ERROR_INVALID_UUID = "ERROR_INVALID_UUID";
     const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
     const std::string ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING = "Unable to open log file for writing: ";
+    const std::string ERROR_PEER_NOT_WHITELISTED = "ERROR_PEER_NOT_WHITELISTED";
 }
 
 
@@ -48,8 +49,13 @@ namespace bzn
     class raft final : public bzn::raft_base, public bzn::status_provider_base, public std::enable_shared_from_this<raft>
     {
     public:
-        raft(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::node_base> node,
-             const bzn::peers_list_t& peers, bzn::uuid_t uuid, const std::string state_dir, size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
+        raft(std::shared_ptr<bzn::asio::io_context_base> io_context,
+                std::shared_ptr<bzn::node_base> node,
+                const bzn::peers_list_t& peers,
+                bzn::uuid_t uuid,
+                const std::string state_dir,
+                size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE,
+                bool whitelist_enabled = false);
 
         bzn::raft_state get_state() override;
 
@@ -150,6 +156,8 @@ namespace bzn
 
         void shutdown_on_exceeded_max_storage(bool do_throw = false);
 
+        void send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message);
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;
@@ -186,5 +194,7 @@ namespace bzn
         const std::string state_dir;
 
         bool enable_audit = true;
+
+        bool whitelist_enabled{false}; // TODO: RHN - this is only temporary, until whitelist is tested and in use.
     };
 } // bzn
