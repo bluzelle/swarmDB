@@ -350,7 +350,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
-    this->service->commit_operation(op);
+    this->service->apply_operation(op->request, op->sequence);
 
     if (this->audit_enabled)
     {
