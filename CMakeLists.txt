@@ -56,6 +56,8 @@ if(Boost_FOUND)
 endif()
 
 FIND_PACKAGE(CURL REQUIRED)
+FIND_PACKAGE(OpenSSL REQUIRED)
+
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
