@@ -39,7 +39,7 @@ matrix:
     - os: osx
       osx_image: xcode9.4
       env:
-        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install openssl && brew upgrade cmake"
+        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install openssl && brew upgrade cmake && ln -s /usr/local/opt/openssl/include/openssl /usr/local/include"
         - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake"
 
