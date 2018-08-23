@@ -135,6 +135,29 @@ bool verify_signature(const std::string& public_key, const std::string& signatur
     std::string decoded_signature = boost::beast::detail::base64_decode(signature);
 
 
+    std::cout << "\t***\tdecoded_signature size:" << decoded_signature.size() << std::endl;
+    // /Volumes/Development/Clients/Bluzelle/Cryptography
+
+    unsigned char buffer[1024]{0};
+    for(size_t i=0; i<decoded_signature.size(); ++i)
+    {
+        buffer[i] = decoded_signature[i];
+    }
+
+
+
+
+
+
+
+    FILE* f = fopen("/Volumes/Development/Clients/Bluzelle/Cryptography/test", "wb");
+
+    fwrite(buffer,512,1,f);
+    fclose(f);
+
+
+
+
 
 
 
