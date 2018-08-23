@@ -21,7 +21,7 @@ namespace {
     const std::string ROPSTEN_URL{"https://ropsten.infura.io"};
 }
 
-namespace bzn
+namespace bzn::utils::blacklist
 {
-    bool is_whitelist_member(const bzn::uuid_t& uuid, const std::string& url = ROPSTEN_URL);
+    bool is_blacklisted(const bzn::uuid_t& uuid, const std::string& url = ROPSTEN_URL);
 }

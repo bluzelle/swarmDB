@@ -12,6 +12,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <utils/blacklist.hpp>
+#include <utils/crypto.hpp>
 #include <utils/http_get.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <fstream>
@@ -101,6 +103,18 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
         {
             LOG(warning) << "Ignoring underspecified peer (needs host, port and http_port) " << peer;
             continue;
+        }
+
+        if (this->is_security_enabled())
+        {
+            // At this point we cannot validate uuids as we do not have
+            // signatures for all of them, so we simply ignore blacklisted
+            // uuids
+            if(bzn::utils::blacklist::is_blacklisted(uuid))
+            {
+                LOG(warning) << "Ignoring blacklisted node with uuid: [" << uuid << "]";
+                continue;
+            }
         }
 
         this->peer_addresses.emplace(host, port, http_port, name, uuid);

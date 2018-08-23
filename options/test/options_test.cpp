@@ -109,7 +109,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
-    EXPECT_FALSE(options.whitelist_enabled());
+    EXPECT_FALSE(options.security_enabled());
 
     // defaults..
     {
@@ -177,18 +177,18 @@ TEST_F(options_file_test, test_enable_whitlelist_temporary)
     bzn::message json;
     config_text_to_json(json);
     {
-        json["enable_whitelist"] = false;
+        json["security_enabled"] = false;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
-        EXPECT_FALSE(options.whitelist_enabled());
+        EXPECT_FALSE(options.security_enabled());
     }
     {
-        json["enable_whitelist"] = true;
+        json["security_enabled"] = true;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
-        EXPECT_TRUE(options.whitelist_enabled());
+        EXPECT_TRUE(options.security_enabled());
     }
 }
 
@@ -211,5 +211,5 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
-    EXPECT_FALSE(options.whitelist_enabled());
+    EXPECT_FALSE(options.security_enabled());
 }

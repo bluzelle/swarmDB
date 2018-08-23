@@ -21,8 +21,7 @@
 #include <fstream>
 
 
-namespace bzn
-{
+namespace bzn {
 
     const std::string MSG_ERROR_EMPTY_LOG_ENTRY_FILE{"Empty log entry file. Please delete .state folder."};
     const std::string MSG_NO_PEERS_IN_LOG{"Unable to find peers in log entries."};
@@ -30,14 +29,12 @@ namespace bzn
     const std::string MSG_UNABLE_TO_CREATE_LOG_PATH_NAMED{"Unable to create log path: "};
     const std::string MSG_EXITING_DUE_TO_LOG_PATH_CREATION_FAILURE{"MSG_EXITING_DUE_TO_LOG_PATH_CREATION_FAILURE"};
     const std::string MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED{"Maximum storage has been exceeded, please update the options file."};
+    const size_t DEFAULT_MAX_STORAGE_SIZE{2147483648}; // The default maximum allowed storage for a node is 2G
 
     class raft_log
     {
     public:
-        // The default maximum allowed storage for a node is 2G
-        static const size_t DEFAULT_MAX_STORAGE_SIZE        = 2147483648;
-
-        raft_log(const std::string& log_path, const size_t max_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE);
+        raft_log(const std::string& log_path, const size_t max_storage = bzn::DEFAULT_MAX_STORAGE_SIZE);
 
         const bzn::log_entry& entry_at(size_t i) const;
         const bzn::log_entry& last_quorum_entry() const;

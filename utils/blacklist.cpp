@@ -30,9 +30,10 @@ namespace
 }
 
 
-namespace bzn
+namespace bzn::utils::blacklist
 {
-    bool is_whitelist_member(const bzn::uuid_t& raw_uuid, const std::string& url)
+    bool
+    is_blacklisted(const bzn::uuid_t& raw_uuid, const std::string& url)
     {
         // We get the uuid in the following format:
         //      "9dc2f619-2e77-49f7-9b20-5b55fd87ea44",

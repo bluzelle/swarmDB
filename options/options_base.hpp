@@ -157,8 +157,8 @@ namespace bzn
          
          /**
           * Temporary toggle for the whitelist while in QA. Defaults to false.
-          * @return boolean
+          * @return boolean if the security_enabled object is set to true. Default is false.
           */
-         virtual bool whitelist_enabled() const = 0;
+         virtual bool security_enabled() const = 0;
     };
 } // bzn

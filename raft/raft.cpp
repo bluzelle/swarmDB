@@ -19,7 +19,8 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <proto/bluzelle.pb.h>
-#include <utils/is_whitelist_member.hpp>
+#include <utils/crypto.hpp>
+#include <utils/blacklist.hpp>
 
 namespace
 {
@@ -45,13 +46,13 @@ raft::raft(
         const bzn::peers_list_t& peers,
         bzn::uuid_t uuid,
         const std::string state_dir, size_t maximum_raft_storage,
-        bool whitelist_enabled
+        bool security_enabled
         )
         :timer(io_context->make_unique_steady_timer())
         ,uuid(std::move(uuid))
         ,node(std::move(node))
         ,state_dir(std::move(state_dir))
-        ,whitelist_enabled(whitelist_enabled)
+        ,security_enabled(security_enabled)
 {
     // we must have a list of peers!
     if (peers.empty())
@@ -423,6 +424,33 @@ raft::send_session_error_message(std::shared_ptr<bzn::session_base> session, con
 }
 
 
+bool
+raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
+{
+    // uuid's are signed as text files, so we must append the end of line character
+    const auto uuid{peer["uuid"].asString() + "\x0a"};
+    if (!peer.isMember("signature")  || peer["signature"].asString().empty())
+    {
+        this->send_session_error_message(session, ERROR_INVALID_SIGNATURE);
+        return false;
+    }
+
+    const auto signature{peer["signature"].asString()};
+    if(!bzn::utils::crypto::verify_signature(bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract(), signature, uuid))
+    {
+        this->send_session_error_message(session, ERROR_UNABLE_TO_VALIDATE_UUID);
+        return false;
+    }
+
+    if (utils::blacklist::is_blacklisted(this->get_uuid()))
+    {
+        this->send_session_error_message(session, ERROR_PEER_HAS_BEEN_BLACKLISTED);
+        return false;
+    }
+    return true;
+}
+
+
 void
 raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
 {
@@ -458,15 +486,24 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
         return;
     }
 
-    if(this->whitelist_enabled && !is_whitelist_member(uuid))
+    if (this->security_enabled && !this->validate_new_peer(session, peer))
     {
-        this->send_session_error_message(session, ERROR_PEER_NOT_WHITELISTED);
+        // Note: failure messages sent from within validate_new_peer
         return;
     }
 
     this->peer_match_index[peer["uuid"].asString()] = 1;
     this->append_log_unsafe(this->create_joint_quorum_by_adding_peer(last_quorum_entry.msg, peer),
                             bzn::log_entry_type::joint_quorum);
+
+    // The add peer has succeded, let's send a message back to the requester
+    bzn::message msg;
+    msg["bzn-api"] = "raft";
+    msg["cmd"] = "add_peer";
+    msg["response"] = bzn::message();
+    msg["response"]["from"] = this->get_uuid();
+    msg["response"]["msg"] = SUCCESS_PEER_ADDED_TO_SWARM;
+    session->send_message(std::make_shared<bzn::message>(msg), true);
     return;
 }
 

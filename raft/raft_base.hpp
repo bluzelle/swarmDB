@@ -138,6 +138,16 @@ namespace bzn
          */
         virtual void register_commit_handler(bzn::raft_base::commit_handler handler) = 0;
 
+
+        /**
+         * Returns the state of the security enabled flag. True if a peer added to the swarm via
+         * the add_peer ws command will be validated against the Bluzelle Private Key and node
+         * blacklist.
+         *
+         * @return boolean, state of security validation
+         */
+        virtual bool get_security_enabled() = 0;
+
     };
 
 

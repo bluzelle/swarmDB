@@ -24,6 +24,8 @@ namespace bzn
     class bootstrap_peers final : public bzn::bootstrap_peers_base
     {
     public:
+        explicit bootstrap_peers(bool security_enabled=false) : security_enabled(security_enabled) {}
+
         bool fetch_peers_from_file(const std::string& filename) override;
 
         bool fetch_peers_from_url(const std::string& url) override;
@@ -36,6 +38,10 @@ namespace bzn
         bzn::peers_list_t peer_addresses;
 
         size_t initialize_peer_list(const Json::Value& root, bzn::peers_list_t& peer_addresses);
+
+        bool is_security_enabled() { return this->security_enabled; }
+
+        bool security_enabled{false};
     };
 
 } // namespace bzn

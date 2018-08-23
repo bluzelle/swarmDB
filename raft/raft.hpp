@@ -39,7 +39,10 @@ namespace
     const std::string ERROR_INVALID_UUID = "ERROR_INVALID_UUID";
     const std::string ERROR_PEER_NOT_FOUND = "ERROR_PEER_NOT_FOUND";
     const std::string ERROR_UNABLE_TO_CREATE_LOG_FILE_FOR_WRITING = "Unable to open log file for writing: ";
-    const std::string ERROR_PEER_NOT_WHITELISTED = "ERROR_PEER_NOT_WHITELISTED";
+    const std::string ERROR_PEER_HAS_BEEN_BLACKLISTED = "ERROR_PEER_HAS_BEEN_BLACKLISTED";
+    const std::string ERROR_INVALID_SIGNATURE = "ERROR_INVALID_SIGNATURE";
+    const std::string ERROR_UNABLE_TO_VALIDATE_UUID ="ERROR_UNABLE_TO_VALIDATE_UUID";
+    const std::string SUCCESS_PEER_ADDED_TO_SWARM = "SUCCESS_PEER_ADDED_TO_SWARM";
 }
 
 
@@ -54,8 +57,8 @@ namespace bzn
                 const bzn::peers_list_t& peers,
                 bzn::uuid_t uuid,
                 const std::string state_dir,
-                size_t maximum_raft_storage = bzn::raft_log::DEFAULT_MAX_STORAGE_SIZE,
-                bool whitelist_enabled = false);
+                size_t maximum_raft_storage = bzn::DEFAULT_MAX_STORAGE_SIZE,
+                bool security_enabled = false);
 
         bzn::raft_state get_state() override;
 
@@ -74,6 +77,8 @@ namespace bzn
         std::string get_name() override;
 
         bzn::message get_status() override;
+
+        bool get_security_enabled() override { return this->security_enabled; };
 
     private:
         friend class raft_log_base;
@@ -103,6 +108,7 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed);
         FRIEND_TEST(raft_test, test_that_bad_add_or_remove_peer_requests_fail);
         FRIEND_TEST(raft_test, test_that_a_four_node_swarm_cannot_reach_consensus_with_two_nodes);
+        FRIEND_TEST(raft_test, test_that_add_node_works_securely);
 
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
@@ -158,6 +164,8 @@ namespace bzn
 
         void send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message);
 
+        bool validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer);
+
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
         uint32_t        current_term = 0;
@@ -195,6 +203,6 @@ namespace bzn
 
         bool enable_audit = true;
 
-        bool whitelist_enabled{false}; // TODO: RHN - this is only temporary, until whitelist is tested and in use.
+        bool security_enabled{false}; // TODO: RHN - this is only temporary, until the security functionality is tested and in use.
     };
 } // bzn
