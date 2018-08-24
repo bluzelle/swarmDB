@@ -37,6 +37,8 @@
 #include <raft/raft.hpp>
 #include <chaos/chaos.hpp>
 #include <options/simple_options.hpp>
+#include <crypto/crypto_base.hpp>
+#include <crypto/crypto.hpp>
 
 
 void
@@ -219,9 +221,10 @@ main(int argc, const char* argv[])
             });
 
         // startup...
+        auto crypto = std::make_shared<bzn::crypto>(options);
         auto chaos = std::make_shared<bzn::chaos>(io_context, options);
         auto websocket = std::make_shared<bzn::beast::websocket>();
-        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, options->get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options->get_listener()});
+        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, options->get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size(), options->pbft_enabled());
         std::shared_ptr<bzn::status> status;
 

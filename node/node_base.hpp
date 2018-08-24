@@ -56,7 +56,7 @@ namespace bzn
         virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) = 0;
 
         /**
-         * Convenience method to connect and send a message to a node
+         * Convenience method to connect and send a message to a node. Will set sender and signature fields as appropriate.
          * @param ep            host to send the message to
          * @param msg           message to send
          */

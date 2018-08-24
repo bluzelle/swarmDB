@@ -148,7 +148,14 @@ simple_options::build_options()
                         "public key of this node")
                 (NODE_PRIVATEKEY_FILE.c_str(),
                         po::value<std::string>()->default_value(".state/private-key.pem"),
-                        "private key of this node");
+                        "private key of this node")
+                (CRYPTO_ENABLED_INCOMING.c_str(),
+                        po::value<bool>()->default_value(false),
+                        "check signatures on incoming messages")
+                (CRYPTO_ENABLED_OUTGOING.c_str(),
+                         po::value<bool>()->default_value(true),
+                        "attach signatures on outgoing messages");
+
 
     this->options_root.add(crypto);
 

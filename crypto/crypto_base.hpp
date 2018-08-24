@@ -12,34 +12,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-syntax = "proto3";
+#pragma once
 
-import "database.proto";
-import "audit.proto";
-import "pbft.proto";
+#include <proto/bluzelle.pb.h>
 
-message bzn_msg
+namespace bzn
 {
-    oneof msg {
-        database_msg db = 10;
-        string json = 11;
-        audit_message audit_message = 12;
-        pbft_msg pbft = 13;
-    }
+    class crypto_base
+    {
+    public:
+        /*
+         * sign a message using our key
+         * @msg message to sign
+         * @return if signature was successful
+         */
+        virtual bool sign(wrapped_bzn_msg& msg) = 0;
+
+        /*
+         * verify that the signature on a message is correct and matches its sender
+         * @msg message to verify
+         * @return signature is present, valid and matches sender
+         */
+        virtual bool verify(const wrapped_bzn_msg& msg) = 0;
+
+        virtual ~crypto_base() = default;
+    };
 }
 
-enum bzn_msg_type
-{
-    BZN_MSG_UNDEFINED = 0;
-    BZN_MSG_PBFT = 1;
-}
 
-message wrapped_bzn_msg
-{
-    // This is stored as a serialized string because we need to sign it, and serialization is not guarenteed to be deterministic
-    bytes payload = 1;
-    bzn_msg_type type = 2;
-
-    string sender = 3;
-    bytes signature = 4;
-}

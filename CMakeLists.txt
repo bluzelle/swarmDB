@@ -100,5 +100,6 @@ add_subdirectory(utils)
 add_subdirectory(audit)
 add_subdirectory(pbft)
 add_subdirectory(chaos)
+add_subdirectory(crypto)
 
 include(cmake/static_analysis.cmake)
