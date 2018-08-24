@@ -54,4 +54,14 @@ namespace bzn::utils::crypto
      * failed before finishing due to some error.
      */
     bool verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid);
+
+    /**
+     * Read the contents of a .pem file, returning the payload as a base64 string.
+     * Any headers are ignored.
+     *
+     * @param filename path of pem file to read
+     * @param expected_type what the file is supposed to contain, such as "PRIVATE KEY".
+     * @throws runtime_error if the file does not indicate that it contains expected_type
+     */
+    std::string read_pem_file(std::string filename, std::string expected_type);
 }
