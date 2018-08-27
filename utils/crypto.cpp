@@ -23,213 +23,132 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <fstream>
 
+namespace {
 
-std::string base_64_decode(const std::string& in_text)
-{
-    std::string cleaned_in_text{""};
-    std::copy_if(in_text.begin(), in_text.end(), std::back_inserter(cleaned_in_text), [](auto c) { return c != '\n'; });
-    return boost::beast::detail::base64_decode(cleaned_in_text);
-}
-
-
-
-
-RSA* create_public_RSA(const std::string& key)
-{
-    RSA *rsa = NULL;
-    BIO *keybio;
-    const char* c_string = key.c_str();
-    keybio = BIO_new_mem_buf((void*)c_string, -1);
-    if (keybio==NULL) {
-        return 0;
-    }
-    rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa, NULL, NULL);
-
-
-    return rsa;
-}
-
-
-bool RSA_verify_signature( RSA* rsa,
-                         unsigned char* MsgHash,
-                         size_t MsgHashLen,
-                         const char* Msg,
-                         size_t MsgLen,
-                         bool* Authentic) {
-    *Authentic = false;
-    EVP_PKEY* pubKey  = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(pubKey, rsa);
-    EVP_MD_CTX* m_RSAVerifyCtx = EVP_MD_CTX_create();
-
-    if (EVP_DigestVerifyInit(m_RSAVerifyCtx,NULL, EVP_sha256(),NULL,pubKey)<=0) {
-        return false;
-    }
-    if (EVP_DigestVerifyUpdate(m_RSAVerifyCtx, Msg, MsgLen) <= 0) {
-        return false;
-    }
-    int AuthStatus = EVP_DigestVerifyFinal(m_RSAVerifyCtx, MsgHash, MsgHashLen);
-    if (AuthStatus==1) {
-        *Authentic = true;
-        EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-        return true;
-    } else if(AuthStatus==0){
-
-
-
-
-        std::cout << "  ** error: [" << ERR_get_error() << "] " << std::endl;
-
-
-        *Authentic = false;
-        EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-        return true;
-    } else{
-        *Authentic = false;
-        EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-        return false;
-    }
-}
-
-
-
-int spc_verify(unsigned char* msg,
-        unsigned int mlen,
-        unsigned char* sig,
-        unsigned int siglen,
-        RSA* r
-        )
-{
-    unsigned char  hash[20];
-    BN_CTX* c{0};
-    int ret;
-
-    if (!(BN_CTX_new()))
-        return 0;
-    if(SHA1(msg, mlen, hash) || !RSA_blinding_on(r, c))
+    /*!
+     * This function is used by base_64_decode to determine the amount of memory required
+     * for the decoded string.
+     * @param base_64_input
+     * @return a size_t containing the number of bytes expected in the decoded string.
+    */
+    size_t calculate_decode_length(const char* base_64_input)
     {
-        BN_CTX_free(c);
-        return 0;
+        const auto len{strlen(base_64_input)};
+        auto padding = (base_64_input[len - 1] == '=' && base_64_input[len - 2] == '=') ? 2 : 1;
+        return (len * 3) / 4 - padding;
     }
 
-    ret = RSA_verify(NID_sha1, hash, 20, sig, siglen, r);
-    RSA_blinding_off(r);
-    BN_CTX_free(c);
-    return ret;
+    RSA* create_public_RSA(const std::string& key)
+    {
+        RSA *rsa{NULL};
+        BIO *keybio;
+        const char* c_string = key.c_str();
+        keybio = BIO_new_mem_buf((void*)c_string, -1);
+        if (keybio==NULL) {
+            return 0;
+        }
+        rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa, NULL, NULL);
+        return rsa;
+    }
+};
 
-}
 
-
-//verify(signature(UUID), BLZ public key)
-// convert base64 encoded signature  to bin
-//      openssl base64 -d -in signature.txt -out /tmp/sign.sha256
-// verify the uuid
-//      openssl dgst -sha256 -verify public.pem -signature /tmp/sign.sha256 uuid.txt
-bool verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid)
+namespace bzn::utils::crypto
 {
-    RSA* public_rsa = create_public_RSA(public_key);
-    if(NULL==public_rsa)
+    int base_64_decode(const char *base64_message, unsigned char **buffer, size_t *length)
     {
-        throw std::runtime_error("Unable to create RSA object from public key");
+        BIO *bio;
+        BIO *b64;
+        const auto decodeLen = calculate_decode_length(base64_message);
+        *buffer = (unsigned char*)malloc(decodeLen + 1);
+        (*buffer)[decodeLen] = '\0';
+
+        bio = BIO_new_mem_buf(base64_message, -1);
+        b64 = BIO_new(BIO_f_base64());
+        bio = BIO_push(b64, bio);
+
+        BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Do not use newlines to flush buffer
+        *length = BIO_read(bio, *buffer, strlen(base64_message));
+
+        assert(*length == decodeLen); //length should equal decodeLen, else something went horribly wrong
+        if(*length != decodeLen)
+            throw std::runtime_error("Unable to decode base64 encoded string.");
+
+        BIO_free_all(bio);
+
+        return (0); //success
     }
-    //std::string decoded_signature = base_64_decode(signature);
-    std::string decoded_signature = boost::beast::detail::base64_decode(signature);
 
 
-    std::cout << "\t***\tdecoded_signature size:" << decoded_signature.size() << std::endl;
-    // /Volumes/Development/Clients/Bluzelle/Cryptography
 
-    unsigned char buffer[1024]{0};
-    for(size_t i=0; i<decoded_signature.size(); ++i)
+    bool RSA_verify_signature( const RSA* rsa,
+                               const unsigned char* msg_hash,
+                               size_t msg_hash_length,
+                               const char* message,
+                               size_t message_length,
+                               bool* is_authentic)
     {
-        buffer[i] = decoded_signature[i];
+        *is_authentic = false;
+        EVP_PKEY* public_key  = EVP_PKEY_new();
+        EVP_PKEY_assign_RSA(public_key, rsa);
+        EVP_MD_CTX* m_RSAVerifyCtx = EVP_MD_CTX_create();
+
+        const EVP_MD* md = EVP_sha256();//   EVP_get_digestbyname( "SHA256" ); // EVP_sha256()
+        EVP_DigestInit_ex( m_RSAVerifyCtx, md, NULL );
+
+        if (EVP_DigestVerifyInit(m_RSAVerifyCtx,NULL, md, NULL,public_key)<=0) {
+            return false;
+        }
+        if (EVP_DigestVerifyUpdate(m_RSAVerifyCtx, message, message_length) <= 0) {
+            return false;
+        }
+        int AuthStatus = EVP_DigestVerifyFinal(m_RSAVerifyCtx, msg_hash, msg_hash_length);
+        if (AuthStatus==1) {
+            *is_authentic = true;
+            EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
+            return true;
+        } else if(AuthStatus==0){
+            unsigned long err_number = ERR_get_error();
+            char buffer[1024]{0};
+            ERR_error_string_n(err_number, buffer, 1024);
+            *is_authentic = false;
+            EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
+            return true;
+        } else{
+            *is_authentic = false;
+            EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
+            return false;
+        }
     }
 
 
-
-
-
-
-
-    FILE* f = fopen("/Volumes/Development/Clients/Bluzelle/Cryptography/test", "wb");
-
-    fwrite(buffer,512,1,f);
-    fclose(f);
-
-
-
-
-
-
-
-    bool authentic{false};
-
-    bool ret_val = RSA_verify_signature( public_rsa,
-            (unsigned char*)decoded_signature.c_str(),
-            decoded_signature.size(),
-            (char*)uuid.c_str(),
-            uuid.size(),
-            &authentic);
-
-    //bool ret_val = spc_verify((unsigned char*)uuid.c_str(), uuid.size(), (unsigned char*)signature.c_str(), signature.size(), public_rsa);
-
-//
-//
-//    bool result = RSA_verify_signature(public_key, encoded_signature, encoded_signature.size(), )
-
+    //verify(signature(UUID), BLZ public key)
     // convert base64 encoded signature  to bin
     //      openssl base64 -d -in signature.txt -out /tmp/sign.sha256
     // verify the uuid
     //      openssl dgst -sha256 -verify public.pem -signature /tmp/sign.sha256 uuid.txt
-
-
-    //std::cout << "ret_val: " << ret_val << "\npublic_rsa:" << public_rsa << "\n and \n" << public_key << " and " << signature << " and " << uuid << std::endl;
-    return ret_val & authentic;
-}
-
-
-
-
-
-
-
-/*
-RSA* create_private_RSA(const std::string& key)
-{
-    RSA* rsa{NULL};
-    const char* c_string = key.c_str();
-    BIO* keybio = BIO_new_mem_buf((void*) c_string, -1);
-    if (keybio==NULL)
+    bool verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid)
     {
-        return 0;
+        RSA* public_rsa = create_public_RSA(public_key);
+        if(NULL==public_rsa)
+        {
+            throw std::runtime_error("Unable to create RSA object from public key");
+        }
+
+        size_t length = 0;
+        unsigned char* base64DecodeOutput{0};
+        base_64_decode(signature.c_str(), &base64DecodeOutput, &length);
+
+        bool authentic{false};
+
+        bool ret_val = RSA_verify_signature( public_rsa,
+                                             base64DecodeOutput,
+                                             length,
+                                             (char*)uuid.c_str(),
+                                             uuid.size(),
+                                             &authentic);
+        return ret_val & authentic;
     }
-    rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
-    return rsa;
+
 }
 
-
-bool RSASign( RSA* rsa,
-              const unsigned char* Msg,
-              size_t MsgLen,
-              unsigned char** EncMsg,
-              size_t* MsgLenEnc)
-{
-    EVP_MD_CTX* m_RSASignCtx = EVP_MD_CTX_create();
-    EVP_PKEY* priKey  = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(priKey, rsa);
-    if (EVP_DigestSignInit(m_RSASignCtx,NULL, EVP_sha256(), NULL,priKey)<=0) {
-        return false;
-    }
-    if (EVP_DigestSignUpdate(m_RSASignCtx, Msg, MsgLen) <= 0) {
-        return false;
-    }
-    if (EVP_DigestSignFinal(m_RSASignCtx, NULL, MsgLenEnc) <=0) {
-        return false;
-    }
-    *EncMsg = (unsigned char*)malloc(*MsgLenEnc);
-    if (EVP_DigestSignFinal(m_RSASignCtx, *EncMsg, MsgLenEnc) <= 0) {
-        return false;
-    }
-    EVP_MD_CTX_cleanup(m_RSASignCtx);
-    return true;
-}
- */

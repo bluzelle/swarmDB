@@ -52,6 +52,8 @@ find_package(
 
 if(Boost_FOUND)
     message(STATUS "Boost: ${Boost_INCLUDE_DIRS}")
+
+    message(STATUS "***boost root ${BOOST_ROOT}")
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 

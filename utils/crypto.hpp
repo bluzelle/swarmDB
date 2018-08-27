@@ -16,4 +16,7 @@
 
 #include <string>
 
-bool verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid);
+namespace bzn::utils::crypto
+{
+    bool verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid);
+}

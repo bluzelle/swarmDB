@@ -16,6 +16,7 @@
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <boost/beast/core/detail/base64.hpp>
 #include "../is_whitelist_member.hpp"
 #include "../crypto.hpp"
 
@@ -138,93 +139,92 @@ namespace
     const std::string password {"6Y4qTvHbQcyNccKW"};
 
     const std::string private_pem{
-            "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\n"
-            "DEK-Info: AES-128-CBC,85B7C2BF5A331057198359FFC062CA9D\n"
-            "\n"
-            "b/05ogEkNDTDm9KI0mIHu1gqHh0Mh9FXDxMq5nNcrgq0/fM7Fm95qA5Dxsn0Zckd\n"
-            "QuCHFOtd5GuJi0y4em5AoXMYLX85AQDbPV9gct93Cph+bhEZHMknIDbciKEXmSpe\n"
-            "NE6zffCfb1L0NmFgZMomv6jMOB1c2QnwcIcte1S5w+r0Wr+tmxQkfWJwmCY3Cebg\n"
-            "byTI/PuHXD6bZYQmdunCw4h1+R2c63yEfnW2tvSau29B5965fxHB1nLGolHBNN/w\n"
-            "82tCWZre/e9UTGURftSlSDsI1wXD3uJB7qFJM/zwZ9UJ1X8CnyC+UNkFgbpvnktk\n"
-            "xZKARY/D2b1/X6vmgL8pAYQDHW+wK4i9xG2p9HDzKRqJOQvEvO3DNxpGqgpuWIV4\n"
-            "ri2NSeWnAxB8jgUl7wSML9EwjfNcK+Xf45aFn2vIhzhUzIF80a7AO6u/yrNGZZ8Z\n"
-            "nH0ICr3P/7a9WSoH0mvM1flMPMwh92Bz9e6xdNYZ7dsSjCC9JHy4PRRJJlWvukbb\n"
-            "7MDSOur6Jkxl0LlM2G9hKM/Zy6QD6Kq/zFAiwzO8Ql0Zd0yZDKiTermcF21ic/oV\n"
-            "A5ULnekYL4NaBFIiq/QmzC8rVdhjvyYFGZzOnFRSYCzfE0BQVrhgb3kQqaaU+/xR\n"
-            "aSxMCUMMSY6qKjTrkRP+5TCnFFo7LVrVo24gPKfqn9Ts6QvcPbEhoq/hOd4z/iy0\n"
-            "Byl++WI8ZEXoxI+4J7INY9VA0iLRcTo7ZwKAUPiH/rjWA2VVNKWc8xPVa/dUrHpO\n"
-            "miU/5QYBpQJLWZVoO/cO1HpeVFMkdTr8rHMM7WlnQmmszZoIME1WFmqLyWecQukw\n"
-            "vx7RtiTcA8Nk4HpgCfWebaHevPsiSKk+NV2l3Ja65765u943r8ZmqwqliPZUDAEL\n"
-            "/se5ohP1L7V1IvS8iSGPkTqWzCFzvjA/sI8m2CNWiWYMOY05IATH/293gzx8SvLf\n"
-            "gqgDEkAXIAyI2MxTQobfHhV9K8oGP47oPmluW4wHNty9vBGcaWdvIBqYdVIgSGMN\n"
-            "uR5OkunuSTY1IccCulfOO4GKtmm1FJxn36Tg0MwB4bxm2zjz0D/d4WP2xh7kz+6C\n"
-            "ayOgLa4fdiuFjdqtYq2he8v6JPkA1DGLqKzGaYd/n1yQ0ee0g3EDbxhrcsq26ilX\n"
-            "zMM4CMRwDAimllJH/rX5p4lsb0XMA2eUvOLVW0Kt3TEpboaleAXvgrhB6zEfpIcw\n"
-            "c0al74e/p5gogKz/9gs7QpWMuvU3+wGgqkAMZohFTEvnwz2BPVxgSMsdRnlqoAxs\n"
-            "1h5+cmrvPI3DCof+Sdqg9F6VzGcUH86HnoEEHN9dQk956i6seqjqguHEDHX+IXK3\n"
-            "uQO0wt76Di/flT/eI/cX2TQ7Ut/5S0HZHD8xU58FeT7VEl99IuejlfG5dFMmsi3Z\n"
-            "Kf0OdfWMRDiwWPPEfuvX6wpwP8lE4LdpTcjRN1Z+JjdhgBC1OsUyWMx8h85l+nzu\n"
-            "88GabwE0+HMxM8kp7yQXQlwJP6MxaxWoEptOL5GkC2YYpLQvLYZGTvlfV0ARNh1L\n"
-            "Mqkhbc/TXfe0ai5cH2C1+RUceUvQtUz5a2PFah9kLbmfhmVIstA+Dg2rBAf4xVLE\n"
-            "LUMfres8rngIcxXW6hFMIdYKsawTo+Y1c9ro/gV99DWQdXHzO+6Ihc981Yk2fR2B\n"
-            "Gr5wezbkPvjzQRByWw0WMGJ6lfz57vLbdABqbRce/E64zITuEXaEHtLBHlAAb2UM\n"
-            "5bWLxoqBGntGZgiK0BfvDft6bimaA1EPEsLR15OMjn6OdMmx8gBSUlggXpQHwrty\n"
-            "3d8h/gOlh2i12mFQCrujgo6eLIZkACe8it1PTSEbkT1Qe2QH9Iw4Pgc+IodNQ9Ca\n"
-            "de13bC0AhXsCTJ348CzglbW5/zzCzBpL/ghXfUoYFoddTvkxKVDoSTaTeB8DIJ+g\n"
-            "M0qOb+fUJMioqxC1ptofsip+maIQN4LUDdrPLAoFeT6ENqP65UvV3nWro8X7/D9P\n"
-            "Ik9gC0adgbQoS47MaH6jNqBpL+xxq7TnZxkrd+Rrqexd8KW0GGVAVzRaByJ/GEAo\n"
-            "/5ehFJYrx2fefLzbykBOWc+wclOri8EdC1hALVg++Rz9UFx5V9xoEd7zX4KSl6WQ\n"
-            "19XEnJEmxmOSLRQ4CcNBByUTOxmlGN+rcnVJGTDaiA+Ybrfme5n00FPte5zA1jZ4\n"
-            "A06i9+vpCJS71qNKtj2zGmMLkoXYM2BxHKvKsvmIcET2F4oBuq8Oqe93FQOsz4HC\n"
-            "lr9+kHWhWmcKnZV63CXg63soX1nRQhxPZa8HoCa7ptK9nCE2n2xbMKbCvOwBMyIL\n"
-            "PoiPrxJmWxXHJ8IfFCUVaVMpKMagtKcSatD9ZYE9aAxM9389CUZGM6B0gXS80dRg\n"
-            "9QWiZf5ub+fJC7diELIb4vjHAyZ/K+b5VAJO8dp5MhAmXkV3vePZgzHmaK38gTJp\n"
-            "KfOetBMmvlqFfnTe2oz0VM15qtu/pnwIG1jwFEsU5I17ByAUFm3GjcQ1Moa7iTWN\n"
-            "06aAJtr3y15CHI3/GkvPSfvKEYG41+hkzUQoSacOiX7Gj2e6qIQbx/Bfs5Pqo90J\n"
-            "/BSjA6y/kAFXDiAuKJhMjNUzQNx9Z408tfjUUiAoRs5/VVWqDho4oKrcw5Tpr6Nu\n"
-            "8zow305aVHS5SD3YtRCPdMku+5V1cSR7+4KxXfJ6L76xR2GgJ7eZ4ncZqqAM3avT\n"
-            "JrYGROLRDQFbUDqBkvIqyHRGqSXcpP+DSYpb5TOsIOaXYMdBjVWZOeHv8dYJIa8n\n"
-            "BwrhGNgmRi25ftiHIOAOH9l74awKdhZfw1QTbii7D1lNlfkimsPpHNREvyPU21DA\n"
-            "1wI3imCKEQFfBMxnHll+Ro91BcOHp9/7JhJzeDgolrSOeCu2BIuCytkjzWQC2sXE\n"
-            "QXqiOosfyK9FQqK1+Pp2viNZI+s/UsZ3VBZxW+/qYihbQlXfrgeLsHEAo5tORcwC\n"
-            "loPKCF766nk/s5pBaOc0cSO25+HLTZdGte00FekP6rjH9ZyAqPypLI14W3asMAAI\n"
-            "TIdIAkX6N6O3UYhVejScZ7/Q7A1eDaXI1sAjrfFHxfpjnd34seJIQhTEAPK2CT0w\n"
-            "hKrrboOl/DywQ7Dv0GFNqu76TDh8Re1RnnT7a4o7jgQhgCqthfu2jb67HX8FsfNT\n"
+            "-----BEGIN RSA PRIVATE KEY-----\n"
+            "MIIJKAIBAAKCAgEAxn6CRuwvYtYYNkINx6p5mqcNJBC9e9dNoeMZf6GVQk0GpPs6\n"
+            "8DV9o/qfRMrzjR5Iqedr/gH9MkHJxJu442tyfiJHWnk5EnIqAF0V7JScnfiZgfKS\n"
+            "N3AJp9nWmhuGTraM7WcKEgZzqiKHQra8V8hC4R1D3sq/VS4+7PLD9EQWkJX8Oxmp\n"
+            "TqCmef9n3+gEJ2iGc+nHpW5hfNKwTPAVAZEe+m5+y++/3mTlj1pH0KT/SoM8bqo8\n"
+            "S53G0+KZXSRFlZFoYBX41cJik+dkslYjGoqRrLF4J4I8grIAYpGCOYirRDne4YzL\n"
+            "ml+xPIDCSmRhkwNviKhqtsH/7hNyCoFcj1hqNOQznw6B46u+81xvZW+xxqPx+HN4\n"
+            "ts2mHi9LualrHZCo9gwNZ48rQxtepVYLXwOeWroX5VfwUaLaHUl5u2I/Q/x0glGE\n"
+            "KhMKwXAYK1l1ePg596ghXrn96wg78L7GxjpC2FfgfyRDYnhWZaYEXukbY0kgpJbk\n"
+            "tPyZ01WYGXQRIRyAoUkhTx6Sxrc6z4SyrGsdwL4s/Hv3+mNnkGDI+huBfvXzU5n2\n"
+            "IFV17FQe1T2yR1sirJ/KxY6WmGQejADKViRNQsWIGT/R0j5eZi6/b0Hh6fgCBofm\n"
+            "lH+PNXZNUkubiUrLDSIbnZiuBQDnO6V2s6z5PlwJm/YP/TCoV3tOTTogU40CAwEA\n"
+            "AQKCAgEAhGUjfizRWopU8fPS/ye9HqNoB3NG/9BXDrDMdC4RwXxg/zA3WrtDB1oG\n"
+            "W7tHAgx+CR28EVvAR4JME2COzNoBLxKsJzOOFrihPUbZdciWQmPr+BoU3vdS6WtK\n"
+            "UdYkGmJ2026T7/vvsD6Bm8UJEUAZI9ACUhtHzYggHqm6fDXiGyR/begq3rAW+m6a\n"
+            "GWXHR4XXkH8RVE2wprJdN6Q3Tqk+UWncFyjeAHeqCpj8J7W2Njwc1e+kcgdV9ERD\n"
+            "aTXlV+L6DIT7SZDzcZW4u57qoSxmCBsDes7Kj54s1ZIam0eGfOZgvG7N6zUCocl8\n"
+            "TmRwFMAI58z2CNqTW3gK6+jnFRGzHFFOcuHprO9CyjLdGHxmxNI0BapUH2RzDT3/\n"
+            "xUTYR8HJiOJleEKuUlvG/Fw5PkRfkdqb4zpZA6a38IV+nKhAU7XakAV8WJjgGAU9\n"
+            "eyfQtJcEtCxycvkJKqueihIPvvdodK71JW4rS8623xLgO1qAczix+df3aMEq9sMA\n"
+            "MLqXp2mTud8+FYN/RmwFdn83Soyry+n+YFyBonHjAlCPAZyFZBhOHuV8vqSPwgTM\n"
+            "cPMg7zWdjdYSZOt75ZVNxDS3+pd68qWJDrxOJ2JQGJr/EBgyxMEErYUkwqd/O8th\n"
+            "IJruCUJgSTVaNJpuuRLosvNtClDQJ4TWgdxXfDSmHlMOi+7oloECggEBAOttLplI\n"
+            "eCRzkFrKpUCPoN2WLCr2JtioE3Oo/DzyLS3pwXd6XrWnFTN65zGOakhx7n/NaYE4\n"
+            "Mm/H9/ZjPmX7Y4cuHWcZi4mSt90pDSAKYhX++w9fsTtozTFw1hL2u9JITJmXnBEb\n"
+            "UyJP+7pqYFVW/bBNRXbhVHgOlyTI/0GHshEwdYmNyacgZ1d0pAJew6JTJjycBAed\n"
+            "aGeNcdGtSnzoU6ZdIUH8tnHGYO2zhl2TZIL5S91oKeir8e8R860smQ71vZxh4Wd9\n"
+            "x7M5nMcsZqLjsKAV47TIMPHE6ssqs0r/X91lAQFr24BcVRLWYugE0NYLzOjRDWic\n"
+            "yILW4dOW3WyX8C0CggEBANfXGX6P3HIdEmC23knywaSA9p3xs1UBT8SGjrWpiZ+X\n"
+            "zjqSR/aIAlhw/3OgsdGBPsl4IpwK790qgEcI3YpVzytEK2TfCy1ri91iH5TL1x19\n"
+            "SqHRjslfnse9wmH2+sTLREsDugsNh9e9a8o8ZvsBLo7PYtadGlHdSg8MF58zI9RP\n"
+            "KTT0uhyvkPzWSh9Nr3NZw+T3BxEeD/mVPEVeWqPtd9sGoFQrcyWD1EANI5NumGgT\n"
+            "5mR1ja5tT8IX/RI0hWLxDmD324FeFjHrPg6rqkLy+WMchi9iZPU4bNG/L4mcRaEW\n"
+            "9xl7FI4SSfd19TgH25oYMttsYbkK+38ZlkGv+0sYrOECggEAbfowFY0ECssteSxH\n"
+            "LDSsSjc35M3eccF6bMJZKsNbFaKoLP8uNR+bSNQ2IjFMNxF5/5vemG2/Kfa5QBE2\n"
+            "ef+IjAKf26TUSW0PlTHzHq+bCHl3oMPsEDux91Glv3AhZ2c82Vc4ocko+dNxXbEJ\n"
+            "1XPwyKYgOBulEPyH4LhAfcU9Csifb6WbuQXrILCtWSoZq7+6EgAz5bbDqfQqYm/Y\n"
+            "ZydExGem/KNoOxgX+ZKuxxHulzyMEx7wzO9d8ndpZNF7osBrVh1nZagdXP0h3u0/\n"
+            "+QHyZaY0HCSUsKxznnsRDIzlpI/le1t+S6VWXJln1MlDIWqby3q1D9SF2pE1J1nH\n"
+            "kE4d9QKCAQBzVCHxOFloOBR7zPqVtLq3dZlQ57cU8rB2qBdVBhPdTLYLIeKF3kKy\n"
+            "kx5L4E9jTJYJ/MExc76bBHyqeBg4NIWP7srpCSzlxhNj5WxOi2SUA0B/moObIhar\n"
+            "T7+vrNJtmNcS5hjgkwhExJf15bR45jbEZBfB6QwJNh6+T43HqQG6DdpMy38umLj2\n"
+            "AGJ2u4HGNu6vRzdldBTBHXao8jOoZ9ilFbNRhi3um7QrzVl3C58v7YIrp4xe6VW2\n"
+            "ti6pLZsgNQGj2oxVYbqmTbZJDHzbbQzIYpNoekDLrqymnmt+MhwaaTT7ToK7LxaK\n"
+            "vWKb38b9XXS/PfgxcabUUQ2yZ5/0jmjBAoIBABCNHkGNpWdKAeAy9LVy2TuInAmp\n"
+            "ic4LcrXEAHFJ+JZ8LaKzn+dLsNMxcL9UQKdVhi1SXR6fcQs5dmaQG7fQD4udCMVB\n"
+            "Uk0if1ER7U9Nrrf6i2CteFrJer8NcXl4kQYP1aacygVew21uC85RzUym4Pik+Uwt\n"
+            "B2gBKezHWZC6BbBCfvIY+pFNv+qM3fr0vn6Zh2NBGpxBRhwdn5Dq5yjSQGIHviyy\n"
+            "+H0cC6UDQp6lrXK15YhdJA1I/3rA25yhGVebRqYmEDp0Z0KucwgFkRU4wEJpoAUJ\n"
+            "bYWIKEdrV2SRGFNwr1AY4AV+63LSVZkDqQ0wPcUR9Mtm2m9wa285X5TZEOU=\n"
             "-----END RSA PRIVATE KEY-----"
+
     };
 
     const std::string public_pem {
-        "-----BEGIN PUBLIC KEY-----\n"
-        "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAsEI5VRZO8rzXkuoy8Jpn\n"
-        "CcjYsmTk4DlNKqVJ6SeuBbQpyg+J2CZL4xH4IyhLhuwE5MklCRxFrWjqrYyaIih7\n"
-        "+eTeaBGtmLdGuHyPw/cBcGWgU4twJjPZQo3WWPwovRkrJkmh7BR5VJ5VdiuwruuH\n"
-        "ichYJBk+FSwGsdcryc33ujtNrWs46/wtc7skh6YiTo3svOH8HTm10vE+fasXS/r9\n"
-        "T6AXBRpVUdlU2Bg+IIU6x/AUW6k0XYOD8K9dI5U3Rql4q+3qDGGWamfX9tTmu2xD\n"
-        "YMyRPDp1rbzG2UKQAvMAdO9daxbnOGyV4Acr5tmD8k/bayQHYN3nsYapZb81/xqv\n"
-        "474PJ62b/s3rauj1HAVRcZrrVEKwcxB1qBz6xD9xOHKunwOwjcDCmk3Hu+Mfc1ih\n"
-        "izJexxxETjaF0YzrhSFw0h+cqHvacWe38jYp3iL4DI/h4u6U96pNobWDs9TTNld/\n"
-        "62LCbw3tZMNtQ04sM6kuVU/XfKzvpjs77jswYHzs/ZJfWyv8DdK3syo2ieZsMlQn\n"
-        "RfqfN2hfyfiSxAxErhfvSbQVT/2LIIerm1O5/F3H3383TyLc09h1AMGoflQTa4Oo\n"
-        "Bg8CYfuidf5kA+He2oQy+HXF4vxLyDwuEoU2CPI8KJgY0VXlPwX20B+QOEoM/M9c\n"
-        "sSsuY0Gg7UWXIiV5BIFrdssCAwEAAQ==\n"
-        "-----END PUBLIC KEY-----"
+            "-----BEGIN PUBLIC KEY-----\n"
+            "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxn6CRuwvYtYYNkINx6p5\n"
+            "mqcNJBC9e9dNoeMZf6GVQk0GpPs68DV9o/qfRMrzjR5Iqedr/gH9MkHJxJu442ty\n"
+            "fiJHWnk5EnIqAF0V7JScnfiZgfKSN3AJp9nWmhuGTraM7WcKEgZzqiKHQra8V8hC\n"
+            "4R1D3sq/VS4+7PLD9EQWkJX8OxmpTqCmef9n3+gEJ2iGc+nHpW5hfNKwTPAVAZEe\n"
+            "+m5+y++/3mTlj1pH0KT/SoM8bqo8S53G0+KZXSRFlZFoYBX41cJik+dkslYjGoqR\n"
+            "rLF4J4I8grIAYpGCOYirRDne4YzLml+xPIDCSmRhkwNviKhqtsH/7hNyCoFcj1hq\n"
+            "NOQznw6B46u+81xvZW+xxqPx+HN4ts2mHi9LualrHZCo9gwNZ48rQxtepVYLXwOe\n"
+            "WroX5VfwUaLaHUl5u2I/Q/x0glGEKhMKwXAYK1l1ePg596ghXrn96wg78L7GxjpC\n"
+            "2FfgfyRDYnhWZaYEXukbY0kgpJbktPyZ01WYGXQRIRyAoUkhTx6Sxrc6z4SyrGsd\n"
+            "wL4s/Hv3+mNnkGDI+huBfvXzU5n2IFV17FQe1T2yR1sirJ/KxY6WmGQejADKViRN\n"
+            "QsWIGT/R0j5eZi6/b0Hh6fgCBofmlH+PNXZNUkubiUrLDSIbnZiuBQDnO6V2s6z5\n"
+            "PlwJm/YP/TCoV3tOTTogU40CAwEAAQ==\n"
+            "-----END PUBLIC KEY-----"
     };
 
-    const std::string valid_uuid        {"9dc2f619-2e77-49f7-9b20-5b55fd87ea44"};
+    const std::string valid_uuid        {"9dc2f619-2e77-49f7-9b20-5b55fd87ea44\x0a"};
     const std::string invalid_uuid      {"8eb1e708-2e77-49f7-9b20-5b55fd87ea44"};
 
-    const std::string signature {
-            "OFww+6HZgexU9nMeHY3j/O+jgqkWZK03JwgZLLdeeW7WFfDBYPWheoTH+5s7DQfd"
-            "rJoSpW4lttFYe01xkJbt7kdqaO80mt2v5jW9QdkN4HOTRUryKkvsIkG91fyieqO7"
-            "ruXXVvBzteCeuMOYI37AKJbCyEtftLC443Kk1WtJ38KyTdMbpmRf5mz5VpCIyFAQ"
-            "UXTOhw+Yo3RQO2ZiwMbfkRoNSXWQxf3Ajo6fmxwQggBIYNivTuIA1sCZedZp/Lxw"
-            "/WOC6MBlXUJybhLLWlKdH0M+CdNhENxcnGM7csezfw/0Gvbfj/gz5b2re2xu5hV0"
-            "OQfLFCVhntNj+l9shjWq6wfH1ExGrsi24qq6I5QTBEE568ZpV0Bu0uAb5tcUY+LM"
-            "gVDtMeF71sigm9D4e5n8PRDg9//E/RdyiEMvXRaLqPXL+QRiNtbM1jBK+USPa0Mz"
-            "cB49hS9uKsghXgfT5kz+cKNWXPxSxopTblSrkf7n4yZGbkzxa3ZkiD/Jp5fNdLnn"
-            "WVeUHrU7w1TZ3LGpuok+cbNn3TWfZsCUJHkNOm0EHYeXVCJY3thwMbgSL8AuKkfz"
-            "wvFHVqbxu2DnPUjqhUt8dKp0RXo8CQpQQWbFitV4Eif9kHyIMoew8oM9GXip9tLJ"
-            "4bJW3WqEujHG3deW7utQbPse63pK20PmaPZIBWuO7lQ="
+    const std::string signature{
+            "OdqESm45taYOlLUaFUh/t1RDdTW9dRbvNXu5PHE7XC+iaXKNjJ3ryQQxXUe7kcX0"
+            "DFtAvlCG4CF90bD0ZvahGKJYAHiBAuASDOKbq8yPxzlQFvKH22rHW+wePTvo39fc"
+            "aNbRbDRBkf2l1ieJh0nH+SdGyCsYz56YZAhRYgHtg5SGC+niMJ5lzVxmsM9Wg/F7"
+            "ihqtf0jetmqiqTORjoTB0FqoRYe7kMrSqlkwhPwJeI0nmL9xTmPRuPey7yZpXMam"
+            "52qQG8M9YbSniwbEZCoJx+AICe5gPeh2U+Kw27FlkgUCNTCg9C61f9p3mk94lPaG"
+            "zbSryq1hi38zsnrmlOggbaIsvYAmJWcCB0/jC9EvqVJES3HyRs9uKzdc6O5Vlfk8"
+            "+jeI3UM8eQBBuqzo7GlawtF6yIIpnLoPq8BPMuSGhBGYFpQmwVYVbgIefKAA5o3m"
+            "tD7skcHmLPgAtU2FZyBf8qbDVq4DtCHQsiJA3hyl8aw3OIOe+mILpZVLOOc0hQnV"
+            "/sLjR1R3H9KVDoufyPphHzAz2YvjOjtOLEg91CMr4kEOhK8lre1NjywHqotmqPip"
+            "tQgpISsx8BCIGN7Sh1qZ42eJCbyedx69dy/7nbbiWy5VViqs8u7MTejqBzLJh+Zb"
+            "dd9pBbI/l62YV59VN+9liglfEhTmMFuXaVn6w/lQnQQ="
     };
 
 
@@ -255,9 +255,31 @@ TEST(util_test, test_that_a_poorly_formed_uuid_fails)
     EXPECT_THROW(bzn::is_whitelist_member("0}56fcb3-ae1e-4b3e-b794-be3270cc9d43", "http://localhost:74858"), std::runtime_error);
 }
 
+
 TEST(util_test, test_that_a_uuid_can_be_validated)
 {
-    EXPECT_TRUE(verify_signature( public_pem, signature, valid_uuid));
-    //EXPECT_FALSE(verify_signature( public_pem, signature, invalid_uuid));
+    EXPECT_TRUE(bzn::utils::crypto::verify_signature( public_pem, signature, valid_uuid));
+    EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, invalid_uuid));
 }
+
+
+TEST(util_test, test_that_boost_beast_detail_base64_functions_will_fail)
+{
+    const char bad_string[46]{"The quick brown \u0000fox jumps over 13 lazy dogs."}; // fake binary data
+    const std::string data{boost::beast::detail::base64_encode(bad_string)};
+    const std::string decoded_string = boost::beast::detail::base64_decode(data);
+    EXPECT_FALSE( 46 == decoded_string.size() );
+}
+
+
+TEST(util_test, test_that_openssl_based_base64_encoding_works_correctly)
+{
+
+}
+
+
+
+
+
+
 
