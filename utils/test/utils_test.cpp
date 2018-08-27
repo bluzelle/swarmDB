@@ -16,9 +16,13 @@
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <boost/beast/core/detail/base64.hpp>
 #include "../is_whitelist_member.hpp"
+#include "../crypto.hpp"
+
 
 using namespace::testing;
+
 
 namespace
 {
@@ -131,6 +135,100 @@ namespace
     };
 
     auto random_engine {std::default_random_engine {static_cast<unsigned>(std::chrono::system_clock::now().time_since_epoch().count())}};
+
+    const std::string password {"6Y4qTvHbQcyNccKW"};
+
+    const std::string private_pem{
+            "-----BEGIN RSA PRIVATE KEY-----\n"
+            "MIIJKAIBAAKCAgEAxn6CRuwvYtYYNkINx6p5mqcNJBC9e9dNoeMZf6GVQk0GpPs6\n"
+            "8DV9o/qfRMrzjR5Iqedr/gH9MkHJxJu442tyfiJHWnk5EnIqAF0V7JScnfiZgfKS\n"
+            "N3AJp9nWmhuGTraM7WcKEgZzqiKHQra8V8hC4R1D3sq/VS4+7PLD9EQWkJX8Oxmp\n"
+            "TqCmef9n3+gEJ2iGc+nHpW5hfNKwTPAVAZEe+m5+y++/3mTlj1pH0KT/SoM8bqo8\n"
+            "S53G0+KZXSRFlZFoYBX41cJik+dkslYjGoqRrLF4J4I8grIAYpGCOYirRDne4YzL\n"
+            "ml+xPIDCSmRhkwNviKhqtsH/7hNyCoFcj1hqNOQznw6B46u+81xvZW+xxqPx+HN4\n"
+            "ts2mHi9LualrHZCo9gwNZ48rQxtepVYLXwOeWroX5VfwUaLaHUl5u2I/Q/x0glGE\n"
+            "KhMKwXAYK1l1ePg596ghXrn96wg78L7GxjpC2FfgfyRDYnhWZaYEXukbY0kgpJbk\n"
+            "tPyZ01WYGXQRIRyAoUkhTx6Sxrc6z4SyrGsdwL4s/Hv3+mNnkGDI+huBfvXzU5n2\n"
+            "IFV17FQe1T2yR1sirJ/KxY6WmGQejADKViRNQsWIGT/R0j5eZi6/b0Hh6fgCBofm\n"
+            "lH+PNXZNUkubiUrLDSIbnZiuBQDnO6V2s6z5PlwJm/YP/TCoV3tOTTogU40CAwEA\n"
+            "AQKCAgEAhGUjfizRWopU8fPS/ye9HqNoB3NG/9BXDrDMdC4RwXxg/zA3WrtDB1oG\n"
+            "W7tHAgx+CR28EVvAR4JME2COzNoBLxKsJzOOFrihPUbZdciWQmPr+BoU3vdS6WtK\n"
+            "UdYkGmJ2026T7/vvsD6Bm8UJEUAZI9ACUhtHzYggHqm6fDXiGyR/begq3rAW+m6a\n"
+            "GWXHR4XXkH8RVE2wprJdN6Q3Tqk+UWncFyjeAHeqCpj8J7W2Njwc1e+kcgdV9ERD\n"
+            "aTXlV+L6DIT7SZDzcZW4u57qoSxmCBsDes7Kj54s1ZIam0eGfOZgvG7N6zUCocl8\n"
+            "TmRwFMAI58z2CNqTW3gK6+jnFRGzHFFOcuHprO9CyjLdGHxmxNI0BapUH2RzDT3/\n"
+            "xUTYR8HJiOJleEKuUlvG/Fw5PkRfkdqb4zpZA6a38IV+nKhAU7XakAV8WJjgGAU9\n"
+            "eyfQtJcEtCxycvkJKqueihIPvvdodK71JW4rS8623xLgO1qAczix+df3aMEq9sMA\n"
+            "MLqXp2mTud8+FYN/RmwFdn83Soyry+n+YFyBonHjAlCPAZyFZBhOHuV8vqSPwgTM\n"
+            "cPMg7zWdjdYSZOt75ZVNxDS3+pd68qWJDrxOJ2JQGJr/EBgyxMEErYUkwqd/O8th\n"
+            "IJruCUJgSTVaNJpuuRLosvNtClDQJ4TWgdxXfDSmHlMOi+7oloECggEBAOttLplI\n"
+            "eCRzkFrKpUCPoN2WLCr2JtioE3Oo/DzyLS3pwXd6XrWnFTN65zGOakhx7n/NaYE4\n"
+            "Mm/H9/ZjPmX7Y4cuHWcZi4mSt90pDSAKYhX++w9fsTtozTFw1hL2u9JITJmXnBEb\n"
+            "UyJP+7pqYFVW/bBNRXbhVHgOlyTI/0GHshEwdYmNyacgZ1d0pAJew6JTJjycBAed\n"
+            "aGeNcdGtSnzoU6ZdIUH8tnHGYO2zhl2TZIL5S91oKeir8e8R860smQ71vZxh4Wd9\n"
+            "x7M5nMcsZqLjsKAV47TIMPHE6ssqs0r/X91lAQFr24BcVRLWYugE0NYLzOjRDWic\n"
+            "yILW4dOW3WyX8C0CggEBANfXGX6P3HIdEmC23knywaSA9p3xs1UBT8SGjrWpiZ+X\n"
+            "zjqSR/aIAlhw/3OgsdGBPsl4IpwK790qgEcI3YpVzytEK2TfCy1ri91iH5TL1x19\n"
+            "SqHRjslfnse9wmH2+sTLREsDugsNh9e9a8o8ZvsBLo7PYtadGlHdSg8MF58zI9RP\n"
+            "KTT0uhyvkPzWSh9Nr3NZw+T3BxEeD/mVPEVeWqPtd9sGoFQrcyWD1EANI5NumGgT\n"
+            "5mR1ja5tT8IX/RI0hWLxDmD324FeFjHrPg6rqkLy+WMchi9iZPU4bNG/L4mcRaEW\n"
+            "9xl7FI4SSfd19TgH25oYMttsYbkK+38ZlkGv+0sYrOECggEAbfowFY0ECssteSxH\n"
+            "LDSsSjc35M3eccF6bMJZKsNbFaKoLP8uNR+bSNQ2IjFMNxF5/5vemG2/Kfa5QBE2\n"
+            "ef+IjAKf26TUSW0PlTHzHq+bCHl3oMPsEDux91Glv3AhZ2c82Vc4ocko+dNxXbEJ\n"
+            "1XPwyKYgOBulEPyH4LhAfcU9Csifb6WbuQXrILCtWSoZq7+6EgAz5bbDqfQqYm/Y\n"
+            "ZydExGem/KNoOxgX+ZKuxxHulzyMEx7wzO9d8ndpZNF7osBrVh1nZagdXP0h3u0/\n"
+            "+QHyZaY0HCSUsKxznnsRDIzlpI/le1t+S6VWXJln1MlDIWqby3q1D9SF2pE1J1nH\n"
+            "kE4d9QKCAQBzVCHxOFloOBR7zPqVtLq3dZlQ57cU8rB2qBdVBhPdTLYLIeKF3kKy\n"
+            "kx5L4E9jTJYJ/MExc76bBHyqeBg4NIWP7srpCSzlxhNj5WxOi2SUA0B/moObIhar\n"
+            "T7+vrNJtmNcS5hjgkwhExJf15bR45jbEZBfB6QwJNh6+T43HqQG6DdpMy38umLj2\n"
+            "AGJ2u4HGNu6vRzdldBTBHXao8jOoZ9ilFbNRhi3um7QrzVl3C58v7YIrp4xe6VW2\n"
+            "ti6pLZsgNQGj2oxVYbqmTbZJDHzbbQzIYpNoekDLrqymnmt+MhwaaTT7ToK7LxaK\n"
+            "vWKb38b9XXS/PfgxcabUUQ2yZ5/0jmjBAoIBABCNHkGNpWdKAeAy9LVy2TuInAmp\n"
+            "ic4LcrXEAHFJ+JZ8LaKzn+dLsNMxcL9UQKdVhi1SXR6fcQs5dmaQG7fQD4udCMVB\n"
+            "Uk0if1ER7U9Nrrf6i2CteFrJer8NcXl4kQYP1aacygVew21uC85RzUym4Pik+Uwt\n"
+            "B2gBKezHWZC6BbBCfvIY+pFNv+qM3fr0vn6Zh2NBGpxBRhwdn5Dq5yjSQGIHviyy\n"
+            "+H0cC6UDQp6lrXK15YhdJA1I/3rA25yhGVebRqYmEDp0Z0KucwgFkRU4wEJpoAUJ\n"
+            "bYWIKEdrV2SRGFNwr1AY4AV+63LSVZkDqQ0wPcUR9Mtm2m9wa285X5TZEOU=\n"
+            "-----END RSA PRIVATE KEY-----"
+
+    };
+
+    const std::string public_pem {
+            "-----BEGIN PUBLIC KEY-----\n"
+            "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxn6CRuwvYtYYNkINx6p5\n"
+            "mqcNJBC9e9dNoeMZf6GVQk0GpPs68DV9o/qfRMrzjR5Iqedr/gH9MkHJxJu442ty\n"
+            "fiJHWnk5EnIqAF0V7JScnfiZgfKSN3AJp9nWmhuGTraM7WcKEgZzqiKHQra8V8hC\n"
+            "4R1D3sq/VS4+7PLD9EQWkJX8OxmpTqCmef9n3+gEJ2iGc+nHpW5hfNKwTPAVAZEe\n"
+            "+m5+y++/3mTlj1pH0KT/SoM8bqo8S53G0+KZXSRFlZFoYBX41cJik+dkslYjGoqR\n"
+            "rLF4J4I8grIAYpGCOYirRDne4YzLml+xPIDCSmRhkwNviKhqtsH/7hNyCoFcj1hq\n"
+            "NOQznw6B46u+81xvZW+xxqPx+HN4ts2mHi9LualrHZCo9gwNZ48rQxtepVYLXwOe\n"
+            "WroX5VfwUaLaHUl5u2I/Q/x0glGEKhMKwXAYK1l1ePg596ghXrn96wg78L7GxjpC\n"
+            "2FfgfyRDYnhWZaYEXukbY0kgpJbktPyZ01WYGXQRIRyAoUkhTx6Sxrc6z4SyrGsd\n"
+            "wL4s/Hv3+mNnkGDI+huBfvXzU5n2IFV17FQe1T2yR1sirJ/KxY6WmGQejADKViRN\n"
+            "QsWIGT/R0j5eZi6/b0Hh6fgCBofmlH+PNXZNUkubiUrLDSIbnZiuBQDnO6V2s6z5\n"
+            "PlwJm/YP/TCoV3tOTTogU40CAwEAAQ==\n"
+            "-----END PUBLIC KEY-----"
+    };
+
+    const std::string valid_uuid        {"9dc2f619-2e77-49f7-9b20-5b55fd87ea44\x0a"};
+    const std::string invalid_uuid      {"8eb1e708-2e77-49f7-9b20-5b55fd87ea44"};
+
+    const std::string signature{
+            "OdqESm45taYOlLUaFUh/t1RDdTW9dRbvNXu5PHE7XC+iaXKNjJ3ryQQxXUe7kcX0"
+            "DFtAvlCG4CF90bD0ZvahGKJYAHiBAuASDOKbq8yPxzlQFvKH22rHW+wePTvo39fc"
+            "aNbRbDRBkf2l1ieJh0nH+SdGyCsYz56YZAhRYgHtg5SGC+niMJ5lzVxmsM9Wg/F7"
+            "ihqtf0jetmqiqTORjoTB0FqoRYe7kMrSqlkwhPwJeI0nmL9xTmPRuPey7yZpXMam"
+            "52qQG8M9YbSniwbEZCoJx+AICe5gPeh2U+Kw27FlkgUCNTCg9C61f9p3mk94lPaG"
+            "zbSryq1hi38zsnrmlOggbaIsvYAmJWcCB0/jC9EvqVJES3HyRs9uKzdc6O5Vlfk8"
+            "+jeI3UM8eQBBuqzo7GlawtF6yIIpnLoPq8BPMuSGhBGYFpQmwVYVbgIefKAA5o3m"
+            "tD7skcHmLPgAtU2FZyBf8qbDVq4DtCHQsiJA3hyl8aw3OIOe+mILpZVLOOc0hQnV"
+            "/sLjR1R3H9KVDoufyPphHzAz2YvjOjtOLEg91CMr4kEOhK8lre1NjywHqotmqPip"
+            "tQgpISsx8BCIGN7Sh1qZ42eJCbyedx69dy/7nbbiWy5VViqs8u7MTejqBzLJh+Zb"
+            "dd9pBbI/l62YV59VN+9liglfEhTmMFuXaVn6w/lQnQQ="
+    };
+
+
+
 }
 
 
@@ -156,4 +254,32 @@ TEST(util_test, test_that_a_poorly_formed_uuid_fails)
 {
     EXPECT_THROW(bzn::is_whitelist_member("0}56fcb3-ae1e-4b3e-b794-be3270cc9d43", "http://localhost:74858"), std::runtime_error);
 }
+
+
+TEST(util_test, test_that_a_uuid_can_be_validated)
+{
+    EXPECT_TRUE(bzn::utils::crypto::verify_signature( public_pem, signature, valid_uuid));
+    EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, invalid_uuid));
+}
+
+
+TEST(util_test, test_that_boost_beast_detail_base64_functions_will_fail)
+{
+    const char bad_string[46]{"The quick brown \u0000fox jumps over 13 lazy dogs."}; // fake binary data
+    const std::string data{boost::beast::detail::base64_encode(bad_string)};
+    const std::string decoded_string = boost::beast::detail::base64_decode(data);
+    EXPECT_FALSE( 46 == decoded_string.size() );
+}
+
+
+TEST(util_test, test_that_openssl_based_base64_encoding_works_correctly)
+{
+
+}
+
+
+
+
+
+
 
