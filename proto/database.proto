@@ -91,13 +91,11 @@ message database_subscription_update
 
 message database_redirect_response
 {
-    database_header header = 1;
-
-    string leader_id = 2;
-    string leader_name = 3;
-    string leader_host = 4;
-    uint32 leader_port = 5;
-    uint32 leader_http_port = 6;
+    string leader_id = 1;
+    string leader_name = 2;
+    string leader_host = 3;
+    uint32 leader_port = 4;
+    uint32 leader_http_port = 5;
 }
 
 message database_has_response
@@ -113,8 +111,8 @@ message database_keys_response
 
 message database_read_response
 {
-    string key = 3;
-    bytes value = 4;
+    string key = 1;
+    bytes value = 2;
 }
 
 message database_size_response
