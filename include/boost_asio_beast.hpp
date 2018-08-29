@@ -113,7 +113,10 @@ namespace bzn::asio
 
         virtual std::unique_ptr<bzn::asio::strand_base> make_unique_strand() = 0;
 
+        virtual void post(std::function<void()>) = 0;
+
         virtual boost::asio::io_context::count_type run() = 0;
+
 
         virtual void stop() = 0;
 
@@ -285,6 +288,11 @@ namespace bzn::asio
         std::unique_ptr<bzn::asio::strand_base> make_unique_strand() override
         {
             return std::make_unique<bzn::asio::strand>(this->io_context);
+        }
+
+        void post(std::function<void()> func) override
+        {
+            boost::asio::post(func);
         }
 
         boost::asio::io_context::count_type run() override

@@ -224,7 +224,7 @@ main(int argc, const char* argv[])
         {
             auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options.get_uuid()
-                    , std::make_shared<bzn::dummy_pbft_service>(failure_detector)
+                    , std::make_shared<bzn::dummy_pbft_service>(io_context)
                     , failure_detector
             );
 

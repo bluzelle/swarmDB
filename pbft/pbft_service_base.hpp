@@ -75,12 +75,23 @@ namespace bzn
         virtual void query(const pbft_request& request, uint64_t sequence_number) const = 0;
 
         /*
+         * Get the hash of the database state (presumably this will be a merkle tree root, but the details don't matter
+         * for now)- same semantics as query
+         */
+        virtual bzn::hash_t service_state_hash(uint64_t sequence_number) const = 0;
+
+        /*
          * A checkpoint has been stabilized, so we no longer need any history from before then.
          */
         virtual void consolidate_log(uint64_t sequence_number) = 0;
 
-        virtual ~pbft_service_base() = default;
+        /*
+         * Callback when a request is executed (not committed, since the service is responsible for the difference
+         * between the two). Should only be called once for each sequence number, in strictly increasing order.
+         */
+        virtual void register_execute_handler(std::function<void(const pbft_request&, uint64_t)> handler) = 0;
 
+        virtual ~pbft_service_base() = default;
     };
 
 }

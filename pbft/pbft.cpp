@@ -15,11 +15,13 @@
 #include <pbft/pbft.hpp>
 #include <utils/make_endpoint.hpp>
 #include <google/protobuf/text_format.h>
+#include <boost/beast/core/detail/base64.hpp>
+#include <boost/format.hpp>
 #include <cstdint>
 #include <memory>
-#include <boost/beast/core/detail/base64.hpp>
 #include <algorithm>
 #include <numeric>
+#include <iterator>
 
 namespace
 {
@@ -82,6 +84,23 @@ pbft::start()
                 this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
                 this->audit_heartbeat_timer->async_wait(
                         std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
+
+                this->service->register_execute_handler(
+                        [weak_this = this->weak_from_this(), fd = this->failure_detector]
+                                (const pbft_request& req, uint64_t sequence)
+                                        {
+                                            fd->request_executed(req);
+
+                                            if (sequence % CHECKPOINT_INTERVAL == 0)
+                                            {
+                                                auto strong_this = weak_this.lock();
+                                                if(strong_this)
+                                                {
+                                                    strong_this->checkpoint_reached_locally(sequence);
+                                                }
+                                            }
+                                        }
+                );
 
                 this->failure_detector->register_failure_handler(
                         [weak_this = this->weak_from_this()]()
@@ -162,6 +181,9 @@ pbft::handle_message(const pbft_msg& msg)
             break;
         case PBFT_MSG_COMMIT :
             this->handle_commit(msg);
+            break;
+        case PBFT_MSG_CHECKPOINT :
+            this->handle_checkpoint(msg);
             break;
         default :
             throw std::runtime_error("Unsupported message type");
@@ -350,7 +372,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
-    this->service->apply_operation(op->request, op->sequence);
+    this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, op->request, op->sequence));
 
     if (this->audit_enabled)
     {
@@ -469,4 +491,130 @@ pbft::handle_failure()
     LOG(fatal) << "Failure detected; view changes not yet implemented\n";
     this->notify_audit_failure_detected();
     //TODO: KEP-332
+}
+
+void
+pbft::checkpoint_reached_locally(uint64_t sequence)
+{
+
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    LOG(info) << "Reached checkpoint " << sequence;
+
+    auto cp = this->local_unstable_checkpoints.emplace(sequence, this->service->service_state_hash(sequence)).first;
+
+    pbft_msg cp_msg;
+    cp_msg.set_type(PBFT_MSG_CHECKPOINT);
+    cp_msg.set_view(this->view);
+    cp_msg.set_sequence(sequence);
+    cp_msg.set_sender(this->uuid);
+    cp_msg.set_state_hash(cp->second);
+
+    this->broadcast(this->wrap_message(cp_msg));
+
+    this->maybe_stabilize_checkpoint(*cp);
+}
+
+void
+pbft::handle_checkpoint(const pbft_msg& msg)
+{
+    if (msg.sequence() <= stable_checkpoint.first)
+    {
+        LOG(debug) << boost::format("Ignoring checkpoint message for seq %1% because I already have a stable checkpoint at seq %2%")
+                   % msg.sequence()
+                   % stable_checkpoint.first;
+        return;
+    }
+
+    LOG(info) << boost::format("Recieved checkpoint message for seq %1% from %2%")
+              % msg.sequence()
+              % msg.sender();
+
+    checkpoint_t cp(msg.sequence(), msg.state_hash());
+
+    this->unstable_checkpoint_proofs[cp][msg.sender()] = msg.SerializeAsString();
+    this->maybe_stabilize_checkpoint(cp);
+}
+
+bzn::checkpoint_t
+pbft::latest_stable_checkpoint() const
+{
+    return this->stable_checkpoint;
+}
+
+bzn::checkpoint_t
+pbft::latest_checkpoint() const
+{
+    return this->local_unstable_checkpoints.empty() ? this->stable_checkpoint : *(this->local_unstable_checkpoints.rbegin());
+}
+
+size_t
+pbft::unstable_checkpoints_count() const
+{
+    return this->local_unstable_checkpoints.size();
+}
+
+void
+pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
+{
+    if (this->local_unstable_checkpoints.count(cp) == 0 || this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
+    {
+        return;
+    }
+
+    this->stable_checkpoint = cp;
+    this->stable_checkpoint_proof = this->unstable_checkpoint_proofs[cp];
+
+    LOG(info) << boost::format("Checkpoint %1% at seq %2% is now stable; clearing old data")
+              % cp.second
+              % cp.first;
+
+    // Remove obsolete local checkpoints
+    auto local_start = this->local_unstable_checkpoints.begin();
+    // Iterator to the first unstable checkpoint that's newer than this one. This logic assumes that CHECKPOINT_INTERVAL
+    // is >= 2, otherwise we would have do do something awkward here
+    auto local_end = this->local_unstable_checkpoints.upper_bound(checkpoint_t(cp.first+1, ""));
+    size_t local_removed = std::distance(local_start, local_end);
+    this->local_unstable_checkpoints.erase(local_start, local_end);
+    LOG(debug) << boost::format("Cleared %1% unstable local checkpoints") % local_removed;
+
+
+    // Remove obsolete checkpoint proof collections
+    auto start = this->unstable_checkpoint_proofs.begin();
+    auto end = this->unstable_checkpoint_proofs.upper_bound(checkpoint_t(cp.first+1, ""));
+    size_t to_remove = std::distance(start, end);
+    this->unstable_checkpoint_proofs.erase(start, end);
+    LOG(debug) << boost::format("Cleared %1% unstable checkpoint proof sets") % to_remove;
+
+
+    // Remove obsolete operations
+    size_t ops_removed = 0;
+    auto it = this->operations.begin();
+    while (it != this->operations.end())
+    {
+        if(it->second->sequence <= cp.first)
+        {
+            it = this->operations.erase(it);
+            ops_removed++;
+        }
+        else
+        {
+            it++;
+        }
+    }
+
+    LOG(debug) << boost::format("Cleared %1% old operation records") % ops_removed;
+
+}
+
+size_t
+pbft::quorum_size() const
+{
+    return 1 + (2*this->max_faulty_nodes());
+}
+
+size_t
+pbft::max_faulty_nodes() const
+{
+    return this->peer_index.size()/3;
 }
