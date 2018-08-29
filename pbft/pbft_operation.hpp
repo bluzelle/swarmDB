@@ -59,9 +59,6 @@ namespace bzn
         void begin_commit_phase();
         void end_commit_phase();
 
-        void record_executed();
-        bool is_executed();
-
         const uint64_t view;
         const uint64_t sequence;
         const pbft_request request;
@@ -78,9 +75,6 @@ namespace bzn
         bool preprepare_seen = false;
         std::set<bzn::uuid_t> prepares_seen;
         std::set<bzn::uuid_t> commits_seen;
-
-        bool executed = false;
-
 
     };
 }

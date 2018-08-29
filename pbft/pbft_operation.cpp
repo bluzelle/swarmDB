@@ -115,14 +115,3 @@ pbft_operation::request_hash(const pbft_request& req)
     return req.ShortDebugString();
 }
 
-void
-pbft_operation::record_executed()
-{
-    this->executed = true;
-}
-
-bool
-pbft_operation::is_executed()
-{
-    return this->executed;
-}
