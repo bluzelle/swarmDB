@@ -6,8 +6,8 @@ add_library(pbft STATIC
         pbft_operation.hpp
         pbft_operation.cpp
 
-        pbft_service.cpp
-        pbft_service.hpp
+        dummy_pbft_service.cpp
+        dummy_pbft_service.hpp
         pbft_service_base.hpp
 
         pbft_failure_detector.cpp

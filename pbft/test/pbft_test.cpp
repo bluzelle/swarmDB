@@ -16,7 +16,7 @@
 #include <pbft/pbft_operation.hpp>
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft.hpp>
-#include <pbft/pbft_service.hpp>
+#include <pbft/dummy_pbft_service.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
@@ -53,7 +53,7 @@ namespace
         std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
         std::shared_ptr<bzn::pbft_failure_detector_base> mock_failure_detector =
                 std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base>>();
-        std::shared_ptr<bzn::pbft_service> service = std::make_shared<bzn::pbft_service>(mock_failure_detector);
+        std::shared_ptr<bzn::dummy_pbft_service> service = std::make_shared<bzn::dummy_pbft_service>(mock_failure_detector);
 
         std::shared_ptr<bzn::pbft> pbft;
 
@@ -348,6 +348,12 @@ namespace
         ASSERT_FALSE(this->pbft->is_primary());
 
         this->audit_heartbeat_timer_callback(boost::system::error_code());
+    }
+
+    TEST_F(pbft_test, dummy_pbft_service_does_not_crash)
+    {
+        service->query(request_msg.request(), 0);
+        service->consolidate_log(2);
     }
 
 }

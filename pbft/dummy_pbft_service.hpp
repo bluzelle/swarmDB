@@ -24,20 +24,20 @@ namespace bzn
     // wrap crud. It needs to be that way around (rather than crud calling
     // pbft) because pbft needs to decide when crud gets to see messages.
 
-    class pbft_service : public pbft_service_base
+    class dummy_pbft_service : public pbft_service_base
     {
     public:
-        pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector);
+        dummy_pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector);
 
-        void commit_operation(std::shared_ptr<pbft_operation> operation) override;
+        void apply_operation(const pbft_request& request, uint64_t sequence_number) override;
+        void query(const pbft_request& request, uint64_t sequence_number) const override;
+        void consolidate_log(uint64_t sequence_number) override;
 
-        const pbft_request& get_last_request();
         uint64_t applied_requests_count();
 
     private:
         uint64_t next_request_sequence = 1;
-        std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_requests;
-        pbft_request remembered_request;
+        std::unordered_map<uint64_t, pbft_request> waiting_requests;
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex lock;

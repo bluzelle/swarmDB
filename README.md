@@ -40,7 +40,7 @@ This will result in a custom Boost install at `~/myboost/1_68_0/`that will not c
 **Other dependencies \(Protobuf, CMake\)**
 
 ```text
-$ brew update && brew install protobuf && brew upgrade cmake
+$ brew update && brew install protobuf && brew install snappy && brew upgrade cmake
 ```
 
 **ccache \(Optional\)**
@@ -76,10 +76,10 @@ $ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -
 
 Again, this will result in a custom cmake install into `~/mycmake/` and will not overwrite your system's cmake.
 
-**Protobuf \(Ver. 3 or greater\)**
+**Protobuf \(Ver. 3 or greater\) etc.**
 
 ```text
-$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev
+$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev libsnappy-dev
 ```
 
 **ccache \(Optional\)**

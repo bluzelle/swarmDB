@@ -41,13 +41,13 @@ set(REQUIRED_BOOST "1.68.0")
 set(Boost_USE_STATIC_LIBS on)
 
 find_package(
-        Boost ${REQUIRED_BOOST}
-        REQUIRED COMPONENTS
-        log
-        program_options
-        system
-        thread
-        serialization
+    Boost ${REQUIRED_BOOST}
+    REQUIRED COMPONENTS
+    log
+    program_options
+    system
+    thread
+    serialization
 )
 
 if(Boost_FOUND)
@@ -55,12 +55,13 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
-find_package(CURL REQUIRED)
+find_package(CURL    REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(cmake/jsoncpp.cmake)
+include(cmake/rocksdb.cmake)
 include(cmake/googletest.cmake)
 
 enable_testing()
