@@ -8,6 +8,6 @@ add_library(raft
         )
 
 target_link_libraries(raft proto)
-add_dependencies(raft jsoncpp)
+add_dependencies(raft jsoncpp googletest)
 target_include_directories(raft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 add_subdirectory(test)
