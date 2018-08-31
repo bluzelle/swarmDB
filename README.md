@@ -23,7 +23,7 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 
 ## Building from source
 
-### Dependencies - Minimum version requirements. Boost 1.67.0, gcc 7.1, cmake 3.12 and Protocol buffers 3.6.0.
+### Dependencies - Boost 1.67.0, gcc 7.1, cmake 3.12, Protocol buffers 3.6.0, libbz2-dev and libsnappy-dev.
 Note, appropriate versions are in some cases provided by the system's package manager (apt, brew, yum, ect). In other cases, you might need to update your sources.lists to a test branch, or install the dependecies from source to obatin a supported version. 
 
 ### Linux Ubuntu 18.04
