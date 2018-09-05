@@ -97,8 +97,8 @@ TEST_F(bootstrap_file_test, test_valid_peers)
 
     for (const bzn::peer_address_t& p : bootstrap_peers.get_peers())
     {
-        if(p.port == 12345) seen_peer1 = true;
-        if(p.port == 54321) seen_peer2 = true;
+        if (p.port == 12345) seen_peer1 = true;
+        if (p.port == 54321) seen_peer2 = true;
     }
 
     ASSERT_TRUE(seen_peer1 && seen_peer2);
@@ -116,8 +116,8 @@ TEST_F(bootstrap_file_test, test_unnamed_peers)
 
     for (const bzn::peer_address_t& p : bootstrap_peers.get_peers())
     {
-        if(p.name == "peer1") seen_name1 = true;
-        if(p.name == "unknown") seen_name2 = true;
+        if (p.name == "peer1") seen_name1 = true;
+        if (p.name == "unknown") seen_name2 = true;
     }
 
     ASSERT_TRUE(seen_name1 && seen_name2);

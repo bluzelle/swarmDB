@@ -270,7 +270,7 @@ options::validate()
         return false;
     }
 
-    if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
+    if (this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
     {
         LOG(info) << "No monitor address provided; will not send monitor packets";
     }

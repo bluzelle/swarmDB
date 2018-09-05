@@ -298,6 +298,7 @@ TEST(util_test, test_that_is_whitelist_member_returns_FALSE_if_uuid_is_NOT_found
 }
 
 
+
 TEST(util_test, test_that_a_poorly_formed_uuid_fails)
 {
     EXPECT_THROW(bzn::utils::blacklist::is_blacklisted("0}56fcb3-ae1e-4b3e-b794-be3270cc9d43", "http://localhost:74858"), std::runtime_error);
@@ -318,4 +319,12 @@ TEST(util_test, test_that_a_uuid_can_be_validated)
 {
     EXPECT_TRUE(bzn::utils::crypto::verify_signature( public_pem, signature, valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, invalid_uuid));
+}
+
+
+TEST(util_test, test_that_verifying_asignature_with_empty_inputs_will_fail_gracefully)
+{
+    EXPECT_FALSE(bzn::utils::crypto::verify_signature( "", signature, valid_uuid));
+    EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, "", valid_uuid));
+    EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, ""));
 }

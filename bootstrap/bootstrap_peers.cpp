@@ -110,7 +110,7 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
             // At this point we cannot validate uuids as we do not have
             // signatures for all of them, so we simply ignore blacklisted
             // uuids
-            if(bzn::utils::blacklist::is_blacklisted(uuid))
+            if (bzn::utils::blacklist::is_blacklisted(uuid))
             {
                 LOG(warning) << "Ignoring blacklisted node with uuid: [" << uuid << "]";
                 continue;

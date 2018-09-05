@@ -154,7 +154,7 @@ TEST_F(options_file_test, test_max_storage_parsing)
                       {
                           std::string max_storage{boost::lexical_cast<std::string>(expected / p.second)};
                           max_storage = max_storage + p.first;
-                          if(p.first!='B')
+                          if (p.first!='B')
                           {
                               max_storage = max_storage.append("B");
                           }

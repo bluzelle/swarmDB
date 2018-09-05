@@ -53,7 +53,7 @@ pbft_failure_detector::handle_timeout(boost::system::error_code /*ec*/)
         this->ordered_requests.pop_front();
     }
 
-    if(this->ordered_requests.size() > 0)
+    if (this->ordered_requests.size() > 0)
     {
         this->start_timer();
     }
@@ -72,7 +72,7 @@ pbft_failure_detector::request_seen(const pbft_request& req)
         this->ordered_requests.emplace_back(req);
         this->outstanding_requests.emplace(req_hash);
 
-        if(this->ordered_requests.size() == 1)
+        if (this->ordered_requests.size() == 1)
         {
             this->start_timer();
         }

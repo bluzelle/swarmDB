@@ -74,8 +74,12 @@ namespace
     size_t
     calculate_decode_length(const std::string& base_64_input)
     {
-        const auto len{base_64_input.size()};
-        auto padding = (base_64_input[len - 1] == '=' && base_64_input[len - 2] == '=') ? 2 : 1;
+        if (base_64_input.empty())
+        {
+            return 0;
+        }
+        const size_t len{base_64_input.size()};
+        const size_t padding = (base_64_input[len - 1] == '=' && base_64_input[len - 2] == '=') ? 2 : 1;
         return (len * 3) / 4 - padding;
     }
 
@@ -84,7 +88,7 @@ namespace
     compose_and_log_OpenSSL_error(const std::string& failing_function_name)
     {
         char buffer[126]{0};
-        ERR_error_string_n(ERR_get_error(), buffer, 126);
+        ERR_error_string_n(ERR_get_error(), buffer, sizeof(buffer));
         LOG(error) << "While verifiying a node uuid " << failing_function_name << " failed with error " << buffer;
     }
 
@@ -99,7 +103,7 @@ namespace
     RSA* create_public_RSA(const std::string& key)
     {
         std::unique_ptr<BIO,std::function<void(BIO*)>> keybio(BIO_new_mem_buf((void*)(key.c_str()), -1), BIO_free);
-        if (nullptr==keybio)
+        if (!keybio)
         {
             return 0;
         }
@@ -152,7 +156,7 @@ namespace
             return false;
         }
         // The const cast is for the unix gcc c++ compiler
-        auto auth_status = EVP_DigestVerifyFinal(RSA_verification_context.get(), const_cast<unsigned char*>(signature.data()), signature.size());
+        const int auth_status = EVP_DigestVerifyFinal(RSA_verification_context.get(), const_cast<unsigned char*>(signature.data()), signature.size());
 
         // There are a couple of options here, the signature was successfully
         // validated or invalidated, or something went wrong during the
@@ -184,7 +188,13 @@ namespace bzn::utils::crypto
     int
     base64_decode(const std::string& base64_message, std::vector<unsigned char>& decoded_message)
     {
-        const auto decoded_length = calculate_decode_length(base64_message);
+        if (base64_message.empty())
+        {
+            LOG(error) << "Input string to base64_decode must not be empty";
+            return 1;
+        }
+
+        const size_t decoded_length = calculate_decode_length(base64_message);
         decoded_message.resize(decoded_length);
 
         // I have chosen to *not* use unique pointers for bio and b64 here, as the memory handling
@@ -202,7 +212,7 @@ namespace bzn::utils::crypto
 
         BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Do not use newlines to flush buffer
 
-        const auto length = BIO_read(bio, decoded_message.data(), static_cast<int>(base64_message.size()));
+        const int length = BIO_read(bio, decoded_message.data(), static_cast<int>(base64_message.size()));
 
         // free all is used here as b64 was pushed onto bio making it a BIO chain.
         BIO_free_all(bio);
@@ -220,6 +230,12 @@ namespace bzn::utils::crypto
     bool
     verify_signature(const std::string& public_key, const std::string& signature, const std::string& uuid)
     {
+        if (public_key.empty() || signature.empty() || uuid.empty())
+        {
+            LOG(error) << "Unable to verify the signature as one or more of the public key, signature or uuid strings were empty";
+            return false;
+        }
+
         auto public_rsa = create_public_RSA(public_key);
         if (nullptr==public_rsa)
         {

@@ -24,7 +24,7 @@ namespace bzn
     raft_log::raft_log(const std::string& log_path, const size_t maximum_storage)
             :  maximum_storage(maximum_storage), entries_log_path(log_path)
     {
-        if(boost::filesystem::exists(this->entries_log_path))
+        if (boost::filesystem::exists(this->entries_log_path))
         {
             std::ifstream is(this->entries_log_path, std::ios::in | std::ios::binary);
             bzn::log_entry log_entry;
@@ -75,10 +75,10 @@ namespace bzn
         if (!this->log_entry_out_stream.is_open())
         {
             boost::filesystem::path path{this->entries_log_path};
-            if(!boost::filesystem::exists(path.parent_path()))
+            if (!boost::filesystem::exists(path.parent_path()))
             {
                 boost::system::error_code ec;
-                if(!boost::filesystem::create_directories(path.parent_path(), ec))
+                if (!boost::filesystem::create_directories(path.parent_path(), ec))
                 {
                     LOG(error) << "Unable to create path " << path.parent_path() << " with error code " << ec <<".";
                     throw std::runtime_error(MSG_EXITING_DUE_TO_LOG_PATH_CREATION_FAILURE);
@@ -116,7 +116,7 @@ namespace bzn
             return;
         }
 
-        if(index < this->log_entries.size() &&  log_entry.term != this->log_entries[index].term)
+        if (index < this->log_entries.size() &&  log_entry.term != this->log_entries[index].term)
         {
             // throw away vector from index
             this->log_entries.erase( this->log_entries.begin() + index, this->log_entries.end());
@@ -127,14 +127,14 @@ namespace bzn
             return;
         }
 
-        if(index == this->log_entries.size())
+        if (index == this->log_entries.size())
         {
             this->log_entries.emplace_back(log_entry);
             this->append_log_disk(log_entry);
             return;
         }
 
-        if(index > this->log_entries.size())
+        if (index > this->log_entries.size())
         {
             throw std::runtime_error(MSG_TRYING_TO_INSERT_INVALID_ENTRY);
         }
@@ -144,7 +144,7 @@ namespace bzn
     bool
     raft_log::entry_accepted(size_t previous_index, size_t previous_term) const
     {
-        if(previous_index < this->log_entries.size()-1)
+        if (previous_index < this->log_entries.size()-1)
         {
             return false;
         }

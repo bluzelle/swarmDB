@@ -118,7 +118,7 @@ size_t
 get_state_file_size(const bzn::options& options)
 {
     boost::filesystem::path state_file_path{options.get_state_dir() + "/" + options.get_uuid() + ".dat"};
-    if(boost::filesystem::exists(state_file_path))
+    if (boost::filesystem::exists(state_file_path))
     {
         return size_t(boost::filesystem::file_size(state_file_path));
     }
@@ -195,7 +195,7 @@ main(int argc, const char* argv[])
         }
 
         bzn::bootstrap_peers peers(options.peer_validation_enabled());
-        if(!init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url()))
+        if (!init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url()))
             throw std::runtime_error("Bootstrap peers initialization failed.");
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
@@ -220,7 +220,7 @@ main(int argc, const char* argv[])
         node->start();
         audit->start();
 
-        if(options.pbft_enabled())
+        if (options.pbft_enabled())
         {
             auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options.get_uuid()

@@ -436,7 +436,7 @@ raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::m
     }
 
     const auto signature{peer["signature"].asString()};
-    if(!bzn::utils::crypto::verify_signature(bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract(), signature, uuid))
+    if (!bzn::utils::crypto::verify_signature(bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract(), signature, uuid))
     {
         this->send_session_error_message(session, ERROR_UNABLE_TO_VALIDATE_UUID);
         return false;

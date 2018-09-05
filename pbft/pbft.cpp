@@ -110,7 +110,7 @@ pbft::start()
                         [weak_this = this->weak_from_this()]()
                         {
                             auto strong_this = weak_this.lock();
-                            if(strong_this)
+                            if (strong_this)
                             {
                                 strong_this->handle_failure();
                             }
@@ -165,7 +165,7 @@ pbft::handle_message(const pbft_msg& msg)
         return;
     }
 
-    if(msg.has_request())
+    if (msg.has_request())
     {
         this->failure_detector->request_seen(msg.request());
     }
@@ -443,7 +443,7 @@ pbft::wrap_message(const pbft_msg& msg, const std::string& debug_info)
 
     json["bzn-api"] = "pbft";
     json["pbft-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
-    if(debug_info.length() > 0)
+    if (debug_info.length() > 0)
     {
         json["debug-info"] = debug_info;
     }
@@ -458,7 +458,7 @@ pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
 
     json["bzn-api"] = "audit";
     json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
-    if(debug_info.length() > 0)
+    if (debug_info.length() > 0)
     {
         json["debug-info"] = debug_info;
     }
@@ -481,7 +481,7 @@ pbft::set_audit_enabled(bool setting)
 void
 pbft::notify_audit_failure_detected()
 {
-    if(this->audit_enabled)
+    if (this->audit_enabled)
     {
         audit_message msg;
         msg.mutable_failure_detected()->set_sender_uuid(this->uuid);

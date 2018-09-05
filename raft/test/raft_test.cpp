@@ -69,7 +69,7 @@ namespace
     void
     fill_entries_with_test_data(const size_t sz, std::vector<bzn::log_entry>& entries)
     {
-        if(entries.size() != sz)
+        if (entries.size() != sz)
         {
             entries.resize(entries.size() + sz);
         }
@@ -109,13 +109,13 @@ namespace
     {
         try
         {
-            if(boost::filesystem::exists(TEST_STATE_DIR))
+            if (boost::filesystem::exists(TEST_STATE_DIR))
             {
                 boost::filesystem::remove_all(TEST_STATE_DIR);
             }
             boost::filesystem::create_directory(TEST_STATE_DIR);
 
-            if(boost::filesystem::exists("./.state"))
+            if (boost::filesystem::exists("./.state"))
             {
                 boost::filesystem::remove_all("./.state");
             }
@@ -948,7 +948,7 @@ namespace bzn
         // there should only be created and updated keys in storage
         for(const auto& key : keys_in_storage)
         {
-            if(std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
+            if (std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
             {
                 EXPECT_EQ(I_AM_CREATED, storage->read(db_uuid, key)->value);
                 continue;
@@ -1944,11 +1944,11 @@ namespace bzn
                         [&](const auto& msg, auto)
                         {
                             auto root = *msg.get();
-                            if(root.isMember("response"))
+                            if (root.isMember("response"))
                             {
                                 EXPECT_EQ(root["response"]["msg"].asString(), SUCCESS_PEER_ADDED_TO_SWARM);
                             }
-                            else if(root.isMember("error"))
+                            else if (root.isMember("error"))
                             {
                                 EXPECT_EQ(root["error"].asString(), ERROR_UNABLE_TO_VALIDATE_UUID);
                             }
