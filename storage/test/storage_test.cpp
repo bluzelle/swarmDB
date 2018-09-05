@@ -308,4 +308,3 @@ TEST_F(storageTest, test_that_storage_fails_to_update_with_a_value_that_exceeds_
     EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
     EXPECT_EQ(expected_value, this->storage->read(USER_UUID, KEY)->value);
 }
-

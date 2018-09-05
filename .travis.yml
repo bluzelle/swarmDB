@@ -31,16 +31,18 @@ matrix:
             - pkg-config
             - protobuf-compiler
             - libprotobuf-dev
+            - libsnappy-dev
+            - libbz2-dev
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-        - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz"
+        - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Linux-x86_64.tar.gz"
         - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
 
     - os: osx
       osx_image: xcode9.4
       env:
-        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install openssl && brew upgrade cmake"
-        - CMAKE_URL="http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz"
+        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install openssl && brew upgrade cmake"
+        - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl"
 
 cache:
@@ -91,6 +93,7 @@ before_script:
 script:
   - ${CXX} --version
   - echo CXXFLAGS=${CXXFLAGS}
+  - make rocksdb
   - make
   - make static_analysis
   - ctest
