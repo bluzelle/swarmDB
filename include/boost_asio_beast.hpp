@@ -28,6 +28,7 @@ namespace bzn::asio
     using connect_handler = std::function<void(const boost::system::error_code& ec)>;
     using   close_handler = std::function<void(const boost::system::error_code& ec)>;
     using    wait_handler = std::function<void(const boost::system::error_code& ec)>;
+    using            task = std::function<void()>;
 
     ///////////////////////////////////////////////////////////////////////////
     // mockable interfaces...
@@ -113,7 +114,10 @@ namespace bzn::asio
 
         virtual std::unique_ptr<bzn::asio::strand_base> make_unique_strand() = 0;
 
+        virtual void post(bzn::asio::task) = 0;
+
         virtual boost::asio::io_context::count_type run() = 0;
+
 
         virtual void stop() = 0;
 
@@ -285,6 +289,11 @@ namespace bzn::asio
         std::unique_ptr<bzn::asio::strand_base> make_unique_strand() override
         {
             return std::make_unique<bzn::asio::strand>(this->io_context);
+        }
+
+        void post(bzn::asio::task func) override
+        {
+            boost::asio::post(func);
         }
 
         boost::asio::io_context::count_type run() override

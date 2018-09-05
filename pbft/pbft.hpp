@@ -21,8 +21,17 @@
 #include <pbft/pbft_failure_detector.hpp>
 #include <include/boost_asio_beast.hpp>
 
+namespace
+{
+    const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
+    const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
+}
+
 namespace bzn
 {
+
+    using request_hash_t = std::string;
+    using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
 
     class pbft final : public bzn::pbft_base, public std::enable_shared_from_this<pbft>
     {
@@ -50,9 +59,12 @@ namespace bzn
 
         void handle_failure() override;
 
-        using request_hash_t = std::string;
-
         void set_audit_enabled(bool setting);
+
+        checkpoint_t latest_stable_checkpoint() const;
+        checkpoint_t latest_checkpoint() const;
+        size_t unstable_checkpoints_count() const;
+
 
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
@@ -66,6 +78,7 @@ namespace bzn
         void handle_preprepare(const pbft_msg& msg);
         void handle_prepare(const pbft_msg& msg);
         void handle_commit(const pbft_msg& msg);
+        void handle_checkpoint(const pbft_msg& msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -84,6 +97,16 @@ namespace bzn
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
 
         void notify_audit_failure_detected();
+
+        void checkpoint_reached_locally(uint64_t sequence);
+        void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+
+        inline size_t quorum_size() const;
+        inline size_t max_faulty_nodes() const;
+
+        void clear_local_checkpoints_until(const checkpoint_t&);
+        void clear_checkpoint_messages_until(const checkpoint_t&);
+        void clear_operations_until(const checkpoint_t&);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
@@ -112,6 +135,12 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
 
         bool audit_enabled = true;
+
+        checkpoint_t stable_checkpoint{0, INITIAL_CHECKPOINT_HASH};
+        std::unordered_map<uuid_t, std::string> stable_checkpoint_proof;
+
+        std::set<checkpoint_t> local_unstable_checkpoints;
+        std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
     };
 
 } // namespace bzn

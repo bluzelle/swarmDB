@@ -16,9 +16,9 @@
 
 using namespace bzn;
 
-dummy_pbft_service::dummy_pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector)
-        : failure_detector(std::move(failure_detector))
+dummy_pbft_service::dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context) : io_context(std::move(io_context))
 {
+
 }
 
 void
@@ -35,7 +35,8 @@ dummy_pbft_service::apply_operation(const pbft_request& request, uint64_t sequen
         LOG(info) << "Executing request " << req.ShortDebugString() << ", sequence " << this->next_request_sequence
                   << "\n";
 
-        this->failure_detector->request_executed(req);
+
+        boost::asio::post(std::bind(this->execute_handler, req, this->next_request_sequence));
 
         this->waiting_requests.erase(this->next_request_sequence);
         this->next_request_sequence++;
@@ -62,3 +63,14 @@ dummy_pbft_service::applied_requests_count()
     return this->next_request_sequence - 1;
 }
 
+void
+dummy_pbft_service::register_execute_handler(execute_handler_t handler)
+{
+    this->execute_handler = std::move(handler);
+}
+
+bzn::hash_t
+dummy_pbft_service::service_state_hash(uint64_t sequence_number) const
+{
+    return "I don't actually have a database [" + std::to_string(sequence_number) + "]";
+}
