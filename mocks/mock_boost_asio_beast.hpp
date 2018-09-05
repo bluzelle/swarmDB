@@ -107,7 +107,7 @@ namespace bzn::asio {
         MOCK_METHOD0(make_unique_strand,
             std::unique_ptr<bzn::asio::strand_base>());
         MOCK_METHOD1(post,
-            void(std::function<void()>));
+            void(bzn::asio::task));
         MOCK_METHOD0(run,
             boost::asio::io_context::count_type());
         MOCK_METHOD0(stop,

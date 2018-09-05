@@ -64,7 +64,7 @@ dummy_pbft_service::applied_requests_count()
 }
 
 void
-dummy_pbft_service::register_execute_handler(std::function<void(const pbft_request&, uint64_t)> handler)
+dummy_pbft_service::register_execute_handler(execute_handler_t handler)
 {
     this->execute_handler = std::move(handler);
 }

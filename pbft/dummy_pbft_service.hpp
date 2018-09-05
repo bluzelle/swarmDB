@@ -32,13 +32,13 @@ namespace bzn
         void apply_operation(const pbft_request& request, uint64_t sequence_number) override;
         void query(const pbft_request& request, uint64_t sequence_number) const override;
         void consolidate_log(uint64_t sequence_number) override;
-        void register_execute_handler(std::function<void(const pbft_request&, uint64_t)> handler) override;
+        void register_execute_handler(execute_handler_t handler) override;
         bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
 
         uint64_t applied_requests_count();
 
     private:
-        std::function<void(const pbft_request&, uint64_t)> execute_handler;
+        execute_handler_t execute_handler;
         std::shared_ptr<bzn::asio::io_context_base> io_context;
 
         uint64_t next_request_sequence = 1;

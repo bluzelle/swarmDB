@@ -98,6 +98,10 @@ pbft::start()
                                                 {
                                                     strong_this->checkpoint_reached_locally(sequence);
                                                 }
+                                                else
+                                                {
+                                                    throw std::runtime_error("pbft_service callback failed because pbft does not exist");
+                                                }
                                             }
                                         }
                 );
@@ -569,25 +573,36 @@ pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
               % cp.second
               % cp.first;
 
-    // Remove obsolete local checkpoints
-    auto local_start = this->local_unstable_checkpoints.begin();
+    this->clear_local_checkpoints_until(cp);
+    this->clear_checkpoint_messages_until(cp);
+    this->clear_operations_until(cp);
+}
+
+void
+pbft::clear_local_checkpoints_until(const checkpoint_t& cp)
+{
+    const auto local_start = this->local_unstable_checkpoints.begin();
     // Iterator to the first unstable checkpoint that's newer than this one. This logic assumes that CHECKPOINT_INTERVAL
     // is >= 2, otherwise we would have do do something awkward here
-    auto local_end = this->local_unstable_checkpoints.upper_bound(checkpoint_t(cp.first+1, ""));
-    size_t local_removed = std::distance(local_start, local_end);
+    const auto local_end = this->local_unstable_checkpoints.upper_bound(checkpoint_t(cp.first+1, ""));
+    const size_t local_removed = std::distance(local_start, local_end);
     this->local_unstable_checkpoints.erase(local_start, local_end);
     LOG(debug) << boost::format("Cleared %1% unstable local checkpoints") % local_removed;
+}
 
-
-    // Remove obsolete checkpoint proof collections
-    auto start = this->unstable_checkpoint_proofs.begin();
-    auto end = this->unstable_checkpoint_proofs.upper_bound(checkpoint_t(cp.first+1, ""));
-    size_t to_remove = std::distance(start, end);
+void
+pbft::clear_checkpoint_messages_until(const checkpoint_t& cp)
+{
+    const auto start = this->unstable_checkpoint_proofs.begin();
+    const auto end = this->unstable_checkpoint_proofs.upper_bound(checkpoint_t(cp.first+1, ""));
+    const size_t to_remove = std::distance(start, end);
     this->unstable_checkpoint_proofs.erase(start, end);
     LOG(debug) << boost::format("Cleared %1% unstable checkpoint proof sets") % to_remove;
+}
 
-
-    // Remove obsolete operations
+void
+pbft::clear_operations_until(const checkpoint_t& cp)
+{
     size_t ops_removed = 0;
     auto it = this->operations.begin();
     while (it != this->operations.end())
@@ -604,7 +619,6 @@ pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
     }
 
     LOG(debug) << boost::format("Cleared %1% old operation records") % ops_removed;
-
 }
 
 size_t

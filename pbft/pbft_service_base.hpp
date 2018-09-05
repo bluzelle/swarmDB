@@ -89,7 +89,8 @@ namespace bzn
          * Callback when a request is executed (not committed, since the service is responsible for the difference
          * between the two). Should only be called once for each sequence number, in strictly increasing order.
          */
-        virtual void register_execute_handler(std::function<void(const pbft_request&, uint64_t)> handler) = 0;
+        using execute_handler_t = std::function<void(const pbft_request&, uint64_t)>;
+        virtual void register_execute_handler(execute_handler_t handler) = 0;
 
         virtual ~pbft_service_base() = default;
     };

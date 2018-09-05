@@ -104,6 +104,10 @@ namespace bzn
         inline size_t quorum_size() const;
         inline size_t max_faulty_nodes() const;
 
+        void clear_local_checkpoints_until(const checkpoint_t&);
+        void clear_checkpoint_messages_until(const checkpoint_t&);
+        void clear_operations_until(const checkpoint_t&);
+
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
