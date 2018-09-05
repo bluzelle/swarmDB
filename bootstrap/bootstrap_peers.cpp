@@ -105,7 +105,7 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
             continue;
         }
 
-        if (this->is_security_enabled())
+        if (this->is_peer_validation_enabled())
         {
             // At this point we cannot validate uuids as we do not have
             // signatures for all of them, so we simply ignore blacklisted

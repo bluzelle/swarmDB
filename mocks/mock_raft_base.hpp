@@ -31,7 +31,7 @@ namespace bzn
                      bool(const bzn::message& msg, const bzn::log_entry_type entry_type));
         MOCK_METHOD1(register_commit_handler,
                      void(bzn::raft_base::commit_handler handler));
-        MOCK_METHOD0(get_security_enabled,
+        MOCK_METHOD0(get_peer_validation_enabled,
                      bool());
     };
 

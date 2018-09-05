@@ -58,7 +58,7 @@ namespace bzn
                 bzn::uuid_t uuid,
                 const std::string state_dir,
                 size_t maximum_raft_storage = bzn::DEFAULT_MAX_STORAGE_SIZE,
-                bool security_enabled = false);
+                bool enable_peer_validation = false);
 
         bzn::raft_state get_state() override;
 
@@ -78,7 +78,7 @@ namespace bzn
 
         bzn::message get_status() override;
 
-        bool get_security_enabled() override { return this->security_enabled; };
+        bool get_peer_validation_enabled() override { return this->enable_peer_validation; };
 
     private:
         friend class raft_log_base;
@@ -203,6 +203,6 @@ namespace bzn
 
         bool enable_audit = true;
 
-        bool security_enabled{false}; // TODO: RHN - this is only temporary, until the security functionality is tested and in use.
+        bool enable_peer_validation{false}; // TODO: RHN - this is only temporary, until the security functionality is tested and in use.
     };
 } // bzn

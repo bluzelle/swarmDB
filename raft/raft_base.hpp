@@ -144,9 +144,9 @@ namespace bzn
          * the add_peer ws command will be validated against the Bluzelle Private Key and node
          * blacklist.
          *
-         * @return boolean, state of security validation
+         * @return boolean, state of peer validation
          */
-        virtual bool get_security_enabled() = 0;
+        virtual bool get_peer_validation_enabled() = 0;
 
     };
 

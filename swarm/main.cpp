@@ -194,7 +194,7 @@ main(int argc, const char* argv[])
             return 0;
         }
 
-        bzn::bootstrap_peers peers(options.security_enabled());
+        bzn::bootstrap_peers peers(options.peer_validation_enabled());
         if(!init_peers(peers, options.get_bootstrap_peers_file(), options.get_bootstrap_peers_url()))
             throw std::runtime_error("Bootstrap peers initialization failed.");
 

@@ -150,7 +150,7 @@ The configuration file is a JSON format file, as seen in the following example:
         "logfile_rotation_size" : "64K",
         "logfile_max_size" : "640K",
         "debug_logging" : false,
-        "security_enabled" : false 
+        "peer_validation_enabled" : false 
     }
 
 where the properties are:
@@ -168,7 +168,7 @@ where the properties are:
 - "logfile_rotation_size" - approximate size of log file must be before rotation (default: 64K)
 - "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
-- "security_enabled" - set this to true to enable blacklisting and uuid signature verification
+- "peer_validation_enabled" - set this to true to enable blacklisting and uuid signature verification
 
 All size entries use the same notation as storage: B, K, M, G & T or none
 (bytes)
@@ -651,7 +651,7 @@ swarm until you add it to the swarm.
 
 Create your add_peer JSON object, and use wscat to send it to the swarm leader,
 note that the signature object is only required for swarms whose nodes have set
-the security_enabled object to true in thier config files:
+the peer_validation_enabled object to true in thier config files:
 
     $ wscat -c  http://<leader-address>:<port>
     connected (press CTRL+C to quit)

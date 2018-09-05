@@ -62,6 +62,8 @@ namespace
     };
 
 
+
+
     /**
      * This function is used by base_64_decode to determine the amount of memory required
      * for the binary buffer represented by the base64 encoded string.

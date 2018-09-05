@@ -327,7 +327,7 @@ namespace bzn
         }
 
         std::shared_ptr<bzn::raft>
-        start_raft(const bzn::peers_list_t& peer_list, bzn::asio::wait_handler& asio_wait_handler, bzn::message_handler bzn_msg_handler, bool security_enabled = false)
+        start_raft(const bzn::peers_list_t& peer_list, bzn::asio::wait_handler& asio_wait_handler, bzn::message_handler bzn_msg_handler, bool enable_peer_validation = false)
         {
             auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
@@ -352,7 +352,7 @@ namespace bzn
                     , TEST_NODE_UUID
                     , TEST_STATE_DIR
                     , bzn::DEFAULT_MAX_STORAGE_SIZE
-                    , security_enabled);
+                    , enable_peer_validation);
 
             //bzn::message_handler mh;
             EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(

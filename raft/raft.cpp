@@ -46,13 +46,13 @@ raft::raft(
         const bzn::peers_list_t& peers,
         bzn::uuid_t uuid,
         const std::string state_dir, size_t maximum_raft_storage,
-        bool security_enabled
+        bool enable_peer_validation
         )
         :timer(io_context->make_unique_steady_timer())
         ,uuid(std::move(uuid))
         ,node(std::move(node))
         ,state_dir(std::move(state_dir))
-        ,security_enabled(security_enabled)
+        ,enable_peer_validation(enable_peer_validation)
 {
     // we must have a list of peers!
     if (peers.empty())
@@ -486,7 +486,7 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
         return;
     }
 
-    if (this->security_enabled && !this->validate_new_peer(session, peer))
+    if (this->enable_peer_validation && !this->validate_new_peer(session, peer))
     {
         // Note: failure messages sent from within validate_new_peer
         return;
