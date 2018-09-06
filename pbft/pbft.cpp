@@ -655,6 +655,8 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     bzn_msg msg;
     database_response response;
 
+    LOG(debug) << "got database message: " << json.toStyledString();
+
     if (!json.isMember("msg"))
     {
         LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
@@ -679,5 +681,6 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
 
     this->handle_request(req, session);
 
+    LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
 }

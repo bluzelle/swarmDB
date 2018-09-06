@@ -84,6 +84,7 @@ dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>&
 {
     database_response resp;
     resp.mutable_resp()->set_value("dummy database execution of " + op->debug_string());
+    LOG(debug) << "Sending request result " << resp.ShortDebugString();
     op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
 }
 
