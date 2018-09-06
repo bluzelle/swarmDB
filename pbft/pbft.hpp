@@ -67,11 +67,11 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg);
         void handle_commit(const pbft_msg& msg);
 
-        void maybe_advance_operation_state(std::shared_ptr<pbft_operation> op);
-        void do_preprepare(std::shared_ptr<pbft_operation> op);
-        std::shared_ptr<pbft_operation> do_preprepared(std::shared_ptr<pbft_operation> op);
-        std::shared_ptr<pbft_operation> do_prepared(std::shared_ptr<pbft_operation> op);
-        void do_committed(std::shared_ptr<pbft_operation> op);
+        void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
+        void do_preprepare(const std::shared_ptr<pbft_operation>& op);
+        void do_preprepared(const std::shared_ptr<pbft_operation>& op);
+        void do_prepared(const std::shared_ptr<pbft_operation>& op);
+        void do_committed(const std::shared_ptr<pbft_operation>& op);
 
         void handle_pbft_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
         bzn::message wrap_message(const pbft_msg& message, const std::string& debug_info = "");

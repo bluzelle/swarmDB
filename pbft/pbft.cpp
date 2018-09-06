@@ -225,7 +225,7 @@ pbft::handle_request(const pbft_request& msg, std::shared_ptr<bzn::session_base>
         op->set_session(std::move(session));
     }
 
-    this->do_preprepare(std::move(op));
+    this->do_preprepare(op);
 }
 
 void
@@ -252,8 +252,8 @@ pbft::handle_preprepare(const pbft_msg& msg)
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
         accepted_preprepares[log_key] = op->get_operation_key();
 
-        op = this->do_preprepared(std::move(op));
-        this->maybe_advance_operation_state(std::move(op));
+        this->do_preprepared(op);
+        this->maybe_advance_operation_state(op);
     }
 }
 
@@ -265,7 +265,7 @@ pbft::handle_prepare(const pbft_msg& msg)
     auto op = this->find_operation(msg);
 
     op->record_prepare(msg);
-    this->maybe_advance_operation_state(std::move(op));
+    this->maybe_advance_operation_state(op);
 }
 
 void
@@ -276,7 +276,7 @@ pbft::handle_commit(const pbft_msg& msg)
     auto op = this->find_operation(msg);
 
     op->record_commit(msg);
-    this->maybe_advance_operation_state(std::move(op));
+    this->maybe_advance_operation_state(op);
 }
 
 void
@@ -293,16 +293,16 @@ pbft::broadcast(const bzn::message& json)
 }
 
 void
-pbft::maybe_advance_operation_state(std::shared_ptr<pbft_operation> op)
+pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
     if (op->get_state() == pbft_operation_state::prepare && op->is_prepared())
     {
-        op = this->do_prepared(std::move(op));
+        this->do_prepared(op);
     }
 
     if (op->get_state() == pbft_operation_state::commit && op->is_committed())
     {
-        this->do_committed(std::move(op));
+        this->do_committed(op);
     }
 }
 
@@ -323,7 +323,7 @@ pbft::common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_t
 }
 
 void
-pbft::do_preprepare(std::shared_ptr<pbft_operation> op)
+pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Doing preprepare for operation " << op->debug_string();
 
@@ -332,20 +332,18 @@ pbft::do_preprepare(std::shared_ptr<pbft_operation> op)
     this->broadcast(this->wrap_message(msg, "preprepare"));
 }
 
-std::shared_ptr<pbft_operation>
-pbft::do_preprepared(std::shared_ptr<pbft_operation> op)
+void
+pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Entering prepare phase for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
     this->broadcast(this->wrap_message(msg, "prepare"));
-
-    return std::move(op);
 }
 
-std::shared_ptr<pbft_operation>
-pbft::do_prepared(std::shared_ptr<pbft_operation> op)
+void
+pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Entering commit phase for operation " << op->debug_string();
     op->begin_commit_phase();
@@ -353,12 +351,10 @@ pbft::do_prepared(std::shared_ptr<pbft_operation> op)
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
     this->broadcast(this->wrap_message(msg, "commit"));
-
-    return std::move(op);
 }
 
 void
-pbft::do_committed(std::shared_ptr<pbft_operation> op)
+pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
@@ -373,7 +369,7 @@ pbft::do_committed(std::shared_ptr<pbft_operation> op)
         this->broadcast(this->wrap_message(msg));
     }
 
-    this->service->apply_operation(std::move(op));
+    this->service->apply_operation(op);
 }
 
 size_t
