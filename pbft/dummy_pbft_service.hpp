@@ -29,7 +29,7 @@ namespace bzn
     {
     public:
         dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context);
-        void apply_operation(const pbft_request& request, uint64_t sequence_number) override;
+        void apply_operation(std::shared_ptr<pbft_operation> op) override;
         void query(const pbft_request& request, uint64_t sequence_number) const override;
         void consolidate_log(uint64_t sequence_number) override;
         void register_execute_handler(execute_handler_t handler) override;
@@ -40,9 +40,13 @@ namespace bzn
     private:
         execute_handler_t execute_handler;
         std::shared_ptr<bzn::asio::io_context_base> io_context;
+        void send_execute_response(const std::shared_ptr<pbft_operation>& op);
 
         uint64_t next_request_sequence = 1;
-        std::unordered_map<uint64_t, pbft_request> waiting_requests;
+        std::shared_ptr<pbft_failure_detector_base> failure_detector;
+
+        std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_operations;
+
         std::mutex lock;
     };
 

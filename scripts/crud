@@ -31,7 +31,6 @@ from argparse import RawDescriptionHelpFormatter
 try:
     import bluzelle_pb2
     import database_pb2
-    import pbft_pb2
 except ImportError as e:
     raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
                       "\n"
@@ -48,26 +47,8 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     req["bzn-api"] = "database";
     req["msg"] = base64.b64encode(msg.SerializeToString())
 
-
-    if use_pbft:
-        # TODO: Wrap this more appropriately. Crud should not be hearing these
-        # directly in the first place.
-        msg_outer = pbft_pb2.pbft_msg()
-        msg_outer.type = 1 #request
-        msg_outer.request.operation = json.dumps(req)
-        msg_outer.request.client = "crud cli"
-        msg_outer.request.timestamp = 0 # TODO
-
-        req_outer = {}
-        req_outer["bzn-api"] = "pbft";
-        req_outer["pbft-data"] = base64.b64encode(msg_outer.SerializeToString())
-
-        print("Sending: \n{}".format(msg_outer))
-        ws.send(json.dumps(req_outer))
-
-    else:
-        print("Sending: \n{}".format(msg))
-        ws.send(json.dumps(req))
+    print("Sending: \n{}".format(msg))
+    ws.send(json.dumps(req))
 
     print("-" * 60 + '\n')
 
@@ -215,8 +196,6 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
 
-    parser.add_argument("-p", "--use_pbft", action="store_true", help="Direct message to pbft instead of raft")
-
     required = parser.add_argument_group('required arguments')
 
     required.add_argument("-n", "--node", type=str, default=None, help="node's address (ex. 127.0.0.1:51010)", required=True)
@@ -287,9 +266,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    global use_pbft
-    use_pbft = args.use_pbft
-
     try:
         if args.file:
             # if user gave us a file we need to read it as our value

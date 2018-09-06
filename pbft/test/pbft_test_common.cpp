@@ -32,6 +32,17 @@ namespace bzn::test
                                 }
                         ));
 
+        EXPECT_CALL(*(this->mock_node), register_for_message("database", _))
+                .Times(Exactly(1))
+                .WillOnce(
+                        Invoke(
+                                [&](const auto&, auto handler)
+                                {
+                                    this->database_handler = handler;
+                                    return true;
+                                }
+                        ));
+
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
                 .Times(AtMost(1))
                 .WillOnce(

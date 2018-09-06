@@ -22,23 +22,27 @@ dummy_pbft_service::dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_bas
 }
 
 void
-dummy_pbft_service::apply_operation(const pbft_request& request, uint64_t sequence_number)
+dummy_pbft_service::apply_operation(std::shared_ptr<pbft_operation> op)
 {
     std::lock_guard<std::mutex> lock(this->lock);
 
-    this->waiting_requests[sequence_number] = request;
+    this->waiting_operations[op->sequence] = std::move(op);
 
-    while (this->waiting_requests.count(this->next_request_sequence) > 0)
+    while (this->waiting_operations.count(this->next_request_sequence) > 0)
     {
-        auto req = waiting_requests[this->next_request_sequence];
+        auto op = waiting_operations[this->next_request_sequence];
 
-        LOG(info) << "Executing request " << req.ShortDebugString() << ", sequence " << this->next_request_sequence
+        LOG(info) << "Executing request " << op->debug_string() << ", sequence " << this->next_request_sequence
                   << "\n";
 
+        if(op->session())
+        {
+            this->send_execute_response(op);
+        }
 
-        boost::asio::post(std::bind(this->execute_handler, req, this->next_request_sequence));
+        boost::asio::post(std::bind(this->execute_handler, op->request, this->next_request_sequence));
 
-        this->waiting_requests.erase(this->next_request_sequence);
+        this->waiting_operations.erase(this->next_request_sequence);
         this->next_request_sequence++;
     }
 }
@@ -74,3 +78,13 @@ dummy_pbft_service::service_state_hash(uint64_t sequence_number) const
 {
     return "I don't actually have a database [" + std::to_string(sequence_number) + "]";
 }
+
+void
+dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>& op)
+{
+    database_response resp;
+    resp.mutable_resp()->set_value("dummy database execution of " + op->debug_string());
+    LOG(debug) << "Sending request result " << resp.ShortDebugString();
+    op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+}
+
