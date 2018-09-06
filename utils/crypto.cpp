@@ -131,7 +131,7 @@ namespace
     RSA_verify_signature(const RSA* rsa, const std::vector<unsigned char>& signature, const std::string& uuid, bool& is_authentic)
     {
         std::unique_ptr<EVP_PKEY, std::function<void(EVP_PKEY*)>> public_key{EVP_PKEY_new(), EVP_PKEY_free};
-        std::unique_ptr<EVP_MD_CTX, std::function<void(EVP_MD_CTX*)>> RSA_verification_context{EVP_MD_CTX_create(), EVP_MD_CTX_destroy};
+        std::unique_ptr<EVP_MD_CTX, std::function<void(EVP_MD_CTX*)>> RSA_verification_context{EVP_MD_CTX_create(), EVP_MD_CTX_free};
 
         // I could find no guidance in the OpenSSL documentation that suggests that the EVP_MD
         // pointer needs to be released after use, though in the same page the documentation

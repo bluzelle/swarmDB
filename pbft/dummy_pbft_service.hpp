@@ -46,7 +46,6 @@ namespace bzn
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_operations;
-        std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex lock;
     };
