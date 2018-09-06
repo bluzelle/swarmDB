@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iterator>
+#include <crud/crud_base.hpp>
 
 namespace
 {
@@ -79,7 +80,10 @@ pbft::start()
             [this]()
             {
                 this->node->register_for_message("pbft",
-                        std::bind(&pbft::unwrap_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+                        std::bind(&pbft::handle_pbft_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+
+                this->node->register_for_message("database",
+                        std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
                 this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
                 this->audit_heartbeat_timer->async_wait(
@@ -143,7 +147,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_pbft_message(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
 {
     pbft_msg msg;
     if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString())))
@@ -175,7 +179,7 @@ pbft::handle_message(const pbft_msg& msg)
     switch (msg.type())
     {
         case PBFT_MSG_REQUEST :
-            this->handle_request(msg);
+            this->handle_request(msg.request());
             break;
         case PBFT_MSG_PREPREPARE :
             this->handle_preprepare(msg);
@@ -226,7 +230,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 void
-pbft::handle_request(const pbft_msg& msg)
+pbft::handle_request(const pbft_request& msg, std::shared_ptr<bzn::session_base> session)
 {
     if (!this->is_primary())
     {
@@ -240,7 +244,12 @@ pbft::handle_request(const pbft_msg& msg)
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, msg.request());
+    auto op = this->find_operation(this->view, request_seq, msg);
+
+    if(session)
+    {
+        op->set_session(std::move(session));
+    }
 
     this->do_preprepare(op);
 }
@@ -376,8 +385,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
-    this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, op->request, op->sequence));
-
     if (this->audit_enabled)
     {
         audit_message msg;
@@ -387,6 +394,9 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 
         this->broadcast(this->wrap_message(msg));
     }
+
+    // Get a new shared pointer to the operation so that we can give pbft_service ownership on it
+    this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
 }
 
 size_t
@@ -412,6 +422,12 @@ std::shared_ptr<pbft_operation>
 pbft::find_operation(const pbft_msg& msg)
 {
     return this->find_operation(msg.view(), msg.sequence(), msg.request());
+}
+
+std::shared_ptr<pbft_operation>
+pbft::find_operation(const std::shared_ptr<pbft_operation>& op)
+{
+    return this->find_operation(op->view, op->sequence, op->request);
 }
 
 std::shared_ptr<pbft_operation>
@@ -631,4 +647,40 @@ size_t
 pbft::max_faulty_nodes() const
 {
     return this->peer_index.size()/3;
+}
+
+void
+pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session)
+{
+    bzn_msg msg;
+    database_response response;
+
+    LOG(debug) << "got database message: " << json.toStyledString();
+
+    if (!json.isMember("msg"))
+    {
+        LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        return;
+    }
+
+    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["msg"].asString())))
+    {
+        LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
+        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        return;
+    }
+
+    *response.mutable_header() = msg.db().header();
+
+    pbft_request req;
+    req.set_operation(json.toStyledString());
+    req.set_timestamp(0); //TODO: KEP-611
+
+    this->handle_request(req, session);
+
+    LOG(debug) << "Sending request ack: " << response.ShortDebugString();
+    session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
 }

@@ -32,6 +32,8 @@ namespace bzn {
           void(uint64_t sequence_number));
       MOCK_METHOD1(register_execute_handler,
           void(std::function<void(const pbft_request&, uint64_t)> handler));
+      MOCK_METHOD1(apply_operation,
+          void(std::shared_ptr<pbft_operation>));
     };
 
 }  // namespace bzn
