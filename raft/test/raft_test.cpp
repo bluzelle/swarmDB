@@ -47,10 +47,29 @@ namespace
 
     const std::string TEST_STATE_DIR = "./.raft_test_state/";
 
+    const std::string valid_uuid        {"9dc2f619-2e77-49f7-9b20-5b55fd87ea44"};
+    const std::string invalid_uuid      {"8eb1e708-2e77-49f7-9b20-5b55fd87ea44"};
+
+    const std::string signature {
+            "DprtbrBfC6pXRxiUCBTpvfIr/gDbnjhUIrQysnqXNL3HkGqN07avQ9eilz4T058F"
+            "HariK5L5V2xoUn2c9K5sKch4qGrCYe2Rs7+alsiDBsqHZvrwQQZbSRnz6iKNijcl"
+            "8rjquBeqsRthLTRYxLFveV7bNsaYfF4jOsfyQwKeQ7hJX3pHhYkQyh1k8WrzAWhr"
+            "0/PdqSOT9fBgroNo0TTg3RDSJ6I78xR7gSBYE5C7PNH63dq8qw2WPi+VElHBtJD+"
+            "Esu3ZMiHnCmGPEx1p40vLSiVz5z3JFJhIb9FfY1RGa3RmNBdPiE8PvYvFGrmLsKD"
+            "HClL3CzUwC4W/RhFcoML6/+SNawtaqmjJ4AASyWkstf22t/qpfAYkXCSoh1QD46J"
+            "waOLHE3L2g7woUT3EFa2ziahkLJSADdlmR1ZKRFA09l7+tkEv2rez0NMpeUXXo+A"
+            "/JG5jMKuJVtJrEEHKubSpxpAb9KSbp6nrKHnAeJKJWyY+aE1LvKBqCN2PcakL6Mn"
+            "TMdaVgAShwSPmtQE5Z+m+WRJcsHDxVPaSK4BQOx4q4U2fHKqE5dc05bODu2kc/Qt"
+            "/In3dL6pHqCTGyUWmgZxjUMvAJ3qNxuMjJu0F1d8KxMSSRQ9OC+OpOIPgsiqLP8F"
+            "DEYcqSC0p2wvbMrtbL1Vz+xGJLi0hryGD6aLA3Es4vk="
+    };
+
+
+
     void
     fill_entries_with_test_data(const size_t sz, std::vector<bzn::log_entry>& entries)
     {
-        if(entries.size() != sz)
+        if (entries.size() != sz)
         {
             entries.resize(entries.size() + sz);
         }
@@ -90,13 +109,13 @@ namespace
     {
         try
         {
-            if(boost::filesystem::exists(TEST_STATE_DIR))
+            if (boost::filesystem::exists(TEST_STATE_DIR))
             {
                 boost::filesystem::remove_all(TEST_STATE_DIR);
             }
             boost::filesystem::create_directory(TEST_STATE_DIR);
 
-            if(boost::filesystem::exists("./.state"))
+            if (boost::filesystem::exists("./.state"))
             {
                 boost::filesystem::remove_all("./.state");
             }
@@ -128,6 +147,16 @@ namespace
         msg["data"]["peer"]["port"] = new_peer.port;
         msg["data"]["peer"]["http_port"] = new_peer.http_port;
         msg["data"]["peer"]["uuid"] = new_peer.uuid;
+        return msg;
+    }
+
+
+    bzn::message
+    make_secure_add_peer_request(const std::string& uuid)
+    {
+        bzn::message  msg{make_add_peer_request()};
+        msg["data"]["peer"]["signature"] = signature;
+        msg["data"]["peer"]["uuid"] = uuid;
         return msg;
     }
 
@@ -298,7 +327,7 @@ namespace bzn
         }
 
         std::shared_ptr<bzn::raft>
-        start_raft(const bzn::peers_list_t& peer_list, bzn::asio::wait_handler& asio_wait_handler, bzn::message_handler bzn_msg_handler)
+        start_raft(const bzn::peers_list_t& peer_list, bzn::asio::wait_handler& asio_wait_handler, bzn::message_handler bzn_msg_handler, bool enable_peer_validation = false)
         {
             auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
@@ -321,7 +350,9 @@ namespace bzn
                     , this->mock_node
                     , peer_list
                     , TEST_NODE_UUID
-                    , TEST_STATE_DIR);
+                    , TEST_STATE_DIR
+                    , bzn::DEFAULT_MAX_STORAGE_SIZE
+                    , enable_peer_validation);
 
             //bzn::message_handler mh;
             EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
@@ -341,6 +372,7 @@ namespace bzn
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context;
         std::shared_ptr<bzn::Mocksession_base> mock_session;
     };
+
 
     TEST(raft, test_that_default_raft_state_is_follower)
     {
@@ -916,7 +948,7 @@ namespace bzn
         // there should only be created and updated keys in storage
         for(const auto& key : keys_in_storage)
         {
-            if(std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
+            if (std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
             {
                 EXPECT_EQ(I_AM_CREATED, storage->read(db_uuid, key)->value);
                 continue;
@@ -1191,7 +1223,6 @@ namespace bzn
         mh( make_add_peer_request(),this->mock_session);
         mh( make_remove_peer_request(),this->mock_session);
     }
-
 
 
     TEST_F(raft_test, test_that_bad_add_or_remove_peer_requests_fail)
@@ -1563,12 +1594,22 @@ namespace bzn
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
         auto peers = raft.get_all_peers();
 
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
         EXPECT_EQ(TEST_PEER_LIST.size(), peers.size());
         EXPECT_EQ(TEST_PEER_LIST,peers);
 
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                .WillOnce(Invoke(
+                        [&](const auto& msg, auto)
+                        {
+                            auto root = *msg.get();
+                            EXPECT_EQ(root["response"]["msg"].asString(), SUCCESS_PEER_ADDED_TO_SWARM);
+                        }));
+
         // replace the last quorum with a joint quorum
         raft.current_state = bzn::raft_state::leader;
-        raft.handle_ws_raft_messages(make_add_peer_request(), nullptr);
+        raft.handle_ws_raft_messages(make_add_peer_request(), mock_session);
 
         const auto& active = raft.get_active_quorum();
         EXPECT_EQ(active.size(), size_t(2));
@@ -1609,6 +1650,16 @@ namespace bzn
         clean_state_folder();
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                .WillOnce(Invoke(
+                        [&](const auto& msg, auto)
+                        {
+                            auto root = *msg.get();
+                            EXPECT_EQ(root["response"]["msg"].asString(), SUCCESS_PEER_ADDED_TO_SWARM);
+                        }));
+
         EXPECT_EQ(bzn::log_entry_type::single_quorum, raft.raft_log->last_quorum_entry().entry_type);
 
         auto active_list = raft.get_active_quorum();
@@ -1636,7 +1687,7 @@ namespace bzn
         // replace the last quorum with a joint quorum
         bzn::message add_peer = make_add_peer_request();
         raft.current_state = bzn::raft_state::leader;
-        raft.handle_ws_raft_messages(add_peer, nullptr);
+        raft.handle_ws_raft_messages(add_peer, mock_session);
 
         active_list = raft.get_active_quorum();
         EXPECT_EQ(active_list.size(), size_t(2));
@@ -1666,6 +1717,16 @@ namespace bzn
         clean_state_folder();
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                .WillOnce(Invoke(
+                        [&](const auto& msg, auto)
+                        {
+                            auto root = *msg.get();
+                            EXPECT_EQ(root["response"]["msg"].asString(), SUCCESS_PEER_ADDED_TO_SWARM);
+                        }));
+
         EXPECT_EQ(bzn::log_entry_type::single_quorum, raft.raft_log->last_quorum_entry().entry_type);
 
         std::set<bzn::uuid_t> yes_votes;
@@ -1682,7 +1743,7 @@ namespace bzn
         EXPECT_TRUE(raft.is_majority(yes_votes));
 
         raft.current_state = bzn::raft_state::leader;
-        raft.handle_ws_raft_messages(make_add_peer_request(), nullptr);
+        raft.handle_ws_raft_messages(make_add_peer_request(), mock_session);
 
         yes_votes.clear();
         yes_votes.emplace(new_peer.uuid);
@@ -1697,7 +1758,6 @@ namespace bzn
 
     TEST_F(raft_test, test_that_joint_quorum_is_converted_to_single_quorum_and_committed)
     {
-        // TODO make sure comit i=indexes are correct.
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         // intercept the timeout callback...
@@ -1750,8 +1810,8 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
         // now send in each vote...
-        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), mock_session);
-        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), this->mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), this->mock_session);
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
@@ -1837,5 +1897,111 @@ namespace bzn
         EXPECT_EQ(raft->yes_votes.size(),size_t(2));
         EXPECT_EQ(raft->no_votes.size(),size_t(2));
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
+    }
+
+
+    TEST_F(raft_test, test_that_add_node_works_securely)
+    {
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+
+        // intercept the timeout callback...
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).WillRepeatedly(Invoke(
+                [&](auto handler)
+                { wh = handler; }));
+
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                { return std::move(mock_steady_timer); }));
+
+        bzn::message_handler mh;
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                [&](const auto&, auto handler)
+                {
+                    mh = handler;
+                    return true;
+                }));
+
+        // create raft...
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR, bzn::DEFAULT_MAX_STORAGE_SIZE, true);
+
+        bool commit_handler_called = false;
+        int commit_handler_times_called = 0;
+        raft->register_commit_handler(
+                [&](const bzn::message& msg)
+                {
+                    LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
+                    commit_handler_called = true;
+                    ++commit_handler_times_called;
+                    return true;
+                });
+
+        // and away we go...
+        raft->start();
+
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+                .WillRepeatedly(Invoke(
+                        [&](const auto& msg, auto)
+                        {
+                            auto root = *msg.get();
+                            if (root.isMember("response"))
+                            {
+                                EXPECT_EQ(root["response"]["msg"].asString(), SUCCESS_PEER_ADDED_TO_SWARM);
+                            }
+                            else if (root.isMember("error"))
+                            {
+                                EXPECT_EQ(root["error"].asString(), ERROR_UNABLE_TO_VALIDATE_UUID);
+                            }
+                        }));
+
+        wh(boost::system::error_code());
+
+        // send the votes
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), this->mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), this->mock_session);
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
+
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
+                [](const auto& /*session*/, const auto& msg)
+                {
+                    std::cout << msg->toStyledString();
+                }));
+
+
+        // attempting to add an invalid peer must fail
+        {
+            EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
+                    [](const auto& /*session*/, const auto& /*msg*/)
+                    {
+                        //std::cout << msg->toStyledString();
+                    }));
+            bzn::message bad_add_peer{make_secure_add_peer_request(invalid_uuid)};
+            mh(bad_add_peer, this->mock_session);
+        }
+
+        // Adding a valid peer that has a valid signature must suceed.
+        {
+            bzn::message msg = make_secure_add_peer_request(valid_uuid);
+            mh(msg,this->mock_session);
+
+            // do the concensus and commit the joint quorum
+            // expire timer...
+            wh(boost::system::error_code());
+
+            raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid1", 1, true, 1), mock_session);
+            raft->handle_request_append_entries_response(bzn::create_append_entries_response("uuid2", 1, true, 1), mock_session);
+            raft->handle_request_append_entries_response(bzn::create_append_entries_response(TEST_NODE_UUID, 1, true, 1), mock_session);
+            wh(boost::system::error_code());
+
+            auto entry = raft->raft_log->last_quorum_entry();
+            EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
+            auto peers = entry.msg["msg"]["peers"]["new"];
+
+            const auto peer = std::find_if(peers.begin(), peers.end(), [&](const auto& u) { return valid_uuid==u["uuid"].asString(); });
+
+            // The new peer has been added to the quorum.
+            EXPECT_FALSE(peer==peers.end());
+        }
     }
 } // bzn

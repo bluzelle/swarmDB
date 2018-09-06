@@ -57,7 +57,7 @@ crud::start()
 
                     // This is to avoid trying to process encoded protobuf messages where we just want to commit this
                     // index, but not alter storage at all.
-                    if(!ws_msg["msg"].isString())
+                    if (!ws_msg["msg"].isString())
                     {
                         return true;
                     }

@@ -61,7 +61,7 @@ audit::start()
                                                             , shared_from_this()
                                                             , std::placeholders::_1
                                                             , std::placeholders::_2));
-        if(this->monitor_endpoint)
+        if (this->monitor_endpoint)
         {
             LOG(info) << boost::format("Audit module running, will send stats to %1%:%2%")
                 % this->monitor_endpoint->address().to_string()
@@ -75,7 +75,7 @@ audit::start()
         LOG(info) << "Audit module running";
 
 
-        if(this->use_pbft)
+        if (this->use_pbft)
         {
             this->pbft_specific_init();
         }
@@ -123,7 +123,7 @@ audit::reset_leader_alive_timer()
 void
 audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
 {
-    if(ec)
+    if (ec)
     {
         LOG(debug) << "Leader alive timeout canceled " << ec.message();
         return;
@@ -139,7 +139,7 @@ audit::handle_leader_alive_timeout(const boost::system::error_code& ec)
 void
 audit::handle_primary_alive_timeout(const boost::system::error_code& ec)
 {
-    if(ec)
+    if (ec)
     {
         LOG(debug) << "Primary alive timeout canceled " << ec.message();
         return;
@@ -169,7 +169,7 @@ audit::clear_leader_progress_timer()
 
 void audit::handle_leader_progress_timeout(const boost::system::error_code& ec)
 {
-    if(ec)
+    if (ec)
     {
         LOG(debug) << "Leader progress timeout canceled " << ec.message();
         return;
@@ -196,7 +196,7 @@ audit::report_error(const std::string& metric_name, const std::string& descripti
 void
 audit::send_to_monitor(const std::string& stat)
 {
-    if(!this->monitor_endpoint)
+    if (!this->monitor_endpoint)
     {
         return;
     }
@@ -225,23 +225,23 @@ audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> sessi
 
     LOG(debug) << "Got audit message" << message.DebugString();
 
-    if(message.has_raft_commit())
+    if (message.has_raft_commit())
     {
         this->handle_raft_commit(message.raft_commit());
     }
-    else if(message.has_leader_status())
+    else if (message.has_leader_status())
     {
         this->handle_leader_status(message.leader_status());
     }
-    else if(message.has_pbft_commit())
+    else if (message.has_pbft_commit())
     {
         this->handle_pbft_commit(message.pbft_commit());
     }
-    else if(message.has_primary_status())
+    else if (message.has_primary_status())
     {
         this->handle_primary_status(message.primary_status());
     }
-    else if(message.has_failure_detected())
+    else if (message.has_failure_detected())
     {
         this->handle_failure_detected(message.failure_detected());
     }
@@ -255,7 +255,7 @@ audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> sessi
 
 void audit::handle_primary_status(const primary_status& primary_status)
 {
-    if(!this->use_pbft)
+    if (!this->use_pbft)
     {
         LOG(debug) << "audit ignoring primary status message because we are in raft mode";
         return;
@@ -263,14 +263,14 @@ void audit::handle_primary_status(const primary_status& primary_status)
 
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    if(this->recorded_primaries.count(primary_status.view()) == 0)
+    if (this->recorded_primaries.count(primary_status.view()) == 0)
     {
         LOG(info) << "audit recording that primary of view " << primary_status.view() << " is '" << primary_status.primary() << "'";
         this->send_to_monitor(bzn::PRIMARY_HEARD_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
         this->recorded_primaries[primary_status.view()] = primary_status.primary();
         this->trim();
     }
-    else if(this->recorded_primaries[primary_status.view()] != primary_status.primary())
+    else if (this->recorded_primaries[primary_status.view()] != primary_status.primary())
     {
         std::string err = str(boost::format(
                 "Conflicting primary elected! '%1%' is the recorded primary of view %2%, but '%3%' claims to be the primary of the same view.")
@@ -286,7 +286,7 @@ void audit::handle_primary_status(const primary_status& primary_status)
 void
 audit::handle_leader_status(const leader_status& leader_status)
 {
-    if(this->use_pbft)
+    if (this->use_pbft)
     {
         LOG(debug) << "audit ignoring leader status message because we are in pbft mode";
         return;
@@ -294,14 +294,14 @@ audit::handle_leader_status(const leader_status& leader_status)
 
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    if(this->recorded_leaders.count(leader_status.term()) == 0)
+    if (this->recorded_leaders.count(leader_status.term()) == 0)
     {
         LOG(info) << "audit recording that leader of term " << leader_status.term() << " is '" << leader_status.leader() << "'";
         this->send_to_monitor(bzn::NEW_LEADER_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
         this->recorded_leaders[leader_status.term()] = leader_status.leader();
         this->trim();
     }
-    else if(this->recorded_leaders[leader_status.term()] != leader_status.leader())
+    else if (this->recorded_leaders[leader_status.term()] != leader_status.leader())
     {
         std::string err = str(boost::format(
                 "Conflicting leader elected! '%1%' is the recorded leader of term %2%, but '%3%' claims to be the leader of the same term.")
@@ -325,7 +325,7 @@ audit::handle_leader_data(const leader_status& leader_status)
     // - The timer must be reset, but not halted, when the leader commits some but not all of the uncommitted entries
     // - The timer must be restarted from full when the leader gets an uncommitted entry where it previously had none
 
-    if(leader_status.leader() != this->last_leader)
+    if (leader_status.leader() != this->last_leader)
     {
         // Leader has changed - halt or restart timer
         this->last_leader = leader_status.leader();
@@ -350,7 +350,7 @@ void audit::handle_leader_made_progress(const leader_status& leader_status)
     // Extracted common logic in the case where we know that the leader has made some progress,
     // but may or may not still have more messages to commit
 
-    if(leader_status.current_commit_index() == leader_status.current_log_index())
+    if (leader_status.current_commit_index() == leader_status.current_log_index())
     {
         this->clear_leader_progress_timer();
         this->leader_has_uncommitted_entries = false;
@@ -367,7 +367,7 @@ audit::handle_raft_commit(const raft_commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    if(this->use_pbft)
+    if (this->use_pbft)
     {
         LOG(debug) << "audit ignoring raft commit message because we are in pbft mode";
         return;
@@ -375,13 +375,13 @@ audit::handle_raft_commit(const raft_commit_notification& commit)
 
     this->send_to_monitor(bzn::RAFT_COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
 
-    if(this->recorded_raft_commits.count(commit.log_index()) == 0)
+    if (this->recorded_raft_commits.count(commit.log_index()) == 0)
     {
         LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at index " << commit.log_index();
         this->recorded_raft_commits[commit.log_index()] = commit.operation();
         this->trim();
     }
-    else if(this->recorded_raft_commits[commit.log_index()] != commit.operation())
+    else if (this->recorded_raft_commits[commit.log_index()] != commit.operation())
     {
         std::string err = str(boost::format(
                 "Conflicting commit detected! '%1%' is the recorded entry at index %2%, but '%3%' has been committed with the same index.")
@@ -397,7 +397,7 @@ audit::handle_pbft_commit(const pbft_commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    if(!this->use_pbft)
+    if (!this->use_pbft)
     {
         LOG(debug) << "audit ignoring pbft commit message because we are in raft mode";
         return;
@@ -405,13 +405,13 @@ audit::handle_pbft_commit(const pbft_commit_notification& commit)
 
     this->send_to_monitor(bzn::PBFT_COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
 
-    if(this->recorded_pbft_commits.count(commit.sequence_number()) == 0)
+    if (this->recorded_pbft_commits.count(commit.sequence_number()) == 0)
     {
         LOG(info) << "audit recording that message '" << commit.operation() << "' is committed at sequence " << commit.sequence_number();
         this->recorded_pbft_commits[commit.sequence_number()] = commit.operation();
         this->trim();
     }
-    else if(this->recorded_pbft_commits[commit.sequence_number()] != commit.operation())
+    else if (this->recorded_pbft_commits[commit.sequence_number()] != commit.operation())
     {
         std::string err = str(boost::format(
                 "Conflicting commit detected! '%1%' is the recorded entry at sequence %2%, but '%3%' has been committed with the same sequence.")
@@ -428,7 +428,7 @@ audit::handle_failure_detected(const failure_detected& /*failure*/)
     // TODO KEP-539: more info in this message
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    if(!this->use_pbft)
+    if (!this->use_pbft)
     {
         LOG(debug) << "audit ignoring pbft failure detected message because we are in raft mode";
         return;

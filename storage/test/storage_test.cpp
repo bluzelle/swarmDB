@@ -246,7 +246,7 @@ TEST_F(storageTest, test_get_keys_returns_all_keys)
     std::sort(user_1_keys.begin(), user_1_keys.end());
     std::sort(user_2_keys.begin(), user_2_keys.end());
 
-    if(user_0_keys.size() >0)
+    if (user_0_keys.size() >0)
     {
         EXPECT_TRUE(std::equal(user_keys.begin(), user_keys.end(), user_0_keys.begin() ));
         EXPECT_TRUE(std::equal(user_keys.begin(), user_keys.end(), user_1_keys.begin() ));

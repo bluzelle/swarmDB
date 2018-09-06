@@ -53,7 +53,6 @@ namespace
     const std::string PBFT_ENABLED_KEY = "use_pbft";
     const std::string STATE_DIR_KEY = "state_dir";
     const std::string WS_IDLE_TIMEOUT_KEY = "ws_idle_timeout";
-    const std::string ENABLE_WHITELIST_KEY = "enable_whitelist"; 
 
     // this is 10k error strings in a vector, which is pessimistically 10MB, which is small enough that no one should mind
     const size_t DEFAULT_AUDIT_MEM_SIZE = 10000;
@@ -271,7 +270,7 @@ options::validate()
         return false;
     }
 
-    if(this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
+    if (this->config_data.isMember(MONITOR_PORT_KEY) && this->config_data.isMember(MONITOR_ADDRESS_KEY))
     {
         LOG(info) << "No monitor address provided; will not send monitor packets";
     }
@@ -485,7 +484,7 @@ options::get_http_port() const
 
 
 bool 
-options::whitelist_enabled() const
+options::peer_validation_enabled() const
 {
-    return this->config_data.isMember(ENABLE_WHITELIST_KEY) && this->config_data[ENABLE_WHITELIST_KEY].asBool();
+    return this->config_data.isMember(PEER_VALIDATION_ENABLED_KEY) && this->config_data[PEER_VALIDATION_ENABLED_KEY].asBool();
 } 

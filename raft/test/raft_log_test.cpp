@@ -82,7 +82,7 @@ namespace
     void
     remove_folder(const std::string& path)
     {
-        if(boost::filesystem::exists(path))
+        if (boost::filesystem::exists(path))
         {
             boost::filesystem::remove_all(path);
         }
