@@ -124,6 +124,7 @@ namespace
 
     TEST_F(pbft_failure_detector_test, timeout_triggers_callback)
     {
+        EXPECT_CALL(*(this->mock_io_context), post(_)).WillOnce(Invoke(std::bind(&pbft_failure_detector_test::failure_detect_handler, this)));
         this->build_failure_detector();
 
         this->failure_detector->request_seen(req_a);

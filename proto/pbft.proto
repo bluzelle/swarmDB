@@ -4,14 +4,20 @@ message pbft_msg
 {
     pbft_msg_type type = 1;
 
-    // These three will be present on every type of message other than requests, and identify the client request in question
+    // used for preprepare, prepare, commit
     uint64 view = 2;
+    // used for preprepare, prepare, commit, checkpoint
     uint64 sequence = 3;
+
+    // used for preprepare, prepare, commit, request
     // TODO: Most messages should contain only the hash of the request - KEP-344
     pbft_request request = 4;
 
-    // For prepare, commit, etc messages where the recipient needs to count the senders. This is the sender's uuid.
+    // Needed for prepare, commit, request, checkpoing, but included always for clarity. This is the sender's uuid.
     string sender = 5;
+
+    // for checkpoints
+    string state_hash = 6;
 }
 
 enum pbft_msg_type {
@@ -20,6 +26,7 @@ enum pbft_msg_type {
     PBFT_MSG_PREPREPARE = 2;
     PBFT_MSG_PREPARE = 3;
     PBFT_MSG_COMMIT = 4;
+    PBFT_MSG_CHECKPOINT = 5;
 }
 
 message pbft_request

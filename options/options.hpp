@@ -61,7 +61,7 @@ namespace bzn
 
         uint16_t get_http_port() const override;
         
-        bool whitelist_enabled() const override;
+        bool peer_validation_enabled() const override;
 
     private:
         bool parse(int argc, const char* argv[]);

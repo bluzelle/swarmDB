@@ -24,6 +24,8 @@
 
 namespace bzn
 {
+    const std::string PEER_VALIDATION_ENABLED_KEY = "peer_validation_enabled";
+
     // Suffixes for the max size parser.
     namespace utils
     {
@@ -156,9 +158,9 @@ namespace bzn
          virtual uint16_t get_http_port() const = 0;
          
          /**
-          * Temporary toggle for the whitelist while in QA. Defaults to false.
-          * @return boolean
+          * Temporary toggle for the peer validation while in QA. Defaults to false.
+          * @return boolean if the peer_validation member is set to true. Default is false.
           */
-         virtual bool whitelist_enabled() const = 0;
+         virtual bool peer_validation_enabled() const = 0;
     };
 } // bzn

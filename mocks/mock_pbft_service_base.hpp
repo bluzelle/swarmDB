@@ -14,25 +14,24 @@
 
 #pragma once
 
-#include <raft/raft_base.hpp>
+#include <pbft/pbft_service_base.hpp>
 #include <gmock/gmock.h>
+#include <functional>
 
-namespace bzn
-{
-    class Mockraft_base : public raft_base {
-    public:
-        MOCK_METHOD0(get_state,
-                     bzn::raft_state());
-        MOCK_METHOD0(start,
-                     void());
-        MOCK_METHOD0(get_leader,
-                     bzn::peer_address_t());
-        MOCK_METHOD2(append_log,
-                     bool(const bzn::message& msg, const bzn::log_entry_type entry_type));
-        MOCK_METHOD1(register_commit_handler,
-                     void(bzn::raft_base::commit_handler handler));
-        MOCK_METHOD0(get_peer_validation_enabled,
-                     bool());
+namespace bzn {
+
+    class mock_pbft_service_base : public pbft_service_base {
+     public:
+      MOCK_METHOD2(apply_operation,
+          void(const pbft_request& request, uint64_t sequence_number));
+      MOCK_CONST_METHOD2(query,
+          void(const pbft_request& request, uint64_t sequence_number));
+      MOCK_CONST_METHOD1(service_state_hash,
+          bzn::hash_t(uint64_t sequence_number));
+      MOCK_METHOD1(consolidate_log,
+          void(uint64_t sequence_number));
+      MOCK_METHOD1(register_execute_handler,
+          void(std::function<void(const pbft_request&, uint64_t)> handler));
     };
 
-} // namespace bzn
+}  // namespace bzn

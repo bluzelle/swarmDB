@@ -149,7 +149,8 @@ The configuration file is a JSON format file, as seen in the following example:
         "logfile_dir" : "logs/",
         "logfile_rotation_size" : "64K",
         "logfile_max_size" : "640K",
-        "debug_logging" : false
+        "debug_logging" : false,
+        "peer_validation_enabled" : false 
     }
 
 where the properties are:
@@ -167,6 +168,7 @@ where the properties are:
 - "logfile_rotation_size" - approximate size of log file must be before rotation (default: 64K)
 - "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
+- "peer_validation_enabled" - set this to true to enable blacklisting and uuid signature verification
 
 All size entries use the same notation as storage: B, K, M, G & T or none
 (bytes)
@@ -612,7 +614,8 @@ following JSON objects:
                 "http_port":<HTTPPORT>,
                 "name":"<NODE-NAME>",
                 "port":<PORT>,
-                "uuid":"<UUID>"
+                "uuid":"<UUID>",
+                "signature" : ["<signature line>", ..., "<last signature line>"]
             }
         }
     }
@@ -620,7 +623,8 @@ following JSON objects:
     The "name" object, <NODE-NAME>, can be a human readable name for the node, "Fluffy" for example.
     The "uuid" object must be a universally unique identifer that uniquely identifies the node within the swarm, or any
     other swarm. This value can be generated online at a site like: https://www.uuidgenerator.net/
-
+    The "signature" object is a signature string associated with your node's UUID provided by a Bluzelle representative. 
+      
     Remove an existing peer:
 
     {
@@ -634,21 +638,30 @@ following JSON objects:
 Given a swarm of nodes, a new node can be added via the command line with a
 WebSocket client such as wscat (https://www.npmjs.com/package/wscat).
 
+If the swarm has security enabled, before a new node can participate in a swarm 
+it must be validated by the leader against a cryptographic signature. You can 
+obtain this signature by providing the nodes' UUID to a Bluzelle representative 
+who will cryptographically sign the UUID and send you a signature file whose 
+contents must be included in the add_peer command to be sent to the swarm leader.
+
 Start the node that you want to add to the swarm, remember that the local peers
 list must include the information for the local node for your node to be able
 to start. When your node does start, it will not be able to participate in the
-swarm.
+swarm until you add it to the swarm.
 
-Create your add_peer JSON object, and use wscat to send it to the swarm leader:
+Create your add_peer JSON object, and use wscat to send it to the swarm leader,
+note that the signature object is only required for swarms whose nodes have set
+the peer_validation_enabled object to true in thier config files:
 
     $ wscat -c  http://<leader-address>:<port>
     connected (press CTRL+C to quit)
-    >{"bzn-api":"raft","cmd":"add_peer","data":{"peer":{"host":"104.25.178.61","http_port":84,"name":"peer3","port":49154,"uuid":"7dda1fcb-d494-4fc1-8645-a14056d13afd"}}}
+    >{"bzn-api":"raft","cmd":"add_peer","data":{"peer":{"host":"104.25.178.61","http_port":84,"name":"peer3","port":49154,"uuid":"7dda1fcb-d494-4fc1-8645-a14056d13afd","signature":"Dprtbr<...>4vk="}}}
     >
     disconnected
     $
 
-the new node will now start participating in the swarm.
+the leader will validate the new node, and if successful, add the new node 
+to the swarm.
 
 To remove the node, create a remove_peer JSON object, and use wscat to send it
 to the swarm leader:

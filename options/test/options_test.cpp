@@ -109,7 +109,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
-    EXPECT_FALSE(options.whitelist_enabled());
+    EXPECT_FALSE(options.peer_validation_enabled());
 
     // defaults..
     {
@@ -154,7 +154,7 @@ TEST_F(options_file_test, test_max_storage_parsing)
                       {
                           std::string max_storage{boost::lexical_cast<std::string>(expected / p.second)};
                           max_storage = max_storage + p.first;
-                          if(p.first!='B')
+                          if (p.first!='B')
                           {
                               max_storage = max_storage.append("B");
                           }
@@ -177,18 +177,18 @@ TEST_F(options_file_test, test_enable_whitlelist_temporary)
     bzn::message json;
     config_text_to_json(json);
     {
-        json["enable_whitelist"] = false;
+        json[bzn::PEER_VALIDATION_ENABLED_KEY] = false;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
-        EXPECT_FALSE(options.whitelist_enabled());
+        EXPECT_FALSE(options.peer_validation_enabled());
     }
     {
-        json["enable_whitelist"] = true;
+        json[bzn::PEER_VALIDATION_ENABLED_KEY] = true;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
-        EXPECT_TRUE(options.whitelist_enabled());
+        EXPECT_TRUE(options.peer_validation_enabled());
     }
 }
 
@@ -211,5 +211,5 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
-    EXPECT_FALSE(options.whitelist_enabled());
+    EXPECT_FALSE(options.peer_validation_enabled());
 }

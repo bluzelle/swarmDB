@@ -16,6 +16,7 @@
 
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_failure_detector_base.hpp>
+#include <include/boost_asio_beast.hpp>
 #include <unordered_map>
 
 namespace bzn
@@ -27,18 +28,23 @@ namespace bzn
     class dummy_pbft_service : public pbft_service_base
     {
     public:
-        dummy_pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector);
-
+        dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context);
         void apply_operation(std::shared_ptr<pbft_operation> op) override;
         void query(const pbft_request& request, uint64_t sequence_number) const override;
         void consolidate_log(uint64_t sequence_number) override;
+        void register_execute_handler(execute_handler_t handler) override;
+        bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
 
         uint64_t applied_requests_count();
 
     private:
+        execute_handler_t execute_handler;
+        std::shared_ptr<bzn::asio::io_context_base> io_context;
         void send_execute_response(const std::shared_ptr<pbft_operation>& op);
 
         uint64_t next_request_sequence = 1;
+        std::shared_ptr<pbft_failure_detector_base> failure_detector;
+
         std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_operations;
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 

@@ -44,16 +44,16 @@ storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::stri
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    if(value.size() > bzn::MAX_VALUE_SIZE)
+    if (value.size() > bzn::MAX_VALUE_SIZE)
     {
         return storage_base::result::value_too_large;
     }
 
     auto search = this->kv_store.find(uuid);
 
-    if(search != this->kv_store.end())
+    if (search != this->kv_store.end())
     {
-        if(search->second.find(key)!= search->second.end() )
+        if (search->second.find(key)!= search->second.end() )
         {
             return storage_base::result::exists;
         }
@@ -61,7 +61,7 @@ storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::stri
 
     auto& inner_db =  this->kv_store[uuid];
 
-    if(inner_db.find(key) == inner_db.end())
+    if (inner_db.find(key) == inner_db.end())
     {
         auto record = std::make_shared<bzn::storage_base::record>(bzn::storage_base::record{
             std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()),
@@ -86,7 +86,7 @@ storage::read(const bzn::uuid_t& uuid, const std::string& key)
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
     auto search = this->kv_store.find(uuid);
-    if(search == this->kv_store.end())
+    if (search == this->kv_store.end())
     {
         return nullptr;
     }
@@ -94,7 +94,7 @@ storage::read(const bzn::uuid_t& uuid, const std::string& key)
     // we have the db, let's see if the key exists
     auto& inner_db = search->second;
     auto inner_search = inner_db.find(key);
-    if(inner_search == inner_db.end())
+    if (inner_search == inner_db.end())
     {
         return nullptr;
     }
@@ -107,13 +107,13 @@ storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::stri
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    if(value.size() > bzn::MAX_VALUE_SIZE)
+    if (value.size() > bzn::MAX_VALUE_SIZE)
     {
         return storage_base::result::value_too_large;
     }
 
     auto search = this->kv_store.find(uuid);
-    if(search == this->kv_store.end())
+    if (search == this->kv_store.end())
     {
         return bzn::storage_base::result::not_found;
     }
@@ -122,7 +122,7 @@ storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::stri
     // we have the db, let's see if the key exists
     auto& inner_db = search->second;
     auto inner_search = inner_db.find(key);
-    if(inner_search == inner_db.end())
+    if (inner_search == inner_db.end())
     {
         return bzn::storage_base::result::not_found;
     }
@@ -141,13 +141,13 @@ storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 
     auto search = this->kv_store.find(uuid);
 
-    if(search == this->kv_store.end())
+    if (search == this->kv_store.end())
     {
         return storage_base::result::not_found;
     }
 
     auto record = search->second.find(key);
-    if(record == search->second.end())
+    if (record == search->second.end())
     {
         return storage_base::result::not_found;
     }
@@ -181,7 +181,7 @@ storage::load(const std::string& path)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    if(!boost::filesystem::exists(path))
+    if (!boost::filesystem::exists(path))
     {
         return storage_base::result::not_found;
     }
@@ -200,7 +200,7 @@ storage::get_keys(const bzn::uuid_t& uuid)
     std::vector<std::string> keys;
     auto inner_db = this->kv_store.find(uuid);
 
-    if(inner_db == this->kv_store.end())
+    if (inner_db == this->kv_store.end())
     {
         return keys;
     }

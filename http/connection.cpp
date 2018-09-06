@@ -91,7 +91,7 @@ connection::do_read_request()
     this->http_socket->async_read(this->buffer, this->request,
         [self = shared_from_this()](boost::beast::error_code ec, std::size_t /*bytes_transferred*/)
         {
-            if(!ec)
+            if (!ec)
             {
                 self->deadline_timer->cancel();
 
