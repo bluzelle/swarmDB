@@ -57,6 +57,7 @@ namespace bzn
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
+        std::shared_ptr<pbft_operation> find_operation(const std::shared_ptr<pbft_operation>& op);
 
         bzn::hash_t request_hash(const pbft_request& req);
 

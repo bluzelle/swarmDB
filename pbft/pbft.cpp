@@ -369,7 +369,8 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         this->broadcast(this->wrap_message(msg));
     }
 
-    this->service->apply_operation(op);
+    // Get a new shared pointer to the operation so that we can give pbft_service ownership on it
+    this->service->apply_operation(this->find_operation(op));
 }
 
 size_t
@@ -395,6 +396,12 @@ std::shared_ptr<pbft_operation>
 pbft::find_operation(const pbft_msg& msg)
 {
     return this->find_operation(msg.view(), msg.sequence(), msg.request());
+}
+
+std::shared_ptr<pbft_operation>
+pbft::find_operation(const std::shared_ptr<pbft_operation>& op)
+{
+    return this->find_operation(op->view, op->sequence, op->request);
 }
 
 std::shared_ptr<pbft_operation>
