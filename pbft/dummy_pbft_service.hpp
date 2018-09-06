@@ -29,15 +29,17 @@ namespace bzn
     public:
         dummy_pbft_service(std::shared_ptr<pbft_failure_detector_base> failure_detector);
 
-        void apply_operation(const pbft_request& request, uint64_t sequence_number) override;
+        void apply_operation(std::shared_ptr<pbft_operation> op) override;
         void query(const pbft_request& request, uint64_t sequence_number) const override;
         void consolidate_log(uint64_t sequence_number) override;
 
         uint64_t applied_requests_count();
 
     private:
+        void send_execute_response(const std::shared_ptr<pbft_operation>& op);
+
         uint64_t next_request_sequence = 1;
-        std::unordered_map<uint64_t, pbft_request> waiting_requests;
+        std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_operations;
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex lock;
