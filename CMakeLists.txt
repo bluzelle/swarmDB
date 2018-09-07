@@ -30,7 +30,11 @@ if (APPLE)
     add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 endif(APPLE)
 
-set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic -Wno-extended-offsetof")
+set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic")
+if (APPLE)
+    set(warnings "${warnings} -Wno-extended-offsetof")
+endif(APPLE)
+
 set(CMAKE_CXX_FLAGS ${warnings})
 set(CMAKE_C_FLAGS   ${warnings})
 
