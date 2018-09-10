@@ -131,8 +131,13 @@ namespace
     RSA_verify_signature(const RSA* rsa, const std::vector<unsigned char>& signature, const std::string& uuid, bool& is_authentic)
     {
         std::unique_ptr<EVP_PKEY, std::function<void(EVP_PKEY*)>> public_key{EVP_PKEY_new(), EVP_PKEY_free};
+        // Versions of OpenSSL greater than 1.1 use new and free instead of create and destroy.
+        // TODO: This #if should be replaced with a better cmake OpenSSL functionality that enforces a minimum OpenSSL version.
+#if (OPENSSL_VERSION_NUMBER < 0x1010000fL)
         std::unique_ptr<EVP_MD_CTX, std::function<void(EVP_MD_CTX*)>> RSA_verification_context{EVP_MD_CTX_create(), EVP_MD_CTX_destroy};
-
+#else
+        std::unique_ptr<EVP_MD_CTX, std::function<void(EVP_MD_CTX*)>> RSA_verification_context{EVP_MD_CTX_new(), EVP_MD_CTX_free};
+#endif
         // I could find no guidance in the OpenSSL documentation that suggests that the EVP_MD
         // pointer needs to be released after use, though in the same page the documentation
         // points out that EVP_MD_CTX pointers *do* need to be released. For now I will leave
