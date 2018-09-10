@@ -40,6 +40,12 @@ namespace bzn
                 return handler;
             }));
 
+        EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::read_handler>())).WillRepeatedly(Invoke(
+            [&](bzn::asio::read_handler handler)
+            {
+                return handler;
+            }));
+
         EXPECT_CALL(*mock_steady_timer, expires_from_now(std::chrono::milliseconds(1000)));
 
         bzn::asio::wait_handler wh;
