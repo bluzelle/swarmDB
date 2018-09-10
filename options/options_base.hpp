@@ -19,13 +19,12 @@
 #include <include/bluzelle.hpp>
 #include <include/optional.hpp>
 #include <include/boost_asio_beast.hpp>
+#include <options/simple_options.hpp>
 #include <string>
 #include <map>
 
 namespace bzn
 {
-    const std::string PEER_VALIDATION_ENABLED_KEY = "peer_validation_enabled";
-
     // Suffixes for the max size parser.
     namespace utils
     {
@@ -40,6 +39,11 @@ namespace bzn
     {
     public:
         virtual ~options_base() = default;
+
+        /**
+         * @return the raw_options container for accessing simple options
+         */
+        virtual const simple_options& get_simple_options() const = 0;
 
         /**
          * Get the address and port for the node to listen on

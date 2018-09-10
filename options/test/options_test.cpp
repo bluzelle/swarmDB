@@ -35,7 +35,7 @@ namespace
         "  \"ethereum_io_api_token\" : \"ASDFASDFASDFASDFSDF\",\n"
         "  \"bootstrap_file\" : \"peers.json\",\n"
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
-        //"  \"uuid\" : \"c05c0dff-3c27-4532-96de-36f53d8a278e\",\n"
+        "  \"uuid\" : \"c05c0dff-3c27-4532-96de-36f53d8a278e\",\n"
         "  \"debug_logging\" : true,"
         "  \"log_to_stdout\" : true,"
         "  \"state_dir\" : \"./daemon_state/\","
@@ -89,13 +89,21 @@ public:
     }
 };
 
+TEST_F(options_file_test, test_that_missing_arguments_fail)
+{
+    this->save_options_file("{}");
+
+    bzn::options options;
+
+    EXPECT_THROW(options.parse_command_line(1, NO_ARGS), std::exception);
+}
+
 
 TEST_F(options_file_test, test_that_loading_of_default_config_file)
 {
     bzn::options options;
 
-    // no uuid...
-    ASSERT_FALSE(options.parse_command_line(1, NO_ARGS));
+    options.parse_command_line(1, NO_ARGS);
 
     EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
@@ -114,6 +122,11 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     // defaults..
     {
         bzn::options options;
+        this->save_options_file("{}");
+
+        // Will fail without many required arguments, but we can still get default values where they exist
+        EXPECT_THROW(options.parse_command_line(1, NO_ARGS), std::exception);
+
         EXPECT_EQ("./.state/", options.get_state_dir());
         EXPECT_EQ(size_t(524288), options.get_logfile_max_size());
         EXPECT_EQ(size_t(65536), options.get_logfile_rotation_size());
@@ -177,14 +190,14 @@ TEST_F(options_file_test, test_enable_whitlelist_temporary)
     bzn::message json;
     config_text_to_json(json);
     {
-        json[bzn::PEER_VALIDATION_ENABLED_KEY] = false;
+        json[bzn::option_names::PEER_VALIDATION_ENABLED] = false;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
         EXPECT_FALSE(options.peer_validation_enabled());
     }
     {
-        json[bzn::PEER_VALIDATION_ENABLED_KEY] = true;
+        json[bzn::option_names::PEER_VALIDATION_ENABLED] = true;
         this->save_options_file(json.toStyledString());
         bzn::options options;
         options.parse_command_line(1, NO_ARGS);
@@ -212,4 +225,47 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
     EXPECT_FALSE(options.peer_validation_enabled());
+}
+
+TEST_F(options_file_test, test_that_no_monitor_endpoint_when_not_specified)
+{
+    bzn::options options;
+
+    try
+    {
+        options.parse_command_line(1, NO_ARGS);
+    }
+    catch (const std::exception& e)
+    {
+        // We are missing some required arguments, that's fine, we want to test against defaults
+    }
+
+    auto io_context = std::make_shared<bzn::asio::io_context>();
+
+    EXPECT_EQ(options.get_monitor_endpoint(io_context), bzn::optional<boost::asio::ip::udp::endpoint>{});
+}
+
+TEST_F(options_file_test, test_that_endpoint_built)
+{
+    bzn::options options;
+    this->save_options_file("{\""
+                            + bzn::option_names::MONITOR_ADDRESS + "\": \"localhost\", \""
+                            + bzn::option_names::MONITOR_PORT + "\": 12345}");
+
+    try
+    {
+        options.parse_command_line(1, NO_ARGS);
+    }
+    catch (const std::exception& e)
+    {
+        // We are missing some required arguments, that's fine, we want to test against what we've specified
+    }
+
+    auto io_context = std::make_shared<bzn::asio::io_context>();
+
+    boost::asio::ip::udp::resolver resolver(io_context->get_io_context());
+    auto eps = resolver.resolve(boost::asio::ip::udp::v4(), "localhost", "12345");
+    auto expect = bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
+
+    EXPECT_EQ(options.get_monitor_endpoint(io_context), expect);
 }
