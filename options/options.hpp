@@ -25,6 +25,8 @@ namespace bzn
     public:
         const simple_options& get_simple_options() const override;
 
+        simple_options& get_mutable_simple_options() override;
+
         bool parse_command_line(int argc, const char* argv[]);
 
         boost::asio::ip::tcp::endpoint get_listener() const override;

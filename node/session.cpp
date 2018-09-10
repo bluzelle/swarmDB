@@ -24,11 +24,12 @@ namespace
 using namespace bzn;
 
 
-session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, const bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout)
+session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, const bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout)
     : strand(io_context->make_unique_strand())
     , session_id(session_id)
     , websocket(std::move(websocket))
     , idle_timer(io_context->make_unique_steady_timer())
+    , chaos(std::move(chaos))
     , ws_idle_timeout(ws_idle_timeout.count() ? ws_idle_timeout : DEFAULT_WS_TIMEOUT_MS)
 {
 }
@@ -118,6 +119,17 @@ session::send_message(std::shared_ptr<bzn::message> msg, const bool end_session)
 void
 session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 {
+    if (this->chaos->is_message_delayed())
+    {
+        this->chaos->reschedule_message(std::bind(static_cast<void(session::*)(std::shared_ptr<std::string>, const bool)>(&session::send_message), shared_from_this(), std::move(msg), end_session));
+        return;
+    }
+
+    if (this->chaos->is_message_dropped())
+    {
+        return;
+    }
+
     this->idle_timer->cancel(); // kill timer for duration of write...
 
     std::lock_guard<std::mutex> lock(this->write_lock);
@@ -148,6 +160,17 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 void
 session::send_datagram(std::shared_ptr<std::string> msg)
 {
+    if (this->chaos->is_message_delayed())
+    {
+        this->chaos->reschedule_message(std::bind(&session::send_datagram, shared_from_this(), std::move(msg)));
+        return;
+    }
+
+    if (this->chaos->is_message_dropped())
+    {
+        return;
+    }
+
     std::lock_guard<std::mutex> lock(this->write_lock);
 
     this->websocket->get_websocket().binary(true);

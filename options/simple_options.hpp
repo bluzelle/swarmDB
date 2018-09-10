@@ -15,6 +15,7 @@
 #pragma once
 
 #include <boost/program_options.hpp>
+#include <boost/program_options/variables_map.hpp>
 #include <string>
 
 namespace bzn::option_names
@@ -44,6 +45,14 @@ namespace bzn::option_names
     const std::string STATE_DIR = "state_dir";
     const std::string WS_IDLE_TIMEOUT = "ws_idle_timeout";
     const std::string PEER_VALIDATION_ENABLED = "peer_validation_enabled";
+
+    const std::string CHAOS_ENABLED = "chaos_testing_enabled";
+    const std::string CHAOS_NODE_FAILURE_SHAPE = "chaos_node_failure_shape";
+    const std::string CHAOS_NODE_FAILURE_SCALE = "chaos_node_failure_scale_hours";
+    const std::string CHAOS_MESSAGE_DROP_CHANCE = "chaos_message_drop_chance";
+    const std::string CHAOS_MESSAGE_DELAY_CHANCE = "chaos_message_delay_chance";
+    const std::string CHAOS_MESSAGE_DELAY_TIME = "chaos_message_delay_time_milliseconds";
+
 
 }
 
@@ -76,6 +85,11 @@ namespace bzn
                 return T();
             }
         }
+
+        /*
+         * Assign a value to an option at runtime
+         */
+        void set(const std::string& option_name, const std::string& option_value);
 
         /*
          * Do we have a value for an option (either explicit or default)

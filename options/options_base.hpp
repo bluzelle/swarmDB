@@ -48,6 +48,11 @@ namespace bzn
         virtual const simple_options& get_simple_options() const = 0;
 
         /**
+         * @return the raw_options container for accessing simple options
+         */
+        virtual simple_options& get_mutable_simple_options() = 0;
+
+        /**
          * Get the address and port for the node to listen on
          * @return endpoint
          */

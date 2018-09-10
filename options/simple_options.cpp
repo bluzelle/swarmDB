@@ -40,12 +40,12 @@ namespace
 simple_options::simple_options()
         : options_root("Core configuration")
 {
+    this->build_options();
 }
 
 bool
 simple_options::parse(int argc, const char* argv[])
 {
-    this->build_options();
     return this->handle_command_line_options(argc, argv) && this->handle_config_file_options() && this->validate_options();
 }
 
@@ -149,6 +149,45 @@ simple_options::build_options()
 
     this->options_root.add(crypto);
 
+    po::options_description chaos("Chaos testing");
+    chaos.add_options()
+                 (CHAOS_ENABLED.c_str(),
+                         po::value<bool>()->default_value(false),
+                         "enable chaos testing module")
+
+                 /*
+                  * With the default parameters specified here,
+                  * 10% of nodes will fail within a couple minutes
+                  * 20% more will fail within the first hour
+                  * 40% will last 1-12 hours
+                  * 20% will last 12-48 hours
+                  * 10% will last 48+ hours
+                  */
+                 (CHAOS_NODE_FAILURE_SHAPE.c_str(),
+                         po::value<double>()->default_value(0.5),
+                         "shape parameter of Weibull distribution for node lifetime")
+                 (CHAOS_NODE_FAILURE_SCALE.c_str(),
+                         po::value<double>()->default_value(10),
+                         "scale parameter of Weibull distribution for node lifetime (expressed in hours)")
+
+
+                 /*
+                  * These parameters are chosen arbitrarily, but a cursory search suggests that
+                  * an exponential distribution is indeed reasonable for internet packet delay
+                  */
+                 (CHAOS_MESSAGE_DELAY_CHANCE.c_str(),
+                         po::value<double>()->default_value(0.1),
+                         "chance by which outgoing messages are delayed (independently at random)")
+                 (CHAOS_MESSAGE_DELAY_TIME.c_str(),
+                         po::value<uint>()->default_value(2500),
+                         "how long to wait before attempting to resend a delayed message (at which point it can be delayed again, resulting in an exponential distribution on the actual delay)")
+
+
+                 (CHAOS_MESSAGE_DROP_CHANCE.c_str(),
+                         po::value<double>()->default_value(0.025),
+                         "chance that outgoing messages are dropped entirely (independently at random)");
+
+    this->options_root.add(chaos);
 }
 
 bool
@@ -305,4 +344,18 @@ bool
 simple_options::has(const std::string& option_name) const
 {
     return this->vm.count(option_name) > 0;
+}
+
+void
+simple_options::set(const std::string& option_name, const std::string& option_value)
+{
+    po::basic_option<char> opt;
+    opt.string_key = option_name;
+    opt.value.push_back(option_value);
+
+    boost::program_options::parsed_options parsed(&(this->options_root));
+    parsed.options.push_back(opt);
+
+    this->vm.erase(option_name);
+    po::store(parsed, this->vm);
 }

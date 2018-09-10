@@ -18,6 +18,7 @@
 #include <node/node_base.hpp>
 #include <node/session_base.hpp>
 #include <options/options_base.hpp>
+#include <chaos/chaos.hpp>
 #include <memory>
 #include <mutex>
 #include <list>
@@ -30,7 +31,7 @@ namespace bzn
     class session final : public bzn::session_base, public std::enable_shared_from_this<session>
     {
     public:
-        session(std::shared_ptr<bzn::asio::io_context_base> io_context, bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout);
+        session(std::shared_ptr<bzn::asio::io_context_base> io_context, bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout);
 
         void start(bzn::message_handler handler) override;
 
@@ -56,6 +57,8 @@ namespace bzn
 
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
+
+        std::shared_ptr<bzn::chaos_base> chaos;
 
         const std::chrono::milliseconds ws_idle_timeout;
         bzn::message_handler handler;

@@ -330,3 +330,15 @@ TEST_F(options_file_test, test_that_uuid_and_pubkey_conflict)
     this->save_options_file(compose_config_data(DEFAULT_CONFIG_CONTENT, "\"public_key_file\": \"somefile\""));
     EXPECT_FALSE(options.parse_command_line(1, NO_ARGS));
 }
+
+TEST_F(options_file_test, test_set_option_at_runtime)
+{
+    bzn::options options;
+    this->save_options_file(DEFAULT_CONFIG_DATA);
+    EXPECT_TRUE(options.parse_command_line(1, NO_ARGS));
+
+    EXPECT_TRUE(options.get_simple_options().get<bool>(bzn::option_names::DEBUG_LOGGING));
+    options.get_mutable_simple_options().set(bzn::option_names::DEBUG_LOGGING, "false");
+    EXPECT_FALSE(options.get_simple_options().get<bool>(bzn::option_names::DEBUG_LOGGING));
+
+}

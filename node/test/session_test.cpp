@@ -14,6 +14,7 @@
 
 #include <node/session.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <mocks/mock_chaos_base.hpp>
 
 #include <gmock/gmock.h>
 
@@ -27,6 +28,7 @@ namespace bzn
         auto mock_websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
         auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
         auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
+        auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
 
         EXPECT_CALL(*mock_io_context, make_unique_strand()).WillOnce(Invoke(
             [&]()
@@ -63,7 +65,7 @@ namespace bzn
                 return std::move(mock_steady_timer);
             }));
 
-        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), mock_websocket_stream, std::chrono::milliseconds(1000));
+        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), mock_websocket_stream, mock_chaos, std::chrono::milliseconds(1000));
 
         EXPECT_EQ(bzn::session_id(1), session->get_session_id());
 
@@ -101,6 +103,7 @@ namespace bzn
         auto websocket_stream = std::make_shared<NiceMock<bzn::beast::Mockwebsocket_stream_base>>();
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
         auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
+        auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
 
         EXPECT_CALL(*mock_io_context, make_unique_strand()).WillOnce(Invoke(
             [&]()
@@ -120,7 +123,7 @@ namespace bzn
                 return handler;
             }));
 
-        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), websocket_stream, std::chrono::milliseconds(0));
+        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), websocket_stream, mock_chaos, std::chrono::milliseconds(0));
 
         bzn::asio::accept_handler accept_handler;
         EXPECT_CALL(*websocket_stream, async_accept(_)).WillRepeatedly(Invoke(
@@ -170,6 +173,7 @@ namespace bzn
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_strand = std::make_unique<bzn::asio::Mockstrand_base>();
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
 
         EXPECT_CALL(*mock_strand, wrap(An<bzn::asio::close_handler>())).WillRepeatedly(Invoke(
             [&](bzn::asio::close_handler handler)
@@ -197,7 +201,7 @@ namespace bzn
 
         auto mock_websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
 
-        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), mock_websocket_stream, std::chrono::milliseconds(0));
+        auto session = std::make_shared<bzn::session>(mock_io_context, bzn::session_id(1), mock_websocket_stream, mock_chaos, std::chrono::milliseconds(0));
 
         EXPECT_CALL(*mock_websocket_stream, write(_,_));
         EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(true));
