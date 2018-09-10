@@ -615,7 +615,7 @@ following JSON objects:
                 "name":"<NODE-NAME>",
                 "port":<PORT>,
                 "uuid":"<UUID>",
-                "signature" : ["<signature line>", ..., "<last signature line>"]
+                "signature" : "<signature>"
             }
         }
     }
