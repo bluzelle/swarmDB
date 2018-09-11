@@ -230,7 +230,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 void
-pbft::handle_request(const pbft_request& msg, std::shared_ptr<bzn::session_base> session)
+pbft::handle_request(const pbft_request& msg, const std::shared_ptr<session_base>& session)
 {
     if (!this->is_primary())
     {
@@ -246,9 +246,9 @@ pbft::handle_request(const pbft_request& msg, std::shared_ptr<bzn::session_base>
     const uint64_t request_seq = this->next_issued_sequence_number++;
     auto op = this->find_operation(this->view, request_seq, msg);
 
-    if(session)
+    if (session)
     {
-        op->set_session(std::move(session));
+        op->set_session(session);
     }
 
     this->do_preprepare(op);

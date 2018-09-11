@@ -65,7 +65,7 @@ namespace bzn
          * PBFT has concluded that an operation is committed-local, it can now be applied as soon as all earlier
          * operations have been applied.
          */
-        virtual void apply_operation(std::shared_ptr<pbft_operation> op) = 0;
+        virtual void apply_operation(const std::shared_ptr<pbft_operation>& op) = 0;
 
         /*
          * Apply some read-only operation to the history of the service at some particular sequence number (either the

@@ -22,7 +22,7 @@ dummy_pbft_service::dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_bas
 }
 
 void
-dummy_pbft_service::apply_operation(std::shared_ptr<pbft_operation> op)
+dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
 {
     std::lock_guard<std::mutex> lock(this->lock);
 
@@ -35,7 +35,7 @@ dummy_pbft_service::apply_operation(std::shared_ptr<pbft_operation> op)
         LOG(info) << "Executing request " << op->debug_string() << ", sequence " << this->next_request_sequence
                   << "\n";
 
-        if(op->session())
+        if (op->session())
         {
             this->send_execute_response(op);
         }

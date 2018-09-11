@@ -75,7 +75,9 @@ namespace bzn
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
-        void handle_request(const pbft_request& msg, std::shared_ptr<bzn::session_base> session = std::shared_ptr<bzn::session_base>());
+        void handle_request(
+                const pbft_request& msg
+                , const std::shared_ptr<session_base>& session = std::shared_ptr<bzn::session_base>());
         void handle_preprepare(const pbft_msg& msg);
         void handle_prepare(const pbft_msg& msg);
         void handle_commit(const pbft_msg& msg);
