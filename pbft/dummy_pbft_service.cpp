@@ -40,7 +40,7 @@ dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
             this->send_execute_response(op);
         }
 
-        boost::asio::post(std::bind(this->execute_handler, op->request, this->next_request_sequence));
+        this->io_context->post(std::bind(this->execute_handler, op->request, this->next_request_sequence));
 
         this->waiting_operations.erase(this->next_request_sequence);
         this->next_request_sequence++;
