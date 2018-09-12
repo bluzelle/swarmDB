@@ -193,7 +193,7 @@ namespace bzn::test
                     database_response resp;
                     resp.ParseFromString(*msg);
 
-                    last_err = resp.resp().error();
+                    last_err = resp.error().message();
                 }
                 ));
 
