@@ -6,7 +6,8 @@ add_library(utils STATIC
         make_endpoint.hpp
         make_endpoint.cpp
         crypto.cpp
-        crypto.hpp)
+        crypto.hpp
+        container.hpp)
 
 target_link_libraries(utils ${CURL_LIBRARIES} ${JSONCPP_LIBRARIES} OpenSSL::SSL)
 

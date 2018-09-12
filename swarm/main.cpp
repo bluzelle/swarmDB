@@ -250,7 +250,10 @@ main(int argc, const char* argv[])
             auto ep = options->get_listener();
             ep.port(options->get_http_port());
 
-            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options->get_uuid(), options->get_state_dir(), options->get_max_storage(), options->peer_validation_enabled());
+            auto raft = std::make_shared<bzn::raft>(
+                    io_context, node, peers.get_peers(),
+                    options->get_uuid(), options->get_state_dir(), options->get_max_storage(),
+                    options->peer_validation_enabled(), options->get_signed_key());
 
             // which type of storage?
             std::shared_ptr<bzn::storage_base> storage;

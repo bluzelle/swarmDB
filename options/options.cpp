@@ -243,3 +243,10 @@ options::peer_validation_enabled() const
     //TODO: Remove this
     return this->raw_opts.get<bool>(PEER_VALIDATION_ENABLED);
 }
+
+
+std::string
+options::get_signed_key() const
+{
+    return this->raw_opts.get<std::string>(SIGNED_KEY);
+}

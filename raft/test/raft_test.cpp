@@ -436,7 +436,8 @@ namespace bzn
         raft->start();
 
         // we should see requests for votes... and then the Append Requests
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        // The "+1" is raft asking if it is in the swarm
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2 + 1);
 
         // expire timer...
         wh(boost::system::error_code());
@@ -483,7 +484,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size());
 
         // expire timer...
         wh(boost::system::error_code());
@@ -531,6 +532,9 @@ namespace bzn
 
         // and away we go...
         raft->start();
+
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
 
         // we should see requests for votes...
         std::vector<bzn::message_handler> mh_req;
@@ -646,7 +650,7 @@ namespace bzn
         EXPECT_EQ(raft->get_status()["state"].asString(), "follower");
 
         // we should see requests...
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(10);
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(11);
 
         // expire election timer...
         wh(boost::system::error_code());
@@ -1070,6 +1074,9 @@ namespace bzn
         // and away we go...
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         // the current state must be follower
         EXPECT_TRUE(raft->get_state() == bzn::raft_state::follower);
         EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
@@ -1130,6 +1137,9 @@ namespace bzn
         // and away we go...
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         // the current state must be follower
         EXPECT_TRUE(raft->get_state() == bzn::raft_state::follower);
         EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
@@ -1188,6 +1198,9 @@ namespace bzn
 
         // and away we go...
         raft->start();
+
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
@@ -1253,6 +1266,9 @@ namespace bzn
 
         // and away we go...
         raft->start();
+
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
@@ -1351,6 +1367,9 @@ namespace bzn
         // and away we go...
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
@@ -1438,6 +1457,9 @@ namespace bzn
         // and away we go...
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
@@ -1513,6 +1535,9 @@ namespace bzn
         // and away we go...
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
@@ -1564,6 +1589,9 @@ namespace bzn
 
         // and away we go...
         raft->start();
+
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
         EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
@@ -2041,11 +2069,17 @@ namespace bzn
 
         raft->start();
 
+        // ignore auto add peers for this test
+        raft->in_a_swarm = true;
+
         EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
 
         raft->handle_get_peers(mock_session);
 
         // session will have set the value of resp via the message handler.
+        EXPECT_EQ(resp["bzn-api"].asString(), "raft");
+        EXPECT_EQ(resp["cmd"].asString(), "get_peers_response");
+        EXPECT_EQ(resp["from"].asString(), raft->get_uuid());
         EXPECT_EQ(resp["error"].asString(), ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER);
     }
 
@@ -2149,7 +2183,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() );
 
         // expire timer...
         wh(boost::system::error_code());

@@ -98,7 +98,7 @@ session::do_read()
             {
                 self->handler(msg, self);
             }
-            else if(ss.seekg(0); proto_msg.ParseFromIstream(&ss))
+            else if (proto_msg.ParseFromIstream(&ss))
             {
                 self->proto_handler(proto_msg, self);
             }
