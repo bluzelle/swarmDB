@@ -1233,3 +1233,15 @@ raft::set_audit_enabled(bool val)
 {
     this->enable_audit = val;
 }
+
+void
+raft::handle_get_peers(std::shared_ptr<bzn::session_base>& session)
+{
+
+    if (this->current_state != bzn::raft_state::leader)
+    {
+        LOG(warning) << "No longer the leader. Ignoring message from peer: " << msg["data"]["from"].asString();
+        return;
+    }
+
+}

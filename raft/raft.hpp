@@ -136,6 +136,9 @@ namespace bzn
         void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message& peer);
         void handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid);
 
+        void handle_get_peers(std::shared_ptr<bzn::session_base>& session);
+
+
         // helpers...
         void get_raft_timeout_scale();
 
@@ -154,7 +157,6 @@ namespace bzn
 
         bool is_majority(const std::set<bzn::uuid_t>& votes);
         uint32_t last_majority_replicated_log_index();
-        std::list<std::set<bzn::uuid_t>> get_active_quorum();
         bool in_quorum(const bzn::uuid_t& uuid);
         bzn::peers_list_t get_all_peers();
 
