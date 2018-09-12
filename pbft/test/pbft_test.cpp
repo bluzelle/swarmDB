@@ -14,6 +14,7 @@
 
 #include <pbft/test/pbft_test_common.hpp>
 #include <set>
+#include <mocks/mock_session_base.hpp>
 
 namespace bzn::test
 {
@@ -179,6 +180,54 @@ namespace bzn::test
     {
         mock_service->query(request_msg.request(), 0);
         mock_service->consolidate_log(2);
+    }
+
+    TEST_F(pbft_test, client_request_results_in_message_ack)
+    {
+        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        std::string last_err;
+
+        EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>(), _)).WillRepeatedly(Invoke(
+                [&](auto msg, auto)
+                {
+                    database_response resp;
+                    resp.ParseFromString(*msg);
+
+                    last_err = resp.resp().error();
+                }
+                ));
+
+        this->build_pbft();
+        bzn::message msg;
+        msg["bzn-api"] = "database";
+
+        this->database_handler(msg, mock_session);
+        EXPECT_NE(last_err, "");
+
+        msg["msg"] = "not a valid crud message";
+        this->database_handler(msg, mock_session);
+        EXPECT_NE(last_err, "");
+
+        bzn_msg payload;
+        msg["msg"] = boost::beast::detail::base64_encode(payload.SerializeAsString());
+        this->database_handler(msg, mock_session);
+        EXPECT_EQ(last_err, "");
+    }
+
+    TEST_F(pbft_test, client_request_executed_results_in_message_response)
+    {
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        EXPECT_CALL(*mock_session, send_datagram(_)).Times(Exactly(1));
+
+        pbft_request msg;
+        auto peers = std::make_shared<const std::vector<bzn::peer_address_t>>();
+        auto op = std::make_shared<pbft_operation>(1, 1, msg, peers);
+        op->set_session(mock_session);
+
+        dummy_pbft_service service(this->mock_io_context);
+        service.register_execute_handler([](auto, auto){});
+
+        service.apply_operation(op);
     }
 
 }
