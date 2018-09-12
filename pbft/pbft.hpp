@@ -69,12 +69,13 @@ namespace bzn
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
+        std::shared_ptr<pbft_operation> find_operation(const std::shared_ptr<pbft_operation>& op);
 
         bzn::hash_t request_hash(const pbft_request& req);
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
-        void handle_request(const pbft_msg& msg);
+        void handle_request(const pbft_request& msg, const std::shared_ptr<session_base>& session = nullptr);
         void handle_preprepare(const pbft_msg& msg);
         void handle_prepare(const pbft_msg& msg);
         void handle_commit(const pbft_msg& msg);
@@ -86,7 +87,7 @@ namespace bzn
         void do_prepared(const std::shared_ptr<pbft_operation>& op);
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
-        void unwrap_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
+        void handle_pbft_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
         bzn::message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn::message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
@@ -100,6 +101,8 @@ namespace bzn
 
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+
+        void handle_database_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
 
         inline size_t quorum_size() const;
         inline size_t max_faulty_nodes() const;

@@ -64,6 +64,7 @@ namespace bzn::test
 
         std::function<void(const pbft_request&, uint64_t)> service_execute_handler;
         bzn::message_handler message_handler;
+        bzn::message_handler database_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;
 
