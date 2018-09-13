@@ -1227,3 +1227,9 @@ raft::shutdown_on_exceeded_max_storage(bool do_throw)
         do_throw ? throw std::runtime_error(MSG_ERROR_MAXIMUM_STORAGE_EXCEEDED) : raise(SIGINT);
     }
 }
+
+void
+raft::set_audit_enabled(bool val)
+{
+    this->enable_audit = val;
+}

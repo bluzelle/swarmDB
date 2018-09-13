@@ -33,6 +33,7 @@
 #include <pbft/pbft.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <raft/raft.hpp>
+#include <options/simple_options.hpp>
 
 
 void
@@ -218,7 +219,11 @@ main(int argc, const char* argv[])
         auto audit = std::make_shared<bzn::audit>(io_context, node, options.get_monitor_endpoint(io_context), options.get_uuid(), options.get_audit_mem_size(), options.pbft_enabled());
 
         node->start();
-        audit->start();
+
+        if (options.get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED))
+        {
+            audit->start();
+        }
 
         if (options.pbft_enabled())
         {
@@ -227,6 +232,8 @@ main(int argc, const char* argv[])
                     , std::make_shared<bzn::dummy_pbft_service>(io_context)
                     , failure_detector
             );
+
+            pbft->set_audit_enabled(options.get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
             pbft->start();
         }
@@ -242,8 +249,9 @@ main(int argc, const char* argv[])
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
             auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
-            raft->initialize_storage_from_log(storage);
+            raft->set_audit_enabled(options.get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
+            raft->initialize_storage_from_log(storage);
 
             // These are here because they are not yet integrated with pbft
             http_server->start();

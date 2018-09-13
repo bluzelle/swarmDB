@@ -20,6 +20,7 @@
 namespace bzn::option_names
 {
     const std::string AUDIT_MEM_SIZE = "audit_mem_size";
+    const std::string AUDIT_ENABLED = "audit_enabled";
     const std::string BOOTSTRAP_PEERS_FILE = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL = "bootstrap_url";
     const std::string DEBUG_LOGGING = "debug_logging";
