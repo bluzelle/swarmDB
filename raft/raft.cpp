@@ -164,7 +164,7 @@ raft::handle_election_timeout(const boost::system::error_code& ec)
 {
     if (ec)
     {
-        LOG(info) << "election timer was canceled: " << ec.message();
+        LOG(debug) << "election timer was canceled: " << ec.message();
 
         return;
     }

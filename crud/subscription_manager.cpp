@@ -20,21 +20,6 @@ using namespace bzn;
 namespace
 {
     const std::chrono::seconds DEFAULT_DEAD_SESSION_CHECK{15};
-
-    template<typename T1, typename T2>
-    auto find_session(T1& sessions, T2& session)
-    {
-        return std::find_if(sessions.begin(), sessions.end(),
-            [&session](const auto& entry)
-            {
-                // get the shared ptr if it's still valid...
-                if (auto session_shared_ptr = entry.second.lock())
-                {
-                    return session_shared_ptr == session;
-                }
-                return false;
-            });
-    }
 }
 
 
@@ -60,9 +45,7 @@ subscription_manager::start()
 void
 subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
-    response.mutable_resp();
-
-    LOG(debug) << "received subscription request: " << uuid << ":" << transaction_id << ":" << key;
+    LOG(debug) << "session [" << session->get_session_id() << "] subscription request: " << uuid << ":" << transaction_id << ":" << key;
 
     std::lock_guard<std::mutex> lock(this->subscribers_lock);
 
@@ -70,40 +53,42 @@ subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, 
     {
         if (auto key_it = database_it->second.find(key); key_it == database_it->second.end())
         {
-            // append new key and subscriber...
-            database_it->second[key].emplace_back(std::make_pair(transaction_id, std::move(session)));
+            // add new key and subscriber...
+            database_it->second[key][session->get_session_id()][transaction_id] = std::move(session);
 
             return;
         }
         else
         {
-            if (find_session(key_it->second, session) == key_it->second.end())
+            // find existing session...
+            auto session_it = database_it->second[key].find(session->get_session_id());
+
+            if (session_it == database_it->second[key].end() || session_it->second.find(transaction_id) == session_it->second.end())
             {
-                key_it->second.emplace_back(std::make_pair(transaction_id, std::move(session)));
+                // add new key and subscriber...
+                database_it->second[key][session->get_session_id()][transaction_id] = std::move(session);
 
                 return;
             }
         }
 
         // session already subscribed to this key...
-        response.mutable_resp()->set_error(MSG_DUPLICATE_SUB);
+        response.mutable_error()->set_message(MSG_DUPLICATE_SUB);
 
-        LOG(debug) << "session (" << session.get() << ") has already subscribed to: " << uuid << ":" << key;
+        LOG(debug) << "session [" << session->get_session_id() << "] has already subscribed to: " << uuid << ":" << transaction_id << ":" << key;
 
         return;
     }
 
     // create a new entry...
-    this->subscribers[uuid][key].emplace_back(std::make_pair(transaction_id, std::move(session)));
+    this->subscribers[uuid][key][session->get_session_id()][transaction_id] = std::move(session);
 }
 
 
 void
 subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t transaction_id, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
-    response.mutable_resp();
-
-    LOG(debug) << "received unsubscription request: " << uuid << ":" << transaction_id << ":" << key;
+    LOG(debug) << "session [" << session->get_session_id() << "] unsubscribe request: " << uuid << ":" << key << ":" << transaction_id;
 
     std::lock_guard<std::mutex> lock(this->subscribers_lock);
 
@@ -111,9 +96,9 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
 
     if (database_it == this->subscribers.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_UUID);
+        response.mutable_error()->set_message(MSG_INVALID_UUID);
 
-        LOG(debug) << "unknown database & key: " << uuid << ":" << transaction_id << ":" << key;
+        LOG(debug) << "session [" << session->get_session_id() << "] unknown database & key: " << uuid << ":" << key << ":" << transaction_id;
 
         return;
     }
@@ -122,26 +107,34 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
 
     if (key_it == database_it->second.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_KEY);
+        response.mutable_error()->set_message(MSG_INVALID_KEY);
 
-        LOG(debug) << "unknown key: " << uuid << ":" << transaction_id << ":" << key;
+        LOG(debug) << "session [" << session->get_session_id() << "] unknown key: " << uuid << ":" << key << ":" << transaction_id;
 
         return;
     }
 
     // check to see if session is already in the list...
-    if (auto session_it = find_session(key_it->second, session); session_it == key_it->second.end())
+    if (auto session_it = database_it->second[key].find(session->get_session_id()); session_it == key_it->second.end())
     {
-        response.mutable_resp()->set_error(MSG_INVALID_SUB);
+        response.mutable_error()->set_message(MSG_INVALID_SUB);
 
-        LOG(debug) << "session not subscribed to: " << uuid << ":" << transaction_id << ":" <<  key;
+        LOG(debug) << "session [" << session->get_session_id() << "] not subscribed to: " << uuid << ":" << key << ":" <<  transaction_id;
 
         return;
     }
     else
     {
-        // remove session...
-        key_it->second.erase(session_it);
+        // remove subscription...
+        if (auto sub_it = session_it->second.find(transaction_id); sub_it != session_it->second.end())
+        {
+            session_it->second.erase(sub_it);
+
+            return;
+        }
+
+        response.mutable_error()->set_message(MSG_INVALID_SUB);
+        LOG(debug) << "session [" << session->get_session_id() << "] not subscribed to: " << uuid << ":" << key << ":" <<  transaction_id;
     }
 }
 
@@ -155,21 +148,28 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t&
     {
         if (auto key_it = database_it->second.find(key); key_it != database_it->second.end())
         {
-            for (const auto& session_pair : key_it->second)
+            for (const auto& sessions : key_it->second)
             {
-                if (auto session_shared_ptr = session_pair.second.lock())
+                for (const auto& subscription : sessions.second)
                 {
-                    database_response resp;
+                    if (auto session_shared_ptr = subscription.second.lock())
+                    {
+                        database_response resp;
 
-                    resp.mutable_header()->set_db_uuid(uuid);
-                    resp.mutable_header()->set_transaction_id(session_pair.first);
-                    resp.mutable_resp()->mutable_update()->set_key(key);
-                    resp.mutable_resp()->mutable_update()->set_value(value);
+                        resp.mutable_header()->set_db_uuid(uuid);
+                        resp.mutable_header()->set_transaction_id(subscription.first);
+                        resp.mutable_subscription_update()->set_key(key);
 
-                    LOG(debug) << "notifying session (" << session_shared_ptr.get() << ") : " << uuid
-                               << ":" << session_pair.first << ":" << key << ":" << value.substr(0, MAX_MESSAGE_SIZE);
+                        if (!value.empty())
+                        {
+                            resp.mutable_subscription_update()->set_value(value);
+                        }
 
-                    session_shared_ptr->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+                        LOG(debug) << "notifying session [" << session_shared_ptr->get_session_id() << "] : " << uuid
+                                   << ":" << key << ":" << subscription.first << ":" << value.substr(0, MAX_MESSAGE_SIZE);
+
+                        session_shared_ptr->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+                    }
                 }
             }
         }
@@ -190,6 +190,10 @@ subscription_manager::inspect_commit(const database_msg& msg)
             this->notify_sessions(msg.header().db_uuid(), msg.update().key(), msg.update().value());
             break;
 
+        case database_msg::kDelete:
+            this->notify_sessions(msg.header().db_uuid(), msg.delete_().key(), "");
+            break;
+
         default:
             // nothing to do...
             break;
@@ -204,29 +208,67 @@ subscription_manager::purge_closed_sessions(const boost::system::error_code& ec)
     {
         std::lock_guard<std::mutex> lock(this->subscribers_lock);
 
-        for (auto& database : this->subscribers)
-        {
-            size_t removed{};
+        auto database_it = this->subscribers.begin();
 
-            for (auto& key : database.second)
+        while (database_it != this->subscribers.end())
+        {
+            size_t purged{};
+
+            auto key_it = database_it->second.begin();
+
+            while (key_it != database_it->second.end())
             {
-                std::remove_if(key.second.begin(), key.second.end(),
-                    [&](const auto& entry)
+                auto session_it = key_it->second.begin();
+
+                while (session_it != key_it->second.end())
+                {
+                    auto subscribers_it = session_it->second.begin();
+
+                    while (subscribers_it != session_it->second.end())
                     {
-                        if (auto session_shared_ptr = entry.second.lock())
+                        if (auto session_shared_ptr = subscribers_it->second.lock())
                         {
-                            return false;
+                            ++subscribers_it;
+                            continue;
                         }
 
-                        LOG(debug) << "purged closed session for: " << database.first << ":" << entry.first << ":" << key.first;
+                        LOG(debug) << "purged closed session [" << session_it->first << "] for: " << database_it->first;
 
-                        ++removed;
+                        ++purged;
 
-                        return true;
-                    });
+                        subscribers_it = session_it->second.erase(subscribers_it);
+                    }
+
+                    if (session_it->second.empty())
+                    {
+                        session_it = key_it->second.erase(session_it);
+                        continue;
+                    }
+
+                    ++session_it;
+                }
+
+                if (key_it->second.empty())
+                {
+                    key_it = database_it->second.erase(key_it);
+                    continue;
+                }
+
+                ++key_it;
             }
 
-            LOG(info) << "purged " << removed << " closed sessions for database: " << database.first;
+            if (purged)
+            {
+                LOG(info) << "purged " << purged << " closed sessions for database: " << database_it->first;
+            }
+
+            if (database_it->second.empty())
+            {
+                database_it = this->subscribers.erase(database_it);
+                continue;
+            }
+
+            ++database_it;
         }
 
         // reschedule...

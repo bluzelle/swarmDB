@@ -211,7 +211,7 @@ TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
             EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49153));
@@ -235,8 +235,8 @@ TEST_F(crud_test, test_that_a_candidate_fails_to_create)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_ELECTION_IN_PROGRESS);
+            EXPECT_EQ(resp.response_case(), database_response::kError);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
         }));
 
     this->mh(msg, mock_session);
@@ -294,7 +294,7 @@ TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_RECORD_EXISTS);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
             EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
         }));
 
@@ -327,7 +327,7 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().value(), "skdif9ek34587fk30df6vm73==");
+            EXPECT_EQ(resp.read().value(), "skdif9ek34587fk30df6vm73==");
         }));
 
     this->mh(request, this->mock_session);
@@ -350,7 +350,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
             EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
@@ -374,8 +374,8 @@ TEST_F(crud_test, test_that_a_candidate_read_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_ELECTION_IN_PROGRESS);
+            EXPECT_EQ(resp.response_case(), database_response::kError);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
         }));
 
     this->mh(msg, mock_session);
@@ -405,7 +405,7 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().value(), "skdif9ek34587fk30df6vm73==");
+            EXPECT_EQ(resp.read().value(), "skdif9ek34587fk30df6vm73==");
         }));
 
     this->mh(request, this->mock_session);
@@ -426,7 +426,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
             EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
@@ -451,7 +451,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
         }));
 
     this->mh(request, this->mock_session);
@@ -469,7 +469,7 @@ TEST_F(crud_test, test_that_a_candidate_update_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_ELECTION_IN_PROGRESS);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
         }));
 
     this->mh(msg, mock_session);
@@ -524,7 +524,7 @@ TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_RECORD_NOT_FOUND);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
     this->mh(request, this->mock_session);
@@ -544,7 +544,7 @@ TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
         }));
 
     this->mh(request, this->mock_session);
@@ -566,7 +566,7 @@ TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kRedirect);
+            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
             EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
             EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
             EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
@@ -590,7 +590,7 @@ TEST_F(crud_test, test_that_a_candidate_delete_fails)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_ELECTION_IN_PROGRESS);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
         }));
 
     this->mh(msg, mock_session);
@@ -625,7 +625,7 @@ TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), 0);
+            EXPECT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
     // OK, run the message handler
@@ -659,7 +659,7 @@ TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_RECORD_NOT_FOUND);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
     // OK, run the message handler
@@ -686,10 +686,10 @@ TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().keys().size(), int(3));
-            EXPECT_EQ(resp.resp().keys(0), "key0");
-            EXPECT_EQ(resp.resp().keys(1), "key1");
-            EXPECT_EQ(resp.resp().keys(2), "key2");
+            EXPECT_EQ(resp.keys().keys().size(), int(3));
+            EXPECT_EQ(resp.keys().keys(0), "key0");
+            EXPECT_EQ(resp.keys().keys(1), "key1");
+            EXPECT_EQ(resp.keys().keys(2), "key2");
         }));
 
     this->mh(request, mock_session);
@@ -713,10 +713,10 @@ TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().keys().size(), int(3));
-            EXPECT_EQ(resp.resp().keys(0), "key0");
-            EXPECT_EQ(resp.resp().keys(1), "key1");
-            EXPECT_EQ(resp.resp().keys(2), "key2");
+            EXPECT_EQ(resp.keys().keys().size(), int(3));
+            EXPECT_EQ(resp.keys().keys(0), "key0");
+            EXPECT_EQ(resp.keys().keys(1), "key1");
+            EXPECT_EQ(resp.keys().keys(2), "key2");
         }));
 
     this->mh(request, mock_session);
@@ -737,8 +737,9 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_TRUE(resp.resp().has());
+            EXPECT_EQ(resp.response_case(), database_response::kHas);
+            // todo: add test for key
+            ASSERT_TRUE(resp.has().has());
         }));
 
     this->mh(request, mock_session);
@@ -752,8 +753,8 @@ TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_FALSE(resp.resp().has());
+            EXPECT_EQ(resp.response_case(), database_response::kHas);
+            ASSERT_FALSE(resp.has().has());
         }));
 
     this->mh(request, mock_session);
@@ -774,8 +775,8 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_TRUE(resp.resp().has());
+            EXPECT_EQ(resp.response_case(), database_response::kHas);
+            ASSERT_TRUE(resp.has().has());
         }));
 
     this->mh(request, mock_session);
@@ -789,8 +790,8 @@ TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), database_response::kResp);
-            ASSERT_FALSE(resp.resp().has());
+            EXPECT_EQ(resp.response_case(), database_response::kHas);
+            ASSERT_FALSE(resp.has().has());
         }));
 
 
@@ -811,7 +812,7 @@ TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().size(), 123);
+            EXPECT_EQ(resp.size().bytes(), 123);
         }));
 
     this->mh(request, mock_session);
@@ -831,7 +832,7 @@ TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().size(), 123);
+            EXPECT_EQ(resp.size().bytes(), 123);
         }));
 
     this->mh(request, mock_session);
@@ -849,7 +850,7 @@ TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_INVALID_CRUD_COMMAND);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_CRUD_COMMAND);
         }));
 
     this->mh(request, this->mock_session);
@@ -861,7 +862,7 @@ TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_INVALID_CRUD_COMMAND);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_CRUD_COMMAND);
         }));
 
     this->mh(request, this->mock_session);
@@ -873,7 +874,7 @@ TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_INVALID_ARGUMENTS);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_ARGUMENTS);
         }));
 
     this->mh(request, this->mock_session);
@@ -891,7 +892,7 @@ TEST_F(crud_test, test_that_a_create_fails_if_the_value_size_exceeds_the_limit)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
         }));
 
     this->mh(request, this->mock_session);
@@ -911,7 +912,7 @@ TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.success_case(), 0); // nothing set?
+            EXPECT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
     EXPECT_CALL(*this->mock_storage, has(USER_UUID,"key0")).WillOnce(Return(false));
@@ -940,7 +941,7 @@ TEST_F(crud_test, test_that_a_update_command_fails_when_the_size_of_the_value_ex
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.resp().error(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
+            EXPECT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
         }));
 
     this->mh(request, this->mock_session);

@@ -24,8 +24,9 @@ namespace
 using namespace bzn;
 
 
-session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout)
+session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, const bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout)
     : strand(io_context->make_unique_strand())
+    , session_id(session_id)
     , websocket(std::move(websocket))
     , idle_timer(io_context->make_unique_steady_timer())
     , ws_idle_timeout(ws_idle_timeout.count() ? ws_idle_timeout : DEFAULT_WS_TIMEOUT_MS)
@@ -65,6 +66,7 @@ session::do_read()
 
     this->start_idle_timeout();
 
+    // todo: strand may not be needed...
     this->websocket->async_read(*buffer,
         this->strand->wrap(
         [self = shared_from_this(), buffer](boost::system::error_code ec, auto /*bytes_transferred*/)
@@ -118,51 +120,46 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 {
     this->idle_timer->cancel(); // kill timer for duration of write...
 
+    std::lock_guard<std::mutex> lock(this->write_lock);
+
     this->websocket->get_websocket().binary(true);
 
-    this->websocket->async_write(
-        boost::asio::buffer(*msg),
-        this->strand->wrap(
-            [self = shared_from_this(), msg, end_session](auto ec, auto bytes_transferred)
-            {
-                if (ec)
-                {
-                    LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
+    boost::beast::error_code ec;
+    this->websocket->write(boost::asio::buffer(*msg), ec);
 
-                    self->close();
-                    return;
-                }
+    if (ec)
+    {
+        LOG(error) << "websocket write failed: " << ec.message();
 
-                if (end_session)
-                {
-                    self->close();
-                    return;
-                }
+        this->close();
+        return;
+    }
 
-                self->do_read();
-            }));
+    if (end_session)
+    {
+        this->close();
+        return;
+    }
+
+    this->do_read();
 }
 
 
 void
 session::send_datagram(std::shared_ptr<std::string> msg)
 {
+    std::lock_guard<std::mutex> lock(this->write_lock);
+
     this->websocket->get_websocket().binary(true);
 
-    this->websocket->async_write(
-        boost::asio::buffer(*msg),
-        this->strand->wrap(
-            [self = shared_from_this(), msg](auto ec, auto bytes_transferred)
-            {
-                if (ec)
-                {
-                    LOG(error) << "websocket write failed: " << ec.message() << " bytes: " << bytes_transferred;
+    boost::beast::error_code ec;
+    this->websocket->write(boost::asio::buffer(*msg), ec);
 
-                    self->close();
-                    return;
-                }
-
-            }));
+    if (ec)
+    {
+        LOG(error) << "websocket write failed: " << ec.message();
+        this->close();
+    }
 }
 
 

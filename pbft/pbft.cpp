@@ -660,7 +660,7 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     if (!json.isMember("msg"))
     {
         LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
     }
@@ -668,7 +668,7 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["msg"].asString())))
     {
         LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_resp()->set_error(bzn::MSG_INVALID_CRUD_COMMAND);
+        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
     }

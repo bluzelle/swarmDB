@@ -86,7 +86,7 @@ node::do_accept()
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                std::make_shared<bzn::session>(self->io_context, std::move(ws), self->ws_idle_timeout)->start(
+                std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, std::move(ws), self->ws_idle_timeout)->start(
                     std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
             }
 
@@ -143,7 +143,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
                         return;
                     }
 
-                    auto session = std::make_shared<bzn::session>(self->io_context, ws, self->ws_idle_timeout);
+                    auto session = std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, ws, self->ws_idle_timeout);
 
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
 

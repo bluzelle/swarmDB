@@ -19,6 +19,8 @@
 #include <node/session_base.hpp>
 #include <options/options_base.hpp>
 #include <memory>
+#include <mutex>
+#include <list>
 
 #include <gtest/gtest_prod.h>
 
@@ -28,7 +30,7 @@ namespace bzn
     class session final : public bzn::session_base, public std::enable_shared_from_this<session>
     {
     public:
-        session(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout);
+        session(std::shared_ptr<bzn::asio::io_context_base> io_context, bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, const std::chrono::milliseconds& ws_idle_timeout);
 
         void start(bzn::message_handler handler) override;
 
@@ -40,6 +42,8 @@ namespace bzn
 
         void close() override;
 
+        bzn::session_id get_session_id() override { return this->session_id; }
+
     private:
         FRIEND_TEST(node_session, test_that_when_message_arrives_registered_callback_is_executed);
 
@@ -48,6 +52,8 @@ namespace bzn
         void start_idle_timeout();
 
         std::unique_ptr<bzn::asio::strand_base> strand;
+        const bzn::session_id session_id;
+
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
 
@@ -55,6 +61,8 @@ namespace bzn
         bzn::message_handler handler;
 
         const bool ignore_json_errors = false;
+
+        std::mutex write_lock;
     };
 
 } // blz
