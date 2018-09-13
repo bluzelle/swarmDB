@@ -3,6 +3,8 @@ add_library(options STATIC
         options.cpp
         options.hpp
         options_base.hpp
+        simple_options.cpp
+        simple_options.hpp
         )
 
 target_link_libraries(options)

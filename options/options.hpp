@@ -23,6 +23,8 @@ namespace bzn
     class options final : public bzn::options_base
     {
     public:
+        const simple_options& get_simple_options() const override;
+
         bool parse_command_line(int argc, const char* argv[]);
 
         boost::asio::ip::tcp::endpoint get_listener() const override;
@@ -64,21 +66,9 @@ namespace bzn
         bool peer_validation_enabled() const override;
 
     private:
-        bool parse(int argc, const char* argv[]);
+        size_t parse_size(const std::string& key) const;
 
-        void load(const std::string& config_file);
-
-        bool validate();
-
-        // todo: nuke once Apple updates clang!
-#ifndef __APPLE__
-        std::optional<size_t>
-#else
-        std::experimental::optional<size_t>
-#endif
-        parse_size(const std::string& key) const;
-
-        Json::Value config_data;
+        simple_options raw_opts;
 
     };
 
