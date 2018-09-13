@@ -31,6 +31,8 @@ namespace bzn {
             void(std::shared_ptr<std::string> msg, bool end_session));
         MOCK_METHOD1(send_datagram,
             void(std::shared_ptr<std::string> msg));
+        MOCK_METHOD0(get_session_id,
+            bzn::session_id());
         MOCK_METHOD0(close,
             void());
     };

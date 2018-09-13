@@ -60,6 +60,13 @@ namespace bzn
          * Perform an orderly shutdown of the websocket.
          */
         virtual void close() = 0;
+
+
+        /**
+         * Get the id associated with this session
+         * @return id
+         */
+        virtual bzn::session_id get_session_id() = 0;
     };
 
 } // bzn

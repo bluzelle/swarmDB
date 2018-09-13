@@ -18,6 +18,7 @@
 #include <node/node_base.hpp>
 #include <json/json.h>
 #include <mutex>
+#include <atomic>
 
 #include <gtest/gtest_prod.h>
 
@@ -53,6 +54,8 @@ namespace bzn
         std::mutex message_map_mutex;
 
         std::once_flag start_once;
+
+        std::atomic<bzn::session_id> session_id_counter = 0;
     };
 
 } // bzn
