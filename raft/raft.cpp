@@ -138,7 +138,7 @@ raft::start_election_timer()
 
     auto timeout = std::chrono::milliseconds(dist(gen));
 
-    LOG(info) << "election timer will expire in: " << timeout.count() << "ms";
+    LOG(debug) << "election timer will expire in: " << timeout.count() << "ms";
 
     this->timer->expires_from_now(timeout);
 
