@@ -555,7 +555,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         this->handle_add_peer(session, msg["data"]["peer"]);
         return;
     }
-    else if (msg["cmd"].asString() == "remove_peer" )
+    else if (msg["cmd"].asString() == "remove_peer")
     {
         if (!msg.isMember("data") || !msg["data"].isMember("uuid") || msg["data"]["uuid"].asString().empty())
         {
@@ -564,6 +564,11 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
         }
 
         this->handle_remove_peer(session, msg["data"]["uuid"].asString());
+        return;
+    }
+    else if (msg["cmd"].asString() == "get_peers")
+    {
+        this->handle_get_peers(session);
         return;
     }
 
@@ -880,10 +885,8 @@ raft::update_raft_state(uint32_t term, bzn::raft_state state)
 
 
 bzn::peer_address_t
-raft::get_leader()
+raft::get_leader_unsafe()
 {
-    std::lock_guard<std::mutex> lock(this->raft_lock);
-
     for(auto& peer : this->get_all_peers())
     {
         if (peer.uuid == this->leader)
@@ -891,8 +894,15 @@ raft::get_leader()
             return peer;
         }
     }
-
     return bzn::peer_address_t("",0,0,"","");
+}
+
+
+bzn::peer_address_t
+raft::get_leader()
+{
+    std::lock_guard<std::mutex> lock(this->raft_lock);
+    return this->get_leader_unsafe();
 }
 
 
@@ -1232,4 +1242,46 @@ void
 raft::set_audit_enabled(bool val)
 {
     this->enable_audit = val;
+}
+
+
+bzn::message
+raft::to_peer_message(const peer_address_t& address)
+{
+    bzn::message bzn;
+    bzn["port"] = address.port;
+    bzn["http_port"] = address.http_port;
+    bzn["host"] = address.host;
+    bzn["uuid"] = address.uuid;
+    bzn["name"] = address.name;
+    return bzn;
+}
+
+void
+raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
+{
+    bzn::message msg;
+
+    switch (this->current_state)
+    {
+        case bzn::raft_state::candidate:
+            LOG(error) << ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER;
+            msg["error"] = ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER;
+            break;
+        case bzn::raft_state::follower:
+            LOG(error) << ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER;
+            msg["error"] = ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER;
+            msg["message"]["leader"] = this->to_peer_message(this->get_leader_unsafe());
+            break;
+        case bzn::raft_state::leader:
+            for(const auto& peer : this->get_all_peers())
+            {
+                msg["message"].append(this->to_peer_message(peer));
+            }
+            break;
+        default:
+            msg["error"] = ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE;
+            break;
+    }
+    session->send_message(std::make_shared<bzn::message>(msg), false);
 }

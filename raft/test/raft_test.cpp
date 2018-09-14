@@ -2004,4 +2004,163 @@ namespace bzn
             EXPECT_FALSE(peer==peers.end());
         }
     }
+
+
+    TEST_F(raft_test, test_that_sending_get_peers_to_follower_fails_and_provides_leader_url)
+    {
+        auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+
+        // timer expectations...
+        EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(1);
+        EXPECT_CALL(*mock_steady_timer, cancel()).Times(1);
+
+        // intercept the timeout callback...
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).Times(1).WillRepeatedly(Invoke(
+                [&](auto handler)
+                { wh = handler; }));
+
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                { return std::move(mock_steady_timer); }));
+
+        bzn::message_handler mh;
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                [&](const auto&, auto handler)
+                {
+                    mh = handler;
+                    return true;
+                }));
+
+        bzn::message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
+                [&](const auto& msg, auto)
+                { resp = *msg; }));
+
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
+
+        raft->start();
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
+
+        raft->handle_get_peers(mock_session);
+
+        // session will have set the value of resp via the message handler.
+        EXPECT_EQ(resp["error"].asString(), ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER);
+    }
+
+
+    TEST_F(raft_test, test_that_sending_get_peers_to_leader_responds_with_quorum)
+    {
+        auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+
+        // intercept the timeout callback...
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).WillRepeatedly(Invoke(
+                [&](auto handler)
+                { wh = handler; }));
+
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                { return std::move(mock_steady_timer); }));
+
+        bzn::message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
+                [&](const auto& msg, auto)
+                { resp = *msg; }));
+
+        EXPECT_CALL(*mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                [&](const auto&, auto)
+                { return true; }));
+
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
+
+        raft->register_commit_handler(
+                [&](const bzn::message& /*msg*/)
+                { return true; });
+
+        // and away we go...
+        raft->start();
+
+        // we should see requests...
+        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(
+                Invoke([](const auto&, const auto& /*msg*/){ })
+        );
+
+        wh(boost::system::error_code());
+
+        // now send in each vote...
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid1", 1, true), this->mock_session);
+        raft->handle_request_vote_response(bzn::create_request_vote_response("uuid2", 1, true), this->mock_session);
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
+
+        // try getting the peers
+        raft->handle_get_peers(mock_session);
+
+        EXPECT_TRUE(resp.isMember("message"));
+        for(const auto& peer : resp["message"])
+        {
+            EXPECT_TRUE(peer.isMember("port"));
+            EXPECT_TRUE(peer.isMember("http_port"));
+            EXPECT_TRUE(peer.isMember("host"));
+            EXPECT_TRUE(peer.isMember("uuid"));
+            EXPECT_TRUE(peer.isMember("name"));
+        }
+    }
+
+
+    TEST_F(raft_test, test_that_sending_get_peers_to_candidate_fails)
+    {
+        auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+
+        // timer expectations...
+        EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
+        EXPECT_CALL(*mock_steady_timer, cancel()).Times(2);
+
+        // intercept the timeout callback...
+        bzn::asio::wait_handler wh;
+        EXPECT_CALL(*mock_steady_timer, async_wait(_)).Times(2).WillRepeatedly(Invoke(
+                [&](auto handler)
+                { wh = handler; }));
+
+        EXPECT_CALL(*this->mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                { return std::move(mock_steady_timer); }));
+
+        bzn::message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
+                [&](const auto& msg, auto)
+                { resp = *msg; }));
+
+        // create raft...
+        auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
+
+        // intercept the node raft registration handler...
+        bzn::message_handler mh;
+        EXPECT_CALL(*this->mock_node, register_for_message("raft", _)).WillOnce(Invoke(
+                [&](const auto&, auto handler)
+                {
+                    mh = handler;
+                    return true;
+                }));
+
+        // and away we go...
+        raft->start();
+
+        // don't care about the handler...
+        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+
+        // expire timer...
+        wh(boost::system::error_code());
+
+        EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
+        EXPECT_EQ(raft->get_status()["state"].asString(), "candidate");
+
+        // try getting the peers - must fail
+        raft->handle_get_peers(mock_session);
+
+        EXPECT_TRUE(resp.isMember("error"));
+        EXPECT_EQ(resp["error"].asString(), ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER);
+    }
 } // bzn
