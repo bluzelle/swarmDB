@@ -108,6 +108,9 @@ simple_options::build_options()
 
     po::options_description audit("Audit");
     audit.add_options()
+                (AUDIT_ENABLED.c_str(),
+                        po::value<bool>()->default_value(false),
+                        "enable audit module")
                 (AUDIT_MEM_SIZE.c_str(),
                         po::value<size_t>()->default_value(10000),
                         "max size of audit datastructures")

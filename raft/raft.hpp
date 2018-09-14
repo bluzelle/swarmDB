@@ -80,6 +80,8 @@ namespace bzn
 
         bool get_peer_validation_enabled() override { return this->enable_peer_validation; };
 
+        void set_audit_enabled(bool val);
+
     private:
         friend class raft_log_base;
         friend class raft_log;
