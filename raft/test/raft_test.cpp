@@ -47,21 +47,21 @@ namespace
 
     const std::string TEST_STATE_DIR = "./.raft_test_state/";
 
-    const std::string valid_uuid        {"9dc2f619-2e77-49f7-9b20-5b55fd87ea44"};
-    const std::string invalid_uuid      {"8eb1e708-2e77-49f7-9b20-5b55fd87ea44"};
+    const std::string valid_uuid        {"81ca538-a222-4add-8cb8-065c8b65a391"};
+    const std::string invalid_uuid      {"8eb1e78-2e77-49f7-9b20-5b55fd87ea44"};
 
     const std::string signature {
-            "DprtbrBfC6pXRxiUCBTpvfIr/gDbnjhUIrQysnqXNL3HkGqN07avQ9eilz4T058F"
-            "HariK5L5V2xoUn2c9K5sKch4qGrCYe2Rs7+alsiDBsqHZvrwQQZbSRnz6iKNijcl"
-            "8rjquBeqsRthLTRYxLFveV7bNsaYfF4jOsfyQwKeQ7hJX3pHhYkQyh1k8WrzAWhr"
-            "0/PdqSOT9fBgroNo0TTg3RDSJ6I78xR7gSBYE5C7PNH63dq8qw2WPi+VElHBtJD+"
-            "Esu3ZMiHnCmGPEx1p40vLSiVz5z3JFJhIb9FfY1RGa3RmNBdPiE8PvYvFGrmLsKD"
-            "HClL3CzUwC4W/RhFcoML6/+SNawtaqmjJ4AASyWkstf22t/qpfAYkXCSoh1QD46J"
-            "waOLHE3L2g7woUT3EFa2ziahkLJSADdlmR1ZKRFA09l7+tkEv2rez0NMpeUXXo+A"
-            "/JG5jMKuJVtJrEEHKubSpxpAb9KSbp6nrKHnAeJKJWyY+aE1LvKBqCN2PcakL6Mn"
-            "TMdaVgAShwSPmtQE5Z+m+WRJcsHDxVPaSK4BQOx4q4U2fHKqE5dc05bODu2kc/Qt"
-            "/In3dL6pHqCTGyUWmgZxjUMvAJ3qNxuMjJu0F1d8KxMSSRQ9OC+OpOIPgsiqLP8F"
-            "DEYcqSC0p2wvbMrtbL1Vz+xGJLi0hryGD6aLA3Es4vk="
+            "Oo8ZlDQcMlZF4hqnhN/2Dz3FYarZHrGf+87i+JUSxBu2GKFk8SYcDrwjc0DuhUCx"
+            "pRVQppMk5fjZtJ3r6I9066jcEpJPljU1SC1Thpy+AUEYx0r640SKRwKwmJMe6mRd"
+            "SJ75rcYHu5+etajOWWjMs4vYQtcwfVF3oEd9/pZjea8x6PuhnM50+FPpnvgu57L8"
+            "vHdeWjCqAiPyomQSLgIJPjvMJw4aHUUE3tHX1WOB8XDHdvuhi9gZODzZWbdI92JN"
+            "hoLbwvjmhKTeTN+FbBtdJIjC0+V0sMFmGNJQ8WIkJscN0hzRkmdlU965lHe4hqlc"
+            "MyEdTSnYSnC7NIHFfvJFBBYi9kcAVBwkYyALQDv6iTGMSI11/ncwdTz4/GGPodaU"
+            "PFxf/WVHUz6rBAtTKvn8Kg61F6cVhcFSCjiw2bWGpeWcWTL+CGbfYCvZNiAVyO7Q"
+            "dmfj5hoLu7KG+nxBLF8uoUl6t3BdKz9Dqg9Vf+QVtaVj/COD1nUykXXRVxfLo4dN"
+            "BS+aVsmOFjppKaEvmeT5SwWOSVrKZwPuTilV9jCehFbFZF6MPyiW5mcp9t4D27hM"
+            "oz/SiKjCqdN93YdBO4FBF/cWD5WHmD7KaaJYmnztz3W+xS7b/qk2PcN+qpZEXsfr"
+            "Wie4prB1umESavYLC1pLhoEgc0jRUl1b9mHSY7E4puk="
     };
 
 
