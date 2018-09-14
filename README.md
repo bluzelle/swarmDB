@@ -676,6 +676,59 @@ to the swarm leader:
 and the node will be removed from the peer list.
 ```
 
+#### Get the List of Peers from the Leader
+
+The active peers in the swarm can be obtained by sending a "get_peers" 
+WebSocket command to the leader. To perform this command create a JSON 
+command object and send it via wscat:
+
+    $ wscat -c http://<leader_address>:port
+    connected (press CTRL+C to quit)
+    >{"bzn-api" : "raft", "cmd" : "get_peers"}
+    >
+
+and the response will look like:
+
+    {
+        "message" :
+        [
+            {
+                "host" : "127.0.0.1",
+                "http_port" : 9082,
+                "name" : "peer0",
+                "port" : 49152,
+                "uuid" : "2e34a07f-fd6d-4575-927e-f83a9edd1866"
+            },
+            {
+                "host" : "127.0.0.1",
+                "http_port" : 9083,
+                "name" : "peer1",
+                "port" : 49153,
+                "uuid" : "a05809a3-0b77-4881-8fa7-b0e0e2ee9107"
+            }
+        ]
+    }
+
+If you send the request to a follower, the response will be:
+
+    {
+        "error" : "ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER",
+        "message" :
+        {
+            "leader" :
+            {
+                "host" : "127.0.0.1",
+                "http_port" : 9082,
+                "name" : "peer0",
+                "port" : 49152,
+                "uuid" : "2e34a07f-fd6d-4575-927e-f83a9edd1866"
+            }
+        }
+    }
+
+and you can resend the request to the leader.
+
+
 #### Help & Options
 
 ```text

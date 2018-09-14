@@ -43,6 +43,9 @@ namespace
     const std::string ERROR_INVALID_SIGNATURE = "ERROR_INVALID_SIGNATURE";
     const std::string ERROR_UNABLE_TO_VALIDATE_UUID ="ERROR_UNABLE_TO_VALIDATE_UUID";
     const std::string SUCCESS_PEER_ADDED_TO_SWARM = "SUCCESS_PEER_ADDED_TO_SWARM";
+    const std::string ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER{"ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER"};
+    const std::string ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER{"ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER"};
+    const std::string ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE{"ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE"};
 }
 
 
@@ -111,7 +114,11 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_bad_add_or_remove_peer_requests_fail);
         FRIEND_TEST(raft_test, test_that_a_four_node_swarm_cannot_reach_consensus_with_two_nodes);
         FRIEND_TEST(raft_test, test_that_add_node_works_securely);
+        FRIEND_TEST(raft_test, test_that_sending_get_peers_to_follower_fails_and_provides_leader_url);
+        FRIEND_TEST(raft_test, test_that_sending_get_peers_to_leader_responds_with_quorum);
+        FRIEND_TEST(raft_test, test_that_sending_get_peers_to_candidate_fails);
 
+        bzn::peer_address_t get_leader_unsafe();
 
         void setup_peer_tracking(const bzn::peers_list_t& peers);
 
@@ -136,8 +143,7 @@ namespace bzn
         void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message& peer);
         void handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid);
 
-        void handle_get_peers(std::shared_ptr<bzn::session_base>& session);
-
+        void handle_get_peers(std::shared_ptr<bzn::session_base> session);
 
         // helpers...
         void get_raft_timeout_scale();
@@ -157,6 +163,7 @@ namespace bzn
 
         bool is_majority(const std::set<bzn::uuid_t>& votes);
         uint32_t last_majority_replicated_log_index();
+        std::list<std::set<bzn::uuid_t>> get_active_quorum();
         bool in_quorum(const bzn::uuid_t& uuid);
         bzn::peers_list_t get_all_peers();
 
@@ -169,6 +176,8 @@ namespace bzn
         void send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message);
 
         bool validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer);
+
+        bzn::message to_peer_message(const peer_address_t& address);
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
