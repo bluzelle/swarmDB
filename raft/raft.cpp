@@ -1257,20 +1257,6 @@ raft::to_peer_message(const peer_address_t& address)
     return bzn;
 }
 
-
-void
-raft::to_peer_message(const peer_address_t& address)
-{
-    bzn::message bzn;
-    bzn["port"] = address.port;
-    bzn["http_port"] = address.http_port;
-    bzn["host"] = address.host;
-    bzn["uuid"] = address.uuid;
-    bzn["name"] = address.name;
-    return bzn;
-}
-
-
 void
 raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
 {
