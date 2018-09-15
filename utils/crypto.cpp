@@ -34,7 +34,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
-#include <stdio.h>
+#include <cstdio>
 
 namespace
 {
@@ -258,7 +258,7 @@ namespace bzn::utils::crypto
         return ret_val & authentic;
     }
 
-    std::string read_pem_file(std::string filename, std::string expected_type)
+    std::string read_pem_file(const std::string& filename, const std::string& expected_type)
     {
         char* name;
         char* headers;

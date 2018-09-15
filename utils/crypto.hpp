@@ -63,5 +63,5 @@ namespace bzn::utils::crypto
      * @param expected_type what the file is supposed to contain, such as "PRIVATE KEY".
      * @throws runtime_error if the file does not indicate that it contains expected_type
      */
-    std::string read_pem_file(std::string filename, std::string expected_type);
+    std::string read_pem_file(const std::string& filename, const std::string& expected_type);
 }

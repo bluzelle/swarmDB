@@ -47,9 +47,10 @@ namespace
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
 
-    std::string compose_config_data(const std::string &a, const std::string &b)
+    std::string compose_config_data(const std::string& a, const std::string& b)
     {
-        return "{" + a + ",\n" + b + "}";
+        std::string result = "{" + a + ",\n" + b + "}";
+        return result;
     }
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
