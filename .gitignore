@@ -9,3 +9,4 @@ scripts/database_pb2.py
 scripts/audit_pb2.py
 scripts/pbft_pb2.py
 *.pyc
+*.pem

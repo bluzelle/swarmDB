@@ -37,6 +37,8 @@ namespace bzn::option_names
     const std::string MONITOR_ADDRESS = "monitor_address";
     const std::string MONITOR_PORT = "monitor_port";
     const std::string NODE_UUID = "uuid";
+    const std::string NODE_PUBKEY_FILE = "public_key_file";
+    const std::string NODE_PRIVATEKEY_FILE = "private_key_file";
     const std::string PBFT_ENABLED = "use_pbft";
     const std::string STATE_DIR = "state_dir";
     const std::string WS_IDLE_TIMEOUT = "ws_idle_timeout";

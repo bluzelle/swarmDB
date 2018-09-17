@@ -16,6 +16,7 @@
 #include <boost/lexical_cast.hpp>
 #include <regex>
 #include <cstdint>
+#include <utils/crypto.hpp>
 
 using namespace bzn;
 using namespace bzn::option_names;
@@ -118,8 +119,13 @@ options::get_bootstrap_peers_url() const
 bzn::uuid_t
 options::get_uuid() const
 {
-    //TODO: Remove this
-    return this->raw_opts.get<std::string>(NODE_UUID);
+    if (this->raw_opts.has(NODE_UUID))
+    {
+        return this->raw_opts.get<std::string>(NODE_UUID);
+    }
+
+    std::string pubkey_raw = bzn::utils::crypto::read_pem_file(this->raw_opts.get<std::string>(NODE_PUBKEY_FILE), "PUBLIC KEY");
+    return boost::beast::detail::base64_encode(pubkey_raw);
 }
 
 bool

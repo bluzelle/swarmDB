@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <memory>
+#include <cstdio>
 
 namespace
 {
@@ -255,5 +256,35 @@ namespace bzn::utils::crypto
         bool ret_val = RSA_verify_signature( public_rsa, binary_signature, uuid, authentic);
 
         return ret_val & authentic;
+    }
+
+    std::string read_pem_file(const std::string& filename, const std::string& expected_type)
+    {
+        char* name;
+        char* headers;
+        unsigned char* data;
+        long len;
+
+        ::FILE* fp = fopen(filename.c_str(), "r");
+        if( !fp)
+        {
+            throw std::runtime_error("Failed to read pem file: " + filename);
+        }
+
+        PEM_read(fp, &name, &headers, &data, &len);
+        ::fclose(fp);
+
+        if (std::string(name) != expected_type)
+        {
+            throw std::runtime_error("Expedted to find a " + expected_type + " in " + filename + ", but found a " + std::string(name));
+        }
+
+        std::string result(reinterpret_cast<char const*>(data), len);
+
+        OPENSSL_free(name);
+        OPENSSL_free(data);
+        OPENSSL_free(headers);
+
+        return result;
     }
 }
