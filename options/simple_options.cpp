@@ -199,6 +199,12 @@ simple_options::handle_config_file_options()
     {
         const auto& json_val = json[name];
 
+        if (! this->options_root.find_nothrow(name.c_str(), false))
+        {
+            std::cerr << "Warning: ignoring unknown config file option '" << name << "'\n";
+            continue;
+        }
+
         boost::program_options::basic_option<char> opt;
         opt.string_key = name;
 
