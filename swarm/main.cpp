@@ -245,7 +245,7 @@ main(int argc, const char* argv[])
             auto ep = options.get_listener();
             ep.port(options.get_http_port());
 
-            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage());
+            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage(), options.peer_validation_enabled());
             auto storage = std::make_shared<bzn::storage>();
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
