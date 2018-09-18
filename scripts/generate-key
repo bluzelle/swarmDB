@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+prefix=${1:-`pwd`/.state}
+
+mkdir -p $prefix
+
+# This is the elliptic curve used by Ethereum. Technically, this identity is an
+# Ethereum account.
+openssl ecparam -name secp256k1 -genkey -noout -out $prefix/private-key.pem
+cat $prefix/private-key.pem
+echo "Private key written to "$prefix"/private-key.pem"
+echo
+
+openssl ec -in $prefix/private-key.pem -pubout -out $prefix/public-key.pem > /dev/null 2>&1
+cat $prefix/public-key.pem
+echo "Public key written to "$prefix"/public-key.pem"
+echo

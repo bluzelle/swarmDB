@@ -7,7 +7,7 @@ add_library(options STATIC
         simple_options.hpp
         )
 
-target_link_libraries(options)
+target_link_libraries(options utils)
 target_include_directories(options PRIVATE ${JSONCPP_INCLUDE_DIRS})
 add_dependencies(options jsoncpp)
 

@@ -20,6 +20,7 @@
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <unordered_set>
 
 
 namespace
@@ -28,7 +29,7 @@ namespace
 
     const std::string TEST_CONFIG_FILE = "bluzelle.json";
 
-    const std::string DEFAULT_CONFIG_DATA = "{\n"
+    const std::string DEFAULT_CONFIG_CONTENT =
         "  \"listener_address\" : \"0.0.0.0\",\n"
         "  \"listener_port\" : 49152,\n"
         "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\",\n"
@@ -42,8 +43,15 @@ namespace
         "  \"logfile_max_size\" : \"1M\","
         "  \"logfile_rotation_size\" : \"2M\","
         "  \"logfile_dir\" : \".\","
-        "  \"http_port\" : 80"
-        "}";
+        "  \"http_port\" : 80";
+
+    const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
+
+    std::string compose_config_data(const std::string& a, const std::string& b)
+    {
+        std::string result = "{" + a + ",\n" + b + "}";
+        return result;
+    }
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
 
@@ -69,6 +77,9 @@ using namespace ::testing;
 class options_file_test : public Test
 {
 public:
+
+    std::unordered_set<std::string> open_files;
+
     options_file_test()
     {
         this->save_options_file(DEFAULT_CONFIG_DATA);
@@ -76,16 +87,34 @@ public:
 
     ~options_file_test()
     {
-        unlink(TEST_CONFIG_FILE.c_str());
+        for(const auto& file : this->open_files)
+        {
+            unlink(file.c_str());
+        }
+    }
+
+    void save_file(const std::string& filename, const std::string& content)
+    {
+        if(this->open_files.count(filename) > 0)
+        {
+            unlink(TEST_CONFIG_FILE.c_str());
+        }
+        else
+        {
+            this->open_files.insert(filename);
+        }
+
+        std::cout << filename;
+
+        std::ofstream ofile(filename.c_str());
+        ofile.exceptions(std::ios::failbit);
+        ofile << content;
     }
 
     void
     save_options_file(const std::string& content)
     {
-        unlink(TEST_CONFIG_FILE.c_str());
-        std::ofstream ofile(TEST_CONFIG_FILE);
-        ofile.exceptions(std::ios::failbit);
-        ofile << content;
+        save_file(TEST_CONFIG_FILE, content);
     }
 };
 
@@ -268,4 +297,33 @@ TEST_F(options_file_test, test_that_endpoint_built)
     auto expect = bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
 
     EXPECT_EQ(options.get_monitor_endpoint(io_context), expect);
+}
+
+TEST_F(options_file_test, test_that_pubkey_used_for_uuid)
+{
+    bzn::options options;
+    this->save_options_file("{\"public_key_file\": \"pkey.pem\"}");
+
+    this->save_file("pkey.pem",
+            "-----BEGIN PUBLIC KEY-----\n"
+            "hFWG\n"
+            "-----END PUBLIC KEY-----\n"
+    );
+
+    try
+    {
+        options.parse_command_line(1, NO_ARGS);
+    }
+    catch (const std::exception& e)
+    {
+    }
+
+    EXPECT_EQ(options.get_uuid(), "hFWG");
+}
+
+TEST_F(options_file_test, test_that_uuid_and_pubkey_conflict)
+{
+    bzn::options options;
+    this->save_options_file(compose_config_data(DEFAULT_CONFIG_CONTENT, "\"public_key_file\": \"somefile\""));
+    EXPECT_FALSE(options.parse_command_line(1, NO_ARGS));
 }
