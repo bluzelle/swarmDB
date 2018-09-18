@@ -78,7 +78,7 @@ simple_options::build_options()
                          po::value<std::string>()->default_value("2G"),
                         "maximum db storage on this node (bytes)")
                 (NODE_UUID.c_str(),
-                        po::value<std::string>()->required(),
+                        po::value<std::string>(),
                         "uuid of this node")
                 (STATE_DIR.c_str(),
                         po::value<std::string>()->default_value("./.state/"),
@@ -135,6 +135,17 @@ simple_options::build_options()
                         "require signed key for new peers to join swarm");
     this->options_root.add(experimental);
 
+    po::options_description crypto("Cryptography");
+    crypto.add_options()
+                (NODE_PUBKEY_FILE.c_str(),
+                        po::value<std::string>()->default_value(".state/public-key.pem"),
+                        "public key of this node")
+                (NODE_PRIVATEKEY_FILE.c_str(),
+                        po::value<std::string>()->default_value(".state/private-key.pem"),
+                        "private key of this node");
+
+    this->options_root.add(crypto);
+
 }
 
 bool
@@ -161,6 +172,12 @@ simple_options::validate_options()
     if (! (this->has(BOOTSTRAP_PEERS_FILE) || this->has(BOOTSTRAP_PEERS_URL)))
     {
         std::cerr << "Bootstrap peers source not specified";
+        errors = true;
+    }
+
+    if (!this->vm[NODE_PUBKEY_FILE].defaulted() && this->has(NODE_UUID))
+    {
+        std::cerr << "You cannot specify both a uuid and a public key; public keys act as uuids";
         errors = true;
     }
 
