@@ -42,9 +42,9 @@ init_logging(const bzn::options& options)
     namespace keywords = boost::log::keywords;
 
     const auto format = boost::log::expressions::stream
-            << boost::log::expressions::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f]")
+            << boost::log::expressions::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f UTC]")
             << " [" << boost::log::expressions::attr< boost::log::attributes::current_thread_id::value_type >("ThreadID")
-            << "] [" << std::setw(5) << std::left << boost::log::trivial::severity << "] " <<  boost::log::expressions::smessage;
+            << "] [" << std::setw(5) << std::left << boost::log::trivial::severity << "] " << boost::log::expressions::smessage;
 
     auto sink = boost::log::add_file_log
         (
@@ -54,6 +54,8 @@ init_logging(const bzn::options& options)
             keywords::auto_flush = true,
             keywords::format = format
         );
+
+    boost::log::core::get()->add_global_attribute("TimeStamp", boost::log::attributes::utc_clock());
 
     if (options.get_log_to_stdout())
     {
@@ -243,7 +245,7 @@ main(int argc, const char* argv[])
             auto ep = options.get_listener();
             ep.port(options.get_http_port());
 
-            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage());
+            auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage(), options.peer_validation_enabled());
             auto storage = std::make_shared<bzn::storage>();
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
