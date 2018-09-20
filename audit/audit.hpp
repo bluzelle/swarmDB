@@ -18,9 +18,9 @@
 #include <node/node_base.hpp>
 #include <proto/bluzelle.pb.h>
 #include <include/boost_asio_beast.hpp>
-#include <mutex>
 #include <boost/asio/ip/udp.hpp>
-#include <include/optional.hpp>
+#include <mutex>
+#include <optional>
 
 
 namespace bzn
@@ -31,7 +31,7 @@ namespace bzn
     public:
         audit(std::shared_ptr<bzn::asio::io_context_base>
                 , std::shared_ptr<bzn::node_base> node
-                , bzn::optional<boost::asio::ip::udp::endpoint>
+                , std::optional<boost::asio::ip::udp::endpoint>
                 , bzn::uuid_t uuid
 		        , size_t mem_size
                 , bool use_pbft);
@@ -105,7 +105,7 @@ namespace bzn
         bool leader_has_uncommitted_entries = false;
 
         size_t forgotten_error_count = 0;
-        bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint;
+        std::optional<boost::asio::ip::udp::endpoint> monitor_endpoint;
         std::unique_ptr<bzn::asio::udp_socket_base> socket;
 
         const std::string statsd_namespace_prefix;

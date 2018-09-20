@@ -635,11 +635,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             LOG(info) << "current term out of sync: " << this->current_term;
 
             this->update_raft_state(this->current_term, bzn::raft_state::follower);
-#ifndef __APPLE__
             this->voted_for.reset();
-#else
-            this->voted_for = std::experimental::optional<bzn::uuid_t>();
-#endif
             this->start_election_timer();
             return;
         }
@@ -650,11 +646,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             LOG(error) << "request had term out of sync: " << this->current_term << " > " << term;
 
             this->update_raft_state(msg["data"]["term"].asUInt(), bzn::raft_state::follower);
-#ifndef __APPLE__
             this->voted_for.reset();
-#else
-            this->voted_for = std::experimental::optional<bzn::uuid_t>();
-#endif
             this->start_election_timer();
             return;
         }

@@ -23,12 +23,7 @@
 #include <storage/storage.hpp>
 #include <gtest/gtest_prod.h>
 #include <fstream>
-
-#ifndef __APPLE__
 #include <optional>
-#else
-#include <experimental/optional>
-#endif
 
 namespace
 {
@@ -184,11 +179,7 @@ namespace bzn
         uint32_t        current_term = 0;
         std::set<bzn::uuid_t> yes_votes;
         std::set<bzn::uuid_t> no_votes;
-#ifndef __APPLE__
         std::optional<bzn::uuid_t> voted_for;
-#else
-        std::experimental::optional<bzn::uuid_t> voted_for;
-#endif
         std::unique_ptr<bzn::asio::steady_timer_base> timer;
 
         // indexes...

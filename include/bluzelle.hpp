@@ -19,9 +19,6 @@
 #include <json/json.h>
 #include <swarm_version.hpp>
 
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                     + __GNUC_PATCHLEVEL__)
 
 namespace bzn
 {
@@ -38,11 +35,7 @@ namespace bzn
 
 namespace bzn::utils
 {
-#if __APPLE__ || GCC_VERSION > 70200
     constexpr
-#else
-    inline
-#endif
     std::string_view basename(const std::string_view& path)
     {
         return path.substr(path.rfind('/') + 1);
