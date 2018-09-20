@@ -29,7 +29,7 @@ namespace bzn
 
         boost::asio::ip::tcp::endpoint get_listener() const override;
 
-        bzn::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const override;
+        std::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const override;
 
         std::string get_ethererum_address() const override;
 

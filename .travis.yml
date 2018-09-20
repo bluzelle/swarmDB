@@ -39,9 +39,9 @@ matrix:
         - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
 
     - os: osx
-      osx_image: xcode9.4
+      osx_image: xcode10
       env:
-        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install openssl && brew upgrade cmake"
+        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install openssl && brew install cmake"
         - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl"
 

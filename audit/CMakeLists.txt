@@ -2,7 +2,7 @@ add_library(audit
         audit_base.hpp
         audit.hpp
         audit.cpp
-        ../include/optional.hpp)
+        )
 
 target_link_libraries(audit proto)
 add_dependencies(audit jsoncpp)

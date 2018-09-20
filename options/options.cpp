@@ -51,7 +51,7 @@ options::get_listener() const
 }
 
 
-bzn::optional<boost::asio::ip::udp::endpoint>
+std::optional<boost::asio::ip::udp::endpoint>
 options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const
 {
     if (this->raw_opts.has(MONITOR_PORT) && this->raw_opts.has(MONITOR_ADDRESS))
@@ -63,7 +63,7 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
                                         this->raw_opts.get<std::string>(MONITOR_ADDRESS),
                                         std::to_string(this->raw_opts.get<uint16_t>(MONITOR_PORT)));
 
-            return bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
+            return std::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
         }
         catch (std::exception& ex)
         {
@@ -73,7 +73,7 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
     }
     else
     {
-        return bzn::optional<boost::asio::ip::udp::endpoint>{};
+        return std::optional<boost::asio::ip::udp::endpoint>{};
     }
 }
 

@@ -21,7 +21,7 @@ using namespace bzn;
 
 audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , std::shared_ptr<bzn::node_base> node
-        , bzn::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
+        , std::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
         , bzn::uuid_t uuid
         , size_t mem_size
         , bool use_pbft)

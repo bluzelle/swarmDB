@@ -43,6 +43,10 @@ namespace bzn
 
     class audit_base
     {
+    public:
+
+        virtual ~audit_base() = default;
+
         virtual void start() = 0;
 
         virtual size_t error_count() const = 0;

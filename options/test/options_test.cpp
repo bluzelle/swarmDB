@@ -271,7 +271,7 @@ TEST_F(options_file_test, test_that_no_monitor_endpoint_when_not_specified)
 
     auto io_context = std::make_shared<bzn::asio::io_context>();
 
-    EXPECT_EQ(options.get_monitor_endpoint(io_context), bzn::optional<boost::asio::ip::udp::endpoint>{});
+    EXPECT_EQ(options.get_monitor_endpoint(io_context), std::optional<boost::asio::ip::udp::endpoint>{});
 }
 
 TEST_F(options_file_test, test_that_endpoint_built)
@@ -294,7 +294,7 @@ TEST_F(options_file_test, test_that_endpoint_built)
 
     boost::asio::ip::udp::resolver resolver(io_context->get_io_context());
     auto eps = resolver.resolve(boost::asio::ip::udp::v4(), "localhost", "12345");
-    auto expect = bzn::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
+    auto expect = std::optional<boost::asio::ip::udp::endpoint>{*eps.begin()};
 
     EXPECT_EQ(options.get_monitor_endpoint(io_context), expect);
 }
