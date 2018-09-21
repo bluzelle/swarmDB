@@ -43,7 +43,8 @@ namespace
         "  \"logfile_max_size\" : \"1M\","
         "  \"logfile_rotation_size\" : \"2M\","
         "  \"logfile_dir\" : \".\","
-        "  \"http_port\" : 80";
+        "  \"http_port\" : 80,"
+        "  \"mem_storage\" : false";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
 
@@ -104,7 +105,7 @@ public:
             this->open_files.insert(filename);
         }
 
-        std::cout << filename;
+        //std::cout << filename;
 
         std::ofstream ofile(filename.c_str());
         ofile.exceptions(std::ios::failbit);
@@ -147,6 +148,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_EQ(uint16_t(80), options.get_http_port());
     EXPECT_FALSE(options.peer_validation_enabled());
+    EXPECT_FALSE(options.get_mem_storage());
 
     // defaults..
     {
@@ -161,6 +163,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
         EXPECT_EQ(size_t(65536), options.get_logfile_rotation_size());
         EXPECT_EQ("logs/", options.get_logfile_dir());
         EXPECT_EQ(uint16_t(8080), options.get_http_port());
+        EXPECT_TRUE(options.get_mem_storage());
     }
 }
 

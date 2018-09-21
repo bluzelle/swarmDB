@@ -71,7 +71,7 @@ ExternalProject_Add(rocksdb
     TIMEOUT 30
     INSTALL_COMMAND ""
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND make static_lib ${BUILD_FLAGS}
+    BUILD_COMMAND make -e DISABLE_JEMALLOC=1 static_lib ${BUILD_FLAGS}
     BUILD_IN_SOURCE true
     DOWNLOAD_NO_PROGRESS true
     )
@@ -88,13 +88,20 @@ link_directories(${binary_dir}/)
 set(ROCKSDB_LIBRARIES ${binary_dir}/librocksdb.a ${SNAPPY_LIBRARIES} ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
 
 if (APPLE)
-   find_library(LZ4_LIBRARY NAMES liblz4.a)
-   message(STATUS ${LZ4_LIBRARY})
-   list(APPEND ROCKSDB_LIBRARIES ${LZ4_LIBRARY})
+    find_library(LZ4_LIBRARY NAMES liblz4.a)
+    message(STATUS ${LZ4_LIBRARY})
+    list(APPEND ROCKSDB_LIBRARIES ${LZ4_LIBRARY})
 
-   # rocksdb may of found this library?
-   find_library(ZSTD_LIBRARY NAMES libzstd.a)
-   if (ZSTD_LIBRARY)
+    # rocksdb may of found these libraries...
+    find_library(ZSTD_LIBRARY NAMES libzstd.a)
+    if (ZSTD_LIBRARY)
+        message(STATUS ${ZSTD_LIBRARY})
        list(APPEND ROCKSDB_LIBRARIES ${ZSTD_LIBRARY})
-   endif()
+    endif()
+
+    find_library(TBB_LIBRARY NAMES libtbb.a)
+    if (TBB_LIBRARY)
+        message(STATUS ${TBB_LIBRARY})
+        list(APPEND ROCKSDB_LIBRARIES ${TBB_LIBRARY})
+    endif()
 endif()

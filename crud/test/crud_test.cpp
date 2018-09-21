@@ -315,11 +315,7 @@ TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
     EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Invoke(
         [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
         {
-            std::shared_ptr<bzn::storage_base::record> record = std::make_shared<bzn::storage_base::record>();
-            record->value = "skdif9ek34587fk30df6vm73==";
-            record->timestamp = std::chrono::seconds(0);
-            record->transaction_id = TEST_NODE_UUID;
-            return record;
+            return std::optional<bzn::value_t>("skdif9ek34587fk30df6vm73==");
         }));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
@@ -341,7 +337,7 @@ TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state ::follower));
 
-    EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Return(nullptr));
+    EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Return(std::nullopt));
 
     EXPECT_CALL(*this->mock_raft, get_leader()).WillRepeatedly(Return(bzn::peer_address_t("127.0.0.1",49152,8080,"ozzy",LEADER_UUID)));
 
@@ -393,11 +389,7 @@ TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
     EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Invoke(
         [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
         {
-            auto record = std::make_shared<bzn::storage_base::record>();
-            record->value = "skdif9ek34587fk30df6vm73==";
-            record->timestamp = std::chrono::seconds(0);
-            record->transaction_id = TEST_NODE_UUID;
-            return record;
+            return std::optional<bzn::value_t>("skdif9ek34587fk30df6vm73==");
         }));
 
     EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(

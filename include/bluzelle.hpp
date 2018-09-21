@@ -28,6 +28,8 @@ namespace bzn
 
     using key_t = std::string;
 
+    using value_t = std::string;
+
     using session_id = uint64_t;
 
 } // bzn

@@ -17,6 +17,7 @@
 #include <regex>
 #include <cstdint>
 #include <utils/crypto.hpp>
+#include <chrono>
 
 using namespace bzn;
 using namespace bzn::option_names;
@@ -180,6 +181,13 @@ size_t
 options::get_max_storage() const
 {
     return this->parse_size(this->raw_opts.get<std::string>(MAX_STORAGE));
+}
+
+
+bool
+options::get_mem_storage() const
+{
+    return this->raw_opts.get<bool>(MEM_STORAGE);
 }
 
 

@@ -18,7 +18,7 @@
 #include <raft/raft.hpp>
 #include <raft/log_entry.hpp>
 #include <raft/raft_log.hpp>
-#include <storage/storage.hpp>
+#include <storage/mem_storage.hpp>
 #include <boost/filesystem.hpp>
 #include <algorithm>
 #include <vector>
@@ -931,7 +931,7 @@ namespace bzn
         }
 
         // We've got a number of entries in the log, now we can load them into storage.
-        auto storage = std::make_shared<bzn::storage>();
+        auto storage = std::make_shared<bzn::mem_storage>();
         raft->initialize_storage_from_log(storage);
 
         // lets make sure we got them all
@@ -950,10 +950,10 @@ namespace bzn
         {
             if (std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end())
             {
-                EXPECT_EQ(I_AM_CREATED, storage->read(db_uuid, key)->value);
+                EXPECT_EQ(I_AM_CREATED, *storage->read(db_uuid, key));
                 continue;
             }
-            EXPECT_EQ(I_AM_UPDATED, storage->read(db_uuid, key)->value);
+            EXPECT_EQ(I_AM_UPDATED, *storage->read(db_uuid, key));
         }
     }
 

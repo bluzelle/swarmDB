@@ -18,6 +18,8 @@
 #include <status/status.hpp>
 #include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
+#include <storage/mem_storage.hpp>
+#include <storage/rocksdb_storage.hpp>
 #include <http/server.hpp>
 #include <options/options.hpp>
 #include <boost/log/expressions.hpp>
@@ -246,7 +248,21 @@ main(int argc, const char* argv[])
             ep.port(options.get_http_port());
 
             auto raft = std::make_shared<bzn::raft>(io_context, node, peers.get_peers(), options.get_uuid(), options.get_state_dir(), options.get_max_storage(), options.peer_validation_enabled());
-            auto storage = std::make_shared<bzn::storage>();
+
+            // which type of storage?
+            std::shared_ptr<bzn::storage_base> storage;
+
+            if (options.get_mem_storage())
+            {
+                LOG(info) << "Using in-memory testing storage";
+                storage = std::make_shared<bzn::mem_storage>();
+            }
+            else
+            {
+                LOG(info) << "Using RocksDB storage";
+                storage = std::make_shared<bzn::rocksdb_storage>(options.get_state_dir(), options.get_uuid());
+            }
+
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
             auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
@@ -268,6 +284,7 @@ main(int argc, const char* argv[])
     }
     catch(std::exception& ex)
     {
+        LOG(fatal) << ex.what();
         std::cerr << '\n' << ex.what() << '\n';
         return 1;
     }

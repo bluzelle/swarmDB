@@ -22,6 +22,7 @@
 #include <string>
 #include <map>
 #include <optional>
+#include <chrono>
 
 
 namespace bzn
@@ -134,6 +135,13 @@ namespace bzn
          * @return size
          */
         virtual size_t get_max_storage() const = 0;
+
+
+        /**
+         * Database to use
+         * @return true if we are using in memory data
+         */
+        virtual bool get_mem_storage() const = 0;
 
 
         /**
