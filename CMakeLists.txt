@@ -41,6 +41,10 @@ set(CMAKE_C_FLAGS   ${warnings})
 # find packages
 include(cmake/add_gmock_test.cmake)
 
+include(FindProtobuf)
+find_package(Protobuf REQUIRED)
+include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
+
 set(REQUIRED_BOOST "1.68.0")
 set(Boost_USE_STATIC_LIBS on)
 
