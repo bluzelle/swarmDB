@@ -22,7 +22,7 @@
 
 namespace bzn
 {
-class chaos : public chaos_base, public std::enable_shared_from_this<chaos>
+    class chaos : public chaos_base, public std::enable_shared_from_this<chaos>
     {
     public:
         chaos(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::options_base> options);
@@ -31,7 +31,9 @@ class chaos : public chaos_base, public std::enable_shared_from_this<chaos>
 
         bool is_message_dropped() override;
         bool is_message_delayed() override;
-        void reschedule_message(std::function<void()> callback) const override;
+
+        using chaos_callback = std::function<void()>;
+        void reschedule_message(chaos_callback callback) const override;
 
 
     private:

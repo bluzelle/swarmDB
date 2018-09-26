@@ -23,9 +23,9 @@ using namespace bzn;
 using namespace bzn::option_names;
 
 chaos::chaos(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::options_base> options)
-        : io_context(io_context)
-        , options(options)
-        , crash_timer(io_context->make_unique_steady_timer())
+        : io_context(std::move(io_context))
+        , options(std::move(options))
+        , crash_timer(this->io_context->make_unique_steady_timer())
 {
     // We don't need cryptographically secure randomness here, but it does need to be of reasonable quality and differ across processes
     std::random_device rd;
@@ -38,7 +38,8 @@ chaos::start()
     if (this->enabled())
     {
         std::call_once(
-                this->start_once, [this]()
+                this->start_once,
+                [this]()
                 {
                     this->start_crash_timer();
                 }
@@ -51,8 +52,8 @@ void
 chaos::start_crash_timer()
 {
     std::weibull_distribution<double> distribution(
-            this->options->get_simple_options().get<double>(CHAOS_NODE_FAILURE_SHAPE),
-            this->options->get_simple_options().get<double>(CHAOS_NODE_FAILURE_SCALE));
+        this->options->get_simple_options().get<double>(CHAOS_NODE_FAILURE_SHAPE),
+        this->options->get_simple_options().get<double>(CHAOS_NODE_FAILURE_SCALE));
 
     double hours_until_crash = distribution(this->random);
     LOG(info) << boost::format("Chaos module will trigger this node crashing in %1$.2f hours") % hours_until_crash;
@@ -84,7 +85,7 @@ chaos::enabled()
 bool
 chaos::is_message_delayed()
 {
-    bool result = this->enabled() &&
+    const bool result = this->enabled() &&
            this->options->get_simple_options().get<double>(CHAOS_MESSAGE_DELAY_CHANCE) > this->random_float(this->random);
 
     if (result)
