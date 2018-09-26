@@ -40,7 +40,7 @@ This will result in a custom Boost install at `~/myboost/1_68_0/`that will not c
 **Other dependencies \(Protobuf, CMake\)**
 
 ```text
-$ brew update && brew install protobuf && brew install snappy && brew upgrade cmake
+$ brew update && brew install protobuf && brew install snappy && brew install lz4 && brew upgrade cmake
 ```
 
 **ccache \(Optional\)**

@@ -86,3 +86,15 @@ ExternalProject_Get_Property(rocksdb binary_dir)
 link_directories(${binary_dir}/)
 
 set(ROCKSDB_LIBRARIES ${binary_dir}/librocksdb.a ${SNAPPY_LIBRARIES} ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
+
+if (APPLE)
+   find_library(LZ4_LIBRARY NAMES liblz4.a)
+   message(STATUS ${LZ4_LIBRARY})
+   list(APPEND ROCKSDB_LIBRARIES ${LZ4_LIBRARY})
+
+   # rocksdb may of found this library?
+   find_library(ZSTD_LIBRARY NAMES libzstd.a)
+   if (ZSTD_LIBRARY)
+       list(APPEND ROCKSDB_LIBRARIES ${ZSTD_LIBRARY})
+   endif()
+endif()

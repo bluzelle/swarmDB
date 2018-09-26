@@ -1,6 +1,3 @@
-include(FindProtobuf)
-find_package(Protobuf REQUIRED)
-include_directories(${PROTOBUF_INCLUDE_DIR})
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER bluzelle.proto database.proto pbft.proto audit.proto)
 add_library(proto ${PROTO_HEADER} ${PROTO_SRC})
 set_target_properties(proto PROPERTIES COMPILE_FLAGS "-Wno-unused")
