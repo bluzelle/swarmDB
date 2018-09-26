@@ -79,8 +79,8 @@ pbft::start()
     std::call_once(this->start_once,
             [this]()
             {
-                this->node->register_for_message("pbft",
-                        std::bind(&pbft::handle_pbft_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT,
+                        std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
                 this->node->register_for_message("database",
                         std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
@@ -147,15 +147,22 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::handle_pbft_message(const bzn::message& json, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    pbft_msg msg;
-    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["pbft-data"].asString())))
+    if (msg.type() != BZN_MSG_PBFT)
     {
-        LOG(error) << "Got invalid message " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE);
+        LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
+    }
+
+    pbft_msg inner_msg;
+
+    if (!inner_msg.ParseFromString(msg.payload()))
+    {
+        LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
-    this->handle_message(msg);
+
+    this->handle_message(inner_msg);
 }
 
 void
@@ -306,15 +313,13 @@ pbft::handle_commit(const pbft_msg& msg)
 }
 
 void
-pbft::broadcast(const bzn::message& json)
+pbft::broadcast(const std::string& msg)
 {
-    auto json_ptr = std::make_shared<bzn::message>(json);
-
-    LOG(debug) << "Broadcasting message " + json.toStyledString();
+    auto msg_ptr = std::make_shared<std::string>(msg);
 
     for (const auto& peer : this->peer_index)
     {
-        this->node->send_message(make_endpoint(peer), json_ptr);
+        this->node->send_message_str(make_endpoint(peer), msg_ptr);
     }
 }
 
@@ -452,22 +457,17 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
     return lookup->second;
 }
 
-bzn::message
-pbft::wrap_message(const pbft_msg& msg, const std::string& debug_info)
+std::string
+pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
-    bzn::message json;
+    wrapped_bzn_msg result;
+    result.set_payload(msg.SerializeAsString());
+    result.set_type(bzn_msg_type::BZN_MSG_PBFT);
 
-    json["bzn-api"] = "pbft";
-    json["pbft-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
-    if (debug_info.length() > 0)
-    {
-        json["debug-info"] = debug_info;
-    }
-
-    return json;
+    return result.SerializeAsString();
 }
 
-bzn::message
+std::string
 pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
 {
     bzn::message json;
@@ -479,7 +479,7 @@ pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
         json["debug-info"] = debug_info;
     }
 
-    return json;
+    return json.toStyledString();
 }
 
 const bzn::uuid_t&

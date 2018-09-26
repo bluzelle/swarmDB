@@ -31,7 +31,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_requests_fire_preprepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft->handle_message(request_msg);
@@ -40,7 +40,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_wrapped_message)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->message_handler(wrap_pbft_msg(request_msg), std::shared_ptr<session_base>());
@@ -48,7 +48,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, test_ignored_when_not_primary)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(0));
 
         this->uuid = SECOND_NODE_UUID;
@@ -61,9 +61,9 @@ namespace bzn::test
     std::set<uint64_t> seen_sequences;
 
     void
-    save_sequences(const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<bzn::message> json)
+    save_sequences(const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(json);
+        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
         seen_sequences.insert(msg.sequence());
     }
 
@@ -71,7 +71,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_different_requests_get_different_sequences)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(Invoke(save_sequences));
+        EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(Invoke(save_sequences));
 
         pbft_msg request_msg2(request_msg);
         request_msg2.mutable_request()->set_timestamp(2);
@@ -85,7 +85,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_preprepare_triggers_prepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg);
@@ -94,12 +94,12 @@ namespace bzn::test
     TEST_F(pbft_test, test_prepare_contains_uuid)
     {
         this->build_pbft();
-        std::shared_ptr<bzn::message> json;
-        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(SaveArg<1>(&json));
+        std::shared_ptr<std::string> wrapped_msg;
+        EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
 
         this->pbft->handle_message(this->preprepare_msg);
 
-        pbft_msg msg_sent = extract_pbft_msg(json);
+        pbft_msg msg_sent = extract_pbft_msg(*wrapped_msg);
 
         ASSERT_EQ(msg_sent.sender(), this->pbft->get_uuid());
         ASSERT_EQ(msg_sent.sender(), TEST_NODE_UUID);
@@ -108,7 +108,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_message_str(_, _)).Times(Exactly(0));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_view(6);
@@ -119,7 +119,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*mock_node, send_message_str(_, _)).Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft_msg prepreparea(this->preprepare_msg);
         pbft_msg preprepareb(this->preprepare_msg);
@@ -139,9 +139,9 @@ namespace bzn::test
     TEST_F(pbft_test, test_commit_messages_sent)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_commit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg);

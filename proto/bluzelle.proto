@@ -27,3 +27,19 @@ message bzn_msg
         pbft_msg pbft = 13;
     }
 }
+
+enum bzn_msg_type
+{
+    BZN_MSG_UNDEFINED = 0;
+    BZN_MSG_PBFT = 1;
+}
+
+message wrapped_bzn_msg
+{
+    // This is stored as a serialized string because we need to sign it, and serialization is not guarenteed to be deterministic
+    string payload = 1;
+    bzn_msg_type type = 2;
+
+    //TODO: string sender
+    //TODO: string signature
+}

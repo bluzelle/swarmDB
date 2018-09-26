@@ -14,9 +14,11 @@
 
 #include <node/session.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <boost/asio/buffer.hpp>
 #include <mocks/mock_chaos_base.hpp>
 
 #include <gmock/gmock.h>
+#include <proto/bluzelle.pb.h>
 
 using namespace ::testing;
 
@@ -81,7 +83,7 @@ namespace bzn
         EXPECT_CALL(*mock_websocket_stream, is_open()).WillOnce(Return(false));
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
-        session->start([](auto&,auto){});
+        session->start([](auto&,auto){}, [](auto&, auto){});
 
         // call handler with no error and read will be scheduled...
         accept_handler(boost::system::error_code());
@@ -132,39 +134,57 @@ namespace bzn
                 accept_handler = handler;
             }));
 
+        const std::string initial_buffer_contents = "{\"some\": \"valid json\"}";
+        std::function<void(const std::string&)> write_to_buffer;
+
         bzn::asio::read_handler read_handler;
         EXPECT_CALL(*websocket_stream, async_read(_,_)).WillRepeatedly(Invoke(
-            [&](auto& /*buffer*/, auto handler)
+            [&](auto& buffer, auto handler)
             {
-                // sadly we can't modify the buffer
+                write_to_buffer = [&](const std::string& data)
+                {
+                    auto data_buf = boost::asio::buffer(data);
+                    buffer.consume(buffer.size());
+                    boost::asio::buffer_copy(buffer.prepare(data_buf.size()), data_buf);
+                    buffer.commit(data_buf.size());
+                };
+
+                write_to_buffer(initial_buffer_contents);
 
                 read_handler = handler;
             }));
 
-        bool handler_called = false;
-        session->start([&](auto&,auto){handler_called = true;});
+        bool json_handler_called = false;
+        bool proto_handler_called = false;
+        session->start([&](auto&,auto){json_handler_called = true;}, [&](auto&, auto){proto_handler_called = true;});
 
-        // yes, this is a hack!
-        const_cast<bool&>(session->ignore_json_errors) = true;
+        //write_to_buffer("{\"some\":  \"valid json\"}");
 
         // call accept and read handler with no error and read will be scheduled...
         accept_handler(boost::system::error_code());
         read_handler(boost::system::error_code(), 0);
 
-        // there is no way for us to modify the buffer passed to the read handler...until I figure a way!
-        ASSERT_TRUE(handler_called);
+        ASSERT_TRUE(json_handler_called);
 
-        // reset flag and handler should not be called
-        const_cast<bool&>(session->ignore_json_errors) = false;
+        write_to_buffer("}}}not valid json");
 
-        handler_called = false;
+        json_handler_called = false;
         read_handler(boost::system::error_code(), 0);
-        ASSERT_FALSE(handler_called);
+        ASSERT_FALSE(json_handler_called);
 
         // calling with an error should not do anything...
-        handler_called = false;
+        json_handler_called = false;
         read_handler(boost::asio::error::operation_aborted, 0);
-        ASSERT_FALSE(handler_called);
+        ASSERT_FALSE(json_handler_called);
+
+        ASSERT_FALSE(proto_handler_called);
+
+        wrapped_bzn_msg proto_msg;
+        write_to_buffer(proto_msg.SerializeAsString());
+        read_handler(boost::system::error_code(), 0);
+
+        ASSERT_TRUE(proto_handler_called);
+        ASSERT_FALSE(json_handler_called);
     }
 
 

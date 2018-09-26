@@ -26,10 +26,14 @@ class Mocknode_base : public node_base {
  public:
   MOCK_METHOD2(register_for_message,
       bool(const std::string& msg_type, bzn::message_handler message_handler));
+  MOCK_METHOD2(register_for_message,
+      bool(const bzn_msg_type msg_type, bzn::protobuf_handler message_handler));
   MOCK_METHOD0(start,
       void());
   MOCK_METHOD2(send_message,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg));
+  MOCK_METHOD2(send_message_str,
+      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg));
 };
 
 }  // namespace bzn

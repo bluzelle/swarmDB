@@ -33,7 +33,7 @@ namespace bzn
     public:
         session(std::shared_ptr<bzn::asio::io_context_base> io_context, bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout);
 
-        void start(bzn::message_handler handler) override;
+        void start(bzn::message_handler handler, bzn::protobuf_handler proto_handler) override;
 
         void send_message(std::shared_ptr<bzn::message> msg, bool end_session) override;
 
@@ -46,8 +46,6 @@ namespace bzn
         bzn::session_id get_session_id() override { return this->session_id; }
 
     private:
-        FRIEND_TEST(node_session, test_that_when_message_arrives_registered_callback_is_executed);
-
         void do_read();
 
         void start_idle_timeout();
@@ -62,8 +60,7 @@ namespace bzn
 
         const std::chrono::milliseconds ws_idle_timeout;
         bzn::message_handler handler;
-
-        const bool ignore_json_errors = false;
+        bzn::protobuf_handler proto_handler;
 
         std::mutex write_lock;
     };

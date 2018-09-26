@@ -15,6 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
+#include <proto/bluzelle.pb.h>
 
 
 namespace bzn
@@ -23,6 +24,7 @@ namespace bzn
     class session_base;
 
     using message_handler = std::function<void(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)>;
+    using protobuf_handler = std::function<void(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)>;
 
     class session_base
     {
@@ -33,7 +35,10 @@ namespace bzn
          * Start accepting new connections
          * @param handler callback to execute when connection is established
          */
-        virtual void start(bzn::message_handler handler) = 0;
+        virtual void start(
+                std::function<void(const message&, std::shared_ptr<session_base>)> handler
+                , bzn::protobuf_handler proto_handler
+        ) = 0;
 
         /**
          * Send a message to the connected node

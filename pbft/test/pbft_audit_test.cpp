@@ -17,9 +17,9 @@ namespace bzn::test
 {
     TEST_F(pbft_test, test_local_commit_sends_audit_messages)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(false))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_audit, Eq(false))))
                 .Times(AnyNumber());
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_audit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();
@@ -44,7 +44,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, primary_sends_primary_status)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_audit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();
@@ -56,7 +56,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, nonprimary_does_not_send_primary_status)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_audit, Eq(true))))
                 .Times(Exactly(0));
 
         this->uuid = SECOND_NODE_UUID;

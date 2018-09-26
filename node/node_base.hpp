@@ -17,6 +17,7 @@
 #include <boost/asio.hpp>
 #include <node/session_base.hpp>
 #include <json/json.h>
+#include <proto/bluzelle.pb.h>
 
 
 namespace bzn
@@ -35,6 +36,14 @@ namespace bzn
         virtual bool register_for_message(const std::string& msg_type, bzn::message_handler msg_handler) = 0;
 
         /**
+         * Register for a callback to be execute when a certain message type arrives
+         * @param msg_type      message type (crud, raft etc.)
+         * @param msg_handler   callback
+         * @return true if registration succeeded
+         */
+        virtual bool register_for_message(const bzn_msg_type type, bzn::protobuf_handler msg_handler) = 0;
+
+        /**
          * Start server's listener etc.
          */
         virtual void start() = 0;
@@ -46,6 +55,12 @@ namespace bzn
          */
         virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg) = 0;
 
+        /**
+         * Convenience method to connect and send a message to a node
+         * @param ep            host to send the message to
+         * @param msg           message to send
+         */
+        virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg) = 0;
     };
 
 } // bzn

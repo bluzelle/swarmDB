@@ -23,8 +23,8 @@
 namespace bzn {
     class Mocksession_base : public session_base {
     public:
-        MOCK_METHOD1(start,
-            void(bzn::message_handler handler));
+        MOCK_METHOD2(start,
+            void(bzn::message_handler handler, bzn::protobuf_handler proto_handler));
         MOCK_METHOD2(send_message,
             void(std::shared_ptr<bzn::message> msg, bool end_session));
         MOCK_METHOD2(send_message,
