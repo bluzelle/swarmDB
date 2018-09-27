@@ -17,6 +17,7 @@ env:
     - secure: "Z4h7T0uHpz3WLtX93NckznB/FujL7LncaZdxJQ5DrWOtIpUJA7REix8oMDyTaXqhsksX5x24CdxuArmFkgE5G1xJK7sIgI7R6RlDG0shRyfMBWaB0Olbsxq9FiZb11Cmguq2ANoPdwFj53BwSjLs+8QW7wWx2NE4TF0JWWNBVVi1hcX5cPc2xW8oEy7657mxCTq6/G8upOonMRHmiB3M+u9Xn0Sv7+SCmtkFw6uUSGfRRkwwRl0haf0qwlOg6o6Aihen0zFEM/Rf3imx5JhyxtlW6KQBG8WZOmv2gQ9AXD9sAZG4H52Klr81QIhKrzlQNEoLvPtkhqTFXCGlBRH7bBXbCYRFYhvm8j1ja2tM46wZHwdIx5gtUqLk5+PcNdFEO335003GeOPewzayk44WWkPQyHPkNLTLAnLJawKkSDsLsWIokl0BGz5m2O08GBoohTd0LaOQrEi3npI92s6OasxPh9wcCwYYwGT5WqLmnKc6XRpI5I+RFN6yjPYCYUwgCd5LVkOG5hpvg8tTYG63gxshPJWSWv5yObMPppmObnpQNjPOdw63m9cpnevo2DbGLZsHedDyqMGhjZnn3CG8ZlRQvdPLo56l2gFRxhw8J2xnk1C2ffil8C9IjiTLBK+Y5ALd17BuI40ZA+ClRHy8Z6MFXgMfFlr/YBrUtY3tvGg="
     - secure: "Hp7Ww6XhkZvzOsktsaL8lyiMbXLP3u/Entj7UXomywDr7gMIAyoIiD122bZ1Wa+sbNfnNd8lKS1AZxMtwxbhAK9hcB6ZvypAE3i4pfoQWxd4jq3pXltJ2oLbXEWzH1aGcTtibf2vI6WBpI8mPGWrykBeQfCzd0qs6t5pNzeA43ta77WCADWJivxe69l4rqxUGmXZVbGzApUgn5UP7FTscuByitQm6KPft63sre6aSC1P9FKWD4VOFlDqol3v+Bsmn05bNc9a/UuLq/C6vSa6BxsJpalMIRtlXE+MRXVpYxnBNS1UlH+8LA6txG3fwisyvwXG5KjO4tDuVLIYzuK1+TBCCnFBbTJ+2aCZ9iR7sA34A+AUbF2JyTfGtR4RnOd2cMgGuWgn1ASoe2c5GE45aK/s+ijDsKpzzHl8gR3QJS7yd0U/KCgnW3bsq4mRq95sjA/5MZuS2gmIpMS0JoprLmjXikZLI3LDQc8VHqK5U2ne/W7xZyszc57IlJI6HiL2v2yw25m8/yna7PXyAYFPsZ8LRzoZJvq/uBVh8sAnhpgMfQ5FxOuJGvhH56UjvcXqIYfz1a4ELIl8b2rLq6M1qUWYHwlTq8xHHhWShQBpfEiZQBncD0+K7LO7KhJb78sqJcbMFcgsWooKqlsElGQwK92BUkECRu8eC4n8uaaJ/GM="
     - secure: "D3BGFKFKHDG0ajTpvEAP7poQmOvSUq2l7jG9q7hK+xHDRKBhM7YfSUJicz5H358VBKURoURLbykq3WXw/gpzTSVqpusXJ4UjGiAZLRXHlTsyXW0IVGvXXPx53SiJkHbfVC/3MK22rzV9LYR3wxEt7k9xKLfRGBr+tAiTzi/ikox/4ibIx6cb0PQGrVTbeoSJfJfF6VQvzeaoST7K9CREJGb9PuLpiXPRt0CIeY5Y1r7+HCJSzO2XWX+8i+DpMB7ZItQjrt09vaoDoUS5WPxL92+S8nrWNH++LhEzvq1PTtZs0bQkLHG+zfrM/5j2Q34HP6QZceVSixMzEz2l9wE0lZI5d21udnh1CApbaZvHHvLuR7cvZGv6VCNZefZhKTsDAs+GRMYLhZgauqxnOxug0ZO8ErLHJ0K87l/U0krBUCtMTO5FPodEPahXVOe9UXlBnl8FFhihQ4VB23TXWbFy0qa1M1iCV3jT27hpDHCmPuD5KwGWzDITrnaC0+YzQpmOuZKLB/wlQdJD7XmRkV3OCye1ejwFpwCD1SMJLZBTd4rReAgxxgT4f0xq/IuoGORvAXYDbZeYNrISYrxN8u6LAAc56IDQ7F8nZO/l85gPZaSrkzL4zeuDhWsMr/SBysBL2XlwhL9iSYHWEhgr67hJVOzVUqpMCH6nr2Y8hc4cK1w="
+    - secure: "b7mCS/qvJzPMasEgwrUmaC65qhzNHnu1sGyYTFTjc0UfWjJ31JF3CLLXRbpHbRqRzibRmwohWRSL8O3kuJ6ibQrh3bNaLyCQJI+KPxcp303ZeFzTUzbo92Y7saK3Sl/aLJd4iSE6QsO7E1OkeJfHjEjTQNVreFmDTiVE8A+MsYK4zj/w5BvCo0j3vQJ9R56O0bvdWVyb1EP4AoLfAkFNqKmf7LCsJyhqO+FFltmTPG1dEjzlh18pGDZOxvswCMsSrspAGDRedOaakJgRoRdNq+OsA/KrbKFR+/PBBbm/kL8Vy5QQFCVUvILwbgcvDFnd+2IrtyH6czFGGREwm9fZ9H2HkIqqWkPvcOhvZEqRkYF50CxQ4gn5nsYGKll5l0BuL0v0buxwmk7gqGu6fxqz/4c6hWT4SeTe4aoktKdZh0ggE6L58Of3HNlhwwRUe4GfmAkv+uSC4DOt+RjNKvhtoK9C/39jSsxniz13JP5p//ZmP/jtO8bE0bWnDpZw7Nb2w7Xf3W/glf+BAcuv4Gj/hVSTxyjEcmlqKRF+D4N/RJfUMSsQ1a1KbbLbGL0+E2xZ3o+spfMGsTwvcuGVSetJogRfJWzByW815hCDiCFtnIb+uu8sB3VEVvpah32tpEoWy4FhCnGp0htfyXpuBJWuLr6+ePItr/2UjP60YpcVb7I="
 
 matrix:
   include:
@@ -101,6 +102,10 @@ script:
 
 after_success:
   - |
+    body='{"request": {
+      "branch":"master"
+    }}'
+  - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
     fi
@@ -110,6 +115,7 @@ after_success:
     if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "devel" ]; then
       if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
         travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=all;deb.component=${PACKAGE_COMPONENT};deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
+        travis_retry curl -s -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "Travis-API-Version: 3" -H "Authorization: token ${TRAVIS_API_TOKEN}" -d "${body}" https://api.travis-ci.org/repo/bluzelle%2Fqa/requests fi
       fi
       if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$TRAVIS_BRANCH" = "master" ]; then
         travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_OSX} "https://bluzelle.jfrog.io/bluzelle/OSX/${PACKAGE_NAME_OSX}"
