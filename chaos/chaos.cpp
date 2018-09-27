@@ -111,7 +111,7 @@ chaos::is_message_dropped()
 }
 
 void
-chaos::reschedule_message(std::function<void()> callback) const
+chaos::reschedule_message(chaos_delay_callback callback) const
 {
     std::shared_ptr<bzn::asio::steady_timer_base> timer = this->io_context->make_unique_steady_timer();
     auto delay = std::chrono::milliseconds(this->options->get_simple_options().get<uint>(CHAOS_MESSAGE_DELAY_TIME));

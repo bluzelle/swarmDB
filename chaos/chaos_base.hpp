@@ -35,11 +35,12 @@ namespace bzn
          */
         virtual bool is_message_delayed() = 0;
 
+        using chaos_delay_callback = std::function<void()>;
         /*
          * Schedule a delayed callback according to settings
          * @param callback      callback for sending message when delay expires
          */
-        virtual void reschedule_message(std::function<void()> callback) const = 0;
+        virtual void reschedule_message(chaos_delay_callback callback) const = 0;
 
         virtual ~chaos_base() = default;
     };

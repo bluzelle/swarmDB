@@ -32,8 +32,7 @@ namespace bzn
         bool is_message_dropped() override;
         bool is_message_delayed() override;
 
-        using chaos_callback = std::function<void()>;
-        void reschedule_message(chaos_callback callback) const override;
+        void reschedule_message(chaos_delay_callback callback) const override;
 
 
     private:
