@@ -20,7 +20,8 @@
 #include <raft/raft_base.hpp>
 #include <raft/log_entry.hpp>
 #include <raft/raft_log.hpp>
-#include <storage/storage.hpp>
+#include <storage/mem_storage.hpp>
+#include <node/node_base.hpp>
 #include <gtest/gtest_prod.h>
 #include <fstream>
 #include <optional>
@@ -81,7 +82,6 @@ namespace bzn
         void set_audit_enabled(bool val);
 
     private:
-        friend class raft_log_base;
         friend class raft_log;
         FRIEND_TEST(raft, test_raft_timeout_scale_can_get_set);
         FRIEND_TEST(raft, test_that_raft_can_rehydrate_state_and_log_entries);

@@ -77,6 +77,9 @@ simple_options::build_options()
                 (MAX_STORAGE.c_str(),
                          po::value<std::string>()->default_value("2G"),
                         "maximum db storage on this node (bytes)")
+                (MEM_STORAGE.c_str(),
+                         po::value<bool>()->default_value(true),
+                         "enable in memory storage for debugging")
                 (NODE_UUID.c_str(),
                         po::value<std::string>(),
                         "uuid of this node")

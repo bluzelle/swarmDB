@@ -55,6 +55,8 @@ namespace bzn
 
         size_t get_max_storage() const override;
 
+        bool get_mem_storage() const override;
+
         size_t get_logfile_rotation_size() const override ;
 
         size_t get_logfile_max_size() const override;

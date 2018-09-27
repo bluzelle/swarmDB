@@ -16,44 +16,34 @@
 
 #include <include/bluzelle.hpp>
 #include <storage/storage_base.hpp>
-#include <node/node_base.hpp>
-#include <unordered_map>
-#include <shared_mutex>
-#include <boost/serialization/unordered_map.hpp>
+#include <options/options_base.hpp>
+#include <rocksdb/db.h>
 
 
 namespace bzn
 {
-    class storage : public bzn::storage_base
+    class rocksdb_storage : public bzn::storage_base
     {
     public:
+        rocksdb_storage(const std::string& state_dir, const bzn::uuid_t& uuid);
 
         storage_base::result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
-        std::shared_ptr<bzn::storage_base::record> read(const bzn::uuid_t& uuid, const std::string& key) override;
+        std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const std::string& key) override;
 
         storage_base::result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
         storage_base::result remove(const bzn::uuid_t& uuid, const std::string& key) override;
 
-        storage_base::result save(const std::string& path) override;
-
-        storage_base::result load(const std::string& path) override;
-
-        std::vector<std::string> get_keys(const bzn::uuid_t& uuid) override;
+        std::vector<bzn::key_t> get_keys(const bzn::uuid_t& uuid) override;
 
         bool has(const bzn::uuid_t& uuid, const  std::string& key) override;
 
         std::size_t get_size(const bzn::uuid_t& uuid) override;
 
     private:
-        friend class boost::serialization::access;
+        std::unique_ptr<rocksdb::DB> db;
 
-        bzn::uuid_t generate_random_uuid();
-
-        std::unordered_map<bzn::uuid_t, std::unordered_map<std::string, std::shared_ptr<bzn::storage_base::record>>> kv_store;
-
-        std::shared_mutex lock; // for multi-reader and single writer access
     };
 
 } // bzn

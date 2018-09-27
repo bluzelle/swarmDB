@@ -14,7 +14,7 @@
 
 #include <crud/crud.hpp>
 #include <numeric>
-#include <storage/storage.hpp>
+#include <storage/mem_storage.hpp>
 
 #include <boost/beast/core/detail/base64.hpp>
 
@@ -154,7 +154,7 @@ crud::handle_read(const bzn::message& /*msg*/, const database_msg& request, data
     if (auto record = this->storage->read(request.header().db_uuid(), request.read().key()); record)
     {
         response.mutable_read()->set_key(request.read().key());
-        response.mutable_read()->set_value(record->value);
+        response.mutable_read()->set_value(*record);
         return;
     }
 

@@ -24,7 +24,7 @@ namespace bzn {
         MOCK_METHOD3(create,
                      storage_base::result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
         MOCK_METHOD2(read,
-                     std::shared_ptr<bzn::storage_base::record>(const bzn::uuid_t& uuid, const std::string& key));
+                     std::optional<bzn::value_t> (const bzn::uuid_t& uuid, const std::string& key));
         MOCK_METHOD3(update,
                      storage_base::result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
         MOCK_METHOD2(remove,
