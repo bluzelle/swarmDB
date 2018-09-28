@@ -141,7 +141,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 }
 
 void
-node::priv_protobuf_handler(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
+node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 

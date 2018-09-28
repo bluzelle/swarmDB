@@ -48,7 +48,7 @@ namespace bzn
         void do_accept();
 
         void priv_msg_handler(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
-        void priv_protobuf_handler(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
 
         std::unique_ptr<bzn::asio::tcp_acceptor_base> tcp_acceptor;
         std::shared_ptr<bzn::asio::io_context_base>   io_context;

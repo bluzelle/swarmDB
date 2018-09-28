@@ -92,7 +92,7 @@ session::do_read()
             Json::Value msg;
             Json::Reader reader;
 
-            bzn::message proto_msg;
+            wrapped_bzn_msg proto_msg;
 
             if (reader.parse(ss.str(), msg))
             {

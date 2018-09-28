@@ -24,7 +24,7 @@ namespace bzn
     class session_base;
 
     using message_handler = std::function<void(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)>;
-    using protobuf_handler = std::function<void(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)>;
+    using protobuf_handler = std::function<void(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)>;
 
     class session_base
     {

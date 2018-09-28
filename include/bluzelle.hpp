@@ -18,13 +18,11 @@
 #include <string_view>
 #include <json/json.h>
 #include <swarm_version.hpp>
-#include <proto/bluzelle.pb.h>
 
 
 namespace bzn
 {
     using json_message = Json::Value;
-    using message = wrapped_bzn_msg;
     using encoded_message = std::string;
 
     using uuid_t = std::string;

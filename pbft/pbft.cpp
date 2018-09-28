@@ -147,7 +147,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::handle_bzn_message(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     if (msg.type() != BZN_MSG_PBFT)
     {
@@ -460,7 +460,7 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
 bzn::encoded_message
 pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
-    bzn::message result;
+    wrapped_bzn_msg result;
     result.set_payload(msg.SerializeAsString());
     result.set_type(bzn_msg_type::BZN_MSG_PBFT);
 

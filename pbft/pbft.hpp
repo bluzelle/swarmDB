@@ -87,7 +87,7 @@ namespace bzn
         void do_prepared(const std::shared_ptr<pbft_operation>& op);
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
-        void handle_bzn_message(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
