@@ -15,6 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
+#include <proto/bluzelle.pb.h>
 
 
 namespace bzn
@@ -22,7 +23,8 @@ namespace bzn
     // forward declare...
     class session_base;
 
-    using message_handler = std::function<void(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)>;
+    using message_handler = std::function<void(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)>;
+    using protobuf_handler = std::function<void(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)>;
 
     class session_base
     {
@@ -33,14 +35,17 @@ namespace bzn
          * Start accepting new connections
          * @param handler callback to execute when connection is established
          */
-        virtual void start(bzn::message_handler handler) = 0;
+        virtual void start(
+                std::function<void(const json_message&, std::shared_ptr<session_base>)> handler
+                , bzn::protobuf_handler proto_handler
+        ) = 0;
 
         /**
          * Send a message to the connected node
          * @param msg message
          * @param end_session close connection after send
          */
-        virtual void send_message(std::shared_ptr<bzn::message> msg, bool end_session) = 0;
+        virtual void send_message(std::shared_ptr<bzn::json_message> msg, bool end_session) = 0;
 
 
         /**
@@ -48,13 +53,13 @@ namespace bzn
          * @param msg message
          * @param end_session close connection after send
          */
-        virtual void send_message(std::shared_ptr<std::string> msg, bool end_session) = 0;
+        virtual void send_message(std::shared_ptr<bzn::encoded_message> msg, bool end_session) = 0;
 
         /**
          * Send a message with no expected response
          * @param msg message
          */
-        virtual void send_datagram(std::shared_ptr<std::string> msg) = 0;
+        virtual void send_datagram(std::shared_ptr<bzn::encoded_message> msg) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.

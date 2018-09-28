@@ -33,12 +33,12 @@ namespace
     const bzn::uuid_t USER_UUID{"80174b53-2dda-49f1-9d6a-6a780d4cceca"};
     const std::string TEST_VALUE = "I2luY2x1ZGUgPG1vY2tzL21vY2tfbm9kZV9iYXNlLmhwcD4NCiNpbmNsdWRlIDxtb2Nrcy9tb2NrX3Nlc3Npb25fYmFzZS5ocHA+DQojaW5jbHVkZSA8bW9ja3MvbW9ja19yYWZ0X2Jhc2UuaHBwPg0KI2luY2x1ZGUgPG1vY2tzL21vY2tfc3RvcmFnZV9iYXNlLmhwcD4NCg==";
 
-    bzn::message generate_generic_request(const bzn::uuid_t& uid, bzn_msg& msg)
+    bzn::json_message generate_generic_request(const bzn::uuid_t& uid, bzn_msg& msg)
     {
         msg.mutable_db()->mutable_header()->set_db_uuid(uid);
         msg.mutable_db()->mutable_header()->set_transaction_id(85746);
 
-        bzn::message request;
+        bzn::json_message request;
 
         request["bzn-api"] = "database";
         request["msg"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
@@ -46,7 +46,7 @@ namespace
         return request;
     }
 
-    bzn::message generate_create_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
+    bzn::json_message generate_create_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
     {
         bzn_msg msg;
 
@@ -56,7 +56,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_read_request(const bzn::uuid_t& uid, const std::string& key)
+    bzn::json_message generate_read_request(const bzn::uuid_t& uid, const std::string& key)
     {
         bzn_msg msg;
 
@@ -65,7 +65,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_update_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
+    bzn::json_message generate_update_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
     {
         bzn_msg msg;
 
@@ -75,7 +75,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_delete_request(const bzn::uuid_t& uid, const std::string& key)
+    bzn::json_message generate_delete_request(const bzn::uuid_t& uid, const std::string& key)
     {
         bzn_msg msg;
 
@@ -84,7 +84,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_keys_request(const bzn::uuid_t& uid)
+    bzn::json_message generate_keys_request(const bzn::uuid_t& uid)
     {
         bzn_msg msg;
 
@@ -93,7 +93,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_has_request(const bzn::uuid_t& uid, const std::string& key)
+    bzn::json_message generate_has_request(const bzn::uuid_t& uid, const std::string& key)
     {
         bzn_msg msg;
 
@@ -102,7 +102,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_size_request(const bzn::uuid_t& uid)
+    bzn::json_message generate_size_request(const bzn::uuid_t& uid)
     {
         bzn_msg msg;
 
@@ -111,7 +111,7 @@ namespace
         return generate_generic_request(uid, msg);
     }
 
-    bzn::message generate_subscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
+    bzn::json_message generate_subscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
     {
         bzn_msg msg;
 
@@ -120,7 +120,7 @@ namespace
         return generate_generic_request(uuid, msg);
     }
 
-    bzn::message generate_unsubscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
+    bzn::json_message generate_unsubscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
     {
         bzn_msg msg;
 
@@ -875,7 +875,7 @@ TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
 
 TEST_F(crud_test, test_that_a_create_fails_if_the_value_size_exceeds_the_limit)
 {
-    bzn::message request = generate_create_request(USER_UUID,"large-value", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
+    bzn::json_message request = generate_create_request(USER_UUID,"large-value", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
 
@@ -893,7 +893,7 @@ TEST_F(crud_test, test_that_a_create_fails_if_the_value_size_exceeds_the_limit)
 
 TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
 {
-    bzn::message request = generate_create_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'));
+    bzn::json_message request = generate_create_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'));
 
     EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
 
@@ -923,7 +923,7 @@ TEST_F(crud_test, test_that_a_update_command_fails_when_the_size_of_the_value_ex
 {
     // if key-value pair exists, must respond with OK, and start the
     // update process via RAFT, otherwise error - key does not exist.
-    bzn::message request = generate_update_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
+    bzn::json_message request = generate_update_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
 
     // This node is in the leader state.
     EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
@@ -944,7 +944,7 @@ TEST_F(crud_test, test_that_subscription_and_unsubscription_requests_are_handled
 {
     // subscribe
     {
-        bzn::message request = generate_subscription_request(USER_UUID, "key0");
+        bzn::json_message request = generate_subscription_request(USER_UUID, "key0");
 
         EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
 
@@ -955,7 +955,7 @@ TEST_F(crud_test, test_that_subscription_and_unsubscription_requests_are_handled
 
     // unsubscribe
     {
-        bzn::message request = generate_unsubscription_request(USER_UUID, "key0");
+        bzn::json_message request = generate_unsubscription_request(USER_UUID, "key0");
 
         EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
 

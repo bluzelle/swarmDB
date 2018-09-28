@@ -21,7 +21,7 @@ namespace bzn::test
         // This pattern copied from audit_test, to allow us to declare expectations on the timer that pbft will
         // construct
 
-        EXPECT_CALL(*(this->mock_node), register_for_message("pbft", _))
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_msg_type::BZN_MSG_PBFT, _))
                 .Times(Exactly(1))
                 .WillOnce(
                         Invoke(
@@ -106,56 +106,68 @@ namespace bzn::test
     }
 
     pbft_msg
-    extract_pbft_msg(std::shared_ptr<bzn::message> json)
+    extract_pbft_msg(std::string msg)
     {
+        wrapped_bzn_msg outer;
+        outer.ParseFromString(msg);
         pbft_msg result;
-        result.ParseFromString(boost::beast::detail::base64_decode((*json)["pbft-data"].asString()));
+        result.ParseFromString(outer.payload());
         return result;
     }
 
-    bzn::message
+    wrapped_bzn_msg
     wrap_pbft_msg(const pbft_msg& msg)
     {
-        bzn::message result;
-        result["pbft-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+        wrapped_bzn_msg result;
+        result.set_payload(msg.SerializeAsString());
+        result.set_type(bzn_msg_type::BZN_MSG_PBFT);
         return result;
     }
 
     bool
-    is_preprepare(std::shared_ptr<bzn::message> json)
+    is_preprepare(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(json);
+
+        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_PREPREPARE && msg.view() > 0 && msg.sequence() > 0;
     }
 
     bool
-    is_prepare(std::shared_ptr<bzn::message> json)
+    is_prepare(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(json);
+        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_PREPARE && msg.view() > 0 && msg.sequence() > 0;
     }
 
     bool
-    is_commit(std::shared_ptr<bzn::message> json)
+    is_commit(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(json);
+        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_COMMIT && msg.view() > 0 && msg.sequence() > 0;
     }
 
     bool
-    is_checkpoint(std::shared_ptr<bzn::message> json)
+    is_checkpoint(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(json);
+        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && msg.sender() != "" && msg.state_hash() != "";
     }
 
     bool
-    is_audit(std::shared_ptr<bzn::message> json)
+    is_audit(std::shared_ptr<std::string> msg)
     {
-        return (*json)["bzn-api"] == "audit";
+        Json::Value json;
+        Json::Reader reader;
+
+        if (!reader.parse(*msg, json))
+        {
+            return false;
+        }
+
+        return json["bzn-api"] == "audit";
     }
 }

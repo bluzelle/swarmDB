@@ -53,7 +53,7 @@ namespace bzn
 
         virtual const std::list<std::string> &error_strings() const = 0;
 
-        virtual void handle(const bzn::message& msg, std::shared_ptr<bzn::session_base> session) = 0;
+        virtual void handle(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session) = 0;
 
         virtual void handle_raft_commit(const raft_commit_notification&) = 0;
 

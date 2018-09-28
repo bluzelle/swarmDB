@@ -136,10 +136,10 @@ namespace
     };
 
 
-    bzn::message
+    bzn::json_message
     make_add_peer_request()
     {
-        bzn::message  msg;
+        bzn::json_message  msg;
         msg["bzn-api"] = "raft";
         msg["cmd"] = "add_peer";
         msg["data"]["peer"]["name"] = new_peer.name;
@@ -151,29 +151,29 @@ namespace
     }
 
 
-    bzn::message
+    bzn::json_message
     make_secure_add_peer_request(const std::string& uuid)
     {
-        bzn::message  msg{make_add_peer_request()};
+        bzn::json_message  msg{make_add_peer_request()};
         msg["data"]["peer"]["signature"] = signature;
         msg["data"]["peer"]["uuid"] = uuid;
         return msg;
     }
 
 
-    bzn::message
+    bzn::json_message
     make_duplicate_add_peer_request()
     {
-        bzn::message  msg{make_add_peer_request()};
+        bzn::json_message  msg{make_add_peer_request()};
         msg["data"]["peer"]["uuid"] = TEST_PEER_LIST.begin()->uuid;
         return msg;
     }
 
 
-    bzn::message
+    bzn::json_message
     make_remove_peer_request()
     {
-        bzn::message  msg;
+        bzn::json_message  msg;
         msg["bzn-api"] = "raft";
         msg["cmd"] = "remove_peer";
         msg["data"]["uuid"] = TEST_NODE_UUID;
@@ -181,10 +181,10 @@ namespace
    }
 
 
-    bzn::message
+    bzn::json_message
     make_remove_nonexisting_peer_request()
     {
-        bzn::message  msg;
+        bzn::json_message  msg;
         msg["bzn-api"] = "raft";
         msg["cmd"] = "remove_peer";
         msg["data"]["uuid"] = "uuid_does_not_exist";
@@ -194,7 +194,7 @@ namespace
 
 
     void
-    json_to_peers(const bzn::message &peers, bzn::peers_list_t &peers_list)
+    json_to_peers(const bzn::json_message &peers, bzn::peers_list_t &peers_list)
     {
         std::for_each(peers.begin(), peers.end(),
                       [&](const auto &p)
@@ -209,10 +209,10 @@ namespace
     }
 
 
-    bzn::message
+    bzn::json_message
     make_dummy_peer()
     {
-        bzn::message peer;
+        bzn::json_message peer;
         peer["host"] = "127.0.0.1";
         peer["port"] = 8081;
         peer["http_port"] = 81;
@@ -294,9 +294,9 @@ namespace
     }
 
 
-    bzn::message make_bzn_message(const bzn_msg& msg)
+    bzn::json_message make_bzn_message(const bzn_msg& msg)
     {
-        bzn::message message;
+        bzn::json_message message;
         message["bzn-api"] = "database";
         message["msg"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
         return message;
@@ -491,8 +491,8 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
         EXPECT_EQ(raft->get_status()["state"].asString(), "candidate");
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).WillOnce(Invoke(
             [&](const auto& msg, auto)
             { resp = *msg; }));
 
@@ -592,13 +592,13 @@ namespace bzn
 
         raft->start();
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).Times(1).WillRepeatedly(Invoke(
             [&](const auto& msg, auto)
             { resp = *msg; }));
 
         // send a message through the registered "node message" callback...
-        bzn::message msg;
+        bzn::json_message msg;
         mh(bzn::create_append_entries_request("uuid2"
                                               , 0 // current term ok
                                               , 0 // commit index doesn't matter
@@ -640,7 +640,7 @@ namespace bzn
         EXPECT_EQ(raft->get_leader().uuid, "");
 
         // try to append a log. It will fail since we are not the leader...
-        ASSERT_FALSE(raft->append_log(bzn::message(), bzn::log_entry_type::database));
+        ASSERT_FALSE(raft->append_log(bzn::json_message(), bzn::log_entry_type::database));
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
         EXPECT_EQ(raft->get_status()["state"].asString(), "follower");
@@ -664,7 +664,7 @@ namespace bzn
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
-            [&](const bzn::message& msg)
+            [&](const bzn::json_message& msg)
             {
                 LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -674,7 +674,7 @@ namespace bzn
             });
 
         // create a log entry now that we are the leader...
-        bzn::message msg;
+        bzn::json_message msg;
         msg["bzn-api"] = "crud";
         msg["data"] = "utests_1";
         ASSERT_TRUE(raft->append_log(msg, bzn::log_entry_type::database));
@@ -743,14 +743,14 @@ namespace bzn
         EXPECT_EQ(raft->get_leader().uuid, "");
 
         // try to append a log. It will fail since we are not the leader...
-        ASSERT_FALSE(raft->append_log(bzn::message(), bzn::log_entry_type::database));
+        ASSERT_FALSE(raft->append_log(bzn::json_message(), bzn::log_entry_type::database));
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::follower);
 
         ///////////////////////////////////////////////////////////////////////////
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillRepeatedly(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).WillRepeatedly(Invoke(
             [&](const auto& msg, auto /*handler*/)
             {
                 resp = *msg;
@@ -758,7 +758,7 @@ namespace bzn
 
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
-            [&](const bzn::message& msg)
+            [&](const bzn::json_message& msg)
             {
                 LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
                 ++commit_handler_times_called;
@@ -766,7 +766,7 @@ namespace bzn
             });
 
         ///////////////////////////////////////////////////////////////////////////
-        bzn::message entry;
+        bzn::json_message entry;
         entry["bzn-api"] = "utest";
 
         auto msg = bzn::create_append_entries_request(TEST_NODE_UUID
@@ -775,7 +775,7 @@ namespace bzn
                 , 0 // previous index
                 , 0 // previous term
                 , 0 // entry term
-                , bzn::message());
+                , bzn::json_message());
         mh(msg, this->mock_session);
 
         resp.clear();
@@ -961,7 +961,7 @@ namespace bzn
     TEST(raft, test_raft_can_find_last_quorum_log_entry)
     {
         const std::string log_path = TEST_STATE_DIR + TEST_NODE_UUID + ".dat";
-        bzn::message  msg;
+        bzn::json_message  msg;
         msg["data"] = "asd;lkfa;lsdfjafs;dlfk";
 
         clean_state_folder();
@@ -993,7 +993,7 @@ namespace bzn
             // add a joint quorum, and then a few more log entries
             std::ofstream log(log_path, std::ios::out | std::ios::binary | std::ios::app);
 
-            bzn::message jq_msg;
+            bzn::json_message jq_msg;
             jq_msg["msg"]["peers"]["new"].append(make_dummy_peer());
             jq_msg["msg"]["peers"]["old"].append(make_dummy_peer());
             log << bzn::log_entry{bzn::log_entry_type::joint_quorum, 5, 1, jq_msg};
@@ -1013,12 +1013,12 @@ namespace bzn
 
     TEST_F(raft_test, test_that_raft_first_log_entry_is_the_quorum)
     {
-        bzn::message expected;
+        bzn::json_message expected;
         auto raft = bzn::raft(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), nullptr, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
         EXPECT_EQ(raft.raft_log->size(), static_cast<size_t>(1));
         EXPECT_EQ(raft.raft_log->get_log_entries().front().entry_type, bzn::log_entry_type::single_quorum);
 
-        bzn::message json_quorum = raft.raft_log->get_log_entries().front().msg["msg"]["peers"];
+        bzn::json_message json_quorum = raft.raft_log->get_log_entries().front().msg["msg"]["peers"];
         EXPECT_EQ(json_quorum.size(), TEST_PEER_LIST.size());
 
         std::for_each(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer)
@@ -1072,7 +1072,7 @@ namespace bzn
 
         // the current state must be follower
         EXPECT_TRUE(raft->get_state() == bzn::raft_state::follower);
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1089,7 +1089,7 @@ namespace bzn
         wh(boost::system::error_code());
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1132,7 +1132,7 @@ namespace bzn
 
         // the current state must be follower
         EXPECT_TRUE(raft->get_state() == bzn::raft_state::follower);
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1149,7 +1149,7 @@ namespace bzn
         wh(boost::system::error_code());
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1211,7 +1211,7 @@ namespace bzn
 
         // Now that we have added a joint quorum, we should not be able to add or remove another peer
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .Times(2)
                 .WillRepeatedly(Invoke(
                         [&](const auto& msg, auto)
@@ -1269,10 +1269,10 @@ namespace bzn
         // test add and remove peers with empty or missing UUID values will fail
 
         {
-            bzn::message bad_add = make_add_peer_request();
+            bzn::json_message bad_add = make_add_peer_request();
             bad_add["data"]["peer"].removeMember("uuid");
 
-            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                     .Times(2)
                     .WillRepeatedly(Invoke(
                             [&](const auto& msg, auto)
@@ -1288,7 +1288,7 @@ namespace bzn
         {
 
 
-            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+            EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                     .Times(3)
                     .WillRepeatedly(Invoke(
                             [&](const auto& msg, auto)
@@ -1297,11 +1297,11 @@ namespace bzn
                                 EXPECT_EQ(root["error"].asString(), ERROR_INVALID_UUID);
                             }));
 
-            bzn::message bad_remove = make_remove_peer_request();
+            bzn::json_message bad_remove = make_remove_peer_request();
             // msg["data"]["uuid"] = TEST_NODE_UUID;
             bad_remove.removeMember("data");
             mh( bad_remove,this->mock_session);
-            bad_remove["data"] = bzn::message{};
+            bad_remove["data"] = bzn::json_message{};
             mh( bad_remove,this->mock_session);
 
             bad_remove["data"]["uuid"] = "";
@@ -1339,7 +1339,7 @@ namespace bzn
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
-                [&](const bzn::message& msg)
+                [&](const bzn::json_message& msg)
                 {
                     LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -1362,13 +1362,13 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-        bzn::message msg = make_add_peer_request();
+        bzn::json_message msg = make_add_peer_request();
         mh(msg,this->mock_session);
 
         bzn::log_entry entry = raft->raft_log->last_quorum_entry();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
-        bzn::message jq{entry.msg["msg"]["peers"]};
+        bzn::json_message jq{entry.msg["msg"]["peers"]};
 
         EXPECT_TRUE(jq.isMember("old"));
         EXPECT_TRUE(jq.isMember("new"));
@@ -1455,7 +1455,7 @@ namespace bzn
         bzn::log_entry entry = raft->raft_log->last_quorum_entry();
         EXPECT_EQ(entry.entry_type, bzn::log_entry_type::joint_quorum);
 
-        bzn::message jq{entry.msg["msg"]["peers"]};
+        bzn::json_message jq{entry.msg["msg"]["peers"]};
 
         EXPECT_TRUE(jq.isMember("old"));
         EXPECT_TRUE(jq.isMember("new"));
@@ -1524,7 +1524,7 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1576,7 +1576,7 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1599,7 +1599,7 @@ namespace bzn
         EXPECT_EQ(TEST_PEER_LIST.size(), peers.size());
         EXPECT_EQ(TEST_PEER_LIST,peers);
 
-        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1652,7 +1652,7 @@ namespace bzn
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1685,7 +1685,7 @@ namespace bzn
         EXPECT_EQ(peer_set.size(), TEST_PEER_LIST.size());
 
         // replace the last quorum with a joint quorum
-        bzn::message add_peer = make_add_peer_request();
+        bzn::json_message add_peer = make_add_peer_request();
         raft.current_state = bzn::raft_state::leader;
         raft.handle_ws_raft_messages(add_peer, mock_session);
 
@@ -1719,7 +1719,7 @@ namespace bzn
 
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillOnce(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1784,7 +1784,7 @@ namespace bzn
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
-                [&](const bzn::message& msg)
+                [&](const bzn::json_message& msg)
                 {
                     LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
                     commit_handler_called = true;
@@ -1816,7 +1816,7 @@ namespace bzn
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
         // add a peer
-        bzn::message msg = make_add_peer_request();
+        bzn::json_message msg = make_add_peer_request();
         mh(msg,this->mock_session);
 
         bzn::log_entry entry = raft->raft_log->last_quorum_entry();
@@ -1928,7 +1928,7 @@ namespace bzn
         bool commit_handler_called = false;
         int commit_handler_times_called = 0;
         raft->register_commit_handler(
-                [&](const bzn::message& msg)
+                [&](const bzn::json_message& msg)
                 {
                     LOG(info) << "commit:\n" << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
                     commit_handler_called = true;
@@ -1939,7 +1939,7 @@ namespace bzn
         // and away we go...
         raft->start();
 
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(),_))
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(),_))
                 .WillRepeatedly(Invoke(
                         [&](const auto& msg, auto)
                         {
@@ -1976,13 +1976,13 @@ namespace bzn
                     {
                         //std::cout << msg->toStyledString();
                     }));
-            bzn::message bad_add_peer{make_secure_add_peer_request(invalid_uuid)};
+            bzn::json_message bad_add_peer{make_secure_add_peer_request(invalid_uuid)};
             mh(bad_add_peer, this->mock_session);
         }
 
         // Adding a valid peer that has a valid signature must suceed.
         {
-            bzn::message msg = make_secure_add_peer_request(valid_uuid);
+            bzn::json_message msg = make_secure_add_peer_request(valid_uuid);
             mh(msg,this->mock_session);
 
             // do the concensus and commit the joint quorum
@@ -2032,8 +2032,8 @@ namespace bzn
                     return true;
                 }));
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).Times(1).WillRepeatedly(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).Times(1).WillRepeatedly(Invoke(
                 [&](const auto& msg, auto)
                 { resp = *msg; }));
 
@@ -2064,8 +2064,8 @@ namespace bzn
                 [&]()
                 { return std::move(mock_steady_timer); }));
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).WillOnce(Invoke(
                 [&](const auto& msg, auto)
                 { resp = *msg; }));
 
@@ -2076,7 +2076,7 @@ namespace bzn
         auto raft = std::make_shared<bzn::raft>(this->mock_io_context, this->mock_node, TEST_PEER_LIST, TEST_NODE_UUID, TEST_STATE_DIR);
 
         raft->register_commit_handler(
-                [&](const bzn::message& /*msg*/)
+                [&](const bzn::json_message& /*msg*/)
                 { return true; });
 
         // and away we go...
@@ -2128,8 +2128,8 @@ namespace bzn
                 [&]()
                 { return std::move(mock_steady_timer); }));
 
-        bzn::message resp;
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::message>>(), _)).WillOnce(Invoke(
+        bzn::json_message resp;
+        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), _)).WillOnce(Invoke(
                 [&](const auto& msg, auto)
                 { resp = *msg; }));
 

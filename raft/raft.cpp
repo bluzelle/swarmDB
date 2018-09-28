@@ -201,7 +201,7 @@ raft::request_vote_request()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            this->node->send_message(ep, std::make_shared<bzn::message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->raft_log->size(), this->last_log_term)));
+            this->node->send_message(ep, std::make_shared<bzn::json_message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->raft_log->size(), this->last_log_term)));
         }
         catch(const std::exception& ex)
         {
@@ -215,7 +215,7 @@ raft::request_vote_request()
 
 
 void
-raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
+raft::handle_request_vote_response(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     LOG(debug) << '\n' << msg.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -278,11 +278,11 @@ raft::handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn:
 
 
 void
-raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
+raft::handle_ws_request_vote(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)
 {
     if (this->current_state == bzn::raft_state::leader || this->voted_for)
     {
-        session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, false)), true);
+        session->send_message(std::make_shared<bzn::json_message>(bzn::create_request_vote_response(this->uuid, this->current_term, false)), true);
 
         return;
     }
@@ -292,12 +292,12 @@ raft::handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::sessi
 
     bool vote = msg["data"]["lastLogIndex"].asUInt() >= this->raft_log->size();
 
-    session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), true);
+    session->send_message(std::make_shared<bzn::json_message>(bzn::create_request_vote_response(this->uuid, this->current_term, vote)), true);
 }
 
 
 void
-raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
+raft::handle_ws_append_entries(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)
 {
     uint32_t term = msg["data"]["term"].asUInt();
 
@@ -350,7 +350,7 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 
     size_t match_index = std::min(this->raft_log->size(), (size_t) msg_index+1);
 
-    auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, match_index));
+    auto resp_msg = std::make_shared<bzn::json_message>(bzn::create_append_entries_response(this->uuid, this->current_term, success, match_index));
 
     LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -375,11 +375,11 @@ raft::handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::ses
 }
 
 
-bzn::message
-raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer)
+bzn::json_message
+raft::create_joint_quorum_by_adding_peer(const bzn::json_message& last_quorum_message, const bzn::json_message& new_peer)
 {
-    bzn::message joint_quorum;
-    bzn::message peers;
+    bzn::json_message joint_quorum;
+    bzn::json_message peers;
     peers["old"] = peers["new"] = last_quorum_message["msg"]["peers"];
     peers["new"].append(new_peer);
     joint_quorum["msg"]["peers"] = peers;
@@ -387,19 +387,19 @@ raft::create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message
 }
 
 
-bzn::message
-raft::create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum)
+bzn::json_message
+raft::create_single_quorum_from_joint_quorum(const bzn::json_message& joint_quorum)
 {
-    bzn::message single_quorum;
+    bzn::json_message single_quorum;
     single_quorum["msg"]["peers"] = joint_quorum["msg"]["peers"]["new"];
     return single_quorum;
 }
 
 
-bzn::message
-raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_message, const bzn::uuid_t& peer_uuid)
+bzn::json_message
+raft::create_joint_quorum_by_removing_peer(const bzn::json_message& last_quorum_message, const bzn::uuid_t& peer_uuid)
 {
-    bzn::message joint_quorum;
+    bzn::json_message joint_quorum;
     const auto& peers = last_quorum_message["msg"]["peers"];
     joint_quorum["msg"]["peers"]["old"] = peers;
 
@@ -418,14 +418,14 @@ raft::create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_messa
 void
 raft::send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message)
 {
-    bzn::message response;
+    bzn::json_message response;
     response["error"] = error_message;
-    session->send_message(std::make_shared<bzn::message>(response), true);
+    session->send_message(std::make_shared<bzn::json_message>(response), true);
 }
 
 
 bool
-raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
+raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message &peer)
 {
     // uuid's are signed as text files, so we must append the end of line character
     const auto uuid{peer["uuid"].asString() + "\x0a"};
@@ -452,7 +452,7 @@ raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::m
 
 
 void
-raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer)
+raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message &peer)
 {
     if (this->get_state() != bzn::raft_state::leader)
     {
@@ -497,13 +497,13 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::mes
                             bzn::log_entry_type::joint_quorum);
 
     // The add peer has succeded, let's send a message back to the requester
-    bzn::message msg;
+    bzn::json_message msg;
     msg["bzn-api"] = "raft";
     msg["cmd"] = "add_peer";
-    msg["response"] = bzn::message();
+    msg["response"] = bzn::json_message();
     msg["response"]["from"] = this->get_uuid();
     msg["response"]["msg"] = SUCCESS_PEER_ADDED_TO_SWARM;
-    session->send_message(std::make_shared<bzn::message>(msg), true);
+    session->send_message(std::make_shared<bzn::json_message>(msg), true);
     return;
 }
 
@@ -543,7 +543,7 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
 
 
 void
-raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
+raft::handle_ws_raft_messages(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)
 {
     this->shutdown_on_exceeded_max_storage();
     std::lock_guard<std::mutex> lock(this->raft_lock);
@@ -615,7 +615,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
             {
                 this->voted_for = msg["data"]["uuid"].asString();
 
-                session->send_message(std::make_shared<bzn::message>(bzn::create_request_vote_response(this->uuid, this->current_term, true)), true);
+                session->send_message(std::make_shared<bzn::json_message>(bzn::create_request_vote_response(this->uuid, this->current_term, true)), true);
 
                 return;
             }
@@ -625,7 +625,7 @@ raft::handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::sess
                 // TODO: We should either process this message properly, or just drop it after updating term
                 this->leader = msg["data"]["from"].asString();
 
-                auto resp_msg = std::make_shared<bzn::message>(bzn::create_append_entries_response(this->uuid, this->current_term, false, this->raft_log->size()));
+                auto resp_msg = std::make_shared<bzn::json_message>(bzn::create_append_entries_response(this->uuid, this->current_term, false, this->raft_log->size()));
 
                 LOG(debug) << "Sending WS message:\n" << resp_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -687,7 +687,7 @@ raft::notify_leader_status()
     msg.mutable_leader_status()->set_current_log_index(this->raft_log->size());
     msg.mutable_leader_status()->set_current_commit_index(this->commit_index);
 
-    auto json_ptr = std::make_shared<bzn::message>();
+    auto json_ptr = std::make_shared<bzn::json_message>();
     (*json_ptr)["bzn-api"] = "audit";
     (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
 
@@ -711,7 +711,7 @@ raft::notify_commit(size_t log_index, const std::string& operation)
     msg.mutable_raft_commit()->set_log_index(log_index);
     msg.mutable_raft_commit()->set_operation(operation);
 
-    auto json_ptr = std::make_shared<bzn::message>();
+    auto json_ptr = std::make_shared<bzn::json_message>();
     (*json_ptr)["bzn-api"] = "audit";
     (*json_ptr)["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
 
@@ -737,7 +737,7 @@ raft::request_append_entries()
 
         try
         {
-            bzn::message msg;
+            bzn::json_message msg;
             uint32_t prev_index{};
             uint32_t prev_term{};
             uint32_t entry_term{};
@@ -760,7 +760,7 @@ raft::request_append_entries()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            auto req = std::make_shared<bzn::message>(bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg));
+            auto req = std::make_shared<bzn::json_message>(bzn::create_append_entries_request(this->uuid, this->current_term, this->commit_index, prev_index, prev_term, entry_term, msg));
 
             LOG(debug) << "Sending request:\n" << req->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
@@ -778,7 +778,7 @@ raft::request_append_entries()
 
 
 void
-raft::handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
+raft::handle_request_append_entries_response(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     if (this->current_state != bzn::raft_state::leader)
     {
@@ -821,7 +821,7 @@ raft::handle_request_append_entries_response(const bzn::message& msg, std::share
 
 
 bool
-raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type)
+raft::append_log_unsafe(const bzn::json_message& msg, const bzn::log_entry_type entry_type)
 {
     if (this->current_state != bzn::raft_state::leader)
     {
@@ -838,7 +838,7 @@ raft::append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry
 
 
 bool
-raft::append_log(const bzn::message& msg, const bzn::log_entry_type entry_type)
+raft::append_log(const bzn::json_message& msg, const bzn::log_entry_type entry_type)
 {
     std::lock_guard<std::mutex> lock(this->raft_lock);
     return this->append_log_unsafe(msg, entry_type);
@@ -1075,7 +1075,7 @@ bzn::peers_list_t
 raft::get_all_peers()
 {
     bzn::peers_list_t result;
-    std::vector<std::reference_wrapper<bzn::message>> all_peers;
+    std::vector<std::reference_wrapper<bzn::json_message>> all_peers;
     bzn::log_entry log_entry = this->raft_log->last_quorum_entry();
 
     if (log_entry.entry_type == bzn::log_entry_type::single_quorum)
@@ -1090,7 +1090,7 @@ raft::get_all_peers()
 
     for(auto jpeers : all_peers)
     {
-        for(const bzn::message& p : jpeers.get())
+        for(const bzn::json_message& p : jpeers.get())
         {
             result.emplace(p["host"].asString(),
                            uint16_t(p["port"].asUInt()),
@@ -1126,11 +1126,11 @@ raft::create_dat_file(const std::string& log_path, const bzn::peers_list_t& peer
         boost::filesystem::create_directories(path.parent_path());
     }
 
-    bzn::message root;
-    root["msg"] = bzn::message();
+    bzn::json_message root;
+    root["msg"] = bzn::json_message();
     for(const auto& p : peers)
     {
-        bzn::message peer;
+        bzn::json_message peer;
         peer["host"] = p.host;
         peer["port"] = p.port;
         peer["http_port"] = p.http_port;
@@ -1163,7 +1163,7 @@ raft::import_state_files()
 
 
 bzn::log_entry_type
-raft::deduce_type_from_message(const bzn::message& message)
+raft::deduce_type_from_message(const bzn::json_message& message)
 {
     if (message["msg"].isString())
     {
@@ -1190,10 +1190,10 @@ raft::get_name()
 }
 
 
-bzn::message
+bzn::json_message
 raft::get_status()
 {
-    bzn::message status;
+    bzn::json_message status;
 
     std::lock_guard<std::mutex> lock(this->raft_lock);
 
@@ -1237,10 +1237,10 @@ raft::set_audit_enabled(bool val)
 }
 
 
-bzn::message
+bzn::json_message
 raft::to_peer_message(const peer_address_t& address)
 {
-    bzn::message bzn;
+    bzn::json_message bzn;
     bzn["port"] = address.port;
     bzn["http_port"] = address.http_port;
     bzn["host"] = address.host;
@@ -1252,7 +1252,7 @@ raft::to_peer_message(const peer_address_t& address)
 void
 raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
 {
-    bzn::message msg;
+    bzn::json_message msg;
 
     switch (this->current_state)
     {
@@ -1275,5 +1275,5 @@ raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
             msg["error"] = ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE;
             break;
     }
-    session->send_message(std::make_shared<bzn::message>(msg), false);
+    session->send_message(std::make_shared<bzn::json_message>(msg), false);
 }

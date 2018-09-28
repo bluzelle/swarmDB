@@ -51,7 +51,7 @@ crud::start()
 
             // the commit handler deals with tasks that require concensus from RAFT
             this->raft->register_commit_handler(
-                [self = shared_from_this()](const bzn::message& ws_msg)
+                [self = shared_from_this()](const bzn::json_message& ws_msg)
                 {
                     bzn_msg msg;
 
@@ -89,7 +89,7 @@ crud::start()
 
 
 void
-crud::do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session)
+crud::do_raft_task_routing(const bzn::json_message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session)
 {
     switch (request.msg_case())
     {
@@ -125,7 +125,7 @@ crud::do_raft_task_routing(const bzn::message& msg, const database_msg& request,
 
 
 void
-crud::handle_create(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::handle_create(const bzn::json_message& msg, const database_msg& request, database_response& response)
 {
     if (this->validate_value_size(request.create().value().size()))
     {
@@ -149,7 +149,7 @@ crud::handle_create(const bzn::message& msg, const database_msg& request, databa
 
 
 void
-crud::handle_read(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+crud::handle_read(const bzn::json_message& /*msg*/, const database_msg& request, database_response& response)
 {
     if (auto record = this->storage->read(request.header().db_uuid(), request.read().key()); record)
     {
@@ -169,7 +169,7 @@ crud::handle_read(const bzn::message& /*msg*/, const database_msg& request, data
 
 
 void
-crud::handle_update(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::handle_update(const bzn::json_message& msg, const database_msg& request, database_response& response)
 {
     if (this->validate_value_size(request.update().value().size()))
     {
@@ -194,7 +194,7 @@ crud::handle_update(const bzn::message& msg, const database_msg& request, databa
 
 
 void
-crud::handle_delete(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::handle_delete(const bzn::json_message& msg, const database_msg& request, database_response& response)
 {
     if (this->raft->get_state() != bzn::raft_state::leader)
     {
@@ -215,7 +215,7 @@ crud::handle_delete(const bzn::message& msg, const database_msg& request, databa
 
 
 void
-crud::handle_get_keys(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+crud::handle_get_keys(const bzn::json_message& /*msg*/, const database_msg& request, database_response& response)
 {
     auto keys = this->storage->get_keys(request.header().db_uuid());
 
@@ -234,7 +234,7 @@ crud::handle_get_keys(const bzn::message& /*msg*/, const database_msg& request, 
 
 
 void
-crud::handle_has(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+crud::handle_has(const bzn::json_message& /*msg*/, const database_msg& request, database_response& response)
 {
     response.mutable_has()->set_key(request.has().key());
     response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
@@ -242,7 +242,7 @@ crud::handle_has(const bzn::message& /*msg*/, const database_msg& request, datab
 
 
 void
-crud::handle_size(const bzn::message& /*msg*/, const database_msg& request, database_response& response)
+crud::handle_size(const bzn::json_message& /*msg*/, const database_msg& request, database_response& response)
 {
     response.mutable_size()->set_keys(0); // todo: add number of keys
     response.mutable_size()->set_bytes(this->storage->get_size(request.header().db_uuid()));
@@ -289,7 +289,7 @@ crud::commit_delete(const database_msg& msg)
 
 
 void
-crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::session_base> session)
+crud::handle_ws_crud_messages(const bzn::json_message& ws_msg, std::shared_ptr<bzn::session_base> session)
 {
     bzn_msg msg;
     database_response response;
@@ -327,14 +327,14 @@ crud::handle_ws_crud_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::s
 
 
 void
-crud::do_candidate_tasks(const bzn::message& /*msg*/, const database_msg& /*request*/, database_response& response)
+crud::do_candidate_tasks(const bzn::json_message& /*msg*/, const database_msg& /*request*/, database_response& response)
 {
     response.mutable_error()->set_message(bzn::MSG_ELECTION_IN_PROGRESS);
 }
 
 
 void
-crud::do_follower_tasks(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::do_follower_tasks(const bzn::json_message& msg, const database_msg& request, database_response& response)
 {
     switch(request.msg_case())
     {
@@ -357,7 +357,7 @@ crud::do_follower_tasks(const bzn::message& msg, const database_msg& request, da
 
 
 void
-crud::do_leader_tasks(const bzn::message& msg, const database_msg& request, database_response& response)
+crud::do_leader_tasks(const bzn::json_message& msg, const database_msg& request, database_response& response)
 {
     if (auto it = this->command_handlers.find(request.msg_case()); it != this->command_handlers.end())
     {

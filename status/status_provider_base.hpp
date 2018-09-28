@@ -34,7 +34,7 @@ namespace bzn
          * get status
          * @return status in a json message
          */
-        virtual bzn::message get_status() = 0;
+        virtual bzn::json_message get_status() = 0;
     };
 
 } // namespace bzn

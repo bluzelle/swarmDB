@@ -36,9 +36,10 @@ session::session(std::shared_ptr<bzn::asio::io_context_base> io_context, const b
 
 
 void
-session::start(bzn::message_handler handler)
+session::start(bzn::message_handler handler, bzn::protobuf_handler proto_handler)
 {
     this->handler = std::move(handler);
+    this->proto_handler = std::move(proto_handler);
 
     // If we haven't completed a handshake then we are accepting one...
     if (!this->websocket->is_open())
@@ -91,33 +92,33 @@ session::do_read()
             Json::Value msg;
             Json::Reader reader;
 
-            if (!reader.parse(ss.str(), msg))
+            wrapped_bzn_msg proto_msg;
+
+            if (reader.parse(ss.str(), msg))
+            {
+                self->handler(msg, self);
+            }
+            else if(ss.seekg(0); proto_msg.ParseFromIstream(&ss))
+            {
+                self->proto_handler(proto_msg, self);
+            }
+            else
             {
                 LOG(error) << "Failed to parse: " << reader.getFormattedErrorMessages();
-
-                // Only a unit test should change this flag since we can't intercept the buffer and modify it.
-                if (!self->ignore_json_errors)
-                {
-                    self->close();
-                    return;
-                }
             }
-
-            // call subscriber...
-            self->handler(msg, self);
         }));
 }
 
 
 void
-session::send_message(std::shared_ptr<bzn::message> msg, const bool end_session)
+session::send_message(std::shared_ptr<bzn::json_message> msg, const bool end_session)
 {
-    this->send_message(std::make_shared<std::string>(msg->toStyledString()), end_session);
+    this->send_message(std::make_shared<bzn::encoded_message>(msg->toStyledString()), end_session);
 }
 
 
 void
-session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
+session::send_message(std::shared_ptr<bzn::encoded_message> msg, const bool end_session)
 {
     if (this->chaos->is_message_delayed())
     {
@@ -158,7 +159,7 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 
 
 void
-session::send_datagram(std::shared_ptr<std::string> msg)
+session::send_datagram(std::shared_ptr<bzn::encoded_message> msg)
 {
     if (this->chaos->is_message_delayed())
     {

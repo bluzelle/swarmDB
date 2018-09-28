@@ -63,7 +63,7 @@ namespace bzn::test
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
 
         std::function<void(const pbft_request&, uint64_t)> service_execute_handler;
-        bzn::message_handler message_handler;
+        bzn::protobuf_handler message_handler;
         bzn::message_handler database_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;
@@ -78,11 +78,12 @@ namespace bzn::test
     };
 
 
-    pbft_msg extract_pbft_msg(std::shared_ptr<bzn::message> json);
-    bzn::message wrap_pbft_msg(const pbft_msg& msg);
-    bool is_preprepare(std::shared_ptr<bzn::message> json);
-    bool is_prepare(std::shared_ptr<bzn::message> json);
-    bool is_commit(std::shared_ptr<bzn::message> json);
-    bool is_audit(std::shared_ptr<bzn::message> json);
-    bool is_checkpoint(std::shared_ptr<bzn::message> json);
+    pbft_msg extract_pbft_msg(std::string msg);
+    wrapped_bzn_msg
+    wrap_pbft_msg(const pbft_msg& msg);
+    bool is_preprepare(std::shared_ptr<std::string> msg);
+    bool is_prepare(std::shared_ptr<std::string> msg);
+    bool is_commit(std::shared_ptr<std::string> msg);
+    bool is_checkpoint(std::shared_ptr<std::string> msg);
+    bool is_audit(std::shared_ptr<std::string> msg);
 }

@@ -65,7 +65,7 @@ TEST(status_test, test_that_status_request_queries_status_providers)
     status->start();
 
     // make a request...
-    bzn::message request;
+    bzn::json_message request;
     request["bzn-api"] = "status";
     request["cmd"] = "state";
     request["transaction-id"] = 85746;
@@ -73,7 +73,7 @@ TEST(status_test, test_that_status_request_queries_status_providers)
     EXPECT_CALL(*mock_status_provider, get_status()).Times(2).WillRepeatedly(Invoke(
         []()
         {
-            bzn::message status;
+            bzn::json_message status;
             status["line"] = __LINE__;
             status["file"] = __FILE__;
             return status;
@@ -83,8 +83,8 @@ TEST(status_test, test_that_status_request_queries_status_providers)
         [](){ return "mock1";})).WillOnce(Invoke(
             [](){return "mock2";}));
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::message>>(), false)).WillOnce(Invoke(
-        [&](std::shared_ptr<bzn::message> msg, bool)
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), false)).WillOnce(Invoke(
+        [&](std::shared_ptr<bzn::json_message> msg, bool)
         {
             ASSERT_EQ((*msg)["transaction-id"].asInt64(), request["transaction-id"].asInt64());
             ASSERT_EQ((*msg)["module"].size(), size_t(2));

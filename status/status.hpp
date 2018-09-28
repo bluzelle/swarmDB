@@ -33,7 +33,7 @@ namespace bzn
         void start();
 
     private:
-        void handle_ws_status_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::session_base> session);
+        void handle_ws_status_messages(const bzn::json_message& ws_msg, std::shared_ptr<bzn::session_base> session);
 
         std::shared_ptr<bzn::node_base> node;
 

@@ -193,7 +193,7 @@ connection::handle_get(const std::vector<std::string>& path)
         request.mutable_header()->set_db_uuid(path[UUID_PATH_IDX]);
         request.mutable_read()->set_key(path[KEY_PATH_IDX]);
 
-        this->crud->handle_read(bzn::message(), request, response);
+        this->crud->handle_read(bzn::json_message(), request, response);
         format_http_response(this->request.target(), response, this->response);
 
         return;
@@ -211,7 +211,7 @@ connection::handle_post(const std::vector<std::string>& path)
 
     // format request using protobuf...
     database_response response;
-    bzn::message crud_msg;
+    bzn::json_message crud_msg;
     crud_msg["bzn-api"] = "crud";
 
     if (path[REQUEST_PATH_IDX] == CREATE_REQ)

@@ -22,7 +22,8 @@
 
 namespace bzn
 {
-    using message = Json::Value;
+    using json_message = Json::Value;
+    using encoded_message = std::string;
 
     using uuid_t = std::string;
 
