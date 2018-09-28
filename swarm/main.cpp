@@ -255,7 +255,7 @@ main(int argc, const char* argv[])
             // which type of storage?
             std::shared_ptr<bzn::storage_base> storage;
 
-            if (options.get_mem_storage())
+            if (options->get_mem_storage())
             {
                 LOG(info) << "Using in-memory testing storage";
                 storage = std::make_shared<bzn::mem_storage>();
@@ -263,7 +263,7 @@ main(int argc, const char* argv[])
             else
             {
                 LOG(info) << "Using RocksDB storage";
-                storage = std::make_shared<bzn::rocksdb_storage>(options.get_state_dir(), options.get_uuid());
+                storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), options->get_uuid());
             }
 
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
