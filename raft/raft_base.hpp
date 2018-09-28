@@ -29,14 +29,14 @@ namespace bzn
     ///////////////////////////////////////////////////////////////////////////
     // todo: Use protobufs!
 
-    inline bzn::message
+    inline bzn::json_message
     create_request_vote_request(const bzn::uuid_t& uuid, uint32_t current_term, uint32_t last_log_index, uint32_t last_log_term)
     {
-        bzn::message msg;
+        bzn::json_message msg;
 
         msg["bzn-api"] = "raft";
         msg["cmd"] = "RequestVote";
-        msg["data"] = bzn::message();
+        msg["data"] = bzn::json_message();
         msg["data"]["from"] = uuid;
         msg["data"]["term"] = current_term;
         msg["data"]["lastLogIndex"] = last_log_index;
@@ -46,14 +46,14 @@ namespace bzn
     }
 
 
-    inline bzn::message
+    inline bzn::json_message
     create_request_vote_response(const bzn::uuid_t& uuid, uint32_t current_term, bool granted)
     {
-        bzn::message msg;
+        bzn::json_message msg;
 
         msg["bzn-api"] = "raft";
         msg["cmd"] = "ResponseVote";
-        msg["data"] = bzn::message();
+        msg["data"] = bzn::json_message();
         msg["data"]["from"] = uuid;
         msg["data"]["term"] = current_term;
         msg["data"]["granted"] = granted;
@@ -64,15 +64,15 @@ namespace bzn
     }
 
 
-    inline bzn::message
+    inline bzn::json_message
     create_append_entries_request(const bzn::uuid_t& uuid, uint32_t current_term, uint32_t commit_index, uint32_t prev_index,
-        uint32_t prev_term, uint32_t entry_term, bzn::message entry)
+        uint32_t prev_term, uint32_t entry_term, bzn::json_message entry)
     {
-        bzn::message msg;
+        bzn::json_message msg;
 
         msg["bzn-api"] = "raft";
         msg["cmd"] = "AppendEntries";
-        msg["data"] = bzn::message();
+        msg["data"] = bzn::json_message();
         msg["data"]["from"] = uuid;
         msg["data"]["term"] = current_term;
         msg["data"]["prevIndex"] = prev_index;
@@ -85,14 +85,14 @@ namespace bzn
     }
 
 
-    inline bzn::message
+    inline bzn::json_message
     create_append_entries_response(const bzn::uuid_t& uuid, uint32_t current_term, bool success, uint32_t match_index)
     {
-        bzn::message msg;
+        bzn::json_message msg;
 
         msg["bzn-api"] = "raft";
         msg["cmd"] = "AppendEntriesReply";
-        msg["data"] = bzn::message();
+        msg["data"] = bzn::json_message();
         msg["data"]["from"] = uuid;
         msg["data"]["term"] = current_term;
         msg["data"]["success"] = success;
@@ -105,7 +105,7 @@ namespace bzn
     class raft_base
     {
     public:
-        using commit_handler = std::function<bool(const bzn::message& msg)>;
+        using commit_handler = std::function<bool(const bzn::json_message& msg)>;
 
         virtual ~raft_base() = default;
 
@@ -130,7 +130,7 @@ namespace bzn
          * Appends entry to leader's log via CRUD
          * @param msg message received
          */
-        virtual bool append_log(const bzn::message& msg, bzn::log_entry_type entry_type) = 0;
+        virtual bool append_log(const bzn::json_message& msg, bzn::log_entry_type entry_type) = 0;
 
         /**
          * Storage commit handler called once concensus has been achieved

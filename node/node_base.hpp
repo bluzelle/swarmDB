@@ -53,14 +53,14 @@ namespace bzn
          * @param ep            host to send the message to
          * @param msg           message to send
          */
-        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg) = 0;
+        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) = 0;
 
         /**
          * Convenience method to connect and send a message to a node
          * @param ep            host to send the message to
          * @param msg           message to send
          */
-        virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg) = 0;
+        virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) = 0;
     };
 
 } // bzn

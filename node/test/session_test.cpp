@@ -234,7 +234,7 @@ namespace bzn
         // no read exepected...
         EXPECT_CALL(*mock_websocket_stream, async_close(_,_));
 
-        session->send_message(std::make_shared<bzn::message>("asdf"), true);
+        session->send_message(std::make_shared<bzn::json_message>("asdf"), true);
 
         // read should be setup...
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
@@ -245,7 +245,7 @@ namespace bzn
                 return 1;
             }));
 
-        session->send_message(std::make_shared<bzn::message>("asdf"), false);
+        session->send_message(std::make_shared<bzn::json_message>("asdf"), false);
 
         // error no read should be setup...
         EXPECT_CALL(*mock_websocket_stream, async_close(_,_));
@@ -257,7 +257,7 @@ namespace bzn
                 ec = boost::asio::error::operation_aborted;
                 return 0;
             }));
-        session->send_message(std::make_shared<bzn::message>("asdf"), false);
+        session->send_message(std::make_shared<bzn::json_message>("asdf"), false);
     }
 
 } // bzn

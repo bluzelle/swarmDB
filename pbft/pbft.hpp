@@ -87,13 +87,13 @@ namespace bzn
         void do_prepared(const std::shared_ptr<pbft_operation>& op);
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
-        void handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
-        std::string wrap_message(const pbft_msg& message, const std::string& debug_info = "");
-        std::string wrap_message(const audit_message& message, const std::string& debug_info = "");
+        void handle_bzn_message(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
+        bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
 
-        void broadcast(const std::string& message);
+        void broadcast(const bzn::encoded_message& message);
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
 
@@ -102,7 +102,7 @@ namespace bzn
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
 
-        void handle_database_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session);
+        void handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session);
 
         inline size_t quorum_size() const;
         inline size_t max_faulty_nodes() const;

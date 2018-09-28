@@ -56,7 +56,7 @@ namespace
 
     const auto DEFAULT_LISTENER = boost::asio::ip::tcp::endpoint{boost::asio::ip::address::from_string("0.0.0.0"), 49152};
 
-    void config_text_to_json(bzn::message& json)
+    void config_text_to_json(bzn::json_message& json)
     {
         std::string config_data{DEFAULT_CONFIG_DATA};
         std::string errors;
@@ -178,7 +178,7 @@ TEST(options, test_that_missing_default_config_throws_exception)
 
 TEST_F(options_file_test, test_max_storage_parsing)
 {
-    bzn::message json;
+    bzn::json_message json;
     config_text_to_json(json);
 
     std::for_each(bzn::utils::BYTE_SUFFIXES.cbegin()
@@ -219,7 +219,7 @@ TEST_F(options_file_test, test_max_storage_parsing)
 
 TEST_F(options_file_test, test_enable_whitlelist_temporary)
 {
-    bzn::message json;
+    bzn::json_message json;
     config_text_to_json(json);
     {
         json[bzn::option_names::PEER_VALIDATION_ENABLED] = false;

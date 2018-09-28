@@ -50,18 +50,18 @@ status::start()
 
 
 void
-status::handle_ws_status_messages(const bzn::message& ws_msg, std::shared_ptr<bzn::session_base> session)
+status::handle_ws_status_messages(const bzn::json_message& ws_msg, std::shared_ptr<bzn::session_base> session)
 {
-    auto response_msg = std::make_shared<bzn::message>(ws_msg);
+    auto response_msg = std::make_shared<bzn::json_message>(ws_msg);
 
     (*response_msg)[VERSION_KEY] = SWARM_VERSION;
-    (*response_msg)[MODULE_KEY] = bzn::message();
+    (*response_msg)[MODULE_KEY] = bzn::json_message();
 
     for (const auto& provider : this->status_providers)
     {
         if (auto provider_shared_ptr = provider.lock())
         {
-            bzn::message entry;
+            bzn::json_message entry;
 
             entry[NAME_KEY] = provider_shared_ptr->get_name();
             entry[STATUS_KEY] = provider_shared_ptr->get_status();

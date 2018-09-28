@@ -22,13 +22,13 @@ namespace bzn {
     class Mockcrud_base : public crud_base {
     public:
         MOCK_METHOD3(handle_create,
-            void(const bzn::message& msg, const database_msg& request, database_response& response));
+            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
         MOCK_METHOD3(handle_read,
-            void(const bzn::message& msg, const database_msg& request, database_response& response));
+            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
         MOCK_METHOD3(handle_update,
-            void(const bzn::message& msg, const database_msg& request, database_response& response));
+            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
         MOCK_METHOD3(handle_delete,
-            void(const bzn::message& msg, const database_msg& request, database_response& response));
+            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
         MOCK_METHOD0(start,
             void());
     };

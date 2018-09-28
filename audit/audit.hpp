@@ -41,7 +41,7 @@ namespace bzn
         const std::list<std::string>& error_strings() const override;
 
 
-        void handle(const bzn::message& message, std::shared_ptr<bzn::session_base> session) override;
+        void handle(const bzn::json_message& message, std::shared_ptr<bzn::session_base> session) override;
         void handle_raft_commit(const raft_commit_notification&) override;
         void handle_leader_status(const leader_status&) override;
 

@@ -30,30 +30,30 @@ namespace bzn
     public:
         crud(std::shared_ptr<bzn::node_base> node, std::shared_ptr<bzn::raft_base> raft, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager);
 
-        void handle_create(const bzn::message& msg, const database_msg& request, database_response& response) override;
+        void handle_create(const bzn::json_message& msg, const database_msg& request, database_response& response) override;
 
-        void handle_read(const bzn::message& msg, const database_msg& request, database_response& response) override;
+        void handle_read(const bzn::json_message& msg, const database_msg& request, database_response& response) override;
 
-        void handle_update(const bzn::message& msg, const database_msg& request, database_response& response) override;
+        void handle_update(const bzn::json_message& msg, const database_msg& request, database_response& response) override;
 
-        void handle_delete(const bzn::message& msg, const database_msg& request, database_response& response) override;
+        void handle_delete(const bzn::json_message& msg, const database_msg& request, database_response& response) override;
 
         void start() override;
 
     private:
-        void handle_ws_crud_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_ws_crud_messages(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
 
         void set_leader_info(database_response& msg);
 
-        void do_raft_task_routing(const bzn::message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session);
+        void do_raft_task_routing(const bzn::json_message& msg, const database_msg& request, database_response& response, std::shared_ptr<bzn::session_base> session);
 
-        void do_candidate_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
-        void  do_follower_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
-        void    do_leader_tasks(const bzn::message& msg, const database_msg& request, database_response& response);
+        void do_candidate_tasks(const bzn::json_message& msg, const database_msg& request, database_response& response);
+        void  do_follower_tasks(const bzn::json_message& msg, const database_msg& request, database_response& response);
+        void    do_leader_tasks(const bzn::json_message& msg, const database_msg& request, database_response& response);
 
-        void handle_get_keys(const bzn::message& msg, const database_msg& request, database_response& response);
-        void      handle_has(const bzn::message& msg, const database_msg& request, database_response& response);
-        void     handle_size(const bzn::message& msg, const database_msg& request, database_response& response);
+        void handle_get_keys(const bzn::json_message& msg, const database_msg& request, database_response& response);
+        void      handle_has(const bzn::json_message& msg, const database_msg& request, database_response& response);
+        void     handle_size(const bzn::json_message& msg, const database_msg& request, database_response& response);
 
         bool commit_create(const database_msg& msg);
         bool commit_update(const database_msg& msg);
@@ -73,8 +73,8 @@ namespace bzn
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
 
-        using route_handler_t   = std::function<void(const bzn::message& msg, const database_msg& request, database_response& response)>;
-        using command_handler_t = std::function<void(const bzn::message& msg, const database_msg& request, database_response& response)>;
+        using route_handler_t   = std::function<void(const bzn::json_message& msg, const database_msg& request, database_response& response)>;
+        using command_handler_t = std::function<void(const bzn::json_message& msg, const database_msg& request, database_response& response)>;
         using commit_handler_t  = std::function<bool(const database_msg& msg)>;
 
         std::unordered_map<bzn::raft_state, route_handler_t>         route_handlers;

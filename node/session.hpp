@@ -35,11 +35,11 @@ namespace bzn
 
         void start(bzn::message_handler handler, bzn::protobuf_handler proto_handler) override;
 
-        void send_message(std::shared_ptr<bzn::message> msg, bool end_session) override;
+        void send_message(std::shared_ptr<bzn::json_message> msg, bool end_session) override;
 
-        void send_message(std::shared_ptr<std::string> msg, bool end_session) override;
+        void send_message(std::shared_ptr<bzn::encoded_message> msg, bool end_session) override;
 
-        void send_datagram(std::shared_ptr<std::string> msg) override;
+        void send_datagram(std::shared_ptr<bzn::encoded_message> msg) override;
 
         void close() override;
 

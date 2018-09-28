@@ -198,7 +198,7 @@ namespace bzn::test
                 ));
 
         this->build_pbft();
-        bzn::message msg;
+        bzn::json_message msg;
         msg["bzn-api"] = "database";
 
         this->database_handler(msg, mock_session);

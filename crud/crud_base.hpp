@@ -33,13 +33,13 @@ namespace bzn
     public:
         virtual ~crud_base() = default;
 
-        virtual void handle_create(const bzn::message& msg, const database_msg& request, database_response& response) = 0;
+        virtual void handle_create(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
 
-        virtual void handle_read(const bzn::message& msg, const database_msg& request, database_response& response) = 0;
+        virtual void handle_read(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
 
-        virtual void handle_update(const bzn::message& msg, const database_msg& request, database_response& response) = 0;
+        virtual void handle_update(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
 
-        virtual void handle_delete(const bzn::message& msg, const database_msg& request, database_response& response) = 0;
+        virtual void handle_delete(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
 
         virtual void start() = 0;
     };

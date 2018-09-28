@@ -111,9 +111,9 @@ node::do_accept()
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, std::move(ws), self->chaos, self->ws_idle_timeout)
-                        ->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2)
-                        , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2));
+                std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, std::move(ws), self->chaos, self->ws_idle_timeout)->start(
+                        std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2),
+                        std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2));
             }
 
             self->do_accept();
@@ -141,7 +141,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 }
 
 void
-node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)
+node::priv_protobuf_handler(const bzn::message& msg, std::shared_ptr<bzn::session_base> session)
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
@@ -158,7 +158,7 @@ node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::ses
 }
 
 void
-node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg)
+node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
 {
     if (this->chaos->is_message_delayed())
     {
@@ -208,7 +208,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
 }
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
 {
-    this->send_message_str(ep, std::make_shared<std::string>(msg->toStyledString()));
+    this->send_message_str(ep, std::make_shared<bzn::encoded_message>(msg->toStyledString()));
 }

@@ -31,9 +31,9 @@ class Mocknode_base : public node_base {
   MOCK_METHOD0(start,
       void());
   MOCK_METHOD2(send_message,
-      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg));
+      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg));
   MOCK_METHOD2(send_message_str,
-      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg));
+      void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg));
 };
 
 }  // namespace bzn

@@ -61,7 +61,7 @@ namespace bzn
 
         bzn::raft_state get_state() override;
 
-        bool append_log(const bzn::message& msg, const bzn::log_entry_type entry_type) override;
+        bool append_log(const bzn::json_message& msg, const bzn::log_entry_type entry_type) override;
 
         void register_commit_handler(commit_handler handler) override;
 
@@ -75,7 +75,7 @@ namespace bzn
 
         std::string get_name() override;
 
-        bzn::message get_status() override;
+        bzn::json_message get_status() override;
 
         bool get_peer_validation_enabled() override { return this->enable_peer_validation; };
 
@@ -121,21 +121,21 @@ namespace bzn
         void handle_heartbeat_timeout(const boost::system::error_code& ec);
 
         void request_append_entries();
-        void handle_request_append_entries_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_request_append_entries_response(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
 
         void start_election_timer();
         void handle_election_timeout(const boost::system::error_code& ec);
 
         void request_vote_request();
-        void handle_request_vote_response(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_request_vote_response(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
 
-        void handle_ws_raft_messages(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
-        void handle_ws_request_vote(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
-        void handle_ws_append_entries(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_ws_raft_messages(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_ws_request_vote(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_ws_append_entries(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
 
         void update_raft_state(uint32_t term, bzn::raft_state state);
 
-        void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::message& peer);
+        void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message& peer);
         void handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid);
 
         void handle_get_peers(std::shared_ptr<bzn::session_base> session);
@@ -151,10 +151,10 @@ namespace bzn
         void create_dat_file(const std::string& log_path, const bzn::peers_list_t& peers);
 
         void perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry);
-        bool append_log_unsafe(const bzn::message& msg, const bzn::log_entry_type entry_type);
-        bzn::message create_joint_quorum_by_adding_peer(const bzn::message& last_quorum_message, const bzn::message& new_peer);
-        bzn::message create_joint_quorum_by_removing_peer(const bzn::message& last_quorum_message, const bzn::uuid_t& peer_uuid);
-        bzn::message create_single_quorum_from_joint_quorum(const bzn::message& joint_quorum);
+        bool append_log_unsafe(const bzn::json_message& msg, const bzn::log_entry_type entry_type);
+        bzn::json_message create_joint_quorum_by_adding_peer(const bzn::json_message& last_quorum_message, const bzn::json_message& new_peer);
+        bzn::json_message create_joint_quorum_by_removing_peer(const bzn::json_message& last_quorum_message, const bzn::uuid_t& peer_uuid);
+        bzn::json_message create_single_quorum_from_joint_quorum(const bzn::json_message& joint_quorum);
 
         bool is_majority(const std::set<bzn::uuid_t>& votes);
         uint32_t last_majority_replicated_log_index();
@@ -164,15 +164,15 @@ namespace bzn
 
         void notify_leader_status();
         void notify_commit(size_t log_index, const std::string& operation);
-        bzn::log_entry_type deduce_type_from_message(const bzn::message& message);
+        bzn::log_entry_type deduce_type_from_message(const bzn::json_message& message);
 
         void shutdown_on_exceeded_max_storage(bool do_throw = false);
 
         void send_session_error_message(std::shared_ptr<bzn::session_base> session, const std::string& error_message);
 
-        bool validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::message &peer);
+        bool validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message &peer);
 
-        bzn::message to_peer_message(const peer_address_t& address);
+        bzn::json_message to_peer_message(const peer_address_t& address);
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;

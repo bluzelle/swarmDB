@@ -75,7 +75,7 @@ namespace bzn
 
 
         inline std::string
-        json_to_string(const bzn::message& msg) const
+        json_to_string(const bzn::json_message& msg) const
         {
             Json::FastWriter fastWriter;
             return fastWriter.write(msg);
@@ -84,7 +84,7 @@ namespace bzn
         log_entry_type  entry_type;
         uint32_t        log_index;
         uint32_t        term;
-        bzn::message    msg;
+        bzn::json_message    msg;
     };
 }
 

@@ -147,7 +147,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_bzn_message(const bzn::message& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     if (msg.type() != BZN_MSG_PBFT)
     {
@@ -313,9 +313,9 @@ pbft::handle_commit(const pbft_msg& msg)
 }
 
 void
-pbft::broadcast(const std::string& msg)
+pbft::broadcast(const bzn::encoded_message& msg)
 {
-    auto msg_ptr = std::make_shared<std::string>(msg);
+    auto msg_ptr = std::make_shared<bzn::encoded_message>(msg);
 
     for (const auto& peer : this->peer_index)
     {
@@ -457,20 +457,20 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
     return lookup->second;
 }
 
-std::string
+bzn::encoded_message
 pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
-    wrapped_bzn_msg result;
+    bzn::message result;
     result.set_payload(msg.SerializeAsString());
     result.set_type(bzn_msg_type::BZN_MSG_PBFT);
 
     return result.SerializeAsString();
 }
 
-std::string
+bzn::encoded_message
 pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
 {
-    bzn::message json;
+    bzn::json_message json;
 
     json["bzn-api"] = "audit";
     json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
@@ -650,7 +650,7 @@ pbft::max_faulty_nodes() const
 }
 
 void
-pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::session_base> session)
+pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session)
 {
     bzn_msg msg;
     database_response response;
@@ -661,7 +661,7 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     {
         LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
         response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
         return;
     }
 
@@ -669,7 +669,7 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     {
         LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
         response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
+        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
         return;
     }
 
@@ -682,5 +682,5 @@ pbft::handle_database_message(const bzn::message& json, std::shared_ptr<bzn::ses
     this->handle_request(req, session);
 
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
-    session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
+    session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
 }

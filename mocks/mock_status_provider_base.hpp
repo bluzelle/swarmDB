@@ -27,7 +27,7 @@ namespace bzn {
         MOCK_METHOD0(get_name,
             std::string());
         MOCK_METHOD0(get_status,
-            bzn::message());
+            bzn::json_message());
     };
 
 }  // namespace bzn

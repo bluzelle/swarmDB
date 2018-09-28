@@ -38,17 +38,17 @@ namespace bzn
 
         void start() override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg) override;
+        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) override;
 
-        void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<std::string> msg) override;
+        void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);
 
         void do_accept();
 
-        void priv_msg_handler(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
-        void priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
+        void priv_msg_handler(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
+        void priv_protobuf_handler(const bzn::message& msg, std::shared_ptr<bzn::session_base> session);
 
         std::unique_ptr<bzn::asio::tcp_acceptor_base> tcp_acceptor;
         std::shared_ptr<bzn::asio::io_context_base>   io_context;

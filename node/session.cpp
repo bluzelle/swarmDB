@@ -92,7 +92,7 @@ session::do_read()
             Json::Value msg;
             Json::Reader reader;
 
-            wrapped_bzn_msg proto_msg;
+            bzn::message proto_msg;
 
             if (reader.parse(ss.str(), msg))
             {
@@ -111,14 +111,14 @@ session::do_read()
 
 
 void
-session::send_message(std::shared_ptr<bzn::message> msg, const bool end_session)
+session::send_message(std::shared_ptr<bzn::json_message> msg, const bool end_session)
 {
-    this->send_message(std::make_shared<std::string>(msg->toStyledString()), end_session);
+    this->send_message(std::make_shared<bzn::encoded_message>(msg->toStyledString()), end_session);
 }
 
 
 void
-session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
+session::send_message(std::shared_ptr<bzn::encoded_message> msg, const bool end_session)
 {
     if (this->chaos->is_message_delayed())
     {
@@ -159,7 +159,7 @@ session::send_message(std::shared_ptr<std::string> msg, const bool end_session)
 
 
 void
-session::send_datagram(std::shared_ptr<std::string> msg)
+session::send_datagram(std::shared_ptr<bzn::encoded_message> msg)
 {
     if (this->chaos->is_message_delayed())
     {

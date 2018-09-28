@@ -46,10 +46,10 @@ namespace
         return test_data;
     }
 
-    bzn::message
+    bzn::json_message
     generate_test_message()
     {
-        bzn::message msg;
+        bzn::json_message msg;
         msg["bzn-api"] = "test";
         msg["cmd"] = "test";
         msg["data"] = generate_test_string(40);
@@ -61,7 +61,7 @@ namespace
     create_initial_entries_log(const std::string& path)
     {
         std::ofstream out(path, std::ios::out | std::ios::binary);
-        out << bzn::log_entry{bzn::log_entry_type::single_quorum, 0, 0, bzn::message{}};
+        out << bzn::log_entry{bzn::log_entry_type::single_quorum, 0, 0, bzn::json_message{}};
 
         for(uint32_t i=1;i<10;++i)
         {

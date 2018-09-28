@@ -26,11 +26,11 @@ namespace bzn {
         MOCK_METHOD2(start,
             void(bzn::message_handler handler, bzn::protobuf_handler proto_handler));
         MOCK_METHOD2(send_message,
-            void(std::shared_ptr<bzn::message> msg, bool end_session));
+            void(std::shared_ptr<bzn::json_message> msg, bool end_session));
         MOCK_METHOD2(send_message,
-            void(std::shared_ptr<std::string> msg, bool end_session));
+            void(std::shared_ptr<bzn::encoded_message> msg, bool end_session));
         MOCK_METHOD1(send_datagram,
-            void(std::shared_ptr<std::string> msg));
+            void(std::shared_ptr<bzn::encoded_message> msg));
         MOCK_METHOD0(get_session_id,
             bzn::session_id());
         MOCK_METHOD0(close,

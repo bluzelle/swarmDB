@@ -64,7 +64,7 @@ namespace bzn::utils::blacklist
             throw (std::runtime_error(MSG_ERROR_CURL + curl_easy_strerror(res)));
         }
 
-        bzn::message response;
+        bzn::json_message response;
         Json::Reader reader;
 
         if (!reader.parse(readBuffer, response))

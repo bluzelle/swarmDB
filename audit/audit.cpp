@@ -218,7 +218,7 @@ audit::send_to_monitor(const std::string& stat)
 }
 
 void
-audit::handle(const bzn::message& json, std::shared_ptr<bzn::session_base> session)
+audit::handle(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session)
 {
     audit_message message;
     message.ParseFromString(boost::beast::detail::base64_decode(json["audit-data"].asString()));
