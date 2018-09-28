@@ -163,7 +163,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
     if (this->chaos->is_message_delayed())
     {
         const boost::asio::ip::tcp::endpoint ep_copy = ep;
-        this->chaos->reschedule_message(std::bind(&node::send_message, shared_from_this(), std::move(ep_copy), std::move(msg)));
+        this->chaos->reschedule_message(std::bind(&node::send_message_str, shared_from_this(), std::move(ep_copy), std::move(msg)));
         return;
     }
 
@@ -197,9 +197,9 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
                                 return;
                             }
 
-                            auto session = std::make_Shared<bzn::session>(self->io_context, ++self->session_id_counter, ws, self->chaos, self->ws_idle_timeout);
+                            auto session = std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, ws, self->chaos, self->ws_idle_timeout);
                             session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2),
-                                           std::bind(&node::priv_proto_handler, self, std::placeholders::_1, std::placeholders::_2));
+                                           std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2));
                             
                             // send the message requested...
                             session->send_message(msg, false);
