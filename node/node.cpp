@@ -24,11 +24,12 @@ namespace
 }
 
 
-node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, const std::chrono::milliseconds& ws_idle_timeout,
+node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout,
     const boost::asio::ip::tcp::endpoint& ep)
     : tcp_acceptor(io_context->make_unique_tcp_acceptor(ep))
     , io_context(std::move(io_context))
     , websocket(std::move(websocket))
+    , chaos(std::move(chaos))
     , ws_idle_timeout(ws_idle_timeout)
 {
 }
@@ -86,7 +87,7 @@ node::do_accept()
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, std::move(ws), self->ws_idle_timeout)->start(
+                std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, std::move(ws), self->chaos, self->ws_idle_timeout)->start(
                     std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
             }
 
@@ -118,6 +119,18 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 void
 node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg)
 {
+    if (this->chaos->is_message_delayed())
+    {
+        const boost::asio::ip::tcp::endpoint ep_copy = ep;
+        this->chaos->reschedule_message(std::bind(&node::send_message, shared_from_this(), std::move(ep_copy), std::move(msg)));
+        return;
+    }
+
+    if (this->chaos->is_message_dropped())
+    {
+        return;
+    }
+
     std::shared_ptr<bzn::asio::tcp_socket_base> socket = this->io_context->make_unique_tcp_socket();
 
     socket->async_connect(ep,
@@ -143,7 +156,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
                         return;
                     }
 
-                    auto session = std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, ws, self->ws_idle_timeout);
+                    auto session = std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, ws, self->chaos, self->ws_idle_timeout);
 
                     session->start(std::bind(&node::priv_msg_handler, self, std::placeholders::_1, std::placeholders::_2));
 

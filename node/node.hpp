@@ -16,6 +16,7 @@
 
 #include <include/boost_asio_beast.hpp>
 #include <node/node_base.hpp>
+#include <chaos/chaos_base.hpp>
 #include <json/json.h>
 #include <mutex>
 #include <atomic>
@@ -28,7 +29,7 @@ namespace bzn
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {
     public:
-        node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, const std::chrono::milliseconds& ws_idle_timeout,
+        node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout,
             const boost::asio::ip::tcp::endpoint& ep);
 
         bool register_for_message(const std::string& msg_type, bzn::message_handler msg_handler) override;
@@ -48,6 +49,7 @@ namespace bzn
         std::shared_ptr<bzn::asio::io_context_base>   io_context;
         std::unique_ptr<bzn::asio::tcp_socket_base>   acceptor_socket;
         std::shared_ptr<bzn::beast::websocket_base>   websocket;
+        std::shared_ptr<bzn::chaos_base>              chaos;
         const std::chrono::milliseconds               ws_idle_timeout;
 
         std::unordered_map<std::string, bzn::message_handler> message_map;

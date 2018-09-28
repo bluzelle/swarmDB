@@ -45,6 +45,7 @@ namespace bzn
          * @param msg           message to send
          */
         virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::message> msg) = 0;
+
     };
 
 } // bzn

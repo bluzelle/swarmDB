@@ -34,6 +34,12 @@ options::get_simple_options() const
     return this->raw_opts;
 }
 
+simple_options&
+options::get_mutable_simple_options()
+{
+    return this->raw_opts;
+}
+
 boost::asio::ip::tcp::endpoint
 options::get_listener() const
 {
