@@ -103,7 +103,7 @@ script:
 after_success:
   - |
     body='{"request": {
-      "branch":"master"
+      "branch":"devel"
     }}'
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
