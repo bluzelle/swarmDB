@@ -264,18 +264,38 @@ namespace
     };
     const unsigned int signature_sha256_len = 512;
 
-    const std::string signature {
-            "Oo8ZlDQcMlZF4hqnhN/2Dz3FYarZHrGf+87i+JUSxBu2GKFk8SYcDrwjc0DuhUCx"
-            "pRVQppMk5fjZtJ3r6I9066jcEpJPljU1SC1Thpy+AUEYx0r640SKRwKwmJMe6mRd"
-            "SJ75rcYHu5+etajOWWjMs4vYQtcwfVF3oEd9/pZjea8x6PuhnM50+FPpnvgu57L8"
-            "vHdeWjCqAiPyomQSLgIJPjvMJw4aHUUE3tHX1WOB8XDHdvuhi9gZODzZWbdI92JN"
-            "hoLbwvjmhKTeTN+FbBtdJIjC0+V0sMFmGNJQ8WIkJscN0hzRkmdlU965lHe4hqlc"
-            "MyEdTSnYSnC7NIHFfvJFBBYi9kcAVBwkYyALQDv6iTGMSI11/ncwdTz4/GGPodaU"
-            "PFxf/WVHUz6rBAtTKvn8Kg61F6cVhcFSCjiw2bWGpeWcWTL+CGbfYCvZNiAVyO7Q"
-            "dmfj5hoLu7KG+nxBLF8uoUl6t3BdKz9Dqg9Vf+QVtaVj/COD1nUykXXRVxfLo4dN"
-            "BS+aVsmOFjppKaEvmeT5SwWOSVrKZwPuTilV9jCehFbFZF6MPyiW5mcp9t4D27hM"
-            "oz/SiKjCqdN93YdBO4FBF/cWD5WHmD7KaaJYmnztz3W+xS7b/qk2PcN+qpZEXsfr"
-            "Wie4prB1umESavYLC1pLhoEgc0jRUl1b9mHSY7E4puk="
+    const std::string signature
+    {
+        "Oo8ZlDQcMlZF4hqnhN/2Dz3FYarZHrGf+87i+JUSxBu2GKFk8SYcDrwjc0DuhUCx"
+        "pRVQppMk5fjZtJ3r6I9066jcEpJPljU1SC1Thpy+AUEYx0r640SKRwKwmJMe6mRd"
+        "SJ75rcYHu5+etajOWWjMs4vYQtcwfVF3oEd9/pZjea8x6PuhnM50+FPpnvgu57L8"
+        "vHdeWjCqAiPyomQSLgIJPjvMJw4aHUUE3tHX1WOB8XDHdvuhi9gZODzZWbdI92JN"
+        "hoLbwvjmhKTeTN+FbBtdJIjC0+V0sMFmGNJQ8WIkJscN0hzRkmdlU965lHe4hqlc"
+        "MyEdTSnYSnC7NIHFfvJFBBYi9kcAVBwkYyALQDv6iTGMSI11/ncwdTz4/GGPodaU"
+        "PFxf/WVHUz6rBAtTKvn8Kg61F6cVhcFSCjiw2bWGpeWcWTL+CGbfYCvZNiAVyO7Q"
+        "dmfj5hoLu7KG+nxBLF8uoUl6t3BdKz9Dqg9Vf+QVtaVj/COD1nUykXXRVxfLo4dN"
+        "BS+aVsmOFjppKaEvmeT5SwWOSVrKZwPuTilV9jCehFbFZF6MPyiW5mcp9t4D27hM"
+        "oz/SiKjCqdN93YdBO4FBF/cWD5WHmD7KaaJYmnztz3W+xS7b/qk2PcN+qpZEXsfr"
+        "Wie4prB1umESavYLC1pLhoEgc0jRUl1b9mHSY7E4puk="
+    };
+
+
+    const std::string temporary_public_pem
+    {
+        "-----BEGIN PUBLIC KEY-----\n"
+        "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA3Delbh36s+NJCCOYi1ql\n"
+        "NGp+R5EoKWtcazi+Kh/t2V4kN4QCEQdxi3nlhbHdiWWNi8puwwJYFDRdjZvEO+2H\n"
+        "yEyFui4v9Rl/RoGdDQeXEeQ+QxMVvT6Ya7+unRDjlIuNmQNNe4HKlcA4fqhRqi07\n"
+        "bF2b1kceuPsxIXcBnrsVVqxvSvqjiVkaSnk+HACm8fjiTwGSFE3ZhooMgxENEWrw\n"
+        "Ltcr80UdWpMvCrlBCWtlxiLl8VgoPCDZ/R2iXvJaQAOwepfdFGmcPomcO9BOEJfn\n"
+        "Jg4sBQNu4CqN5KRCS8CN39E705s4upFMRleU6nKHa0kSb9OsqJP/0i0fBVFLsxpX\n"
+        "WbR2iLwpCy3YqJqwoS8PFz9rr4V9ESqRJlczjkRt6bfx4/fSskxsXWRl+Dlv1V/P\n"
+        "Sl0zlJXMoxpPuLANxEVsnR9fT07h0XuQ58dsjbMImTL8Hmomfl3n2WK35TesAAaO\n"
+        "WNa4+2LFYzKwLUL9cRv696544eo8TCi+bXEKSCmUzpLsLIeHVmeHy3CiUUq13ktE\n"
+        "ykQD9vdtoyJkWJ4n5QMQVaV1k1hJ0V8EMfpV9mMEpItfQQRqDW1QG2fHbZgrUV1m\n"
+        "5PdnWwf3L9nMNxja7nX0vk5QVw1r8Kl4KqP4sid4djBYz4SBLeSfimUDw/USsKik\n"
+        "MwoaYGgrejBmlvZ5UiFw+xMCAwEAAQ==\n"
+        "-----END PUBLIC KEY-----"
     };
 }
 
@@ -296,7 +316,6 @@ TEST(util_test, test_that_is_whitelist_member_returns_FALSE_if_uuid_is_NOT_found
 {
     EXPECT_FALSE(bzn::utils::blacklist::is_blacklisted(NOT_BLACKLISTED_UUID));
 }
-
 
 
 TEST(util_test, test_that_a_poorly_formed_uuid_fails)
@@ -322,9 +341,15 @@ TEST(util_test, test_that_a_uuid_can_be_validated)
 }
 
 
-TEST(util_test, test_that_verifying_asignature_with_empty_inputs_will_fail_gracefully)
+TEST(util_test, test_that_verifying_a_signature_with_empty_inputs_will_fail_gracefully)
 {
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( "", signature, valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, "", valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, ""));
+}
+
+
+TEST(util_test, test_that_ethereum_will_provide_bluzelle_public_key)
+{
+    EXPECT_EQ(temporary_public_pem, bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract());
 }
