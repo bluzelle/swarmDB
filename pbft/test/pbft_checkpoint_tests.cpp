@@ -186,4 +186,31 @@ namespace bzn::test
         EXPECT_EQ(expected_cp, this->pbft->latest_stable_checkpoint());
         EXPECT_EQ(expected_cp, this->pbft->latest_checkpoint());
     }
+
+    TEST_F(pbft_checkpoint_test, stable_checkpoint_advances_high_low_water_marks)
+    {
+        this->build_pbft();
+
+        uint64_t initial_low = this->pbft->get_low_water_mark();
+        uint64_t initial_high = this->pbft->get_high_water_mark();
+
+        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+
+        EXPECT_EQ(this->pbft->get_high_water_mark(), initial_high);
+        EXPECT_EQ(this->pbft->get_low_water_mark(), initial_low);
+
+        for (const auto& peer : TEST_PEER_LIST)
+        {
+            pbft_msg msg = cp1_msg;
+            msg.set_sender(peer.uuid);
+            this->pbft->handle_message(msg);
+        }
+
+        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
+        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
+        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
+
+        EXPECT_GT(this->pbft->get_high_water_mark(), initial_high);
+        EXPECT_GT(this->pbft->get_low_water_mark(), initial_low);
+    }
 }

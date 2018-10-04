@@ -230,4 +230,23 @@ namespace bzn::test
         service.apply_operation(op);
     }
 
+    TEST_F(pbft_test, messages_after_high_water_mark_dropped)
+    {
+        this->build_pbft();
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+                .Times(Exactly(0));
+
+        this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
+        pbft->handle_message(preprepare_msg);
+    }
+
+    TEST_F(pbft_test, messages_before_low_water_mark_dropped)
+    {
+        this->build_pbft();
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+                .Times(Exactly(0));
+
+        this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
+        pbft->handle_message(preprepare_msg);
+    }
 }

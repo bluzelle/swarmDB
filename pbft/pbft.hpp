@@ -23,8 +23,10 @@
 
 namespace
 {
-    const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
+    const std::chrono::milliseconds HEARTBEAT_INTERVAL{std::chrono::milliseconds(5000)};
     const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
+    const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
+    const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
 }
 
 namespace bzn
@@ -65,6 +67,8 @@ namespace bzn
         checkpoint_t latest_checkpoint() const;
         size_t unstable_checkpoints_count() const;
 
+        uint64_t get_low_water_mark();
+        uint64_t get_high_water_mark();
 
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
@@ -115,8 +119,8 @@ namespace bzn
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
 
-        uint64_t low_water_mark = 1;
-        uint64_t high_water_mark = UINT64_MAX;
+        uint64_t low_water_mark;
+        uint64_t high_water_mark;
 
         std::shared_ptr<bzn::node_base> node;
 

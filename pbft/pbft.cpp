@@ -24,11 +24,6 @@
 #include <iterator>
 #include <crud/crud_base.hpp>
 
-namespace
-{
-    const std::chrono::milliseconds heartbeat_interval{std::chrono::milliseconds(5000)};
-}
-
 using namespace bzn;
 
 pbft::pbft(
@@ -71,6 +66,10 @@ pbft::pbft(
                 return unordered_peers_list[peer_index];
             }
     );
+
+    // TODO: stable checkpoint should be read from disk first: KEP-494
+    this->low_water_mark = this->stable_checkpoint.first;
+    this->high_water_mark = this->stable_checkpoint.first + std::lround(CHECKPOINT_INTERVAL*HIGH_WATER_INTERVAL_IN_CHECKPOINTS);
 }
 
 void
@@ -85,7 +84,7 @@ pbft::start()
                 this->node->register_for_message("database",
                         std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
+                this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
                 this->audit_heartbeat_timer->async_wait(
                         std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 
@@ -142,7 +141,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 
     }
 
-    this->audit_heartbeat_timer->expires_from_now(heartbeat_interval);
+    this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
     this->audit_heartbeat_timer->async_wait(std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 }
 
@@ -208,9 +207,6 @@ pbft::handle_message(const pbft_msg& msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
-
-    // TODO: Crypto verification goes here - KEP-331, KEP-345
-
     auto t = msg.type();
     if (t == PBFT_MSG_PREPREPARE || t == PBFT_MSG_PREPARE || t == PBFT_MSG_COMMIT)
     {
@@ -220,15 +216,15 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
             return false;
         }
 
-        if (msg.sequence() < this->low_water_mark)
+        if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number";
+            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
 
         if (msg.sequence() > this->high_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number";
+            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
     }
@@ -592,6 +588,9 @@ pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
     this->clear_local_checkpoints_until(cp);
     this->clear_checkpoint_messages_until(cp);
     this->clear_operations_until(cp);
+
+    this->low_water_mark = std::max(this->low_water_mark, cp.first);
+    this->high_water_mark = std::max(this->high_water_mark, cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS*CHECKPOINT_INTERVAL));
 }
 
 void
@@ -683,4 +682,16 @@ pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn
 
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
+}
+
+uint64_t
+pbft::get_low_water_mark()
+{
+    return this->low_water_mark;
+}
+
+uint64_t
+pbft::get_high_water_mark()
+{
+    return this->high_water_mark;
 }
