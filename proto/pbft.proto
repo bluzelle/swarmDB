@@ -14,6 +14,8 @@
 
 syntax = "proto3";
 
+import "database.proto";
+
 message pbft_msg
 {
     pbft_msg_type type = 1;
@@ -45,7 +47,7 @@ enum pbft_msg_type {
 
 message pbft_request
 {
-    string operation = 1;
+    database_msg operation = 1;
     uint64 timestamp = 2;
     string client = 3;
 }

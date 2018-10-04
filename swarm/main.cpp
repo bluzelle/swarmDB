@@ -235,14 +235,13 @@ main(int argc, const char* argv[])
         if (options->pbft_enabled())
         {
             auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
-            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid()
-                    , std::make_shared<bzn::dummy_pbft_service>(io_context)
-                    , failure_detector
-            );
-
+            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid(), std::make_shared<bzn::dummy_pbft_service>(io_context), failure_detector);
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
+            auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
+
             pbft->start();
+            status->start();
         }
         else
         {

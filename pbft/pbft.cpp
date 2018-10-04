@@ -27,19 +27,19 @@
 using namespace bzn;
 
 pbft::pbft(
-        std::shared_ptr<bzn::node_base> node
-        , std::shared_ptr<bzn::asio::io_context_base> io_context
-        , const bzn::peers_list_t& peers
-        , bzn::uuid_t uuid
-        , std::shared_ptr<pbft_service_base> service
-        , std::shared_ptr<pbft_failure_detector_base> failure_detector
-)
-        : node(std::move(node))
-        , uuid(std::move(uuid))
-        , service(std::move(service))
-        , failure_detector(std::move(failure_detector))
-        , io_context(io_context)
-        , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
+    std::shared_ptr<bzn::node_base> node
+    , std::shared_ptr<bzn::asio::io_context_base> io_context
+    , const bzn::peers_list_t& peers
+    , bzn::uuid_t uuid
+    , std::shared_ptr<pbft_service_base> service
+    , std::shared_ptr<pbft_failure_detector_base> failure_detector
+    )
+    : node(std::move(node))
+    , uuid(std::move(uuid))
+    , service(std::move(service))
+    , failure_detector(std::move(failure_detector))
+    , io_context(io_context)
+    , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
 {
     if (peers.empty())
     {
@@ -54,17 +54,17 @@ pbft::pbft(
     std::iota(indicies.begin(), indicies.end(), 0);
 
     std::sort(indicies.begin(), indicies.end(),
-            [&unordered_peers_list](const auto& i1, const auto& i2)
-            {
-                return unordered_peers_list[i1].uuid < unordered_peers_list[i2].uuid;
-            }
+        [&unordered_peers_list](const auto& i1, const auto& i2)
+        {
+            return unordered_peers_list[i1].uuid < unordered_peers_list[i2].uuid;
+        }
     );
 
     std::transform(indicies.begin(), indicies.end(), std::back_inserter(this->peer_index),
-            [&unordered_peers_list](auto& peer_index)
-            {
-                return unordered_peers_list[peer_index];
-            }
+        [&unordered_peers_list](auto& peer_index)
+        {
+            return unordered_peers_list[peer_index];
+        }
     );
 
     // TODO: stable checkpoint should be read from disk first: KEP-494
@@ -675,7 +675,7 @@ pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn
     *response.mutable_header() = msg.db().header();
 
     pbft_request req;
-    req.set_operation(json.toStyledString());
+    *req.mutable_operation() = msg.db();
     req.set_timestamp(0); //TODO: KEP-611
 
     this->handle_request(req, session);
@@ -695,3 +695,52 @@ pbft::get_high_water_mark()
 {
     return this->high_water_mark;
 }
+
+std::string
+pbft::get_name()
+{
+    return "pbft";
+}
+
+
+bzn::json_message
+pbft::get_status()
+{
+    bzn::json_message status;
+
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    status["outstanding_operations_count"] = uint64_t(this->outstanding_operations_count());
+    status["is_primary"] = this->is_primary();
+
+    auto primary = this->get_primary();
+    status["primary"]["host"] = primary.host;
+    status["primary"]["host_port"] = primary.port;
+    status["primary"]["http_port"] = primary.http_port;
+    status["primary"]["name"] = primary.name;
+    status["primary"]["uuid"] = primary.uuid;
+
+    status["latest_stable_checkpoint"]["count"] = this->latest_stable_checkpoint().first;
+    status["latest_stable_checkpoint"]["hash"] = this->latest_stable_checkpoint().second;
+    status["latest_checkpoint"]["count"] = this->latest_checkpoint().first;
+    status["latest_checkpoint"]["hash"] = this->latest_checkpoint().first;
+
+    status["unstable_checkpoints_count"] = uint64_t(this->unstable_checkpoints_count());
+    status["next_issued_sequence_number"] = this->next_issued_sequence_number;
+    status["view"] = this->view;
+
+    status["peer_index"] = bzn::json_message();
+    for(const auto& p : this->peer_index)
+    {
+        bzn::json_message peer;
+        peer["host"] = p.host;
+        peer["port"] = p.port;
+        peer["http_port"] = p.http_port;
+        peer["name"] = p.name;
+        peer["uuid"] = p.uuid;
+        status["peer_index"].append(peer);
+    }
+
+    return status;
+}
+
