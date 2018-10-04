@@ -223,6 +223,7 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, options->get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options->get_listener()});
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size(), options->pbft_enabled());
+        std::shared_ptr<bzn::status> status;
 
         node->start();
         chaos->start();
@@ -238,7 +239,7 @@ main(int argc, const char* argv[])
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid(), std::make_shared<bzn::dummy_pbft_service>(io_context), failure_detector);
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
-            auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
+            status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
 
             pbft->start();
             status->start();
@@ -270,7 +271,7 @@ main(int argc, const char* argv[])
 
             auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
-            auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
+            status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 
             raft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
