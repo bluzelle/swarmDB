@@ -46,30 +46,6 @@ namespace
     const std::string GET_KEY_SIZE              {"0xcf5d53f1"};
     const std::string GET_KEY_CHUNK             {"0x96ce93e2"};
     const std::string MSG_ERROR_CURL            {"curl_easy_perform() failed: "};
-    /**
-     * NOTE This is temporary
-     * We shall use this only until we can get the public key from an Etherium
-     * contract.
-     * TODO Retrieve the public key from the Etherium contract.
-     */
-    const std::string temporary_public_pem
-    {
-            "-----BEGIN PUBLIC KEY-----\n"
-            "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA3Delbh36s+NJCCOYi1ql\n"
-            "NGp+R5EoKWtcazi+Kh/t2V4kN4QCEQdxi3nlhbHdiWWNi8puwwJYFDRdjZvEO+2H\n"
-            "yEyFui4v9Rl/RoGdDQeXEeQ+QxMVvT6Ya7+unRDjlIuNmQNNe4HKlcA4fqhRqi07\n"
-            "bF2b1kceuPsxIXcBnrsVVqxvSvqjiVkaSnk+HACm8fjiTwGSFE3ZhooMgxENEWrw\n"
-            "Ltcr80UdWpMvCrlBCWtlxiLl8VgoPCDZ/R2iXvJaQAOwepfdFGmcPomcO9BOEJfn\n"
-            "Jg4sBQNu4CqN5KRCS8CN39E705s4upFMRleU6nKHa0kSb9OsqJP/0i0fBVFLsxpX\n"
-            "WbR2iLwpCy3YqJqwoS8PFz9rr4V9ESqRJlczjkRt6bfx4/fSskxsXWRl+Dlv1V/P\n"
-            "Sl0zlJXMoxpPuLANxEVsnR9fT07h0XuQ58dsjbMImTL8Hmomfl3n2WK35TesAAaO\n"
-            "WNa4+2LFYzKwLUL9cRv696544eo8TCi+bXEKSCmUzpLsLIeHVmeHy3CiUUq13ktE\n"
-            "ykQD9vdtoyJkWJ4n5QMQVaV1k1hJ0V8EMfpV9mMEpItfQQRqDW1QG2fHbZgrUV1m\n"
-            "5PdnWwf3L9nMNxja7nX0vk5QVw1r8Kl4KqP4sid4djBYz4SBLeSfimUDw/USsKik\n"
-            "MwoaYGgrejBmlvZ5UiFw+xMCAwEAAQ==\n"
-            "-----END PUBLIC KEY-----"
-    };
-
 
     /**
      * This function is used by base_64_decode to determine the amount of memory required
@@ -398,7 +374,7 @@ namespace bzn::utils::crypto
 
         if (std::string(name) != expected_type)
         {
-            throw std::runtime_error("Expedted to find a " + expected_type + " in " + filename + ", but found a " + std::string(name));
+            throw std::runtime_error("Expected to find a " + expected_type + " in " + filename + ", but found a " + std::string(name));
         }
 
         std::string result(reinterpret_cast<char const*>(data), len);
