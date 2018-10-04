@@ -355,7 +355,7 @@ TEST(util_test, test_that_choose_any_one_of_chooses_one_of_a_set)
     {
         auto peer = bzn::utils::container::choose_any_one_of(TEST_LIST);
         EXPECT_TRUE(peer != TEST_LIST.end());
-        EXPECT_TRUE( TEST_LIST.end() != find_if( TEST_LIST.begin(), TEST_LIST.end(), [peer](bzn::peer_address_t addr){ return addr.port == peer->port; }));
+        EXPECT_TRUE( TEST_LIST.end() != std::find_if( TEST_LIST.begin(), TEST_LIST.end(), [peer](bzn::peer_address_t addr){ return addr.port == peer->port; }));
         histogram[peer->http_port] = true;
         EXPECT_TRUE(10000 > ++count);
     }
