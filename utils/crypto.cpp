@@ -45,6 +45,7 @@ namespace
     const std::string REQUEST_BASE              {R"({"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x492CCD1eAeCDA0262e3AAeF8445F3F731a30AfbB","data": "%s" },"latest"],"id":1})"};
     const std::string GET_KEY_SIZE              {"0xcf5d53f1"};
     const std::string GET_KEY_CHUNK             {"0x96ce93e2"};
+    const std::string MSG_ERROR_CURL            {"curl_easy_perform() failed: "};
     /**
      * NOTE This is temporary
      * We shall use this only until we can get the public key from an Etherium
@@ -186,17 +187,16 @@ namespace
 
 
     size_t
-    write_function(void* contents,size_t size, size_t nmemb, void* userp)
+    write_function(void* contents,size_t size, size_t buffer_size, void* userp)
     {
-        reinterpret_cast<std::string*>(userp)->append(reinterpret_cast<char*>(contents), size * nmemb);
-        return size * nmemb;
+        reinterpret_cast<std::string*>(userp)->append(reinterpret_cast<char*>(contents), size * buffer_size);
+        return size * buffer_size;
     }
 
 
     bzn::json_message
     get_curl_response(const std::string& function_call, const std::string& url = ROPSTEN_URL)
     {
-        const std::string MSG_ERROR_CURL{"curl_easy_perform() failed: "};
         std::unique_ptr<CURL, std::function<void(CURL*)>> curl(curl_easy_init(),
                                                                std::bind(curl_easy_cleanup, std::placeholders::_1));
         std::string readBuffer;
@@ -211,14 +211,15 @@ namespace
         curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, reinterpret_cast<void*>(write_function));
 
+        Json::Reader reader;
+
         CURLcode res = curl_easy_perform(curl.get());
         if (res != CURLE_OK)
         {
-            throw (std::runtime_error(MSG_ERROR_CURL + curl_easy_strerror(res)));
+            LOG(error) << MSG_ERROR_CURL << " - " << curl_easy_strerror(res);
         }
 
         bzn::json_message response;
-        Json::Reader reader;
 
         if (!reader.parse(readBuffer, response))
         {
@@ -281,7 +282,7 @@ namespace
     std::string
     hex_string_to_string(const std::string& hex_string)
     {
-        std::string public_key{""};
+        std::string public_key;
         for(size_t i=0 ; i < hex_string.size(); i+=2)
         {
             public_key += static_cast<unsigned char>(std::strtoul(hex_string.substr(i,2).c_str(), nullptr, 16));
@@ -296,11 +297,10 @@ namespace bzn::utils::crypto
     std::string
     retrieve_bluzelle_public_key_from_contract()
     {
-        std::string public_key_hex{""};
+        std::string public_key_hex;
         // TODO retrieve the public key from the contract
-        const size_t key_size = get_public_pem_size();
 
-        for (size_t index=0; index < key_size; ++index)
+        for (size_t index=0; index < get_public_pem_size(); ++index)
         {
             const auto line = get_public_pem_chunk(index);
             public_key_hex += line;
