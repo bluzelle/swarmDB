@@ -34,6 +34,22 @@ namespace
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(1250)};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
+
+    std::mt19937 gen(std::time(0)); //Standard mersenne_twister_engine seeded with rd()
+
+    // TODO: RHN - this should be templatized
+    bzn::peers_list_t::const_iterator
+    choose_any_one_of(const bzn::peers_list_t& all_peers)
+    {
+        if (all_peers.size()>0)
+        {
+            std::uniform_int_distribution<> dis(1, all_peers.size());
+            auto it = all_peers.begin();
+            std::advance(it, dis(gen) - 1);
+            return it;
+        }
+        return all_peers.end();
+    }
 }
 
 
@@ -46,13 +62,15 @@ raft::raft(
         const bzn::peers_list_t& peers,
         bzn::uuid_t uuid,
         const std::string state_dir, size_t maximum_raft_storage,
-        bool enable_peer_validation
+        bool enable_peer_validation,
+        const std::string& signed_key
         )
         :timer(io_context->make_unique_steady_timer())
         ,uuid(std::move(uuid))
         ,node(std::move(node))
         ,state_dir(std::move(state_dir))
         ,enable_peer_validation(enable_peer_validation)
+        ,signed_key(signed_key)
 {
     // we must have a list of peers!
     if (peers.empty())
@@ -162,6 +180,14 @@ raft::start_heartbeat_timer()
 void
 raft::handle_election_timeout(const boost::system::error_code& ec)
 {
+    // A reason that we may be asking for an election is that we are not in the
+    // swarm so no one is sending us messages, if we haven't already, do a
+    // quick check.
+    if(!this->in_a_swarm)
+    {
+        this->auto_add_peer_if_required();
+    }
+
     if (ec)
     {
         LOG(debug) << "election timer was canceled: " << ec.message();
@@ -300,6 +326,14 @@ void
 raft::handle_ws_append_entries(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)
 {
     uint32_t term = msg["data"]["term"].asUInt();
+
+    // We've received an append entries from another node, we are in
+    // a swarm.
+    if(!this->in_a_swarm && (msg["data"]["from"].asString() != this->get_uuid()))
+    {
+        LOG(debug) << "RAFT - just received an append entries - auto add peer is unecessary";
+        this->in_a_swarm = true;
+    }
 
     if ((this->current_state == bzn::raft_state::candidate || this->current_state == bzn::raft_state::leader) &&
         this->current_term >= term)
@@ -543,6 +577,94 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
 
 
 void
+raft::handle_get_peers_response_from_follower_or_candidate(const bzn::json_message& msg)
+{
+    LOG(debug) << "RAFT - handling get_peers_response from a follower or candidate";
+    // one of the following must be true:
+    //  2) I'm the follower, here's the leader
+    //  3) I'm a candidate, there might be an election happening, try later
+    if (msg.isMember("message") && msg["message"].isMember("leader"))
+    {
+        LOG(debug) << "RAFT - recieved a get_peers response from a follower raft who knows the leader";
+        this->leader = msg["message"]["leader"]["uuid"].asString();
+        // Since the leader variable gets cleared with each timer expiration,
+        // we need to call auto_add_peer_if_required() immediately
+        // TODO RHN - pass the leader uuid as a parameter?
+        this->auto_add_peer_if_required();
+    }
+    else
+    {
+        LOG(debug) << "RAFT - recieved a get_peers_response from a follower, or a candidate who doesn't know the leader - must try again";
+    }
+    this->in_a_swarm = false;
+    return;
+}
+
+void
+raft::handle_get_peers_response_from_leader(const bzn::json_message& msg)
+{
+    LOG(debug) << "RAFT - the get_peers_response is from a leader RAFT";
+    //  1) I'm the leader, here are the peers
+    if (msg.isMember("message"))
+    {
+        if (msg.isMember("from"))
+        {
+            this->leader = msg["from"].asString();
+            LOG(debug) << "RAFT - setting the leader to [" << this->leader << "]";
+        }
+
+        if (msg["message"].isArray())
+        {
+            auto peer = std::find_if(msg["message"].begin(), msg["message"].end(), [&](const auto& p) { return p["uuid"].asString() == this->get_uuid(); });
+            if (peer == msg["message"].end())
+            {
+                LOG(debug) << "RAFT - I am not in the peers list, need to send add_peer request";
+                // we do not find ourselves in the leader's quorum!
+                // Time to add oursleves to the swarm!
+                this->add_self_to_swarm();
+                return;
+            }
+            LOG(debug) << "RAFT - I am already in the peers list, no further action required";
+            // if we get this far, then we know that we are in the
+            // leader's quorum and all is good, no need to do anything
+            // else, simply remember that we are in a swarm.
+            this->in_a_swarm = true;
+            return;
+        }
+        else
+        {
+            // we do not ever expect a non error response to get_peers to not have an array
+            // of peers.
+            // TODO: THROW maybe?
+            return;
+        }
+    }
+}
+
+
+void
+raft::handle_get_peers_response(const bzn::json_message& msg)
+{
+    LOG(debug) << "RAFT - recieved get_peers_response";
+    // This raft must have sent a get_peers request because it was
+    // trying to determine if it's in the swarm
+    // There are three options:
+    //  1) I'm the leader here are the peers
+    //  2) I'm the follower, here's the leader
+    //  3) I'm a candidate, there might be an election happening, try later
+    if (msg.isMember("error"))
+    {
+        handle_get_peers_response_from_follower_or_candidate(msg);
+        return;
+    }
+    else
+    {
+        this->handle_get_peers_response_from_leader(msg);
+    }
+}
+
+
+void
 raft::handle_ws_raft_messages(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)
 {
     this->shutdown_on_exceeded_max_storage();
@@ -552,6 +674,20 @@ raft::handle_ws_raft_messages(const bzn::json_message& msg, std::shared_ptr<bzn:
     // TODO: refactor add/remove peers to move the functionality into handlers
     if (msg["cmd"].asString()=="add_peer")
     {
+        // TODO RHN - change cmd for the add_peer response to add_peer_response
+        if (msg.isMember("response"))
+        {
+            if (msg["response"]["msg"].asString() == SUCCESS_PEER_ADDED_TO_SWARM)
+            {
+                // This is a response to an add peer request that this raft had
+                // initialized, this raft is now part of the swarm. Any other
+                // response would indicate that the add swarm failed
+                this->in_a_swarm = true;
+            }
+            // TODO RHN we need better responses from add_peer requests.
+            return;
+        }
+
         this->handle_add_peer(session, msg["data"]["peer"]);
         return;
     }
@@ -569,6 +705,11 @@ raft::handle_ws_raft_messages(const bzn::json_message& msg, std::shared_ptr<bzn:
     else if (msg["cmd"].asString() == "get_peers")
     {
         this->handle_get_peers(session);
+        return;
+    }
+    else if ( msg["cmd"].asString() == "get_peers_response")
+    {
+        this->handle_get_peers_response(msg);
         return;
     }
 
@@ -672,6 +813,7 @@ raft::handle_heartbeat_timeout(const boost::system::error_code& ec)
     this->request_append_entries();
     this->notify_leader_status();
 }
+
 
 void
 raft::notify_leader_status()
@@ -952,16 +1094,6 @@ raft::entries_log_path()
 }
 
 
-std::string
-raft::state_path()
-{
-    // Refactored as the original version was resulting in double '/' occurring
-    boost::filesystem::path out{this->state_dir};
-    out.append(this->get_uuid() + ".state");
-    return out.string();
-}
-
-
 void
 raft::perform_commit(uint32_t& commit_index, const bzn::log_entry& log_entry)
 {
@@ -1230,6 +1362,7 @@ raft::shutdown_on_exceeded_max_storage(bool do_throw)
     }
 }
 
+
 void
 raft::set_audit_enabled(bool val)
 {
@@ -1249,10 +1382,14 @@ raft::to_peer_message(const peer_address_t& address)
     return bzn;
 }
 
+
 void
 raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
 {
     bzn::json_message msg;
+    msg["bzn-api"] = "raft";
+    msg["cmd"] = "get_peers_response";
+    msg["from"] = this->get_uuid();
 
     switch (this->current_state)
     {
@@ -1277,3 +1414,102 @@ raft::handle_get_peers(std::shared_ptr<bzn::session_base> session)
     }
     session->send_message(std::make_shared<bzn::json_message>(msg), false);
 }
+
+
+bzn::peers_list_t
+remove_peer_from_peers_list(const bzn::peers_list_t& all_peers, const bzn::uuid_t& uuid_of_peer_to_remove)
+{
+    bzn::peers_list_t other_peers;
+    for(auto& p : all_peers) // TODO: I'd like to try std::copy_if
+    {
+        if (p.uuid != uuid_of_peer_to_remove)
+        {
+            other_peers.emplace(p);
+        }
+    }
+    return other_peers;
+}
+
+
+void
+raft::auto_add_peer_if_required()
+{
+    LOG(debug) << "RAFT - may not be in a swarm - finding out";
+    // NOTE: if this node is the leader, we don't need to do this test, however, we do this test during startup so
+    // there is no way that the node could be a leader...
+    // We try any peer that is not ourself, it may come back and say  "i'm not the leader, but try this url",
+    // and that would be great, we know the leader so we ask that node for peers in the swarm, hopefully, the leader
+    // gives us the list.
+    // Or, it may come back and say, there is an election in progress. That's OK, we're just till in limbo.
+
+    // Not that we can't trust our get_all_peers, because we are not the leader, and we may not be in the
+    // "official" quorum yet, so we seek out the leader and ask.
+
+    // This may be the second time we've been here, if so that means that we've obtained the
+    // uuid of the leader, let's try that
+
+    auto choose_leader=[&]()
+            {
+                // we don'know who the leader is so we should try someone else
+                auto other_peers = remove_peer_from_peers_list(this->get_all_peers(), this->get_uuid());
+                if (other_peers.empty())
+                {
+                    throw std::runtime_error(ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER);
+                }
+                return *choose_any_one_of(other_peers);
+            };
+
+    bzn::peer_address_t leader{((this->get_leader_unsafe().uuid.empty() && this->get_leader_unsafe().host.empty()) ?  choose_leader() : this->get_leader_unsafe())};
+
+    auto end_point = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(leader.host), leader.port};
+    bzn::json_message msg;
+    msg["bzn-api"] = "raft";
+    msg["cmd"] = "get_peers";
+    LOG(debug) << "RAFT - sending get_peers to [" << end_point.address().to_string() << ":" << end_point.port() << "]";
+    this->node->send_message(end_point, std::make_shared<bzn::json_message>(msg));
+}
+
+
+bzn::json_message
+make_add_peer_request(const bzn::peer_address_t& new_peer)
+{
+    bzn::json_message  msg;
+    msg["bzn-api"] = "raft";
+    msg["cmd"] = "add_peer";
+    msg["data"]["peer"]["name"] = new_peer.name;
+    msg["data"]["peer"]["host"] = new_peer.host;
+    msg["data"]["peer"]["port"] = new_peer.port;
+    msg["data"]["peer"]["http_port"] = new_peer.http_port;
+    msg["data"]["peer"]["uuid"] = new_peer.uuid;
+    return msg;
+}
+
+
+bzn::json_message
+make_secure_add_peer_request(const bzn::peer_address_t& new_peer, const std::string& signed_key)
+{
+    bzn::json_message  msg{make_add_peer_request(new_peer)};
+    msg["data"]["peer"]["signature"] = signed_key;
+    return msg;
+}
+
+
+void
+raft::add_self_to_swarm()
+{
+    const auto all_peers = this->get_all_peers();
+    const auto this_address = std::find_if(all_peers.begin(), all_peers.end(),
+            [&](const auto& peer){return peer.uuid == this->get_uuid();});
+
+    bzn::json_message request{make_secure_add_peer_request(*this_address, this->signed_key)};
+
+    bzn::peer_address_t leader{this->get_leader_unsafe()};
+    auto end_point = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(leader.host), leader.port};
+
+    LOG(debug) << "RAFT sending add_peer command to the leader:\n" << request.toStyledString();
+
+
+
+    this->node->send_message(end_point, std::make_shared<bzn::json_message>(request));
+}
+

@@ -174,11 +174,19 @@ namespace bzn
           * @return port
           */
          virtual uint16_t get_http_port() const = 0;
+
          
          /**
           * Temporary toggle for the peer validation while in QA. Defaults to false.
           * @return boolean if the peer_validation member is set to true. Default is false.
           */
          virtual bool peer_validation_enabled() const = 0;
+
+
+        /**
+         * Signature for uuid signing verification
+         * @return string containing the signature
+         */
+        virtual std::string get_signed_key() const = 0;
     };
 } // bzn

@@ -69,6 +69,8 @@ namespace bzn
         
         bool peer_validation_enabled() const override;
 
+        std::string get_signed_key() const override;
+
     private:
         size_t parse_size(const std::string& key) const;
 

@@ -42,6 +42,7 @@ namespace
     const std::string ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER{"ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER"};
     const std::string ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER{"ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER"};
     const std::string ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE{"ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE"};
+    const std::string ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER{"ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER"};
 }
 
 
@@ -57,7 +58,8 @@ namespace bzn
                 bzn::uuid_t uuid,
                 const std::string state_dir,
                 size_t maximum_raft_storage = bzn::DEFAULT_MAX_STORAGE_SIZE,
-                bool enable_peer_validation = false);
+                bool enable_peer_validation = false,
+                const std::string& signed_key = "");
 
         bzn::raft_state get_state() override;
 
@@ -112,6 +114,12 @@ namespace bzn
         FRIEND_TEST(raft_test, test_that_sending_get_peers_to_follower_fails_and_provides_leader_url);
         FRIEND_TEST(raft_test, test_that_sending_get_peers_to_leader_responds_with_quorum);
         FRIEND_TEST(raft_test, test_that_sending_get_peers_to_candidate_fails);
+        FRIEND_TEST(raft_peers_test, test_that_raft_doesn_t_attempt_auto_add_if_already_in_quorum);
+        FRIEND_TEST(raft_peers_test, test_that_raft_calls_a_follower_who_knows_the_leader_raft_is_already_in_swarm);
+        FRIEND_TEST(raft_peers_test, test_that_raft_that_is_not_in_a_swarm_will_add_itself);
+        FRIEND_TEST(raft_peers_test, test_that_raft_tries_again_when_encountering_a_candidate);
+        FRIEND_TEST(raft_test, test_that_non_leaders_cannot_add_peers);
+        FRIEND_TEST(raft_test, test_that_non_leaders_cannot_remove_peers);
 
         bzn::peer_address_t get_leader_unsafe();
 
@@ -145,8 +153,6 @@ namespace bzn
 
         std::string entries_log_path();
 
-        std::string state_path();
-
         void import_state_files();
         void create_dat_file(const std::string& log_path, const bzn::peers_list_t& peers);
 
@@ -173,6 +179,13 @@ namespace bzn
         bool validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message &peer);
 
         bzn::json_message to_peer_message(const peer_address_t& address);
+
+        void auto_add_peer_if_required();
+        void add_self_to_swarm();
+
+        void handle_get_peers_response_from_leader(const bzn::json_message& msg);
+        void handle_get_peers_response_from_follower_or_candidate(const bzn::json_message& msg);
+        void handle_get_peers_response(const bzn::json_message& msg);
 
         // raft state...
         bzn::raft_state current_state = raft_state::follower;
@@ -208,5 +221,8 @@ namespace bzn
         bool enable_audit = true;
 
         bool enable_peer_validation{false}; // TODO: RHN - this is only temporary, until the security functionality is tested and in use.
+        std::string signed_key;
+
+        bool in_a_swarm = false;
     };
 } // bzn

@@ -44,6 +44,7 @@ namespace
         "  \"logfile_rotation_size\" : \"2M\","
         "  \"logfile_dir\" : \".\","
         "  \"http_port\" : 80,"
+        "  \"signed_key\" : \"Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=\","
         "  \"mem_storage\" : false";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
@@ -149,6 +150,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ(uint16_t(80), options.get_http_port());
     EXPECT_FALSE(options.peer_validation_enabled());
     EXPECT_FALSE(options.get_mem_storage());
+    EXPECT_EQ("Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=",options.get_signed_key());
 
     // defaults..
     {
