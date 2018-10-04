@@ -19,7 +19,6 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <utils/blacklist.hpp>
 #include <utils/crypto.hpp>
-#include <utils/container.hpp>
 
 using namespace::testing;
 
@@ -328,44 +327,4 @@ TEST(util_test, test_that_verifying_asignature_with_empty_inputs_will_fail_grace
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( "", signature, valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, "", valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, ""));
-}
-
-
-TEST(util_test, test_that_choose_any_one_of_chooses_one_of_a_set)
-{
-    const bzn::uuid_t LEADER_NODE_UUID  {"fb300a30-49fd-4230-8044-0e3069948e42"};
-    const bzn::uuid_t TEST_NODE_UUID    {"f0645cc2-476b-485d-b589-217be3ca87d5"};
-    const bzn::uuid_t FOLLOWER_NODE_UUID{"8993098f-e32e-4b6f-9db9-c770c9bc2509"};
-    const bzn::peers_list_t TEST_LIST { // using http_port as an index.
-        {"127.0.0.1", 8081, 0, "leader",   LEADER_NODE_UUID},
-        {"127.0.0.2", 8082, 1, "follower", FOLLOWER_NODE_UUID},
-        {"127.0.0.3", 8083, 2, "sut",      TEST_NODE_UUID},
-        {"127.0.0.4", 8084, 3, "sut0",     TEST_NODE_UUID},
-        {"127.0.0.5", 8085, 4, "sut1",     TEST_NODE_UUID},
-        {"127.0.0.6", 8086, 5, "sut2",     TEST_NODE_UUID},
-        {"127.0.0.7", 8087, 6, "sut3",     TEST_NODE_UUID},
-        {"127.0.0.8", 8088, 7, "sut4",     TEST_NODE_UUID}};
-
-    // How do you test a function that uses random?? Well I just want to 
-    // make sure that every element in the array gets chosen at some point, 
-    // and that the function is unlikely to fail.
-    std::array<bool, 8> histogram{false};
-    size_t count{0};
-    while( static_cast<size_t>(std::count_if(histogram.begin(), histogram.end(), [](bool i){return i;})) < TEST_LIST.size())
-    {
-        auto peer = bzn::utils::container::choose_any_one_of(TEST_LIST);
-        EXPECT_TRUE(peer != TEST_LIST.end());
-        EXPECT_TRUE( TEST_LIST.end() != std::find_if( TEST_LIST.begin(), TEST_LIST.end(), [peer](bzn::peer_address_t addr){ return addr.port == peer->port; }));
-        histogram[peer->http_port] = true;
-        EXPECT_TRUE(10000 > ++count);
-    }
-    // this is redundant, I know.
-    EXPECT_EQ(8, std::count_if(histogram.begin(), histogram.end(), [](bool i){return i;}));
-}
-
-
-TEST(util_test, test_that_choose_any_one_of_behaves_when_given_bad_input)
-{
-    const bzn::peers_list_t TEST_LIST {};
-    EXPECT_EQ(bzn::utils::container::choose_any_one_of(TEST_LIST), TEST_LIST.end());
 }

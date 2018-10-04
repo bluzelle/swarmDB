@@ -21,7 +21,6 @@
 #include <proto/bluzelle.pb.h>
 #include <utils/crypto.hpp>
 #include <utils/blacklist.hpp>
-#include <utils/container.hpp>
 
 namespace
 {
@@ -35,6 +34,22 @@ namespace
     const std::chrono::milliseconds  DEFAULT_ELECTION_TIMER_LEN{std::chrono::milliseconds(1250)};
 
     const std::string RAFT_TIMEOUT_SCALE = "RAFT_TIMEOUT_SCALE";
+
+    std::mt19937 gen(std::time(0)); //Standard mersenne_twister_engine seeded with rd()
+
+    // TODO: RHN - this should be templatized
+    bzn::peers_list_t::const_iterator
+    choose_any_one_of(const bzn::peers_list_t& all_peers)
+    {
+        if (all_peers.size()>0)
+        {
+            std::uniform_int_distribution<> dis(1, all_peers.size());
+            auto it = all_peers.begin();
+            std::advance(it, dis(gen) - 1);
+            return it;
+        }
+        return all_peers.end();
+    }
 }
 
 
@@ -1441,7 +1456,7 @@ raft::auto_add_peer_if_required()
                 {
                     throw std::runtime_error(ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER);
                 }
-                return *bzn::utils::container::choose_any_one_of(other_peers);
+                return *choose_any_one_of(other_peers);
             };
 
     bzn::peer_address_t leader{((this->get_leader_unsafe().uuid.empty() && this->get_leader_unsafe().host.empty()) ?  choose_leader() : this->get_leader_unsafe())};
