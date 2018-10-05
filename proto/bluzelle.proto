@@ -37,7 +37,7 @@ enum bzn_msg_type
 message wrapped_bzn_msg
 {
     // This is stored as a serialized string because we need to sign it, and serialization is not guarenteed to be deterministic
-    string payload = 1;
+    bytes payload = 1;
     bzn_msg_type type = 2;
 
     //TODO: string sender

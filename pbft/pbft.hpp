@@ -15,11 +15,13 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <pbft/pbft_base.hpp>
-#include <pbft/pbft_service_base.hpp>
-#include <mutex>
-#include <pbft/pbft_failure_detector.hpp>
 #include <include/boost_asio_beast.hpp>
+#include <pbft/pbft_base.hpp>
+#include <pbft/pbft_failure_detector.hpp>
+#include <pbft/pbft_service_base.hpp>
+#include <status/status_provider_base.hpp>
+#include <mutex>
+
 
 namespace
 {
@@ -35,7 +37,7 @@ namespace bzn
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
 
-    class pbft final : public bzn::pbft_base, public std::enable_shared_from_this<pbft>
+    class pbft final : public bzn::pbft_base, public bzn::status_provider_base, public std::enable_shared_from_this<pbft>
     {
     public:
         pbft(
@@ -64,11 +66,17 @@ namespace bzn
         void set_audit_enabled(bool setting);
 
         checkpoint_t latest_stable_checkpoint() const;
+
         checkpoint_t latest_checkpoint() const;
+
         size_t unstable_checkpoints_count() const;
 
         uint64_t get_low_water_mark();
         uint64_t get_high_water_mark();
+
+        std::string get_name() override;
+
+        bzn::json_message get_status() override;
 
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);

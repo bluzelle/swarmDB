@@ -63,8 +63,8 @@ namespace
                             [&](auto handler){this->request_timer_callback = handler;}
                     ));
 
-            req_a.set_operation("do something");
-            req_b.set_operation("do something else");
+            //req_a.set_operation("do something");
+            //req_b.set_operation("do something else");
 
             req_a.set_client("alice");
             req_b.set_client("bob");

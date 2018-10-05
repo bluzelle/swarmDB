@@ -127,7 +127,7 @@ namespace bzn::test
         pbft_msg preprepared(this->preprepare_msg);
 
         preprepareb.mutable_request()->set_timestamp(99);
-        prepreparec.mutable_request()->set_operation("something else");
+        prepreparec.mutable_request()->mutable_operation();
         preprepared.mutable_request()->set_client("certainly not bob");
 
         this->pbft->handle_message(prepreparea);
