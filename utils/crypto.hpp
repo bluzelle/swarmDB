@@ -31,15 +31,12 @@ namespace bzn::utils::crypto
      */
     int base64_decode(const std::string& base64_message, std::vector<unsigned char>& decoded_message);
 
-
     /**
      * Retrieves the Bluzelle public key from the Etherium blockchain via a call
      * to a contract
      * @return a string containing the base64 Encoded Bluzelle public key
      */
-    std::string
-    retrieve_bluzelle_public_key_from_contract();
-
+    std::string retrieve_bluzelle_public_key_from_contract();
 
     /**
      * verify_signature is a C++ wrapper for the C style OpenSSL signature
