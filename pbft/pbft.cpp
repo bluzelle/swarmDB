@@ -722,8 +722,8 @@ pbft::get_status()
 
     status["latest_stable_checkpoint"]["sequence_number"] = this->latest_stable_checkpoint().first;
     status["latest_stable_checkpoint"]["hash"] = this->latest_stable_checkpoint().second;
-    status["latest_checkpoint"]["count"] = this->latest_checkpoint().first;
-    status["latest_checkpoint"]["hash"] = this->latest_checkpoint().first;
+    status["latest_checkpoint"]["sequence_number"] = this->latest_checkpoint().first;
+    status["latest_checkpoint"]["hash"] = this->latest_checkpoint().second;
 
     status["unstable_checkpoints_count"] = uint64_t(this->unstable_checkpoints_count());
     status["next_issued_sequence_number"] = this->next_issued_sequence_number;
