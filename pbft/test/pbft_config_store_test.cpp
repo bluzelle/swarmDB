@@ -94,14 +94,24 @@ namespace {
             EXPECT_NE(this->store.get(h), nullptr);
         }
 
+        // set first config current
+        this->store.set_current(hashes.front());
+
         auto config = std::make_shared<bzn::pbft_configuration>();
         EXPECT_TRUE(this->store.add(config));
         EXPECT_TRUE(this->store.remove_prior_to(config->get_hash()));
 
-        // all other configs should be gone except the last one
+        // all other configs should be gone except the first one
         for (auto const& h : hashes)
         {
-            EXPECT_EQ(this->store.get(h), nullptr);
+            if (h == hashes.front())
+            {
+                EXPECT_NE(this->store.get(h), nullptr);
+            }
+            else
+            {
+                EXPECT_EQ(this->store.get(h), nullptr);
+            }
         }
         EXPECT_NE(this->store.get(config->get_hash()), nullptr);
     }

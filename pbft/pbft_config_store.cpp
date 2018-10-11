@@ -58,7 +58,18 @@ pbft_config_store::remove_prior_to(const hash_t& hash)
         return false;
     }
 
-    this->configs.erase(this->configs.begin(), config);
+    // erase any earlier config that isn't the current one
+    for (auto it = this->configs.begin(); it != config; )
+    {
+        if (it->first != this->current_index)
+        {
+            it = this->configs.erase(it);
+        }
+        else
+        {
+            it++;
+        }
+    }
     return true;
 }
 

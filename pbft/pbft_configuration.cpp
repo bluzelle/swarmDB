@@ -40,8 +40,16 @@ pbft_configuration::operator!=(const pbft_configuration& other) const
 }
 
 bool
-pbft_configuration::from_json(const bzn::json_message& json)
+pbft_configuration::from_string(const std::string& str)
 {
+    Json::Value json;
+    Json::Reader reader;
+    if (!reader.parse(str, json))
+    {
+        LOG(error) << "Unable to parse configuration: " << str.substr(0, MAX_MESSAGE_SIZE) << "...";
+        return false;
+    }
+
     if (!json.isMember("peers") || !json["peers"].isArray())
     {
         LOG(error) << "Invalid configuration: " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
@@ -71,8 +79,8 @@ pbft_configuration::from_json(const bzn::json_message& json)
     return result;
 }
 
-bzn::json_message
-pbft_configuration::to_json() const
+std::string
+pbft_configuration::to_string() const
 {
     bzn::json_message json;
     json["peers"] = bzn::json_message();
@@ -88,7 +96,7 @@ pbft_configuration::to_json() const
         json["peers"].append(peer);
     }
 
-    return json;
+    return json.toStyledString();
 }
 
 hash_t
@@ -96,7 +104,7 @@ pbft_configuration::create_hash() const
 {
     // TODO: better hash function
 
-    return std::to_string(std::hash<std::string>{}(this->to_json().toStyledString()));
+    return std::to_string(std::hash<std::string>{}(this->to_string()));
 }
 
 hash_t
@@ -215,4 +223,32 @@ pbft_configuration::valid_peer(const bzn::peer_address_t &peer) const
     // TODO: validate host address?
 
     return true;
+}
+
+std::pair<std::shared_ptr<std::vector<bzn::peer_address_t>>, std::shared_ptr<std::vector<bzn::peer_address_t>>>
+pbft_configuration::diff(const pbft_configuration& other) const
+{
+    auto added = std::make_shared<std::vector<bzn::peer_address_t>>();
+    auto removed = std::make_shared<std::vector<bzn::peer_address_t>>();
+
+    auto const& mine = this->peers;
+    auto const& theirs = other.peers;
+
+    for (auto& p : mine)
+    {
+        if (theirs.find(p) == theirs.end())
+        {
+            removed->push_back(p);
+        }
+    }
+
+    for (auto& p : theirs)
+    {
+        if (mine.find(p) == mine.end())
+        {
+            added->push_back(p);
+        }
+    }
+
+    return std::make_pair(added, removed);
 }

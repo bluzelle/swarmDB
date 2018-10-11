@@ -34,11 +34,11 @@ namespace bzn
         bool operator==(const pbft_configuration& other) const;
         bool operator!=(const pbft_configuration& other) const;
 
-        // de-serialize from json - returns true for success
-        bool from_json(const bzn::json_message& json);
+        // de-serialize from string - returns true for success
+        bool from_string(const std::string& str);
 
-        // serialize to json
-        bzn::json_message to_json() const;
+        // serialize to string
+        std::string to_string() const;
 
         // returns the hash of this configuration
         hash_t get_hash() const;
@@ -51,6 +51,11 @@ namespace bzn
 
         // removes an existing peer - returns true if found and removed
         bool remove_peer(const bzn::peer_address_t& peer);
+
+        // computes differences between this config and another
+        // returns pair of vectors of added and removed peers
+        std::pair<std::shared_ptr<std::vector<bzn::peer_address_t>>, std::shared_ptr<std::vector<bzn::peer_address_t>>>
+            diff(const pbft_configuration& other) const;
 
     private:
         void cache_sorted_peers();

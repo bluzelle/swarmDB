@@ -62,6 +62,9 @@ pbft::start()
                 this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT,
                         std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
+                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP,
+                    std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+
                 this->node->register_for_message("database",
                         std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
@@ -135,7 +138,6 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
     }
 
     pbft_msg inner_msg;
-
     if (!inner_msg.ParseFromString(msg.payload()))
     {
         LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
@@ -143,6 +145,36 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
     }
 
     this->handle_message(inner_msg, msg);
+}
+
+void
+pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+{
+    if (msg.type() != BZN_MSG_PBFT_MEMBERSHIP)
+    {
+        LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
+    }
+
+    pbft_membership_msg inner_msg;
+    if (!inner_msg.ParseFromString(msg.payload()))
+    {
+        LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
+        return;
+    }
+
+    if (inner_msg.has_peer_info())
+    {
+        switch (inner_msg.type())
+        {
+            case PBFT_MMSG_JOIN:
+            case PBFT_MMSG_LEAVE:
+                this->handle_join_or_leave(inner_msg);
+                break;
+            default:
+                LOG(error) << "Invalid membership message received "
+                    << inner_msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
+        }
+    }
 }
 
 void
@@ -210,6 +242,20 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
     return true;
 }
 
+std::shared_ptr<pbft_operation>
+pbft::setup_request_operation(const pbft_request& msg, const std::shared_ptr<session_base>& session)
+{
+    const uint64_t request_seq = this->next_issued_sequence_number++;
+    auto op = this->find_operation(this->view, request_seq, msg);
+
+    if (session)
+    {
+        op->set_session(session);
+    }
+
+    return op;
+}
+
 void
 pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
 {
@@ -224,21 +270,13 @@ pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
-    const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, msg);
-
-    if (session)
-    {
-        op->set_session(session);
-    }
-
+    auto op = setup_request_operation(msg, session);
     this->do_preprepare(op);
 }
 
 void
 pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
-
     // If we've already accepted a preprepare for this view+sequence, and it's not this one, then we should reject this one
     // Note that if we get the same preprepare more than once, we can still accept it
     const log_key_t log_key(msg.view(), msg.sequence());
@@ -259,6 +297,11 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
         accepted_preprepares[log_key] = op->get_operation_key();
 
+        if (msg.has_request() && msg.request().type() == PBFT_REQ_NEW_CONFIG)
+        {
+            this->handle_config_message(msg, op);
+        }
+
         this->do_preprepared(op);
         this->maybe_advance_operation_state(op);
     }
@@ -267,7 +310,6 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 void
 pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
-
     // Prepare messages are never rejected, assuming the sanity checks passed
     auto op = this->find_operation(msg);
 
@@ -278,12 +320,58 @@ pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 void
 pbft::handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
-
     // Commit messages are never rejected, assuming  the sanity checks passed
     auto op = this->find_operation(msg);
 
     op->record_commit(original_msg);
     this->maybe_advance_operation_state(op);
+}
+
+void
+pbft::handle_join_or_leave(const pbft_membership_msg& msg)
+{
+    if (!this->is_primary())
+    {
+        LOG(error) << "Ignoring client request because I am not the primary";
+        // TODO - KEP-327
+        return;
+    }
+
+    if (msg.has_peer_info())
+    {
+        // build a peer_address_t from the message
+        auto const &peer_info = msg.peer_info();
+        bzn::peer_address_t peer(peer_info.host(), static_cast<uint16_t>(peer_info.port()),
+            static_cast<uint16_t>(peer_info.http_port()), peer_info.name(), peer_info.uuid());
+
+        auto config = std::make_shared<pbft_configuration>(*(this->configurations.current()));
+        if (msg.type() == PBFT_MMSG_JOIN)
+        {
+            // see if we can add this peer
+            if (!config->add_peer(peer))
+            {
+                // TODO - respond with negative result?
+                LOG(debug) << "Can't add new peer due to conflict";
+                return;
+            }
+        }
+        else if (msg.type() == PBFT_MMSG_LEAVE)
+        {
+            if (!config->remove_peer(peer))
+            {
+                // TODO - respond with negative result?
+                LOG(debug) << "Couldn't remove requested peer";
+                return;
+            }
+        }
+
+        this->configurations.add(config);
+        this->broadcast_new_configuration(config);
+    }
+    else
+    {
+        LOG(debug) << "Malformed join/leave message";
+    }
 }
 
 void
@@ -346,6 +434,16 @@ pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 void
 pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
+    // accept new configuration if applicable
+    if (op->request.type() == PBFT_REQ_NEW_CONFIG && op->request.has_config())
+    {
+        pbft_configuration config;
+        if (config.from_string(op->request.config().configuration()))
+        {
+            this->configurations.enable(config.get_hash());
+        }
+    }
+
     LOG(debug) << "Entering commit phase for operation " << op->debug_string();
     op->begin_commit_phase();
 
@@ -357,6 +455,17 @@ pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 void
 pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
+    // commit new configuration if applicable
+    if (op->request.type() == PBFT_REQ_NEW_CONFIG && op->request.has_config())
+    {
+        pbft_configuration config;
+        if (config.from_string(op->request.config().configuration()))
+        {
+            // get rid of all other previous configs, except for currently active one
+            this->configurations.remove_prior_to(config.get_hash());
+        }
+    }
+
     LOG(debug) << "Operation " << op->debug_string() << " is committed-local";
     op->end_commit_phase();
 
@@ -756,4 +865,59 @@ const std::vector<bzn::peer_address_t>&
 pbft::current_peers() const
 {
     return *(this->current_peers_ptr());
+}
+
+void
+pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
+{
+    pbft_request req;
+    req.set_type(PBFT_REQ_NEW_CONFIG);
+    auto cfg_msg = new pbft_config_msg;
+    cfg_msg->set_configuration(config->to_string());
+    req.set_allocated_config(cfg_msg);
+
+    auto op  = this->setup_request_operation(req);
+    this->do_preprepare(op);
+}
+
+bool
+pbft::is_configuration_acceptable_in_new_view(hash_t config_hash)
+{
+    return this->configurations.is_enabled(config_hash);
+}
+
+void
+pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
+{
+    auto const& request = op->request;
+    assert(request.type() == PBFT_REQ_NEW_CONFIG);
+    auto config = std::make_shared<pbft_configuration>();
+    if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(request.config().configuration()))
+    {
+        if (this->proposed_config_is_acceptable(config))
+        {
+            // store this configuration
+            this->configurations.add(config);
+        }
+    }
+}
+
+bool
+pbft::move_to_new_configuration(hash_t config_hash)
+{
+    if (this->configurations.is_enabled(config_hash))
+    {
+        this->configurations.set_current(config_hash);
+        this->configurations.remove_prior_to(config_hash);
+        return true;
+    }
+
+    return false;
+}
+
+bool
+pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config)
+{
+    (void) config;
+    return true;
 }

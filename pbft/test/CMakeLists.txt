@@ -7,6 +7,7 @@ set(test_srcs
     pbft_checkpoint_tests.cpp
     pbft_configuration_test.cpp
     pbft_config_store_test.cpp
+    pbft_join_leave_test.cpp
     database_pbft_service_test.cpp)
 set(test_libs pbft ${Protobuf_LIBRARIES} bootstrap storage)
 
