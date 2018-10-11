@@ -65,7 +65,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
         ws.send_binary(msg_outer.SerializeToString())
         return
     else:
-        print("Sending: \n{}".format(msg).expandtabs(4))
+        print("Sending: \n{}".format(msg))
         ws.send(json.dumps(req))
 
     print("-" * 60 + '\n')
@@ -75,10 +75,10 @@ def send_request(node, uuid, msg, loop=False, ws=None):
 
     if resp.WhichOneof('response') == 'redirect':
         redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
-        print("redirecting to leader at {}...\n".format(redirect_node).expandtabs(4))
+        print("redirecting to leader at {}...\n".format(redirect_node))
         resp = send_request(redirect_node, uuid, msg)
     else:
-        print("Response: \n{}".format(resp).expandtabs(4))
+        print("Response: \n{}".format(resp))
         print("-" * 60 + '\n')
 
     if loop:
@@ -87,7 +87,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
                 print("Waiting....\n")
                 resp = database_pb2.database_response()
                 resp.ParseFromString(ws.recv())
-                print("Response: \n{}".format(resp).expandtabs(4))
+                print("Response: \n{}".format(resp))
                 print("-" * 60 + '\n')
             except KeyboardInterrupt:
                 break
@@ -105,13 +105,13 @@ def send_status_request(node):
     req["bzn-api"] = "status"
     req["transaction_id"] = random.randint(1,sys.maxint);
 
-    print("Sending : \n" + json.dumps(req, indent=4))
+    print("Sending : \n" + json.dumps(req,indent=4))
     print("-" * 60 + '\n')
 
     ws.send(json.dumps(req))
     resp = ws.recv()
 
-    print("Response: \n{}".format(resp).expandtabs(4))
+    print("Response: \n{}".format(resp))
     print("-" * 60 + '\n')
 
     ws.close()

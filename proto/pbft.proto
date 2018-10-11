@@ -51,6 +51,21 @@ enum pbft_msg_type
     PBFT_MSG_CHECKPOINT = 5;
 }
 
+message pbft_request
+{
+    string operation = 1;
+    uint64 timestamp = 2;
+    string client = 3;
+    pbft_request_type type = 1;
+    oneof msg
+    {
+        database_msg operation = 2;
+        pbft_config_msg config = 3;
+    }
+    uint64 timestamp = 4;
+    string client = 5;
+}
+
 enum pbft_request_type
 {
     PBFT_REQ_UNDEFINED = 0;

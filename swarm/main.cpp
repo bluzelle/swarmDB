@@ -227,7 +227,6 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, options->get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size(), options->pbft_enabled());
-        std::shared_ptr<bzn::status> status;
 
         node->start();
         chaos->start();
@@ -245,17 +244,19 @@ main(int argc, const char* argv[])
             auto unstable_storage = std::make_shared<bzn::mem_storage>();
             auto stable_storage = std::make_shared<bzn::mem_storage>();
             auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
-
-            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid(),
-                std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid()), failure_detector, crypto);
-
+            auto pbft = std::make_shared<bzn::pbft>(
+                    node
+                    , io_context, peers.get_peers()
+                    , options->get_uuid()
+                    , std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
+                    , failure_detector
+            );
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
             status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft}, true);
 
             crud->start();
             pbft->start();
-            status->start();
         }
         else
         {
@@ -284,7 +285,7 @@ main(int argc, const char* argv[])
 
             auto crud = std::make_shared<bzn::raft_crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
-            status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft}, false);
+            auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft}, false);
 
             raft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 

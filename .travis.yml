@@ -42,6 +42,7 @@ matrix:
       osx_image: xcode10
       env:
         - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4"
+        - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Darwin-x86_64.tar.gz"
         - CMAKE_COMMAND="cmake"
 
 cache:
