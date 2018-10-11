@@ -151,6 +151,7 @@ The configuration file is a JSON format file, as seen in the following example:
         "logfile_max_size" : "640K",
         "debug_logging" : false,
         "peer_validation_enabled" : false 
+        "signed_key": "LjMrLq8pw3 <...> +QbThXaQ="
     }
 
 where the properties are:
@@ -169,6 +170,7 @@ where the properties are:
 - "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
 - "peer_validation_enabled" - set this to true to enable blacklisting and uuid signature verification
+- "signed_key" - a key generated from the node's UUID and the Bluzelle private key. If peer_validation_enabled is set to true, the node owner must provide the node's uuid to a Bluzelle representative who will generate the signed_key. The key must be added to the config file as a single line of text with no carriage returns or line feeds.
 
 All size entries use the same notation as storage: B, K, M, G & T or none
 (bytes)
@@ -597,6 +599,21 @@ resp {
 Waiting....
 ```
 #### Adding or Removing A Peer
+
+Please note that RAFT nodes automatically add themselves to a RAFT swarm on 
+start up. 
+
+The node will first attempt to determine if it is a member of the swarm described 
+in the bootstrap file, and if it finds that it is not, it will automatically send 
+the add_peer request to the leader.
+
+If the RAFT node has peer_validation_enabled set to true, a valid signed_key for the 
+node must be set in the configuration file:
+
+        "peer_validation_enabled" : false 
+        "signed_key": "LjMrLq8pw3 <...> +QbThXaQ="
+        
+the signed key can be obtaied from a Bluzelle representative.  
 
 ```text
 Nodes are added to, or removed from, the network with the add_peer and
