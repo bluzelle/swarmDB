@@ -15,6 +15,7 @@
 #include <crypto/crypto.hpp>
 #include <openssl/pem.h>
 #include <openssl/err.h>
+#include <openssl/crypto.h>
 
 using namespace bzn;
 
@@ -32,6 +33,7 @@ crypto::crypto(std::shared_ptr<bzn::options_base> options)
 void
 crypto::start()
 {
+    LOG(info) << "Using " << SSLeay_version(SSLEAY_VERSION);
     if(this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
     {
         this->load_private_key();
@@ -45,6 +47,11 @@ crypto::verify(const wrapped_bzn_msg& msg)
     EC_KEY* pubkey = NULL;
     EVP_PKEY* key = NULL;
     EVP_MD_CTX* context = NULL;
+
+    // In openssl 1.0.1 (but not newer versions), EVP_DigestVerifyFinal strangely expects the signature as
+    // a non-const pointer.
+    std::string signature = msg.signature();
+    char* sig_ptr = signature.data();
 
     // This is admittedly a weird structure, but it seems the cleanest way to deal with the combined manual
     // memory management and error handling
@@ -63,12 +70,12 @@ crypto::verify(const wrapped_bzn_msg& msg)
             && (1 == EVP_PKEY_set1_EC_KEY(key, pubkey))
 
             // Perform the signature validation
-            && (context = EVP_MD_CTX_new())
+            && (context = EVP_MD_CTX_create())
             && (1 == EVP_DigestVerifyInit(context, NULL, EVP_sha512(), NULL, key))
             && (1 == EVP_DigestVerifyUpdate(context, msg.payload().c_str(), msg.payload().length()))
-            && (1 == EVP_DigestVerifyFinal(context, reinterpret_cast<const unsigned char*>(msg.signature().c_str()), msg.signature().length()));
+            && (1 == EVP_DigestVerifyFinal(context, reinterpret_cast<unsigned char*>(sig_ptr), msg.signature().length()));
 
-    if (context) EVP_MD_CTX_free(context);
+    if (context) EVP_MD_CTX_destroy(context);
     if (pubkey) OPENSSL_free(pubkey);
     if (key) OPENSSL_free(key);
     if (bio) OPENSSL_free(bio);
@@ -101,7 +108,7 @@ crypto::sign(wrapped_bzn_msg& msg)
     unsigned char* signature = NULL;
 
     bool result =
-            (bool) (context = EVP_MD_CTX_new())
+            (bool) (context = EVP_MD_CTX_create())
             && (1 == EVP_DigestSignInit(context, NULL, EVP_sha512(), NULL, this->private_key_EVP))
             && (1 == EVP_DigestSignUpdate(context, msg.payload().c_str(), msg.payload().size()))
             && (1 == EVP_DigestSignFinal(context, NULL, &signature_length))
@@ -118,7 +125,7 @@ crypto::sign(wrapped_bzn_msg& msg)
         // Message will be sent without signature; depending on settings they may still accept it
     }
 
-    if (context) EVP_MD_CTX_free(context);
+    if (context) EVP_MD_CTX_destroy(context);
     if (signature) OPENSSL_free(signature);
     this->log_openssl_errors();
 

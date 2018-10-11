@@ -19,6 +19,7 @@
 #include <options/options_base.hpp>
 #include <proto/bluzelle.pb.h>
 #include <openssl/evp.h>
+#include <openssl/ec.h>
 
 namespace bzn
 {

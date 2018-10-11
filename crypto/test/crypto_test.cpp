@@ -81,18 +81,32 @@ TEST_F(crypto_test, messages_use_my_public_key)
 TEST_F(crypto_test, messages_signed_and_verified)
 {
     crypto->start();
-    EXPECT_TRUE(crypto->sign(msg));
+    wrapped_bzn_msg msg2 = msg;
+    wrapped_bzn_msg msg3 = msg;
 
+    EXPECT_TRUE(crypto->sign(msg));
     EXPECT_TRUE(crypto->verify(msg));
+}
 
-    auto altered_signature = msg.signature();
-    altered_signature.push_back('!');
-    msg.set_signature(altered_signature);
-    EXPECT_FALSE(crypto->verify(msg));
+TEST_F(crypto_test, bad_signature_caught)
+{
+    crypto->start();
+    wrapped_bzn_msg msg2 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));
-    auto altered_sender = msg.sender();
-    altered_sender.push_back('!');
-    msg.set_sender(altered_sender);
-    EXPECT_FALSE(crypto->verify(msg));
+
+    msg2.set_signature("a" + msg.signature());
+    EXPECT_FALSE(crypto->verify(msg2));
+}
+
+TEST_F(crypto_test, bad_sender_caught)
+{
+    crypto->start();
+    wrapped_bzn_msg msg3 = msg;
+
+    EXPECT_TRUE(crypto->sign(msg));
+
+    msg3.set_sender('a' + msg.sender());
+    msg3.set_signature(msg.signature());
+    EXPECT_FALSE(crypto->verify(msg3));
 }
