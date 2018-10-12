@@ -218,6 +218,37 @@ namespace bzn::test
         pbft->handle_message(preprepare_msg, default_original_msg);
     }
 
+    TEST_F(pbft_test, pbft_starts_in_a_valid_view_state)
+    {
+        this->build_pbft();
+        EXPECT_TRUE(this->pbft->is_view_valid());
+    }
+
+    TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
+    {
+        this->build_pbft();
+        this->pbft->handle_failure();
+        EXPECT_FALSE(this->pbft->is_view_valid());
+    }
+
+    TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
+    {
+
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
+                .Times(Exactly(0));
+
+        this->build_pbft();
+        this->pbft->handle_failure();
+
+        std::cout << this->request_msg.DebugString() << std::endl;
+
+        pbft->handle_message(this->request_msg);
+        std::cout <<this->request_msg.DebugString() << std::endl;
+
+    }
+
+
+
     TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
         EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
 
