@@ -771,6 +771,7 @@ pbft::handle_failure()
     this->notify_audit_failure_detected();
     //TODO: KEP-332
     this->view_is_valid = false;
+    this->view_is_valid = false;
     // at this point the timer has expired (i expires in view v)
     // doesn't matter: we must be a backup !this->is_primary()
     // Create  view-change message.
