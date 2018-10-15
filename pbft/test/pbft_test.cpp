@@ -277,15 +277,9 @@ namespace bzn::test
 
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(0));
-
         this->build_pbft();
         this->pbft->handle_failure();
-
-        std::cout << this->request_msg.DebugString() << std::endl;
-
         pbft->handle_message(this->request_msg);
-        std::cout <<this->request_msg.DebugString() << std::endl;
-
     }
 
 
