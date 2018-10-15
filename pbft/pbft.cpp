@@ -792,10 +792,10 @@ pbft::handle_failure()
 
     // P_m = the pre prepare and the 2 f + 1 prepares
 
-            get the set of operations, frome each operation get the messages..
+//            get the set of operations, frome each operation get the messages..
 
 
-    this->
+  //  this->
 
 
     // ...
