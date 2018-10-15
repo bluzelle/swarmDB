@@ -65,6 +65,9 @@ endif()
 
 find_package(CURL REQUIRED)
 
+message("OpenSSL version: ${OPENSSL_VERSION}")
+
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(cmake/jsoncpp.cmake)

@@ -223,6 +223,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
     if(!this->is_view_valid())
     {
+        LOG(debug) << "Dropping message because local view is invalid";
         return false;
     }
 
@@ -770,6 +771,42 @@ pbft::handle_failure()
     this->notify_audit_failure_detected();
     //TODO: KEP-332
     this->view_is_valid = false;
+
+
+
+    // at this point the timer has expired (i expires in view v)
+
+    // doesn't matter: we must be a backup !this->is_primary()
+
+    // Create  view-change message.
+
+    // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+    // v + 1 = this->view + 1
+    // n = sequence # of last valid checkpoint
+    //   = this->stable_checkpoint.first
+    // C = a set of local 2*f + 1 valid checkpoint messages
+    //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings
+
+    // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
+    //     than n
+
+    // P_m = the pre prepare and the 2 f + 1 prepares
+
+            get the set of operations, frome each operation get the messages..
+
+
+    this->
+
+
+    // ...
+
+    // this->broadcast(const bzn::encoded_message& message)
+
+
+
+
+
+
 }
 
 void
