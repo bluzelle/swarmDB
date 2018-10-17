@@ -63,14 +63,14 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
-find_package(CURL    REQUIRED)
-find_package(OpenSSL REQUIRED)
+find_package(CURL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include(cmake/jsoncpp.cmake)
 include(cmake/rocksdb.cmake)
 include(cmake/googletest.cmake)
+include(cmake/openssl.cmake)
 
 enable_testing()
 

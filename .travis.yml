@@ -41,8 +41,8 @@ matrix:
     - os: osx
       osx_image: xcode10
       env:
-        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4 && brew install openssl"
-        - CMAKE_COMMAND="cmake -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl"
+        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4"
+        - CMAKE_COMMAND="cmake"
 
 cache:
   directories:
@@ -92,6 +92,7 @@ before_script:
 script:
   - ${CXX} --version
   - echo CXXFLAGS=${CXXFLAGS}
+  - make openssl
   - make rocksdb
   - make
   - make static_analysis
@@ -101,7 +102,7 @@ script:
 after_success:
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/rocksdb' -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'chaos/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
+      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/openssl' -e 'build/rocksdb' -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'chaos/test' -e 'crud/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'raft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
     fi
   - echo ${TRAVIS_BRANCH}
   - if [ "$TRAVIS_BRANCH" = "master" ] ; then PACKAGE_COMPONENT="stable" ; else PACKAGE_COMPONENT="unstable" ; fi
