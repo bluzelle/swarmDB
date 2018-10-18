@@ -279,9 +279,7 @@ namespace bzn::test
                     EXPECT_TRUE( 2 == view_change.view());
                     EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
 
-
                 }));
-
 
         this->build_pbft();
         this->pbft->handle_failure();
@@ -291,10 +289,15 @@ namespace bzn::test
     TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
     {
 
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-                .Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_message_str(_, _))
+                .Times(Exactly(4)); // there are 4 nodes in the test swarm
+
         this->build_pbft();
+
+        // invalidate the view - this will send 4 send_message_str messages
         this->pbft->handle_failure();
+
+        // nothing will happen with this request
         pbft->handle_message(this->request_msg);
     }
 
