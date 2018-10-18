@@ -177,6 +177,24 @@ namespace bzn
 
         std::mutex pbft_lock;
 
+        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
+        {
+            std::set<std::shared_ptr<bzn::pbft_operation>> retval;
+            // TODO functional filter...
+            for(const auto& p : this->operations)
+            {
+                if(p.second->is_prepared())
+                {
+                    if(p.second->sequence > this->latest_stable_checkpoint().first)
+                    {
+                        retval.emplace(p.second);
+                    }
+                }
+            }
+            return retval;
+        }
+
+
         std::map<bzn::operation_key_t, std::shared_ptr<bzn::pbft_operation>> operations;
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
 

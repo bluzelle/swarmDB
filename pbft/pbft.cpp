@@ -771,42 +771,39 @@ pbft::handle_failure()
     this->notify_audit_failure_detected();
     //TODO: KEP-332
     this->view_is_valid = false;
-
-
-
     // at this point the timer has expired (i expires in view v)
-
     // doesn't matter: we must be a backup !this->is_primary()
-
     // Create  view-change message.
+    pbft_msg view_change;
 
     // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+    view_change.set_type(PBFT_MSG_VIEWCHANGE);
+
     // v + 1 = this->view + 1
+    view_change.set_view(this->view + 1);
+
     // n = sequence # of last valid checkpoint
     //   = this->stable_checkpoint.first
+    view_change.set_sequence(this->latest_stable_checkpoint().first);
+
     // C = a set of local 2*f + 1 valid checkpoint messages
-    //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings
+    //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
+    for (const auto& msg : this->stable_checkpoint_proof)
+    {
+        view_change.add_checkpoint_messages(msg.second);
+    }
 
     // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
     //     than n
-
     // P_m = the pre prepare and the 2 f + 1 prepares
+    //            get the set of operations, frome each operation get the messages..
 
-//            get the set of operations, frome each operation get the messages..
-
-
-  //  this->
-
-
-    // ...
-
-    // this->broadcast(const bzn::encoded_message& message)
+    // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
 
 
 
 
-
-
+    this->broadcast(this->wrap_message(view_change));
 }
 
 void
