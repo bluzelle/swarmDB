@@ -267,6 +267,22 @@ namespace bzn::test
 
     TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
     {
+        EXPECT_CALL( *mock_node, send_message_str(_, _))
+                .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
+                {
+                    wrapped_bzn_msg wmsg;
+                    wmsg.ParseFromString(*p);
+                    pbft_msg view_change;
+                    view_change.ParseFromString(wmsg.payload());
+
+                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+                    EXPECT_TRUE( 2 == view_change.view());
+                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+
+
+                }));
+
+
         this->build_pbft();
         this->pbft->handle_failure();
         EXPECT_FALSE(this->pbft->is_view_valid());

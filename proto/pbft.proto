@@ -58,6 +58,7 @@ enum pbft_msg_type
     PBFT_MSG_PREPARE = 3;
     PBFT_MSG_COMMIT = 4;
     PBFT_MSG_CHECKPOINT = 5;
+    PBFT_MSG_VIEWCHANGE = 6;
 }
 
 message pbft_request
