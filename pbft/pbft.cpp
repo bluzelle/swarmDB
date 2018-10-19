@@ -726,7 +726,7 @@ pbft::initialize_configuration(const bzn::peers_list_t& peers)
 {
     auto config = std::make_shared<pbft_configuration>();
     bool config_good = true;
-    for (auto p : peers)
+    for (auto& p : peers)
     {
         config_good &= config->add_peer(p);
     }
@@ -748,7 +748,9 @@ pbft::current_peers_ptr() const
 {
     auto config = this->configurations.current();
     if (config)
+    {
         return config->get_peers();
+    }
 
     throw std::runtime_error("No current configuration!");
 }

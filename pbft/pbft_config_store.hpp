@@ -24,8 +24,6 @@ namespace bzn
     class pbft_config_store
     {
     public:
-        pbft_config_store();
-
         bool add(pbft_configuration::shared_const_ptr config);
         bool remove_prior_to(const hash_t& hash);
         pbft_configuration::shared_const_ptr get(const hash_t& hash) const;
@@ -43,8 +41,8 @@ namespace bzn
 
         // a map from the config index to a pair of <config, is_config_enabled>
         config_map configs;
-        index_t current_index;
-        index_t next_index;
+        index_t current_index = 0;
+        index_t next_index = 1;
     };
 }
 

@@ -16,11 +16,6 @@
 
 using namespace bzn;
 
-pbft_config_store::pbft_config_store()
-    : current_index(0), next_index(1)
-{
-}
-
 bool
 pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 {
@@ -46,7 +41,9 @@ pbft_config_store::set_current(const hash_t& hash)
 {
     auto config = this->find_by_hash(hash);
     if (config == this->configs.end())
+    {
         return false;
+    }
 
     this->current_index = config->first;
     return true;
@@ -57,7 +54,9 @@ pbft_config_store::remove_prior_to(const hash_t& hash)
 {
     auto config = this->find_by_hash(hash);
     if (config == this->configs.end())
+    {
         return false;
+    }
 
     this->configs.erase(this->configs.begin(), config);
     return true;
@@ -75,7 +74,7 @@ pbft_config_store::enable(const hash_t& hash, bool val)
 {
     // can't find_by_hash here because we need a non-const
     auto config = std::find_if(this->configs.begin(), this->configs.end(),
-        [hash](auto c)
+        [hash](auto& c)
         {
             return c.second.first->get_hash() == hash;
         });

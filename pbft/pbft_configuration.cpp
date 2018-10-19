@@ -50,7 +50,7 @@ pbft_configuration::from_json(const bzn::json_message& json)
 
     bool result = true;
     this->peers.clear();
-    for (auto p : json["peers"])
+    for (auto& p : json["peers"])
     {
         bzn::peer_address_t peer(p["host"].asString(), static_cast<uint16_t>(p["port"].asUInt()),
             static_cast<uint16_t>(p["http_port"].asUInt()), p["name"].asString(), p["uuid"].asString());
@@ -96,9 +96,7 @@ pbft_configuration::create_hash() const
 {
     // TODO: better hash function
 
-    auto json = this->to_json().toStyledString();
-    size_t h = std::hash<std::string>{}(json);
-    return std::to_string(h);
+    return std::to_string(std::hash<std::string>{}(this->to_json().toStyledString()));
 }
 
 hash_t
@@ -180,22 +178,26 @@ pbft_configuration::cache_sorted_peers()
         }
     );
 
-    this->sorted_peers = sorted;
+    this->sorted_peers = std::move(sorted);
     this->cached_hash = this->create_hash();
 }
 
 bool
 pbft_configuration::conflicting_peer_exists(const bzn::peer_address_t &peer) const
 {
-    for (auto p : this->peers)
+    for (auto& p : this->peers)
     {
         if (p.uuid == peer.uuid || p.name == peer.name)
+        {
             return true;
+        }
 
         if (p.host == peer.host)
         {
             if (p.port == peer.port || p.http_port == peer.http_port)
+            {
                 return true;
+            }
         }
     }
 
@@ -206,7 +208,9 @@ bool
 pbft_configuration::valid_peer(const bzn::peer_address_t &peer) const
 {
     if (peer.name.empty() || peer.uuid.empty() || peer.host.empty() || !peer.port || !peer.http_port)
+    {
         return false;
+    }
 
     // TODO: validate host address?
 
