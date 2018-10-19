@@ -5,5 +5,5 @@ add_library(chaos
         )
 
 target_link_libraries(chaos options)
-
+add_dependencies(chaos openssl)
 add_subdirectory(test)

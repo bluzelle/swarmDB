@@ -16,5 +16,6 @@ add_library(pbft STATIC
 
 target_link_libraries(pbft utils proto)
 target_include_directories(pbft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
+add_dependencies(pbft openssl)
 
 add_subdirectory(test)

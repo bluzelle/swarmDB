@@ -73,9 +73,17 @@ namespace bzn::utils::blacklist
             return false;
         }
 
-        // result must be "0x0000000000000000000000000000000000000000000000000000000000000000"
-        // or "0x0000000000000000000000000000000000000000000000000000000000000001" we will only
-        // accept a value of 1 as true.
-        return (std::stoul(response["result"].asString().c_str(), nullptr, 16) == 1);
+        try
+        {
+            // result must be "0x0000000000000000000000000000000000000000000000000000000000000000"
+            // or "0x0000000000000000000000000000000000000000000000000000000000000001" we will only
+            // accept a value of 1 as true.
+            return (std::stoul(response["result"].asString().c_str(), nullptr, 16) == 1);
+        }
+        catch(std::exception& ex)
+        {
+            LOG(error) << "Invalid response from Bluzelle blacklist server: " << ex.what();
+        }
+        return false;
     }
 }
