@@ -25,7 +25,7 @@ class crypto_test : public Test
 {
 public:
     std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
-    std::shared_ptr<bzn::crypto> crypto = std::make_shared<bzn::crypto>(options);
+    std::shared_ptr<bzn::crypto> crypto;
 
     const std::string private_key_file = "test_private_key.pem";
     const std::string public_key_file = "test_public_key.pem";
@@ -60,7 +60,8 @@ public:
         this->options->get_mutable_simple_options().set(bzn::option_names::NODE_PRIVATEKEY_FILE, private_key_file);
         this->options->get_mutable_simple_options().set(bzn::option_names::NODE_PUBKEY_FILE, public_key_file);
 
-        this->crypto->start();
+        this->crypto = std::make_shared<bzn::crypto>(this->options);
+
     }
 
     ~crypto_test()
@@ -73,14 +74,12 @@ public:
 
 TEST_F(crypto_test, messages_use_my_public_key)
 {
-    crypto->start();
     EXPECT_TRUE(crypto->sign(msg));
     EXPECT_EQ(msg.sender(), this->options->get_uuid());
 }
 
 TEST_F(crypto_test, messages_signed_and_verified)
 {
-    crypto->start();
     wrapped_bzn_msg msg2 = msg;
     wrapped_bzn_msg msg3 = msg;
 
@@ -90,7 +89,6 @@ TEST_F(crypto_test, messages_signed_and_verified)
 
 TEST_F(crypto_test, bad_signature_caught)
 {
-    crypto->start();
     wrapped_bzn_msg msg2 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));
@@ -101,7 +99,6 @@ TEST_F(crypto_test, bad_signature_caught)
 
 TEST_F(crypto_test, bad_sender_caught)
 {
-    crypto->start();
     wrapped_bzn_msg msg3 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));

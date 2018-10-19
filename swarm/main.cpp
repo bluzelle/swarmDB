@@ -230,7 +230,6 @@ main(int argc, const char* argv[])
 
         node->start();
         chaos->start();
-        crypto->start();
 
         if (options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED))
         {

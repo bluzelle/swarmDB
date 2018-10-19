@@ -23,21 +23,22 @@
 
 namespace bzn
 {
-    class crypto : public crypto_base
+    class crypto : public bzn::crypto_base
     {
     public:
 
         crypto(std::shared_ptr<bzn::options_base> options);
 
-        void start();
-
         bool sign(wrapped_bzn_msg& msg) override;
 
         bool verify(const wrapped_bzn_msg& msg) override;
 
-        ~crypto() override;
-
     private:
+
+        using EC_KEY_ptr = std::unique_ptr<EC_KEY, decltype(&::EC_KEY_free)>;
+        using EVP_PKEY_ptr = std::unique_ptr<EVP_PKEY, decltype(&::EVP_PKEY_free)>;
+        using BIO_ptr = std::unique_ptr<BIO, decltype(&::BIO_free)>;
+        using EVP_MD_CTX_ptr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
 
         bool load_private_key();
 
@@ -45,8 +46,8 @@ namespace bzn
 
         std::shared_ptr<bzn::options_base> options;
 
-        EVP_PKEY* private_key_EVP = NULL;
-        EC_KEY* private_key_EC = NULL;
+        EVP_PKEY_ptr private_key_EVP = EVP_PKEY_ptr(nullptr, &EVP_PKEY_free);
+        EC_KEY_ptr private_key_EC = EC_KEY_ptr(nullptr, &EC_KEY_free);
 
     };
 }

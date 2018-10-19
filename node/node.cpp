@@ -147,10 +147,9 @@ node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::ses
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
-    if (
-            this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_INCOMING)
-            && (!msg.sender().empty())
-            && (!this->crypto->verify(msg))
+    if (this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_INCOMING)
+        && (!msg.sender().empty())
+        && (!this->crypto->verify(msg))
     )
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
