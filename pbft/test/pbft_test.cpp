@@ -24,7 +24,7 @@ namespace bzn::test
         this->build_pbft();
         ASSERT_TRUE(pbft->is_primary());
         ASSERT_EQ(0u, pbft->outstanding_operations_count());
-        pbft->handle_message(request_msg);
+        pbft->handle_message(request_msg, default_original_msg);
         ASSERT_EQ(1u, pbft->outstanding_operations_count());
     }
 
@@ -34,7 +34,7 @@ namespace bzn::test
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-        pbft->handle_message(request_msg);
+        pbft->handle_message(request_msg, default_original_msg);
     }
 
     TEST_F(pbft_test, test_wrapped_message)
@@ -55,7 +55,7 @@ namespace bzn::test
         this->build_pbft();
         EXPECT_FALSE(pbft->is_primary());
 
-        pbft->handle_message(request_msg);
+        pbft->handle_message(request_msg, default_original_msg);
     }
 
     std::set<uint64_t> seen_sequences;
@@ -77,8 +77,8 @@ namespace bzn::test
         request_msg2.mutable_request()->set_timestamp(2);
 
         seen_sequences = std::set<uint64_t>();
-        pbft->handle_message(request_msg);
-        pbft->handle_message(request_msg2);
+        pbft->handle_message(request_msg, default_original_msg);
+        pbft->handle_message(request_msg2, default_original_msg);
         ASSERT_EQ(seen_sequences.size(), 2u);
     }
 
@@ -88,7 +88,7 @@ namespace bzn::test
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-        this->pbft->handle_message(this->preprepare_msg);
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
     }
 
     TEST_F(pbft_test, test_prepare_contains_uuid)
@@ -97,12 +97,12 @@ namespace bzn::test
         std::shared_ptr<std::string> wrapped_msg;
         EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
 
-        this->pbft->handle_message(this->preprepare_msg);
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
 
         pbft_msg msg_sent = extract_pbft_msg(*wrapped_msg);
 
-        ASSERT_EQ(msg_sent.sender(), this->pbft->get_uuid());
-        ASSERT_EQ(msg_sent.sender(), TEST_NODE_UUID);
+        ASSERT_EQ(extract_sender(*wrapped_msg), this->pbft->get_uuid());
+        ASSERT_EQ(extract_sender(*wrapped_msg), TEST_NODE_UUID);
     }
 
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
@@ -113,7 +113,7 @@ namespace bzn::test
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_view(6);
 
-        this->pbft->handle_message(preprepare2);
+        this->pbft->handle_message(preprepare2, default_original_msg);
     }
 
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
@@ -130,10 +130,10 @@ namespace bzn::test
         prepreparec.mutable_request()->mutable_operation();
         preprepared.mutable_request()->set_client("certainly not bob");
 
-        this->pbft->handle_message(prepreparea);
-        this->pbft->handle_message(preprepareb);
-        this->pbft->handle_message(prepreparec);
-        this->pbft->handle_message(preprepared);
+        this->pbft->handle_message(prepreparea, default_original_msg);
+        this->pbft->handle_message(preprepareb, default_original_msg);
+        this->pbft->handle_message(prepreparec, default_original_msg);
+        this->pbft->handle_message(preprepared, default_original_msg);
     }
 
     TEST_F(pbft_test, test_commit_messages_sent)
@@ -144,13 +144,12 @@ namespace bzn::test
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-        this->pbft->handle_message(this->preprepare_msg);
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg prepare = pbft_msg(this->preprepare_msg);
             prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_sender(peer.uuid);
-            this->pbft->handle_message(prepare);
+            this->pbft->handle_message(prepare, from(peer.uuid));
         }
     }
 
@@ -161,18 +160,16 @@ namespace bzn::test
 
         pbft_msg preprepare = pbft_msg(this->preprepare_msg);
         preprepare.set_sequence(1);
-        this->pbft->handle_message(preprepare);
+        this->pbft->handle_message(preprepare, default_original_msg);
 
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg prepare = pbft_msg(preprepare);
             pbft_msg commit = pbft_msg(preprepare);
             prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_sender(peer.uuid);
             commit.set_type(PBFT_MSG_COMMIT);
-            commit.set_sender(peer.uuid);
-            this->pbft->handle_message(prepare);
-            this->pbft->handle_message(commit);
+            this->pbft->handle_message(prepare, from(peer.uuid));
+            this->pbft->handle_message(commit, from(peer.uuid));
         }
     }
 
@@ -237,7 +234,7 @@ namespace bzn::test
                 .Times(Exactly(0));
 
         this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
-        pbft->handle_message(preprepare_msg);
+        pbft->handle_message(preprepare_msg, default_original_msg);
     }
 
     TEST_F(pbft_test, messages_before_low_water_mark_dropped)
@@ -247,6 +244,6 @@ namespace bzn::test
                 .Times(Exactly(0));
 
         this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
-        pbft->handle_message(preprepare_msg);
+        pbft->handle_message(preprepare_msg, default_original_msg);
     }
 }

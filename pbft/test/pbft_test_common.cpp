@@ -115,6 +115,14 @@ namespace bzn::test
         return result;
     }
 
+    std::string
+    extract_sender(std::string msg)
+    {
+        wrapped_bzn_msg outer;
+        outer.ParseFromString(msg);
+        return outer.sender();
+    }
+
     wrapped_bzn_msg
     wrap_pbft_msg(const pbft_msg& msg)
     {
@@ -154,7 +162,7 @@ namespace bzn::test
     {
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
-        return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && msg.sender() != "" && msg.state_hash() != "";
+        return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && extract_sender(*wrapped_msg) != "" && msg.state_hash() != "";
     }
 
     bool
@@ -169,5 +177,13 @@ namespace bzn::test
         }
 
         return json["bzn-api"] == "audit";
+    }
+
+    wrapped_bzn_msg
+    from(uuid_t uuid)
+    {
+        wrapped_bzn_msg result;
+        result.set_sender(uuid);
+        return result;
     }
 }

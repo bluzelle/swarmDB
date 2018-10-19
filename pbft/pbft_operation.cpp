@@ -27,7 +27,7 @@ pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request re
 }
 
 void
-pbft_operation::record_preprepare()
+pbft_operation::record_preprepare(const wrapped_bzn_msg& /*encoded_preprepare*/)
 {
     this->preprepare_seen = true;
 }
@@ -39,9 +39,10 @@ pbft_operation::has_preprepare()
 }
 
 void
-pbft_operation::record_prepare(const pbft_msg& prepare)
+pbft_operation::record_prepare(const wrapped_bzn_msg& encoded_prepare)
 {
-    this->prepares_seen.insert(prepare.sender());
+    // TODO: Save message
+    this->prepares_seen.insert(encoded_prepare.sender());
 }
 
 size_t
@@ -57,9 +58,9 @@ pbft_operation::is_prepared()
 }
 
 void
-pbft_operation::record_commit(const pbft_msg& commit)
+pbft_operation::record_commit(const wrapped_bzn_msg& encoded_commit)
 {
-    this->commits_seen.insert(commit.sender());
+    this->commits_seen.insert(encoded_commit.sender());
 }
 
 bool

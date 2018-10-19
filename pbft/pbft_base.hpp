@@ -32,7 +32,7 @@ namespace bzn
     public:
         virtual void start() = 0;
 
-        virtual void handle_message(const pbft_msg& msg) = 0;
+        virtual void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) = 0;
 
         virtual bool is_primary() const = 0;
 
