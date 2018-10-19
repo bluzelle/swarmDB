@@ -17,6 +17,8 @@
 #include <include/boost_asio_beast.hpp>
 #include <node/node_base.hpp>
 #include <chaos/chaos_base.hpp>
+#include <crypto/crypto_base.hpp>
+#include <options/options_base.hpp>
 #include <json/json.h>
 #include <mutex>
 #include <atomic>
@@ -30,7 +32,7 @@ namespace bzn
     {
     public:
         node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout,
-            const boost::asio::ip::tcp::endpoint& ep);
+            const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options);
 
         bool register_for_message(const std::string& msg_type, bzn::message_handler msg_handler) override;
 
@@ -40,10 +42,13 @@ namespace bzn
 
         void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) override;
 
+        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<wrapped_bzn_msg> msg);
+
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);
+        FRIEND_TEST(node, test_that_wrongly_signed_messages_are_dropped);
 
         void do_accept();
 
@@ -64,6 +69,9 @@ namespace bzn
         std::once_flag start_once;
 
         std::atomic<bzn::session_id> session_id_counter = 0;
+
+        std::shared_ptr<bzn::crypto_base> crypto;
+        std::shared_ptr<bzn::options_base> options;
     };
 
 } // bzn

@@ -20,8 +20,8 @@
 #include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <status/status_provider_base.hpp>
+#include <crypto/crypto_base.hpp>
 #include <mutex>
-
 
 namespace
 {
@@ -156,6 +156,8 @@ namespace bzn
 
         std::set<checkpoint_t> local_unstable_checkpoints;
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
+
+        std::shared_ptr<crypto_base> crypto;
     };
 
 } // namespace bzn

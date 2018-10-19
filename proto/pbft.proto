@@ -30,6 +30,7 @@ message pbft_msg
     pbft_request request = 4;
 
     // Needed for prepare, commit, request, checkpoing, but included always for clarity. This is the sender's uuid.
+    // TODO: remove
     string sender = 5;
 
     // for checkpoints

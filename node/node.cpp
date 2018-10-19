@@ -25,12 +25,14 @@ namespace
 
 
 node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout,
-    const boost::asio::ip::tcp::endpoint& ep)
+    const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options)
     : tcp_acceptor(io_context->make_unique_tcp_acceptor(ep))
     , io_context(std::move(io_context))
     , websocket(std::move(websocket))
     , chaos(std::move(chaos))
     , ws_idle_timeout(ws_idle_timeout)
+    , crypto(std::move(crypto))
+    , options(std::move(options))
 {
 }
 
@@ -145,9 +147,17 @@ node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::ses
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
+    if (this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_INCOMING)
+        && (!msg.sender().empty())
+        && (!this->crypto->verify(msg))
+    )
+    {
+        LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        return;
+    }
+
     if (auto it = this->protobuf_map.find(msg.type()); it != this->protobuf_map.end())
     {
-        // Should also do signature verification here
         it->second(msg, std::move(session));
     }
     else
@@ -211,4 +221,20 @@ void
 node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
 {
     this->send_message_str(ep, std::make_shared<bzn::encoded_message>(msg->toStyledString()));
+}
+
+void
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<wrapped_bzn_msg> msg)
+{
+    if(msg->sender().empty())
+    {
+        msg->set_sender(this->options->get_uuid());
+    }
+
+    if(msg->signature().empty() && this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    {
+        this->crypto->sign(*msg);
+    }
+
+    this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()));
 }

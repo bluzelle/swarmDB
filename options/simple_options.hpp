@@ -54,6 +54,9 @@ namespace bzn::option_names
     const std::string CHAOS_MESSAGE_DELAY_CHANCE = "chaos_message_delay_chance";
     const std::string CHAOS_MESSAGE_DELAY_TIME = "chaos_message_delay_time_milliseconds";
 
+    const std::string CRYPTO_ENABLED_OUTGOING = "crypto_enabled_outgoing";
+    const std::string CRYPTO_ENABLED_INCOMING = "crypto_enabled_incoming";
+
 
 }
 

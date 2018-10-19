@@ -6,6 +6,6 @@ add_library(bootstrap STATIC
   )
 
 target_link_libraries(bootstrap utils)
-target_include_directories(bootstrap PRIVATE ${JSONCPP_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+target_include_directories(bootstrap PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(test)

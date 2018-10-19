@@ -20,6 +20,12 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_chaos_base.hpp>
 
+#include <options/options.hpp>
+#include <chaos/chaos.hpp>
+#include <crypto/crypto.hpp>
+
+#include <proto/bluzelle.pb.h>
+
 using namespace ::testing;
 
 namespace
@@ -37,10 +43,12 @@ namespace  bzn
     {
         auto io_context = std::make_shared<bzn::asio::io_context>();
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
 
         EXPECT_THROW(
             bzn::node(io_context, nullptr, mock_chaos, std::chrono::milliseconds(0),
-                boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string("8.8.8.8"), 8080}),
+                boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string("8.8.8.8"), 8080}, crypto, options),
             std::exception
         );
     }
@@ -53,6 +61,8 @@ namespace  bzn
         auto mock_websocket = std::make_shared<bzn::beast::Mockwebsocket_base>();
         auto mock_steady_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
 
         // start expectations... (here we are returning a real socket)
         EXPECT_CALL(*mock_io_context, make_unique_tcp_socket()).WillRepeatedly(Invoke(
@@ -95,7 +105,7 @@ namespace  bzn
                 return std::make_unique<bzn::beast::websocket_stream>(std::move(socket));
             }));
 
-        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
         node->start();
 
         // call the handler to test do_accept() is not called on error and do_accept() is called again...
@@ -113,7 +123,9 @@ namespace  bzn
     {
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT);
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
 
         // test that nulls are rejected...
         ASSERT_FALSE(node->register_for_message("asdf", nullptr));
@@ -130,7 +142,9 @@ namespace  bzn
     {
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT);
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
 
         // Add our test callback...
         bool callback_execute = false;
@@ -157,6 +171,42 @@ namespace  bzn
         EXPECT_EQ(msg_type, "asdf");
     }
 
+    TEST(node, test_that_wrongly_signed_messages_are_dropped)
+    {
+        auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+        auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+        auto options = std::make_shared<bzn::options>();
+        options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_INCOMING, "true");
+        auto crypto = std::make_shared<bzn::crypto>(options);
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
+
+        // Add our test callback...
+        unsigned int callback_execute = 0u;
+        node->register_for_message(BZN_MSG_PBFT, [&](const auto& /*msg*/, auto)
+        {
+            callback_execute++;
+        });
+
+        wrapped_bzn_msg bad_msg;
+        bad_msg.set_payload("some stuff");
+        bad_msg.set_sender("Elizabeth the Second, by the Grace of God of the United Kingdom, Canada and Her other Realms and Territories Queen, Head of the Commonwealth, Defender of the Faith");
+        bad_msg.set_signature("probably not a valid signature");
+        bad_msg.set_type(BZN_MSG_PBFT);
+
+        wrapped_bzn_msg anon_msg;
+        anon_msg.set_payload("some stuff");
+        anon_msg.set_sender("");
+        anon_msg.set_signature("");
+        anon_msg.set_type(BZN_MSG_PBFT);
+
+        node->priv_protobuf_handler(bad_msg, mock_session);
+        EXPECT_EQ(callback_execute, 0u);
+
+        node->priv_protobuf_handler(anon_msg, mock_session);
+        EXPECT_EQ(callback_execute, 1u);
+    }
+
 
     TEST(node, test_that_send_msg_connects_and_performs_handshake)
     {
@@ -165,10 +215,12 @@ namespace  bzn
         auto mock_websocket = std::make_shared<bzn::beast::Mockwebsocket_base>();
         auto mock_socket = std::make_unique<bzn::asio::Mocktcp_socket_base>();
         auto mock_websocket_stream = std::make_unique<bzn::beast::Mockwebsocket_stream_base>();
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
 
         // satisfy constructor...
         EXPECT_CALL(*mock_io_context, make_unique_tcp_acceptor(_));
-        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT);
+        auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
 
         // setup expectations for connect...
         bzn::asio::connect_handler connect_handler;
@@ -217,10 +269,12 @@ namespace  bzn
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto io_context = std::make_shared<bzn::asio::io_context>();
         auto websocket = std::make_shared<bzn::beast::websocket>();
+        auto options = std::shared_ptr<bzn::options>();
+        auto crypto = std::shared_ptr<bzn::crypto>();
 
         boost::asio::ip::tcp::endpoint ep{boost::asio::ip::address_v4::from_string("127.0.0.1"), 8080};
 
-        auto node = std::make_shared<bzn::node>(io_context, websocket, mock_chaos, std::chrono::milliseconds(0), ep);
+        auto node = std::make_shared<bzn::node>(io_context, websocket, mock_chaos, std::chrono::milliseconds(0), ep, crypto, options);
 
         node->register_for_message("crud",
             [](const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)

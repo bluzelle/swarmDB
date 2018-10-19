@@ -72,6 +72,8 @@ include(cmake/rocksdb.cmake)
 include(cmake/googletest.cmake)
 include(cmake/openssl.cmake)
 
+include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+
 enable_testing()
 
 # coverage?
@@ -100,5 +102,6 @@ add_subdirectory(utils)
 add_subdirectory(audit)
 add_subdirectory(pbft)
 add_subdirectory(chaos)
+add_subdirectory(crypto)
 
 include(cmake/static_analysis.cmake)
