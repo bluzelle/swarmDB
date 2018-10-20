@@ -50,13 +50,13 @@ namespace bzn
         operation_key_t get_operation_key();
         pbft_operation_state get_state();
 
-        void record_preprepare();
+        void record_preprepare(const wrapped_bzn_msg& encoded_preprepare);
         bool has_preprepare();
 
-        void record_prepare(const pbft_msg& prepare);
+        void record_prepare(const wrapped_bzn_msg& encoded_prepare);
         bool is_prepared();
 
-        void record_commit(const pbft_msg& commit);
+        void record_commit(const wrapped_bzn_msg& encoded_commit);
         bool is_committed();
 
         void begin_commit_phase();

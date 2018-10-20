@@ -51,7 +51,7 @@ namespace bzn
 
         void start() override;
 
-        void handle_message(const pbft_msg& msg) override;
+        void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) override;
 
         size_t outstanding_operations_count() const;
 
@@ -88,10 +88,10 @@ namespace bzn
         bool preliminary_filter_msg(const pbft_msg& msg);
 
         void handle_request(const pbft_request& msg, const std::shared_ptr<session_base>& session = nullptr);
-        void handle_preprepare(const pbft_msg& msg);
-        void handle_prepare(const pbft_msg& msg);
-        void handle_commit(const pbft_msg& msg);
-        void handle_checkpoint(const pbft_msg& msg);
+        void handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);

@@ -161,11 +161,11 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
         return;
     }
 
-    this->handle_message(inner_msg);
+    this->handle_message(inner_msg, msg);
 }
 
 void
-pbft::handle_message(const pbft_msg& msg)
+pbft::handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
 
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
@@ -188,16 +188,16 @@ pbft::handle_message(const pbft_msg& msg)
             this->handle_request(msg.request());
             break;
         case PBFT_MSG_PREPREPARE :
-            this->handle_preprepare(msg);
+            this->handle_preprepare(msg, original_msg);
             break;
         case PBFT_MSG_PREPARE :
-            this->handle_prepare(msg);
+            this->handle_prepare(msg, original_msg);
             break;
         case PBFT_MSG_COMMIT :
-            this->handle_commit(msg);
+            this->handle_commit(msg, original_msg);
             break;
         case PBFT_MSG_CHECKPOINT :
-            this->handle_checkpoint(msg);
+            this->handle_checkpoint(msg, original_msg);
             break;
         default :
             throw std::runtime_error("Unsupported message type");
@@ -258,7 +258,7 @@ pbft::handle_request(const pbft_request& msg, const std::shared_ptr<session_base
 }
 
 void
-pbft::handle_preprepare(const pbft_msg& msg)
+pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
 
     // If we've already accepted a preprepare for this view+sequence, and it's not this one, then we should reject this one
@@ -276,7 +276,7 @@ pbft::handle_preprepare(const pbft_msg& msg)
     else
     {
         auto op = this->find_operation(msg);
-        op->record_preprepare();
+        op->record_preprepare(original_msg);
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
         accepted_preprepares[log_key] = op->get_operation_key();
@@ -287,24 +287,24 @@ pbft::handle_preprepare(const pbft_msg& msg)
 }
 
 void
-pbft::handle_prepare(const pbft_msg& msg)
+pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
 
     // Prepare messages are never rejected, assuming the sanity checks passed
     auto op = this->find_operation(msg);
 
-    op->record_prepare(msg);
+    op->record_prepare(original_msg);
     this->maybe_advance_operation_state(op);
 }
 
 void
-pbft::handle_commit(const pbft_msg& msg)
+pbft::handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
 
     // Commit messages are never rejected, assuming  the sanity checks passed
     auto op = this->find_operation(msg);
 
-    op->record_commit(msg);
+    op->record_commit(original_msg);
     this->maybe_advance_operation_state(op);
 }
 
@@ -341,10 +341,6 @@ pbft::common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_t
     msg.set_sequence(op->sequence);
     msg.set_allocated_request(new pbft_request(op->request));
     msg.set_type(type);
-
-
-    // Some message types don't need this, but it's cleaner to always include it
-    msg.set_sender(this->uuid);
 
     return msg;
 }
@@ -459,6 +455,7 @@ pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
     wrapped_bzn_msg result;
     result.set_payload(msg.SerializeAsString());
     result.set_type(bzn_msg_type::BZN_MSG_PBFT);
+    result.set_sender(this->uuid);
 
     return result.SerializeAsString();
 }
@@ -523,7 +520,6 @@ pbft::checkpoint_reached_locally(uint64_t sequence)
     cp_msg.set_type(PBFT_MSG_CHECKPOINT);
     cp_msg.set_view(this->view);
     cp_msg.set_sequence(sequence);
-    cp_msg.set_sender(this->uuid);
     cp_msg.set_state_hash(cp->second);
 
     this->broadcast(this->wrap_message(cp_msg));
@@ -532,7 +528,7 @@ pbft::checkpoint_reached_locally(uint64_t sequence)
 }
 
 void
-pbft::handle_checkpoint(const pbft_msg& msg)
+pbft::handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
     if (msg.sequence() <= stable_checkpoint.first)
     {
@@ -544,11 +540,11 @@ pbft::handle_checkpoint(const pbft_msg& msg)
 
     LOG(info) << boost::format("Recieved checkpoint message for seq %1% from %2%")
               % msg.sequence()
-              % msg.sender();
+              % original_msg.sender();
 
     checkpoint_t cp(msg.sequence(), msg.state_hash());
 
-    this->unstable_checkpoint_proofs[cp][msg.sender()] = msg.SerializeAsString();
+    this->unstable_checkpoint_proofs[cp][original_msg.sender()] = original_msg.SerializeAsString();
     this->maybe_stabilize_checkpoint(cp);
 }
 

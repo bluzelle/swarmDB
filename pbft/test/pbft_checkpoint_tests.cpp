@@ -59,8 +59,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
 
         EXPECT_EQ(0u, this->pbft->latest_checkpoint().first);
@@ -84,8 +83,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
 
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
@@ -99,8 +97,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
         this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
 
@@ -116,8 +113,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
         this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL*2);
 
@@ -133,17 +129,15 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
         this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL*2);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
             msg.set_sequence(CHECKPOINT_INTERVAL*2);
             msg.set_state_hash(cp2_hash);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
 
         EXPECT_EQ(CHECKPOINT_INTERVAL*2, this->pbft->latest_stable_checkpoint().first);
@@ -162,7 +156,7 @@ namespace bzn::test
             msg.set_sequence(i);
             msg.set_allocated_request(new pbft_request(this->request_msg.request()));
 
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, default_original_msg);
         }
 
         EXPECT_EQ(9u, this->pbft->outstanding_operations_count());
@@ -171,8 +165,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
 
         EXPECT_EQ(0u, this->pbft->outstanding_operations_count());
@@ -202,8 +195,7 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
-            msg.set_sender(peer.uuid);
-            this->pbft->handle_message(msg);
+            this->pbft->handle_message(msg, from(peer.uuid));
         }
 
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
