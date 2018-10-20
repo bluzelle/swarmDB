@@ -21,7 +21,7 @@ pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 {
     // TODO - should we be making a copy here instead?
     // currently the added config could be changed externally after being added
-    return (this->configs.insert(std::make_pair(this->next_index++, std::make_pair(config, false)))).second;
+    return (this->configs.insert(std::make_pair(this->next_index++, std::make_pair(std::move(config), false)))).second;
 }
 
 pbft_config_store::config_map::const_iterator
