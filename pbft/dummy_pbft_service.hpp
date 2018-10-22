@@ -25,7 +25,7 @@ namespace bzn
     // wrap crud. It needs to be that way around (rather than crud calling
     // pbft) because pbft needs to decide when crud gets to see messages.
 
-    class dummy_pbft_service : public pbft_service_base
+    class dummy_pbft_service : public bzn::pbft_service_base
     {
     public:
         dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context);

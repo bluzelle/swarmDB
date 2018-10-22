@@ -14,16 +14,15 @@
 
 #pragma once
 
-#include "include/bluzelle.hpp"
-#include "proto/bluzelle.pb.h"
-#include "bootstrap/bootstrap_peers_base.hpp"
+#include <include/bluzelle.hpp>
+#include <proto/bluzelle.pb.h>
+#include <bootstrap/bootstrap_peers_base.hpp>
 #include <cstdint>
 #include <string>
 #include <node/session_base.hpp>
 
 namespace bzn
 {
-
     using hash_t = std::string;
     // View, sequence
     using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
@@ -43,7 +42,7 @@ namespace bzn
 
         pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
-        void set_session(std::shared_ptr<bzn::session_base>);
+        void set_session(std::weak_ptr<bzn::session_base>);
 
         static hash_t request_hash(const pbft_request& req);
 
@@ -62,7 +61,7 @@ namespace bzn
         void begin_commit_phase();
         void end_commit_phase();
 
-        const std::shared_ptr<bzn::session_base>& session();
+        std::weak_ptr<bzn::session_base> session();
 
         const uint64_t view;
         const uint64_t sequence;
@@ -81,8 +80,7 @@ namespace bzn
         std::set<bzn::uuid_t> prepares_seen;
         std::set<bzn::uuid_t> commits_seen;
 
-        std::shared_ptr<bzn::session_base> listener_session;
+        std::weak_ptr<bzn::session_base> listener_session;
 
     };
 }
-

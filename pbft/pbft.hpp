@@ -34,7 +34,6 @@ namespace
 
 namespace bzn
 {
-
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
 
@@ -42,13 +41,13 @@ namespace bzn
     {
     public:
         pbft(
-                std::shared_ptr<bzn::node_base> node
-                , std::shared_ptr<bzn::asio::io_context_base> io_context
-                , const bzn::peers_list_t& peers
-                , bzn::uuid_t uuid
-                , std::shared_ptr<pbft_service_base> service
-                , std::shared_ptr<pbft_failure_detector_base> failure_detector
-        );
+            std::shared_ptr<bzn::node_base> node
+            , std::shared_ptr<bzn::asio::io_context_base> io_context
+            , const bzn::peers_list_t& peers
+            , bzn::uuid_t uuid
+            , std::shared_ptr<pbft_service_base> service
+            , std::shared_ptr<pbft_failure_detector_base> failure_detector
+            );
 
         void start() override;
 
@@ -73,6 +72,7 @@ namespace bzn
         size_t unstable_checkpoints_count() const;
 
         uint64_t get_low_water_mark();
+
         uint64_t get_high_water_mark();
 
         std::string get_name() override;
@@ -83,8 +83,6 @@ namespace bzn
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
         std::shared_ptr<pbft_operation> find_operation(const std::shared_ptr<pbft_operation>& op);
-
-        bzn::hash_t request_hash(const pbft_request& req);
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -165,4 +163,3 @@ namespace bzn
     };
 
 } // namespace bzn
-

@@ -4,7 +4,7 @@ add_library(status STATIC
         )
 
 target_link_libraries(status )
-add_dependencies(status jsoncpp)
+add_dependencies(status jsoncpp proto)
 target_include_directories(status PRIVATE ${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(test)
