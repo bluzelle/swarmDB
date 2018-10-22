@@ -67,15 +67,17 @@ namespace bzn::test
                                 { this->service_execute_handler = handler; }
                         ));
 
-//        request_msg.mutable_request()->set_operation("do some stuff");
-        request_msg.mutable_request()->set_client("bob");
-        request_msg.mutable_request()->set_timestamp(1);
-        request_msg.set_type(PBFT_MSG_REQUEST);
+        this->request_msg.set_allocated_operation(new database_msg());
 
-        preprepare_msg = pbft_msg(request_msg);
+        this->request_json["bzn-api"] = "database";
+        this->request_json["msg"] = boost::beast::detail::base64_encode(this->request_msg.SerializeAsString());
+
+        preprepare_msg = pbft_msg();
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
         preprepare_msg.set_view(1);
+        preprepare_msg.mutable_request()->set_client("bob");
+        preprepare_msg.mutable_request()->set_timestamp(1);
     }
 
     void
@@ -185,5 +187,15 @@ namespace bzn::test
         wrapped_bzn_msg result;
         result.set_sender(uuid);
         return result;
+    }
+
+    bzn::json_message
+    wrap_request(const database_msg& db)
+    {
+        bzn::json_message json;
+        json["msg"] = boost::beast::detail::base64_encode(db.SerializeAsString());
+        json["bzn-api"] = "database";
+
+        return json;
     }
 }

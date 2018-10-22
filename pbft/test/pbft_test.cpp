@@ -15,6 +15,8 @@
 #include <pbft/test/pbft_test_common.hpp>
 #include <set>
 #include <mocks/mock_session_base.hpp>
+#include <utils/make_endpoint.hpp>
+#include <gtest/gtest.h>
 
 namespace bzn::test
 {
@@ -24,7 +26,7 @@ namespace bzn::test
         this->build_pbft();
         ASSERT_TRUE(pbft->is_primary());
         ASSERT_EQ(0u, pbft->outstanding_operations_count());
-        pbft->handle_message(request_msg, default_original_msg);
+        pbft->handle_database_message(this->request_json, this->mock_session);
         ASSERT_EQ(1u, pbft->outstanding_operations_count());
     }
 
@@ -34,28 +36,27 @@ namespace bzn::test
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-        pbft->handle_message(request_msg, default_original_msg);
+        pbft->handle_database_message(this->request_json, this->mock_session);
     }
 
-    TEST_F(pbft_test, test_wrapped_message)
+    TEST_F(pbft_test, test_forwarded_to_primary_when_not_primary)
     {
-        this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-                .Times(Exactly(TEST_PEER_LIST.size()));
+        boost::asio::ip::tcp::endpoint msg_sent_to;
+        bzn::json_message msg_sent;
 
-        this->message_handler(wrap_pbft_msg(request_msg), std::shared_ptr<session_base>());
-    }
-
-    TEST_F(pbft_test, test_ignored_when_not_primary)
-    {
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-                .Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(1).WillRepeatedly(Invoke(
+                [&](auto ep, auto msg)
+                {
+                    EXPECT_EQ(ep, make_endpoint(this->pbft->get_primary()));
+                    EXPECT_EQ((*msg)["bzn-api"], "database");
+                }));
 
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
         EXPECT_FALSE(pbft->is_primary());
 
-        pbft->handle_message(request_msg, default_original_msg);
+        pbft->handle_database_message(this->request_json, this->mock_session);
+
     }
 
     std::set<uint64_t> seen_sequences;
@@ -73,12 +74,13 @@ namespace bzn::test
         this->build_pbft();
         EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(Invoke(save_sequences));
 
-        pbft_msg request_msg2(request_msg);
-        request_msg2.mutable_request()->set_timestamp(2);
+        database_msg req, req2;
+        req.mutable_header()->set_transaction_id(5);
+        req2.mutable_header()->set_transaction_id(1055);
 
         seen_sequences = std::set<uint64_t>();
-        pbft->handle_message(request_msg, default_original_msg);
-        pbft->handle_message(request_msg2, default_original_msg);
+        pbft->handle_database_message(wrap_request(req), this->mock_session);
+        pbft->handle_database_message(wrap_request(req2), this->mock_session);
         ASSERT_EQ(seen_sequences.size(), 2u);
     }
 
@@ -175,7 +177,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, dummy_pbft_service_does_not_crash)
     {
-        mock_service->query(request_msg.request(), 0);
+        mock_service->query(request_msg, 0);
         mock_service->consolidate_log(2);
     }
 
@@ -245,5 +247,15 @@ namespace bzn::test
 
         this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
         pbft->handle_message(preprepare_msg, default_original_msg);
+    }
+
+    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
+        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
+
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+        EXPECT_FALSE(pbft->is_primary());
+        pbft->handle_database_message(this->request_json, this->mock_session);
     }
 }

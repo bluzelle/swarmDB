@@ -53,6 +53,8 @@ namespace bzn
 
         void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) override;
 
+        void handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session);
+
         size_t outstanding_operations_count() const;
 
         bool is_primary() const override;
@@ -87,7 +89,7 @@ namespace bzn
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
-        void handle_request(const pbft_request& msg, const std::shared_ptr<session_base>& session = nullptr);
+        void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr);
         void handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
         void handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
         void handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
@@ -113,8 +115,6 @@ namespace bzn
 
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
-
-        void handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session);
 
         inline size_t quorum_size() const;
         inline size_t max_faulty_nodes() const;

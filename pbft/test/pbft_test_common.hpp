@@ -27,6 +27,7 @@
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <mocks/mock_pbft_failure_detector.hpp>
 #include <mocks/mock_pbft_service_base.hpp>
+#include <mocks/mock_session_base.hpp>
 
 using namespace ::testing;
 
@@ -44,17 +45,21 @@ namespace bzn::test
     class pbft_test : public Test
     {
     public:
-        pbft_msg request_msg;
+        bzn::json_message request_json;
+        pbft_request request_msg;
+
         pbft_msg preprepare_msg;
         wrapped_bzn_msg default_original_msg;
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base >>();
-        std::shared_ptr<bzn::pbft_failure_detector_base> mock_failure_detector =
+        std::shared_ptr<bzn::Mockpbft_failure_detector_base> mock_failure_detector =
                 std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
+        std::shared_ptr<bzn::Mocksession_base> mock_session =
+                std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
         std::shared_ptr<bzn::pbft> pbft;
 
@@ -81,8 +86,13 @@ namespace bzn::test
 
     pbft_msg extract_pbft_msg(std::string msg);
     uuid_t extract_sender(std::string msg);
+
     wrapped_bzn_msg
     wrap_pbft_msg(const pbft_msg& msg);
+
+    bzn::json_message
+    wrap_request(const database_msg& msg);
+
     bool is_preprepare(std::shared_ptr<std::string> msg);
     bool is_prepare(std::shared_ptr<std::string> msg);
     bool is_commit(std::shared_ptr<std::string> msg);
