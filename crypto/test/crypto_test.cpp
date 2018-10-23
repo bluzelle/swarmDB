@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 #include <proto/bluzelle.pb.h>
 #include <fstream>
+#include <boost/range/irange.hpp>
 
 using namespace ::testing;
 
@@ -106,4 +107,38 @@ TEST_F(crypto_test, bad_sender_caught)
     msg3.set_sender('a' + msg.sender());
     msg3.set_signature(msg.signature());
     EXPECT_FALSE(crypto->verify(msg3));
+}
+
+TEST_F(crypto_test, hash_no_collision)
+{
+    /*
+     * It's well outside our scope to test that the hash actually has cryptographically secure hash properties,
+     * so we'll just test that it "looks like" a hash function
+     */
+
+    std::set<std::string> hash_values;
+    std::string hash_data = "";
+
+    for(int i=0; i<10000; i++)
+    {
+        hash_data.push_back('A');
+    }
+
+    for(int i=0; i<1000; i++)
+    {
+        hash_data[i] = 'a' + (i%31);
+        hash_values.insert(this->crypto->hash(hash_data));
+    }
+
+    EXPECT_EQ(hash_values.size(), 1000u);
+}
+
+TEST_F(crypto_test, hash_deterministic_but_not_identity)
+{
+    for(int i=0; i<1000; i++)
+    {
+        std::string str = std::to_string(i);
+        EXPECT_EQ(this->crypto->hash(str), this->crypto->hash(str));
+        EXPECT_NE(str, this->crypto->hash(str));
+    }
 }
