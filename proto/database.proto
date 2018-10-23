@@ -84,8 +84,15 @@ message database_has
 
 message database_subscription_update
 {
+    enum operation_type
+    {
+        UPDATE = 0;
+        DELETE = 1;
+    }
+
     string key = 1;
     bytes value = 2;
+    operation_type operation = 3;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -40,7 +40,7 @@ namespace bzn
 
         void purge_closed_sessions(const boost::system::error_code& ec);
 
-        void notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t& key, const std::string& value);
+        void notify_sessions(const bzn::uuid_t& uuid, bool update, const bzn::key_t& key, const std::string& value);
 
         std::unordered_map<bzn::uuid_t, std::unordered_map<bzn::key_t, std::unordered_map<bzn::session_id, std::unordered_map<uint64_t, std::weak_ptr<bzn::session_base>>>>> subscribers;
 
