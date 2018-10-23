@@ -38,10 +38,10 @@ crypto::crypto(std::shared_ptr<bzn::options_base> options)
 bool
 crypto::verify(const wrapped_bzn_msg& msg)
 {
-    BIO_ptr bio(BIO_new(BIO_s_mem()), &BIO_free);
-    EC_KEY_ptr pubkey(nullptr, &EC_KEY_free);
-    EVP_PKEY_ptr key(EVP_PKEY_new(), &EVP_PKEY_free);
-    EVP_MD_CTX_ptr context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
+    BIO_ptr_t bio(BIO_new(BIO_s_mem()), &BIO_free);
+    EC_KEY_ptr_t pubkey(nullptr, &EC_KEY_free);
+    EVP_PKEY_ptr_t key(EVP_PKEY_new(), &EVP_PKEY_free);
+    EVP_MD_CTX_ptr_t context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
 
     if (!bio || !key || !context)
     {
@@ -61,7 +61,7 @@ crypto::verify(const wrapped_bzn_msg& msg)
             && (0 < BIO_write(bio.get(), PEM_SUFFIX.c_str(), PEM_SUFFIX.length()))
 
             // Parse the PEM string to get the public key the message is allegedly from
-            && (pubkey = EC_KEY_ptr(PEM_read_bio_EC_PUBKEY(bio.get(), NULL, NULL, NULL), &EC_KEY_free))
+            && (pubkey = EC_KEY_ptr_t(PEM_read_bio_EC_PUBKEY(bio.get(), NULL, NULL, NULL), &EC_KEY_free))
             && (1 == EC_KEY_check_key(pubkey.get()))
             && (1 == EVP_PKEY_set1_EC_KEY(key.get(), pubkey.get()))
 
@@ -92,7 +92,7 @@ crypto::sign(wrapped_bzn_msg& msg)
         return false;
     }
 
-    EVP_MD_CTX_ptr context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
+    EVP_MD_CTX_ptr_t context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
     size_t signature_length = 0;
 
     bool result =
@@ -131,9 +131,9 @@ crypto::load_private_key()
 
     bool result =
             (bool) (fp)
-            && (this->private_key_EC = EC_KEY_ptr(PEM_read_ECPrivateKey(fp.get(), NULL, NULL, NULL), &EC_KEY_free))
+            && (this->private_key_EC = EC_KEY_ptr_t(PEM_read_ECPrivateKey(fp.get(), NULL, NULL, NULL), &EC_KEY_free))
             && (1 == EC_KEY_check_key(this->private_key_EC.get()))
-            && (this->private_key_EVP = EVP_PKEY_ptr(EVP_PKEY_new(), &EVP_PKEY_free))
+            && (this->private_key_EVP = EVP_PKEY_ptr_t(EVP_PKEY_new(), &EVP_PKEY_free))
             && (1 == EVP_PKEY_set1_EC_KEY(this->private_key_EVP.get(), this->private_key_EC.get()));
 
     if (!result)
@@ -144,6 +144,30 @@ crypto::load_private_key()
     this->log_openssl_errors();
 
     return result;
+}
+
+std::string
+crypto::hash(const std::string& msg)
+{
+    EVP_MD_CTX_ptr_t context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
+    size_t md_size = EVP_MD_size(EVP_sha512());
+
+    auto deleter = [](unsigned char* ptr){OPENSSL_free(ptr);};
+    std::unique_ptr<unsigned char, decltype(deleter)> hash_buffer((unsigned char*) OPENSSL_malloc(sizeof(unsigned char) * md_size), deleter);
+
+    bool success =
+            (bool) (context)
+            && (1 == EVP_DigestInit_ex(context.get(), EVP_sha512(), NULL))
+            && (1 == EVP_DigestUpdate(context.get(), msg.c_str(), msg.size()))
+            && (1 == EVP_DigestFinal_ex(context.get(), hash_buffer.get(), NULL));
+
+    if(!success)
+    {
+        this->log_openssl_errors();
+        throw std::runtime_error(std::string("\nfailed to compute message hash ") + msg);
+    }
+
+    return std::string(reinterpret_cast<char*>(hash_buffer.get()), md_size);
 }
 
 void

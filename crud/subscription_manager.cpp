@@ -140,7 +140,7 @@ subscription_manager::unsubscribe(const bzn::uuid_t& uuid, const bzn::key_t& key
 
 
 void
-subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t& key, const std::string& value)
+subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update, const bzn::key_t& key, const std::string& value)
 {
     std::lock_guard<std::mutex> lock(this->subscribers_lock);
 
@@ -165,6 +165,15 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bzn::key_t&
                             resp.mutable_subscription_update()->set_value(value);
                         }
 
+                        if (update)
+                        {
+                            resp.mutable_subscription_update()->set_operation(database_subscription_update::UPDATE);
+                        }
+                        else
+                        {
+                            resp.mutable_subscription_update()->set_operation(database_subscription_update::DELETE);
+                        }
+
                         LOG(debug) << "notifying session [" << session_shared_ptr->get_session_id() << "] : " << uuid
                                    << ":" << key << ":" << subscription.first << ":" << value.substr(0, MAX_MESSAGE_SIZE);
 
@@ -183,15 +192,15 @@ subscription_manager::inspect_commit(const database_msg& msg)
     switch (msg.msg_case())
     {
         case database_msg::kCreate:
-            this->notify_sessions(msg.header().db_uuid(), msg.create().key(), msg.create().value());
+            this->notify_sessions(msg.header().db_uuid(), true, msg.create().key(), msg.create().value());
             break;
 
         case database_msg::kUpdate:
-            this->notify_sessions(msg.header().db_uuid(), msg.update().key(), msg.update().value());
+            this->notify_sessions(msg.header().db_uuid(), true, msg.update().key(), msg.update().value());
             break;
 
         case database_msg::kDelete:
-            this->notify_sessions(msg.header().db_uuid(), msg.delete_().key(), "");
+            this->notify_sessions(msg.header().db_uuid(), false, msg.delete_().key(), "");
             break;
 
         default:

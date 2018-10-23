@@ -35,6 +35,13 @@ namespace bzn
          */
         virtual bool verify(const wrapped_bzn_msg& msg) = 0;
 
+        /*
+         * Compute the hash of some message
+         * @msg data
+         * @return hash value
+         */
+        virtual std::string hash(const std::string& msg) = 0;
+
         virtual ~crypto_base() = default;
     };
 }
