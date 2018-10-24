@@ -19,6 +19,7 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
+#include <pbft/pbft_config_store.hpp>
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
 #include <mutex>
@@ -33,7 +34,6 @@ namespace
 
 namespace bzn
 {
-
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
 
@@ -41,13 +41,13 @@ namespace bzn
     {
     public:
         pbft(
-                std::shared_ptr<bzn::node_base> node
-                , std::shared_ptr<bzn::asio::io_context_base> io_context
-                , const bzn::peers_list_t& peers
-                , bzn::uuid_t uuid
-                , std::shared_ptr<pbft_service_base> service
-                , std::shared_ptr<pbft_failure_detector_base> failure_detector
-        );
+            std::shared_ptr<bzn::node_base> node
+            , std::shared_ptr<bzn::asio::io_context_base> io_context
+            , const bzn::peers_list_t& peers
+            , bzn::uuid_t uuid
+            , std::shared_ptr<pbft_service_base> service
+            , std::shared_ptr<pbft_failure_detector_base> failure_detector
+            );
 
         void start() override;
 
@@ -74,6 +74,7 @@ namespace bzn
         size_t unstable_checkpoints_count() const;
 
         uint64_t get_low_water_mark();
+
         uint64_t get_high_water_mark();
 
         std::string get_name() override;
@@ -84,8 +85,6 @@ namespace bzn
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
         std::shared_ptr<pbft_operation> find_operation(const std::shared_ptr<pbft_operation>& op);
-
-        bzn::hash_t request_hash(const pbft_request& req);
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -123,6 +122,10 @@ namespace bzn
         void clear_checkpoint_messages_until(const checkpoint_t&);
         void clear_operations_until(const checkpoint_t&);
 
+        bool initialize_configuration(const bzn::peers_list_t& peers);
+        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
+        const std::vector<bzn::peer_address_t>& current_peers() const;
+
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
@@ -131,8 +134,6 @@ namespace bzn
         uint64_t high_water_mark;
 
         std::shared_ptr<bzn::node_base> node;
-
-        std::vector<bzn::peer_address_t> peer_index;
 
         const bzn::uuid_t uuid;
         std::shared_ptr<pbft_service_base> service;
@@ -156,9 +157,9 @@ namespace bzn
 
         std::set<checkpoint_t> local_unstable_checkpoints;
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
+        pbft_config_store configurations;
 
         std::shared_ptr<crypto_base> crypto;
     };
 
 } // namespace bzn
-

@@ -21,10 +21,13 @@
 
 namespace bzn
 {
+    using execute_handler_t = std::function<void(const pbft_request&, uint64_t)>;
 
     class pbft_service_base
     {
     public:
+
+        virtual ~pbft_service_base() = default;
 
         /*
          * Interface for some service that is replicated by pbft. There could a layer that just handles the logic
@@ -89,10 +92,8 @@ namespace bzn
          * Callback when a request is executed (not committed, since the service is responsible for the difference
          * between the two). Should only be called once for each sequence number, in strictly increasing order.
          */
-        using execute_handler_t = std::function<void(const pbft_request&, uint64_t)>;
-        virtual void register_execute_handler(execute_handler_t handler) = 0;
+        virtual void register_execute_handler(bzn::execute_handler_t handler) = 0;
 
-        virtual ~pbft_service_base() = default;
     };
 
 }

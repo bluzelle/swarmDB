@@ -16,7 +16,9 @@
 
 using namespace bzn;
 
-dummy_pbft_service::dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context) : io_context(std::move(io_context))
+
+dummy_pbft_service::dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context)
+    : io_context(std::move(io_context))
 {
 
 }
@@ -35,11 +37,9 @@ dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
         LOG(info) << "Executing request " << op->debug_string() << ", sequence " << this->next_request_sequence
                   << "\n";
 
-        if (op->session())
-        {
-            this->send_execute_response(op);
-        }
+        this->send_execute_response(op);
 
+        // todo: use shared from this as post could act on a long gone dummy_pbft_service?
         this->io_context->post(std::bind(this->execute_handler, op->request, this->next_request_sequence));
 
         this->waiting_operations.erase(this->next_request_sequence);
@@ -84,7 +84,15 @@ dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>&
 {
     database_response resp;
     resp.mutable_read()->set_value("dummy database execution of " + op->debug_string());
-    LOG(debug) << "Sending request result " << resp.ShortDebugString();
-    op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
-}
 
+    if (auto session = op->session().lock())
+    {
+        LOG(debug) << "Sending request result " << resp.ShortDebugString();
+
+        session->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+    }
+    else
+    {
+        LOG(debug) << "Session no longer valid, not sending request result " << resp.ShortDebugString();
+    }
+}

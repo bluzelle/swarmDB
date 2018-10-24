@@ -199,6 +199,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
         EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -211,6 +212,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
         sm.inspect_commit(msg);
@@ -235,6 +237,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
         EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -247,6 +250,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
         sm.inspect_commit(msg);
@@ -270,6 +274,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::DELETE);
             }));
 
         EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -282,6 +287,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
+                ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::DELETE);
             }));
 
         sm.inspect_commit(msg);
@@ -342,6 +348,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
     EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -354,6 +361,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
     sm->inspect_commit(msg);
@@ -375,6 +383,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
     sm->inspect_commit(msg);
