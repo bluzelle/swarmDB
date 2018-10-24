@@ -117,12 +117,12 @@ pbft_operation::request_hash(const pbft_request& req)
 }
 
 void
-pbft_operation::set_session(std::shared_ptr<bzn::session_base> session)
+pbft_operation::set_session(std::weak_ptr<bzn::session_base> session)
 {
     this->listener_session = std::move(session);
 }
 
-const std::shared_ptr<bzn::session_base>&
+std::weak_ptr<bzn::session_base>
 pbft_operation::session()
 {
     return this->listener_session;
