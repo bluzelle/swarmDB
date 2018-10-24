@@ -165,9 +165,6 @@ pbft::handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 
     switch (msg.type())
     {
-        case PBFT_MSG_REQUEST :
-            this->handle_request(msg.request());
-            break;
         case PBFT_MSG_PREPREPARE :
             this->handle_preprepare(msg, original_msg);
             break;
@@ -214,12 +211,12 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 void
-pbft::handle_request(const pbft_request& msg, const std::shared_ptr<session_base>& session)
+pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
 {
     if (!this->is_primary())
     {
-        LOG(error) << "Ignoring client request because I am not the primary";
-        // TODO - KEP-327
+        LOG(info) << "Forwarding request to primary: " << original_msg.toStyledString();
+        this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn::json_message>(original_msg));
         return;
     }
 
@@ -655,7 +652,7 @@ pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn
     *req.mutable_operation() = msg.db();
     req.set_timestamp(0); //TODO: KEP-611
 
-    this->handle_request(req, session);
+    this->handle_request(req, json, session);
 
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);

@@ -50,7 +50,7 @@ namespace bzn::test
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();
-        this->service_execute_handler(request_msg.request() , CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
     }
 
     TEST_F(pbft_checkpoint_test, no_checkpoint_on_message_before_local_state)
@@ -69,7 +69,7 @@ namespace bzn::test
     TEST_F(pbft_checkpoint_test, unstable_checkpoint_on_local_state_before_message)
     {
         this->build_pbft();
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
 
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
         EXPECT_EQ(0u, this->pbft->latest_stable_checkpoint().first);
@@ -79,7 +79,7 @@ namespace bzn::test
     TEST_F(pbft_checkpoint_test, stable_checkpoint_on_message_after_local_state)
     {
         this->build_pbft();
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
@@ -99,7 +99,7 @@ namespace bzn::test
             pbft_msg msg = cp1_msg;
             this->pbft->handle_message(msg, from(peer.uuid));
         }
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
 
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
@@ -109,13 +109,13 @@ namespace bzn::test
     TEST_F(pbft_checkpoint_test, unstable_checkpoint_does_not_discard_stable_checkpoint)
     {
         this->build_pbft();
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
             this->pbft->handle_message(msg, from(peer.uuid));
         }
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL*2);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL*2);
 
         EXPECT_EQ(CHECKPOINT_INTERVAL*2, this->pbft->latest_checkpoint().first);
         EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
@@ -125,13 +125,13 @@ namespace bzn::test
     TEST_F(pbft_checkpoint_test, stable_checkpoint_discards_old_stable_checkpoint)
     {
         this->build_pbft();
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
             this->pbft->handle_message(msg, from(peer.uuid));
         }
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL*2);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL*2);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
@@ -154,14 +154,14 @@ namespace bzn::test
             msg.set_type(PBFT_MSG_PREPREPARE);
             msg.set_view(1);
             msg.set_sequence(i);
-            msg.set_allocated_request(new pbft_request(this->request_msg.request()));
+            msg.set_allocated_request(new pbft_request(this->request_msg));
 
             this->pbft->handle_message(msg, default_original_msg);
         }
 
         EXPECT_EQ(9u, this->pbft->outstanding_operations_count());
 
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg msg = cp1_msg;
@@ -187,7 +187,7 @@ namespace bzn::test
         uint64_t initial_low = this->pbft->get_low_water_mark();
         uint64_t initial_high = this->pbft->get_high_water_mark();
 
-        this->service_execute_handler(request_msg.request(), CHECKPOINT_INTERVAL);
+        this->service_execute_handler(this->request_msg, CHECKPOINT_INTERVAL);
 
         EXPECT_EQ(this->pbft->get_high_water_mark(), initial_high);
         EXPECT_EQ(this->pbft->get_low_water_mark(), initial_low);
