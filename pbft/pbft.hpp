@@ -84,6 +84,11 @@ namespace bzn
 
         bool is_view_valid() const;
 
+        bool is_valid_viewchange_message(const pbft_msg& msg) const;
+        bool is_valid_newview_message(const pbft_msg& msg) const;
+
+        uint64_t get_view() const { return this->view; }
+
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
@@ -100,6 +105,8 @@ namespace bzn
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
+        void handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -228,6 +235,9 @@ namespace bzn
         std::shared_ptr<crypto_base> crypto;
 
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
+
+        std::set<std::string> valid_view_change_messages; // should this be in operation?
+        std::set<std::string> valid_new_view_messages; // should this be in operation?
     };
 
 } // namespace bzn

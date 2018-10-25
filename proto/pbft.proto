@@ -16,6 +16,7 @@ syntax = "proto3";
 
 import "database.proto";
 import "bluzelle.proto";
+import "database.proto";
 
 message pbft_msg
 {
@@ -33,12 +34,18 @@ message pbft_msg
     // most messages should only have the hash, not the original request
     bzn_envelope request = 4;
 
+    // Needed for prepare, commit, request, checkpoint, but included always for clarity. This is the sender's uuid.
+    string sender = 5;
+
     // for checkpoints
     string state_hash = 6;
 
+    // for join/leave requests
+    pbft_peer_info peer_info = 7;
+
     // for viewchange
     // TODO replace string with wrapped_bzn_message
-    repeated string checkpoint_messages = 7;
+    repeated string checkpoint_messages = 8;
 
     // for viewchange
     // P, p_m ???
@@ -58,7 +65,10 @@ enum pbft_msg_type
     PBFT_MSG_PREPARE = 3;
     PBFT_MSG_COMMIT = 4;
     PBFT_MSG_CHECKPOINT = 5;
-    PBFT_MSG_VIEWCHANGE = 6;
+    PBFT_MSG_JOIN = 6;
+    PBFT_MSG_LEAVE = 7;
+    PBFT_MSG_VIEWCHANGE = 8;
+    PBFT_MSG_NEWVIEW = 9;
 }
 
 message pbft_request
@@ -105,6 +115,42 @@ enum pbft_membership_msg_type
     PBFT_MMSG_LEAVE = 2;
     PBFT_MMSG_GET_STATE = 3;
     PBFT_MMSG_SET_STATE = 4;
+}
+
+message pbft_peer_info
+{
+    string host = 1;
+    uint32 port = 2;
+    uint32 http_port = 3;
+    string name = 4;
+    string uuid = 5;
+    pbft_request_type type = 1;
+    oneof msg
+    {
+        database_msg operation = 2;
+        pbft_internal_msg command = 3;
+    }
+    uint64 timestamp = 4;
+    string client = 5;
+}
+
+enum pbft_internal_msg_type {
+    PBFT_IMSG_UNDEFINED = 0;
+    PBFT_IMSG_NEW_CONFIG = 1;
+}
+
+enum pbft_request_type {
+    PBFT_REQ_UNDEFINED = 0;
+    PBFT_REQ_DATABASE = 1;
+    PBFT_REQ_INTERNAL = 2;
+}
+
+message pbft_internal_msg
+{
+    pbft_internal_msg_type type = 1;
+
+    // for new_config
+    string configuration = 2;
 }
 
 message pbft_peer_info

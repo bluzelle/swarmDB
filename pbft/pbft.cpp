@@ -210,9 +210,16 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
         case PBFT_MSG_COMMIT :
             this->handle_commit(msg, original_msg);
             break;
-        case PBFT_MSG_CHECKPOINT :
+        case PBFT_MSG_CHECKPOINT:
             this->handle_checkpoint(msg, original_msg);
             break;
+        case PBFT_MSG_VIEWCHANGE:
+            this->handle_viewchange(msg, original_msg);
+            break;
+        case PBFT_MSG_NEWVIEW:
+            this->handle_newview(msg, original_msg);
+            break;
+
         default :
             throw std::runtime_error("Unsupported message type");
     }
@@ -772,8 +779,6 @@ pbft::handle_failure()
     //TODO: KEP-332
     this->view_is_valid = false;
 
-
-
     // at this point the timer has expired (i expires in view v)
     // doesn't matter: we must be a backup !this->is_primary()
     // Create  view-change message.
@@ -802,10 +807,6 @@ pbft::handle_failure()
     //            get the set of operations, frome each operation get the messages..
 
     // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
-
-
-
-
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1071,6 +1072,33 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
     this->handle_request(mutable_msg, session);
 
     database_response response;
+
+    LOG(debug) << "got database message: " << json.toStyledString();
+
+    if (!json.isMember("msg"))
+    {
+        LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
+        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
+        return;
+    }
+
+    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["msg"].asString())))
+    {
+        LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
+        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
+        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
+        return;
+    }
+
+    *response.mutable_header() = msg.db().header();
+
+    pbft_request req;
+    *req.mutable_operation() = msg.db();
+    req.set_timestamp(this->now()); //TODO: the timestamp needs to come from the client
+
+    this->handle_request(req, json, session);
+
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
 }
@@ -1091,6 +1119,141 @@ bool
 pbft::is_view_valid() const
 {
     return this->view_is_valid;
+}
+
+
+bool
+pbft::is_valid_viewchange_message(const pbft_msg& msg) const
+{
+    return (msg.type() == PBFT_MSG_VIEWCHANGE) && (msg.view() == this->view + 1);
+}
+
+
+bool
+pbft::is_valid_newview_message(const pbft_msg& msg) const
+{
+    return (msg.type() == PBFT_MSG_NEWVIEW) && (msg.view() == this->view + 1);
+}
+
+
+void
+pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+{
+    LOG(debug) << "\t*** handle_viewchange: " << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
+    if (this->is_primary())
+    {
+        LOG(debug) << "\t*** primary";
+        // KEP-633 - When the primary of view v+1 receives 2f valid view change messages
+        // for view v+1,
+
+        // TODO: Dry this by moving it one block up.
+        // what is a valid vew change messsage? For now check that it is for view + 1;
+        if (this->is_valid_viewchange_message(msg))
+        {
+            this->valid_view_change_messages.emplace(msg.SerializeAsString());
+        }
+
+        LOG(debug) << "\n&***this->max_faulty_nodes(): " << this->max_faulty_nodes();
+
+        if (this->valid_view_change_messages.size() == 2 * this->max_faulty_nodes())
+        {
+            pbft_msg new_view;
+            //       It sends a message <NEWVIEW, v+1, V, O> where
+            new_view.set_type(PBFT_MSG_NEWVIEW);
+            //          v+1 is the new view index
+            new_view.set_view(this->view + 1);
+            //          V is the set of 2f+1 view change messages
+            ///new_view.set_??? V?
+
+            //          O is a set of prepare messages computed by the new primary as follows:
+            //              - Each message in some P from a view-change after the latest stable
+            //              checkpoint is given a new preprepare in the new view
+            //              - If there are gaps, they are filled with null requests
+            //              - These messages are added to the log as normal
+            //new_view.set_??? O?
+
+            this->broadcast(this->wrap_message(new_view));
+
+            //        - It then moves to v+1
+            LOG(debug) << "\t*** %%%moving to view +1";
+            this->view += 1;
+            this->view_is_valid = true;
+            this->valid_view_change_messages.clear();
+        }
+    }
+    else
+    {
+        LOG(debug) << "\t*** *NOT* primary";
+        // When a replica receives f+1 view change messages, it sends one as well
+        // even if its timer has not yet expired - KEP-632
+
+        // TODO: Dry this by moving it one block up.
+        // Does this need to be a valid view? What is a valid vew change messsage? For now check that it is for view + 1;
+        if (this->is_valid_viewchange_message(msg))
+        {
+            this->valid_view_change_messages.emplace(msg.SerializeAsString());
+        }
+
+        LOG(debug) << "\t*** this->valid_view_change_messages.size():" << this->valid_view_change_messages.size()  << "\t target:" <<   this->max_faulty_nodes() + 1;
+
+        if (this->valid_view_change_messages.size() == (this->max_faulty_nodes() + 1) )
+        {
+            // TODO: DRY Refactor the following view_change, it is duplicated in handle_failure
+            pbft_msg view_change;
+            // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+            view_change.set_type(PBFT_MSG_VIEWCHANGE);
+
+            // v + 1 = this->view + 1
+            view_change.set_view(this->view + 1);
+
+            // n = sequence # of last valid checkpoint
+            //   = this->stable_checkpoint.first
+            view_change.set_sequence(this->latest_stable_checkpoint().first);
+
+            // C = a set of local 2*f + 1 valid checkpoint messages
+            //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
+            for (const auto& msg : this->stable_checkpoint_proof)
+            {
+                view_change.add_checkpoint_messages(msg.second);
+            }
+
+            // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
+            //     than n
+            // P_m = the pre prepare and the 2 f + 1 prepares
+            //            get the set of operations, frome each operation get the messages..
+
+
+            // TODO: Is it correct to set the new view at this point?
+            this->view += 1;
+
+            // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
+            this->broadcast(this->wrap_message(view_change));
+        }
+    }
+}
+
+void
+pbft::handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+{
+    LOG(debug) << "\t*** handle_newview" << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
+
+    if (!this->is_primary())
+    {
+        LOG(debug) << "\t***I am a backup";
+        // KEP-634 - A backup accepts a new-view message for view v+1 if
+        //      - the view change messages are valid
+        if(msg.view() == this->view + 1)
+        {
+            LOG(debug) << "\t***new view message is valid.";
+            this->valid_new_view_messages.insert(msg.SerializeAsString());
+
+            //      - The set O is correct
+            //          - None of the messages it knows about are lost ???
+            //      - It then moves to view v+1, processing the preprepares in O as normal.
+            this->view += 1;
+            this->view_is_valid = true;
+        }
+    }
 }
 
 std::string
