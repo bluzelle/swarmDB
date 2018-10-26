@@ -209,10 +209,14 @@ audit::send_to_monitor(const std::string& stat)
     std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
 
     this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
-                                [buffer](const boost::system::error_code& error, std::size_t bytes)
-                                {
-                                    LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2'") % error.message() % bytes;
-                                }
+        [buffer](const boost::system::error_code& ec, std::size_t bytes)
+        {
+            if (ec)
+            {
+                LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2%'") %
+                              ec.message() % bytes;
+            }
+        }
     );
 
 }
