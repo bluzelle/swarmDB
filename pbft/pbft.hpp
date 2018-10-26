@@ -229,6 +229,8 @@ namespace bzn
 
         std::set<std::string> valid_view_change_messages; // should this be in operation?
         std::set<std::string> valid_new_view_messages; // should this be in operation?
+
+        FRIEND_TEST(pbft_test, full_test);
     };
 
 } // namespace bzn

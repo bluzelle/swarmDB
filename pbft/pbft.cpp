@@ -228,12 +228,13 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
+#if 0
     if (!this->is_view_valid() || msg.type() != PBFT_MSG_CHECKPOINT || msg.type() != PBFT_MSG_VIEWCHANGE || msg.type() != PBFT_MSG_NEWVIEW)
     {
         LOG(debug) << "Dropping message because local view is invalid";
         return false;
     }
-
+#endif
     auto t = msg.type();
     if (t == PBFT_MSG_PREPREPARE || t == PBFT_MSG_PREPARE || t == PBFT_MSG_COMMIT)
     {
