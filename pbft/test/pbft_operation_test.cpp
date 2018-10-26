@@ -139,10 +139,4 @@ namespace
 
         EXPECT_TRUE(this->op.is_prepared());
     }
-
-
-    TEST_F(pbft_operation_test, pbft_replica_sends_view_change_message_after_view_becomes_invalid)
-    {
-
-    }
 }

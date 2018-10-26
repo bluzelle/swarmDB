@@ -228,7 +228,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
-    if(!this->is_view_valid()  /* TODO: except for checkpoints, view change, and new view messages*/)
+    if (!this->is_view_valid() || msg.type() != PBFT_MSG_CHECKPOINT || msg.type() != PBFT_MSG_VIEWCHANGE || msg.type() != PBFT_MSG_NEWVIEW)
     {
         LOG(debug) << "Dropping message because local view is invalid";
         return false;
@@ -811,7 +811,7 @@ pbft::handle_failure()
 
     for(const auto operation : operations)
     {
-        preprepare_message* preprep_msg = view_change.add_preprepare_messages();
+        prepared_proof* preprep_msg = view_change.add_prepared_proofs();
         preprep_msg->set_pre_prepare(operation->get_preprepare());
         for (const auto &prepared : operation->get_prepares())
         {

@@ -492,4 +492,53 @@ namespace bzn::test
         this->send_commits(1, 1, hash);
     }
 
+
+
+    void create_and_send_request(std::shared_ptr<pbft> sut, std::shared_ptr<Mocknode_base> mock_node)
+    {
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true)))).Times(Exactly(TEST_PEER_LIST.size()));
+
+
+        auto request = new pbft_request();
+        pbft_msg msg;
+        msg.set_allocated_request(request);
+        sut->handle_message(msg, wrap_pbft_msg(msg));
+    }
+
+
+
+
+    TEST_F(pbft_test, full_test)
+    {
+        this->build_pbft();
+
+        create_and_send_request(this->pbft, this->mock_node);
+
+
+
+
+        // we have our SUT
+
+        // 1 - create a request
+        // 2 - SUT does this: pbft->handle_message
+        // 3 - pbft sends a bunch of pre-prepares to "backups" - EXPECT that they are sent
+        // 4 - fake prepares from "backups" to SUT
+        // 5 - Expect the SUT to broadcast commits to all backups
+        // 6a -
+        // 6b -
+
+        // ...
+        // n - goto 1 101 times
+        // n+1
+
+
+
+
+
+
+    }
+
+
+
+
 }

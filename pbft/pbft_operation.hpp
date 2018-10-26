@@ -79,7 +79,15 @@ namespace bzn
 
         const std::string& get_preprepare() const { return this->preprepare_message; };
 
-        const std::set<std::string>& get_prepares() const { return this->prepare_messages; };
+        const std::set<std::string> get_prepares() const
+        {
+            std::set<std::string> prepares;
+            for (const auto& message : this->prepare_messages)
+            {
+                prepares.insert(message.second);
+            }
+            return prepares;
+        };
 
     private:
         const std::shared_ptr<const std::vector<peer_address_t>> peers;
