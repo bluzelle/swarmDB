@@ -228,7 +228,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
-    if(!this->is_view_valid())
+    if(!this->is_view_valid()  /* TODO: except for checkpoints, view change, and new view messages*/)
     {
         LOG(debug) << "Dropping message because local view is invalid";
         return false;
@@ -806,6 +806,25 @@ pbft::handle_failure()
     // P_m = the pre prepare and the 2 f + 1 prepares
     //            get the set of operations, frome each operation get the messages..
 
+    // std::set<std::shared_ptr<bzn::pbft_operation>>
+    const auto operations = this->prepared_operations_since_last_checkpoint();
+
+    for(const auto operation : operations)
+    {
+        preprepare_message* preprep_msg = view_change.add_preprepare_messages();
+        preprep_msg->set_pre_prepare(operation->get_preprepare());
+        for (const auto &prepared : operation->get_prepares())
+        {
+            preprep_msg->add_prepare(prepared);
+        }
+    }
+
+
+
+
+
+
+
     // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
     this->broadcast(this->wrap_message(view_change));
 }
@@ -1132,6 +1151,48 @@ pbft::is_valid_viewchange_message(const pbft_msg& msg) const
 bool
 pbft::is_valid_newview_message(const pbft_msg& msg) const
 {
+    // the view change messages are valid
+    auto V = msg.viewchange_messages();
+    LOG(debug) << " Are the viewchange messages valid: [" << V.size() << "]";
+    for(const auto& v : V)
+    {
+        pbft_msg viewchange;
+        viewchange.ParseFromString(v);
+        if ( (viewchange.type() != PBFT_MSG_VIEWCHANGE) || (viewchange.view()!= this->get_view()+1) )
+        {
+            return false;
+        }
+    }
+
+
+
+
+
+    //      - The set O is correct
+    //          - None of the messages it knows about are lost ???
+//    auto O = msg.preprepare_messages();
+//    LOG(debug) << " Are the prepare messages, O, valid: [" << V.size() << "]";
+//    // ?? O.size() == this->prepared_operations_since_last_checkpoint().size()
+//
+//    for(const auto& o : O)
+//    {
+//        LOG (debug) << o;
+//
+//    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     return (msg.type() == PBFT_MSG_NEWVIEW) && (msg.view() == this->view + 1);
 }
 
@@ -1222,10 +1283,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
             // P_m = the pre prepare and the 2 f + 1 prepares
             //            get the set of operations, frome each operation get the messages..
 
-
-            // TODO: Is it correct to set the new view at this point?
-            this->view += 1;
-
             // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
             this->broadcast(this->wrap_message(view_change));
         }
@@ -1242,16 +1299,14 @@ pbft::handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
         LOG(debug) << "\t***I am a backup";
         // KEP-634 - A backup accepts a new-view message for view v+1 if
         //      - the view change messages are valid
-        if(msg.view() == this->view + 1)
+        if(this->is_valid_newview_message(msg))
         {
             LOG(debug) << "\t***new view message is valid.";
-            this->valid_new_view_messages.insert(msg.SerializeAsString());
+            //      - It then moves to view v+1,
+            this->view = msg.view();
+            // processing the preprepares in O as normal. ???
 
-            //      - The set O is correct
-            //          - None of the messages it knows about are lost ???
-            //      - It then moves to view v+1, processing the preprepares in O as normal.
-            this->view += 1;
-            this->view_is_valid = true;
+            // DO I need to send the set O to be processed?
         }
     }
 }
@@ -1409,6 +1464,24 @@ bool
 pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* config */)
 {
     return true;
+}
+
+std::set<std::shared_ptr<bzn::pbft_operation>>
+pbft::prepared_operations_since_last_checkpoint()
+{
+    std::set<std::shared_ptr<bzn::pbft_operation>> retval;
+    // TODO functional filter...
+    for (const auto& p : this->operations)
+    {
+        if (p.second->is_prepared() && !p.second->is_committed())
+        {
+            if (p.second->sequence > this->latest_stable_checkpoint().first)
+            {
+                retval.emplace(p.second);
+            }
+        }
+    }
+    return retval;
 }
 
 timestamp_t

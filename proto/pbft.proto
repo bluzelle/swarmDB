@@ -47,9 +47,14 @@ message pbft_msg
     // TODO replace string with wrapped_bzn_message
     repeated string checkpoint_messages = 8;
 
-    // for viewchange
-    // P, p_m ???
-    // repeated ?? preprepare_messages = 8;
+    // for viewchange, and newview (O)
+    // P, p_m ???  O for newview
+    repeated prepared_proof prepared_proofs = 9;
+
+    // for newview
+    // V valid view change messages
+    repeated bytes viewchange_messages = 10;
+
 }
 
 message pbft_config_msg
@@ -160,4 +165,11 @@ message pbft_peer_info
     uint32 http_port = 3;
     string name = 4;
     string uuid = 5;
+}
+
+
+message prepared_proof
+{
+    bytes pre_prepare = 1;
+    repeated bytes prepare = 2;
 }

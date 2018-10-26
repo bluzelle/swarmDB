@@ -218,21 +218,36 @@ namespace bzn::test
         pbft->handle_message(preprepare_msg, default_original_msg);
     }
 
+    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector)
+    {
+        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
+
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+        EXPECT_FALSE(pbft->is_primary());
+        pbft->handle_database_message(this->request_json, this->mock_session);
+    }
+
+
+    ////////////////////////////////////////////////////////////////
+    // TODO: move to new module
+
     TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
     {
         // I expect that a replica forced to handle a failure will invalidate
         // its' view, and cause the replica to send a VIEWCHANGE messsage
         EXPECT_CALL( *mock_node, send_message_str(_, _))
                 .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
-                {
-                    wrapped_bzn_msg wmsg;
-                    wmsg.ParseFromString(*p);
-                    pbft_msg view_change;
-                    view_change.ParseFromString(wmsg.payload());
-                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                    EXPECT_TRUE( 2 == view_change.view());
-                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-                }));
+                                       {
+                                           wrapped_bzn_msg wmsg;
+                                           wmsg.ParseFromString(*p);
+                                           pbft_msg view_change;
+                                           view_change.ParseFromString(wmsg.payload());
+                                           EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+                                           EXPECT_TRUE( 2 == view_change.view());
+                                           EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+                                       }));
 
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -240,7 +255,7 @@ namespace bzn::test
         // force the failure.
         this->pbft->handle_failure();
 
-        // Now the replicas' view shoould be invalid
+        // Now the replicas' view should be invalid
         EXPECT_FALSE(this->pbft->is_view_valid());
     }
 
@@ -261,7 +276,7 @@ namespace bzn::test
         this->pbft->handle_failure();
 
         // nothing will happen with this request, that is there will be no new messages
-        pbft->handle_message(this->request_msg, default_original_msg);
+        pbft->handle_message(this->preprepare_msg, default_original_msg);
     }
 
 
@@ -310,7 +325,7 @@ namespace bzn::test
         // We are expecting the primary to send the newview message after 2f of
         // the replicas have sent thier view change messages.
         EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_newview, Eq(true))))
-             .WillRepeatedly(Invoke([&](auto&,auto&) { ASSERT_TRUE( ( 2 * NON_FAULTY_REPLICAS) == count); }));
+                .WillRepeatedly(Invoke([&](auto&,auto&) { ASSERT_TRUE( ( 2 * NON_FAULTY_REPLICAS) == count); }));
 
         pbft_msg view_change_msg;
         view_change_msg.set_type(PBFT_MSG_VIEWCHANGE);
@@ -371,7 +386,7 @@ namespace bzn::test
         EXPECT_TRUE(this->pbft->is_view_valid());
     }
 
-    TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
+    TEST_F(pbft_test, backup_accepts_newview)
     {
         EXPECT_CALL( *mock_node, send_message_str(_, _))
                 .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
@@ -460,6 +475,10 @@ namespace bzn::test
 
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
+        EXPECT_TRUE(!pbft->is_primary());
+        const size_t NEW_VIEW = this->pbft->get_view() + 1;
+
+        EXPECT_EQ(this->pbft->get_view(), static_cast<size_t>(1));
 
         EXPECT_FALSE(pbft->is_primary());
         this->request_msg.set_timestamp(now());
@@ -472,4 +491,5 @@ namespace bzn::test
 
         this->send_commits(1, 1, hash);
     }
+
 }

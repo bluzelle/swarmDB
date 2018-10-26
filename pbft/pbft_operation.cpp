@@ -110,9 +110,10 @@ pbft_operation::record_request(const bzn_envelope& wrapped_request)
 }
 
 void
-pbft_operation::record_preprepare(const bzn_envelope& /*encoded_preprepare*/)
+pbft_operation::record_preprepare(const bzn_envelope& encoded_preprepare)
 {
     this->preprepare_seen = true;
+    this->preprepare_message = encoded_preprepare.SerializeAsString();
 }
 
 bool
@@ -126,6 +127,7 @@ pbft_operation::record_prepare(const bzn_envelope& encoded_prepare)
 {
     // TODO: Save message
     this->prepares_seen.insert(encoded_prepare.sender());
+    this->prepare_messages.insert(encoded_prepare.SerializeAsString());
 }
 
 size_t

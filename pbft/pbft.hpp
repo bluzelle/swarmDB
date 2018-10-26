@@ -15,7 +15,9 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
+#include <include/boost_asio_beast.hpp>
 #include <pbft/pbft_base.hpp>
+#include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_config_store.hpp>
 #include <status/status_provider_base.hpp>
@@ -36,14 +38,13 @@ namespace
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
 }
 
-
 namespace bzn
 {
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
     using timestamp_t = uint64_t;
 
-    class pbft final : public bzn::pbft_base, public std::enable_shared_from_this<pbft>
+    class pbft final : public bzn::pbft_base, public bzn::status_provider_base, public std::enable_shared_from_this<pbft>
     {
     public:
         pbft(
@@ -75,14 +76,20 @@ namespace bzn
         void set_audit_enabled(bool setting);
 
         checkpoint_t latest_stable_checkpoint() const;
+
         checkpoint_t latest_checkpoint() const;
+
         size_t unstable_checkpoints_count() const;
 
         uint64_t get_low_water_mark();
 
         uint64_t get_high_water_mark();
 
+        std::string get_name() override;
+
         bool is_view_valid() const;
+
+        bzn::json_message get_status() override;
 
         bool is_valid_viewchange_message(const pbft_msg& msg) const;
         bool is_valid_newview_message(const pbft_msg& msg) const;
@@ -185,23 +192,7 @@ namespace bzn
 
         std::mutex pbft_lock;
 
-        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
-        {
-            std::set<std::shared_ptr<bzn::pbft_operation>> retval;
-            // TODO functional filter...
-            for(const auto& p : this->operations)
-            {
-                if(p.second->is_prepared())
-                {
-                    if(p.second->sequence > this->latest_stable_checkpoint().first)
-                    {
-                        retval.emplace(p.second);
-                    }
-                }
-            }
-            return retval;
-        }
-
+        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
 
         std::map<bzn::operation_key_t, std::shared_ptr<bzn::pbft_operation>> operations;
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
