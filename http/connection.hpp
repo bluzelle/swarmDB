@@ -31,7 +31,7 @@ namespace bzn::http
     class connection : public std::enable_shared_from_this<connection>
     {
     public:
-        connection(std::shared_ptr<bzn::asio::io_context_base> io_context, std::unique_ptr<bzn::beast::http_socket_base> http_socket, std::shared_ptr<bzn::crud_base> crud);
+        connection(std::shared_ptr<bzn::asio::io_context_base> io_context, std::unique_ptr<bzn::beast::http_socket_base> http_socket, std::shared_ptr<bzn::deprecated::crud_base> crud);
 
         void start();
 
@@ -53,7 +53,7 @@ namespace bzn::http
 
         std::shared_ptr<bzn::beast::http_socket_base> http_socket;
         std::unique_ptr<bzn::asio::steady_timer_base> deadline_timer;
-        std::shared_ptr<bzn::crud_base> crud;
+        std::shared_ptr<bzn::deprecated::crud_base> crud;
 
         boost::beast::flat_buffer buffer{bzn::MAX_VALUE_SIZE + 1024}; // add a bit of room for a header
         boost::beast::http::request<boost::beast::http::dynamic_body> request;

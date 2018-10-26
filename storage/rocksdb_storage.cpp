@@ -180,17 +180,19 @@ rocksdb_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 }
 
 
-std::size_t
+std::pair<std::size_t, std::size_t>
 rocksdb_storage::get_size(const bzn::uuid_t& uuid)
 {
     std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
 
     std::size_t size{};
+    std::size_t keys{};
 
     for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
     {
+        ++keys;
         size += iter->value().size();
     }
 
-    return size;
+    return std::make_pair(keys, size);
 }

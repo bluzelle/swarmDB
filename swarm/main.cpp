@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <bootstrap/bootstrap_peers.hpp>
-#include <crud/crud.hpp>
+#include <crud/raft_crud.hpp>
 #include <crud/subscription_manager.hpp>
 #include <status/status.hpp>
 #include <ethereum/ethereum.hpp>
@@ -272,7 +272,7 @@ main(int argc, const char* argv[])
                 storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), options->get_uuid());
             }
 
-            auto crud = std::make_shared<bzn::crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
+            auto crud = std::make_shared<bzn::raft_crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
             status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{raft});
 

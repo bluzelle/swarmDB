@@ -1,11 +1,13 @@
 add_library(crud STATIC
-        crud.cpp
-        crud.hpp
-        crud_base.hpp
-        subscription_manager.cpp
-        subscription_manager.hpp
-        subscription_manager_base.hpp
-        )
+    raft_crud.cpp
+    raft_crud.hpp
+    crud_base.hpp
+    subscription_manager.cpp
+    subscription_manager.hpp
+    subscription_manager_base.hpp
+    crud.cpp
+    crud.hpp
+    )
 
 target_link_libraries(crud proto)
 add_dependencies(crud jsoncpp openssl)

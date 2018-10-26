@@ -28,7 +28,7 @@ namespace bzn::http
     class server : public std::enable_shared_from_this<server>
     {
     public:
-        server(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::crud_base> crud, const boost::asio::ip::tcp::endpoint& ep);
+        server(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::deprecated::crud_base> crud, const boost::asio::ip::tcp::endpoint& ep);
 
         void start();
 
@@ -38,7 +38,7 @@ namespace bzn::http
         std::unique_ptr<bzn::asio::tcp_acceptor_base> tcp_acceptor;
         std::unique_ptr<bzn::asio::tcp_socket_base>   acceptor_socket;
         std::shared_ptr<bzn::asio::io_context_base>   io_context;
-        std::shared_ptr<bzn::crud_base>               crud;
+        std::shared_ptr<bzn::deprecated::crud_base>   crud;
 
         std::once_flag start_once;
     };
