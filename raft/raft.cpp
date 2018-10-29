@@ -486,6 +486,19 @@ raft::validate_new_peer(std::shared_ptr<bzn::session_base> session, const bzn::j
 
 
 void
+raft::send_success_message(std::shared_ptr<bzn::session_base> session, const std::string& command, const std::string& message)
+{
+    bzn::json_message msg;
+    msg["bzn-api"] = "raft";
+    msg["cmd"] = command;
+    msg["response"] = bzn::json_message();
+    msg["response"]["from"] = this->get_uuid();
+    msg["response"]["msg"] = message;
+    session->send_message(std::make_shared<bzn::json_message>(msg), true);
+}
+
+
+void
 raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message &peer)
 {
     if (this->get_state() != bzn::raft_state::leader)
@@ -531,13 +544,7 @@ raft::handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::jso
                             bzn::log_entry_type::joint_quorum);
 
     // The add peer has succeded, let's send a message back to the requester
-    bzn::json_message msg;
-    msg["bzn-api"] = "raft";
-    msg["cmd"] = "add_peer";
-    msg["response"] = bzn::json_message();
-    msg["response"]["from"] = this->get_uuid();
-    msg["response"]["msg"] = SUCCESS_PEER_ADDED_TO_SWARM;
-    session->send_message(std::make_shared<bzn::json_message>(msg), true);
+    this->send_success_message(session, "add_peer", SUCCESS_PEER_ADDED_TO_SWARM);
     return;
 }
 
@@ -572,6 +579,10 @@ raft::handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::
 
     this->append_log_unsafe(this->create_joint_quorum_by_removing_peer(last_quorum_entry.msg, uuid),
                             bzn::log_entry_type::joint_quorum);
+
+    // The remove peer has succeded, let's send a message back to the requester
+    this->send_success_message(session, "remove_peer", SUCCESS_PEER_REMOVED_FROM_SWARM);
+
     return;
 }
 

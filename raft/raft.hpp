@@ -39,6 +39,7 @@ namespace
     const std::string ERROR_INVALID_SIGNATURE = "ERROR_INVALID_SIGNATURE";
     const std::string ERROR_UNABLE_TO_VALIDATE_UUID ="ERROR_UNABLE_TO_VALIDATE_UUID";
     const std::string SUCCESS_PEER_ADDED_TO_SWARM = "SUCCESS_PEER_ADDED_TO_SWARM";
+    const std::string SUCCESS_PEER_REMOVED_FROM_SWARM = "SUCCESS_PEER_REMOVED_FROM_SWARM";
     const std::string ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER{"ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER"};
     const std::string ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER{"ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER"};
     const std::string ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE{"ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE"};
@@ -143,6 +144,7 @@ namespace bzn
 
         void update_raft_state(uint32_t term, bzn::raft_state state);
 
+        void send_success_message(std::shared_ptr<bzn::session_base> session, const std::string& command, const std::string& message);
         void handle_add_peer(std::shared_ptr<bzn::session_base> session, const bzn::json_message& peer);
         void handle_remove_peer(std::shared_ptr<bzn::session_base> session, const std::string& uuid);
 
