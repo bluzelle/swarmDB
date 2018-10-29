@@ -23,6 +23,7 @@
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
 #include <mutex>
+#include <gtest/gtest_prod.h>
 
 namespace
 {
@@ -93,6 +94,8 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
         void handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_join_or_leave(const pbft_membership_msg& msg);
+        void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -101,10 +104,13 @@ namespace bzn
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
         void handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
+        std::shared_ptr<pbft_operation> setup_request_operation(const pbft_request& msg
+            , const std::shared_ptr<session_base>& session = nullptr);
 
         void broadcast(const bzn::encoded_message& message);
 
@@ -125,6 +131,10 @@ namespace bzn
         bool initialize_configuration(const bzn::peers_list_t& peers);
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
+        void broadcast_new_configuration(pbft_configuration::shared_const_ptr config);
+        bool is_configuration_acceptable_in_new_view(hash_t config_hash);
+        bool move_to_new_configuration(hash_t config_hash);
+        bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
@@ -158,6 +168,14 @@ namespace bzn
         std::set<checkpoint_t> local_unstable_checkpoints;
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
         pbft_config_store configurations;
+
+        FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
+        FRIEND_TEST(pbft_test, valid_leave_request_test);
+        FRIEND_TEST(pbft_test, invalid_leave_request_test);
+        FRIEND_TEST(pbft_test, test_new_config_preprepare_handling);
+        FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
+        FRIEND_TEST(pbft_test, test_new_config_commit_handling);
+        FRIEND_TEST(pbft_test, test_move_to_new_config);
 
         std::shared_ptr<crypto_base> crypto;
     };

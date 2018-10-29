@@ -24,14 +24,26 @@ namespace bzn
     class pbft_config_store
     {
     public:
+        // add a new configuration to storage. does not enable it or set it current
         bool add(pbft_configuration::shared_const_ptr config);
+
+        // remove configurations from store older than the one with the given hash
+        // Note: this will not remove the currently active configuration
         bool remove_prior_to(const hash_t& hash);
+
+        // get the configuration with the given hash
         pbft_configuration::shared_const_ptr get(const hash_t& hash) const;
 
+        // set the configuration with the given hash to be the currently active one
         bool set_current(const hash_t& hash);
+
+        // returns the currently active configuration
         pbft_configuration::shared_const_ptr current() const;
 
+        // mark a configuration enabled/disabled
         bool enable(const hash_t& hash, bool val = true);
+
+        // returns whether the configuration with the given hash is enabled
         bool is_enabled(const hash_t& hash) const;
 
     private:

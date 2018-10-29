@@ -32,6 +32,16 @@ namespace bzn::test
                                 }
                         ));
 
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP, _))
+            .Times(Exactly(1))
+            .WillOnce(
+                Invoke(
+                    [&](const auto&, auto)
+                    {
+                        return true;
+                    }
+                ));
+
         EXPECT_CALL(*(this->mock_node), register_for_message("database", _))
                 .Times(Exactly(1))
                 .WillOnce(
