@@ -525,20 +525,74 @@ namespace bzn
     {
         this->build_pbft();
 
-        auto op = std::shared_ptr<pbft_operation>();
+        auto operation = std::shared_ptr<pbft_operation>();
         EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true)))).Times(
                 Exactly(TEST_PEER_LIST.size()))
             .WillRepeatedly(Invoke([&](auto, auto enc_bzn_msg) {
+                wrapped_bzn_msg wmsg;
+                wmsg.ParseFromString(*enc_bzn_msg);
+
+
                 pbft_msg msg;
-                if (msg.ParseFromString(*enc_bzn_msg))
+                if (msg.ParseFromString(wmsg.payload()))
                 {
-                    if (op == nullptr)
-                        op = this->pbft->find_operation(this->pbft->get_view(), msg.sequence(), msg.request());
+                    if (operation == nullptr)
+                        operation = this->pbft->find_operation(this->pbft->get_view(), msg.sequence(), msg.request());
                 }
             }));
 
-        create_and_send_request(this->pbft);
-        ASSERT_NE(op, nullptr);
+
+        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_commit, Eq(true)))).Times(
+                        Exactly(TEST_PEER_LIST.size()))
+                .WillRepeatedly(Invoke([&](auto, auto /*enc_bzn_msg*/) {
+                    /*pbft_msg msg;
+                    if (msg.ParseFromString(*enc_bzn_msg))
+                    {
+                        if (op == nullptr)
+                            op = this->pbft->find_operation(this->pbft->get_view(), msg.sequence(), msg.request());
+                    }*/
+                }));
+
+
+
+
+
+
+        // sending the initial request from a client
+        auto request = new pbft_request();
+        request->set_type(PBFT_REQ_DATABASE);
+        bzn::json_message empty_json_msg;
+        pbft->handle_request(*request, empty_json_msg);
+        ASSERT_NE(operation, nullptr);
+
+
+
+
+
+        // now we fake sending prepare messages from the backups
+        for (const auto peer : TEST_PEER_LIST)
+        {
+            pbft_msg prepare;
+
+            prepare.set_view(operation->view);
+            prepare.set_sequence(operation->sequence);
+            prepare.set_type(PBFT_MSG_PREPARE);
+            prepare.set_allocated_request(new pbft_request(operation->request));
+
+
+            auto wmsg = wrap_pbft_msg(prepare);
+
+            // TEST_PEER_LIST
+
+            wmsg.set_sender(peer.uuid);
+
+            pbft->handle_message(prepare, wmsg);
+
+
+
+        }
+
+
 
 
 
