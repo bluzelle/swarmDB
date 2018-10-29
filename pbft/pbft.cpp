@@ -150,11 +150,6 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
 void
 pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    if (msg.type() != BZN_MSG_PBFT_MEMBERSHIP)
-    {
-        LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
-    }
-
     pbft_membership_msg inner_msg;
     if (!inner_msg.ParseFromString(msg.payload()))
     {
@@ -916,8 +911,7 @@ pbft::move_to_new_configuration(hash_t config_hash)
 }
 
 bool
-pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config)
+pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* config */)
 {
-    (void) config;
     return true;
 }

@@ -64,8 +64,7 @@ enum pbft_request_type
 {
     PBFT_REQ_UNDEFINED = 0;
     PBFT_REQ_DATABASE = 1;
-    PBFT_REQ_MEMBERSHIP = 2;
-    PBFT_REQ_NEW_CONFIG = 3;
+    PBFT_REQ_NEW_CONFIG = 2;
 }
 
 message pbft_membership_msg
