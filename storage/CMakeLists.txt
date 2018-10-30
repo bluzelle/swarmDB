@@ -6,7 +6,7 @@ add_library(storage STATIC
     rocksdb_storage.cpp)
 
 target_link_libraries(storage)
-add_dependencies(storage jsoncpp)
+add_dependencies(storage jsoncpp rocksdb)
 target_include_directories(storage PRIVATE ${JSONCPP_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
 
 add_subdirectory(test)

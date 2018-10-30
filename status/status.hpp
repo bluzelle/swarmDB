@@ -17,6 +17,7 @@
 #include <include/bluzelle.hpp>
 #include <node/node_base.hpp>
 #include <status/status_provider_base.hpp>
+#include <chrono>
 #include <memory>
 #include <mutex>
 
@@ -39,6 +40,8 @@ namespace bzn
 
         status_provider_list_t status_providers;
         std::once_flag start_once;
+
+        const std::chrono::steady_clock::time_point start_time;
     };
 
 } // namespace bzn

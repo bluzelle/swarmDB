@@ -105,3 +105,16 @@ add_subdirectory(chaos)
 add_subdirectory(crypto)
 
 include(cmake/static_analysis.cmake)
+
+# git commit used to build
+add_custom_command(
+    OUTPUT  swarm_git_commit
+    COMMENT "Generating swarm_git_commit.hpp"
+    COMMAND ${CMAKE_COMMAND}
+    -D PROJECT_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -D PROJECT_BINARY_DIR=${CMAKE_BINARY_DIR}
+    -P ${CMAKE_SOURCE_DIR}/cmake/git_commit.cmake
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+
+add_custom_target(swarn-git-commit ALL DEPENDS swarm_git_commit)
