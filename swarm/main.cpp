@@ -39,7 +39,6 @@
 #include <options/simple_options.hpp>
 #include <crypto/crypto_base.hpp>
 #include <crypto/crypto.hpp>
-#include <utils/blacklist.hpp>
 
 
 void
@@ -190,12 +189,6 @@ main(int argc, const char* argv[])
         if (!options->parse_command_line(argc, argv))
         {
             return 1;
-        }
-
-        // If peer validation is enabled, bail quickly if we find that the daemon's uuid is in the black list.
-        if (options->peer_validation_enabled() && bzn::utils::blacklist::is_blacklisted(options->get_uuid()))
-        {
-            throw std::runtime_error(std::string("This node has been actively disallowed from the Bluzelle network. Please contact support@bluzelle.com."));
         }
 
         init_logging(*options);
