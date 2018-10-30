@@ -97,6 +97,8 @@ namespace bzn
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_join_or_leave(const pbft_membership_msg& msg);
+        void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
+        void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
@@ -108,6 +110,7 @@ namespace bzn
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
+        bzn::encoded_message wrap_message(const pbft_membership_msg& message, const std::string& debug_info = "") const;
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
@@ -122,9 +125,13 @@ namespace bzn
 
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+        void stabilize_checkpoint(const checkpoint_t& cp);
+        void request_checkpoint_state(const checkpoint_t& cp) const;
+        std::string get_checkpoint_state(const checkpoint_t& cp) const;
+        void set_checkpoint_state(const checkpoint_t& cp, const std::string& data);
 
         inline size_t quorum_size() const;
-        inline size_t max_faulty_nodes() const;
+        size_t max_faulty_nodes() const;
 
         void clear_local_checkpoints_until(const checkpoint_t&);
         void clear_checkpoint_messages_until(const checkpoint_t&);
@@ -180,6 +187,8 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
+
+        friend class pbft_proto_test;
 
         std::shared_ptr<crypto_base> crypto;
     };

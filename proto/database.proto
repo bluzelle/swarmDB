@@ -35,6 +35,8 @@ message database_msg
 
         database_subscribe      subscribe = 9;
         database_unsubscribe    unsubscribe = 10;
+
+        database_nullmsg        nullmsg = 11;
     }
 }
 
@@ -151,3 +153,5 @@ message database_response
         database_error                  error = 8;
     }
 }
+
+message database_nullmsg {}

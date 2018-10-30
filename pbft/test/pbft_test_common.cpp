@@ -36,8 +36,9 @@ namespace bzn::test
             .Times(Exactly(1))
             .WillOnce(
                 Invoke(
-                    [&](const auto&, auto)
+                    [&](const auto&, auto handler)
                     {
+                        this->membership_handler = handler;
                         return true;
                     }
                 ));
@@ -141,6 +142,14 @@ namespace bzn::test
     {
         bzn_envelope result;
         result.set_pbft(msg.SerializeAsString());
+        return result;
+    }
+
+    bzn_envelope
+    wrap_pbft_membership_msg(const pbft_membership_msg& msg)
+    {
+        bzn_envelope result;
+        result.set_pbft_membership(msg.SerializeAsString());
         return result;
     }
 

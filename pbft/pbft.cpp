@@ -156,7 +156,7 @@ pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_b
 }
 
 void
-pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
     pbft_membership_msg inner_msg;
     if (!inner_msg.ParseFromString(msg.pbft_membership()))
@@ -165,18 +165,21 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
-    if (inner_msg.has_peer_info())
+    switch (inner_msg.type())
     {
-        switch (inner_msg.type())
-        {
-            case PBFT_MMSG_JOIN:
-            case PBFT_MMSG_LEAVE:
-                this->handle_join_or_leave(inner_msg);
-                break;
-            default:
-                LOG(error) << "Invalid membership message received "
-                    << inner_msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
-        }
+        case PBFT_MMSG_JOIN:
+        case PBFT_MMSG_LEAVE:
+            this->handle_join_or_leave(inner_msg);
+            break;
+        case PBFT_MMSG_GET_STATE:
+            this->handle_get_state(inner_msg, std::move(session));
+            break;
+        case PBFT_MMSG_SET_STATE:
+            this->handle_set_state(inner_msg);
+            break;
+        default:
+            LOG(error) << "Invalid membership message received "
+                << inner_msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
     }
 }
 
@@ -392,6 +395,51 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg)
 }
 
 void
+pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const
+{
+    // get stable checkpoint for request
+    checkpoint_t req_cp(msg.sequence(), msg.state_hash());
+
+    if (req_cp == this->latest_stable_checkpoint())
+    {
+        pbft_membership_msg reply;
+        reply.set_type(PBFT_MMSG_SET_STATE);
+        reply.set_sequence(req_cp.first);
+        reply.set_state_hash(req_cp.second);
+        reply.set_state_data(this->get_checkpoint_state(req_cp));
+
+        auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply));
+        session->send_datagram(msg_ptr);
+    }
+    else
+    {
+        LOG(debug) << boost::format("Request for checkpoint that I don't have: seq: %1%, hash: %2%")
+            % msg.sequence(), msg.state_hash();
+    }
+}
+
+void
+pbft::handle_set_state(const pbft_membership_msg& msg)
+{
+    checkpoint_t cp(msg.sequence(), msg.state_hash());
+
+    if (this->unstable_checkpoint_proofs[cp].size() >= this->quorum_size() &&
+        this->local_unstable_checkpoints.count(cp) == 0)
+    {
+        LOG(info) << boost::format("Adopting checkpoint %1% at seq %2%")
+            % cp.second % cp.first;
+
+        this->set_checkpoint_state(cp, msg.state_data());
+        this->stabilize_checkpoint(cp);
+    }
+    else
+    {
+        LOG(debug) << boost::format("Sent state for checkpoint that I don't need: seq: %1%, hash: %2%")
+            % msg.sequence() % msg.state_hash();
+    }
+}
+
+void
 pbft::broadcast(const bzn::encoded_message& msg)
 {
     auto msg_ptr = std::make_shared<bzn::encoded_message>(msg);
@@ -497,8 +545,22 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         this->broadcast(this->wrap_message(msg));
     }
 
-    // Get a new shared pointer to the operation so that we can give pbft_service ownership on it
-    this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
+    // TODO: this needs to be refactored to be service-agnostic
+    if (op->request.type() == PBFT_REQ_DATABASE)
+    {
+        // Get a new shared pointer to the operation so that we can give pbft_service ownership on it
+        this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
+    }
+    else
+    {
+        // the service needs sequentially sequenced operations. post a null request to fill in this hole
+        auto msg = new database_msg;
+        msg->set_allocated_nullmsg(new database_nullmsg);
+        pbft_request request;
+        request.set_allocated_operation(msg);
+        auto new_op = std::make_shared<pbft_operation>(op->view, op->sequence, request, nullptr);
+        this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
+    }
 }
 
 size_t
@@ -558,6 +620,16 @@ pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
+    result.set_sender(this->uuid);
+
+    return result.SerializeAsString();
+}
+
+bzn::encoded_message
+pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_info*/) const
+{
+    bzn_envelope result;
+    result.set_pbft_membership(msg.SerializeAsString());
     result.set_sender(this->uuid);
 
     return result.SerializeAsString();
@@ -641,7 +713,7 @@ pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    LOG(info) << boost::format("Recieved checkpoint message for seq %1% from %2%")
+    LOG(info) << boost::format("Received checkpoint message for seq %1% from %2%")
               % msg.sequence()
               % original_msg.sender();
 
@@ -672,24 +744,69 @@ pbft::unstable_checkpoints_count() const
 void
 pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
 {
-    if (this->local_unstable_checkpoints.count(cp) == 0 || this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
+    if (this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
     {
         return;
     }
 
+    if (this->local_unstable_checkpoints.count(cp) != 0)
+    {
+        this->stabilize_checkpoint(cp);
+    }
+    else
+    {
+        // we don't have this checkpoint, so we need to catch up
+        this->request_checkpoint_state(cp);
+    }
+}
+
+void
+pbft::stabilize_checkpoint(const checkpoint_t& cp)
+{
     this->stable_checkpoint = cp;
     this->stable_checkpoint_proof = this->unstable_checkpoint_proofs[cp];
 
     LOG(info) << boost::format("Checkpoint %1% at seq %2% is now stable; clearing old data")
-              % cp.second
-              % cp.first;
+        % cp.second % cp.first;
 
     this->clear_local_checkpoints_until(cp);
     this->clear_checkpoint_messages_until(cp);
     this->clear_operations_until(cp);
 
     this->low_water_mark = std::max(this->low_water_mark, cp.first);
-    this->high_water_mark = std::max(this->high_water_mark, cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS*CHECKPOINT_INTERVAL));
+    this->high_water_mark = std::max(this->high_water_mark,
+        cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS * CHECKPOINT_INTERVAL));
+
+}
+
+void
+pbft::request_checkpoint_state(const checkpoint_t& cp) const
+{
+    pbft_membership_msg msg;
+    msg.set_type(PBFT_MMSG_GET_STATE);
+    msg.set_sequence(cp.first);
+    msg.set_state_hash(cp.second);
+
+    LOG(info) << boost::format("Requesting checkpoint state for hash %1% at seq %2%")
+        % cp.second % cp.first;
+
+    auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(msg));
+    this->node->send_message_str(make_endpoint(this->get_primary()), msg_ptr);
+}
+
+std::string
+pbft::get_checkpoint_state(const checkpoint_t& cp) const
+{
+    // TODO: call service to retrieve state at this checkpoint
+    return std::string("state_") + cp.second;
+}
+
+void
+pbft::set_checkpoint_state(const checkpoint_t& /*cp*/, const std::string& /*data*/)
+{
+    // TODO: set the service state at the given checkpoint sequence
+    // the service is expected to load the state and discard any pending operations
+    // prior to the sequence number, then execute any subsequent operations sequentially
 }
 
 void
