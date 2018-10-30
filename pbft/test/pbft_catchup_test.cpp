@@ -63,7 +63,7 @@ namespace bzn
             msg.set_type(PBFT_MMSG_GET_STATE);
             msg.set_sequence(sequence);
             msg.set_state_hash(std::to_string(sequence));
-            auto wmsg = wrap_pbft_membership_msg(msg);
+            auto wmsg = wrap_pbft_membership_msg(msg, this->pbft->get_uuid());
 
             this->membership_handler(wmsg, this->mock_session);
         }
@@ -155,7 +155,7 @@ namespace bzn
         reply.set_sequence(100);
         reply.set_state_hash("100");
         reply.set_state_data("state_100");
-        auto wmsg = wrap_pbft_membership_msg(reply);
+        auto wmsg = wrap_pbft_membership_msg(reply, "see_node_adopts_requested_checkpoint");
         this->membership_handler(wmsg, nullptr);
 
         EXPECT_EQ(this->pbft->latest_stable_checkpoint(), checkpoint_t(100, "100"));
@@ -185,7 +185,7 @@ namespace bzn
         reply.set_sequence(200);
         reply.set_state_hash("200");
         reply.set_state_data("state_200");
-        auto wmsg = wrap_pbft_membership_msg(reply);
+        auto wmsg = wrap_pbft_membership_msg(reply, "see_node_doesnt_adopt_wrong_checkpoint");
         this->membership_handler(wmsg, nullptr);
 
         EXPECT_NE(this->pbft->latest_stable_checkpoint(), checkpoint_t(200, "200"));

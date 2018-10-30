@@ -209,18 +209,20 @@ namespace bzn::test
     }
 
     bzn_envelope
-    wrap_pbft_msg(const pbft_msg& msg)
+    wrap_pbft_msg(const pbft_msg& msg, const bzn::uuid_t sender)
     {
         bzn_envelope result;
         result.set_pbft(msg.SerializeAsString());
+        result.set_sender(sender);
         return result;
     }
 
     bzn_envelope
-    wrap_pbft_membership_msg(const pbft_membership_msg& msg)
+    wrap_pbft_membership_msg(const pbft_membership_msg& msg, const bzn::uuid_t sender)
     {
         bzn_envelope result;
         result.set_pbft_membership(msg.SerializeAsString());
+        result.set_sender(sender);
         return result;
     }
 
@@ -294,6 +296,22 @@ namespace bzn::test
     {
         audit_message parsed;
         return (msg->payload_case() == bzn_envelope::kAudit && parsed.ParseFromString(msg->audit()));
+    }
+
+    bool
+    is_viewchange(std::shared_ptr<bzn_envelope> wrapped_msg)
+    {
+        pbft_msg msg;
+        msg.ParseFromString(wrapped_msg->pbft());
+        return msg.type() == PBFT_MSG_VIEWCHANGE;
+    }
+
+    bool
+    is_newview(std::shared_ptr<std::string> wrapped_msg)
+    {
+        pbft_msg msg;
+        msg.ParseFromString(*wrapped_msg);
+        return msg.type() == PBFT_MSG_NEWVIEW;
     }
 
     bzn_envelope

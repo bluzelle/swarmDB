@@ -53,6 +53,14 @@ namespace bzn
         uint64_t get_view() const override;
         const hash_t& get_request_hash() const override;
 
+        const bzn_envelope get_preprepare() const override ;
+
+        const std::map<uuid_t, bzn_envelope>& get_prepares() const override;
+
+        bzn_envelope preprepare_message;
+
+        std::map<bzn::uuid_t, bzn_envelope> prepare_messages;  // uuid_t is the sender uuid, prepared messages
+
     private:
         size_t faulty_nodes_bound() const;
 

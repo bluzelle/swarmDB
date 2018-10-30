@@ -227,3 +227,15 @@ pbft_memory_operation::get_request_hash() const
 {
     return this->request_hash;
 }
+
+const bzn_envelope
+pbft_memory_operation::get_preprepare() const
+{
+    return this->preprepare_message;
+}
+
+const std::map<bzn::uuid_t, bzn_envelope>&
+pbft_memory_operation::get_prepares() const
+{
+    return this->prepare_messages;
+}

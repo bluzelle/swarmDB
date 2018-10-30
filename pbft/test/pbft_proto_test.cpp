@@ -56,6 +56,7 @@ namespace bzn
         dmsg->set_allocated_create(create);
         request.set_database_msg(dmsg->SerializeAsString());
         request.set_timestamp(this->now());
+        request.set_sender(this->pbft->get_uuid());
 
         pbft->handle_request(request);
 
@@ -66,7 +67,7 @@ namespace bzn
     void
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
-        // after preprepare is sent, SUT will send out prepares to all nodes
+        // after preprepares is sent, SUT will send out prepares to all nodes
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 
@@ -78,8 +79,7 @@ namespace bzn
         preprepare.set_type(PBFT_MSG_PREPREPARE);
         preprepare.set_allocated_request(new bzn_envelope(request));
         preprepare.set_request_hash(this->pbft->crypto->hash(request));
-        auto wmsg = wrap_pbft_msg(preprepare);
-        wmsg.set_sender(peer.uuid);
+        auto wmsg = wrap_pbft_msg(preprepare, peer.uuid);
         pbft->handle_message(preprepare, wmsg);
     }
 
@@ -99,8 +99,7 @@ namespace bzn
             prepare.set_sequence(sequence);
             prepare.set_type(PBFT_MSG_PREPARE);
             prepare.set_request_hash(request_hash);
-            auto wmsg = wrap_pbft_msg(prepare);
-            wmsg.set_sender(peer.uuid);
+            auto wmsg = wrap_pbft_msg(prepare, peer.uuid);
             pbft->handle_message(prepare, wmsg);
         }
     }
@@ -121,8 +120,7 @@ namespace bzn
             commit.set_sequence(sequence);
             commit.set_type(PBFT_MSG_COMMIT);
             commit.set_request_hash(request_hash);
-            auto wmsg = wrap_pbft_msg(commit);
-            wmsg.set_sender(peer.uuid);
+            auto wmsg = wrap_pbft_msg(commit, peer.uuid);
             pbft->handle_message(commit, wmsg);
         }
 
@@ -159,8 +157,7 @@ namespace bzn
         cp.set_type(PBFT_MSG_CHECKPOINT);
         cp.set_state_hash(std::to_string(sequence));
 
-        auto wmsg = wrap_pbft_msg(cp);
-        wmsg.set_sender(node.uuid);
+        auto wmsg = wrap_pbft_msg(cp, node.uuid);
         this->pbft->handle_message(cp, wmsg);
     }
 
