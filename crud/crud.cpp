@@ -66,6 +66,10 @@ crud::send_response(const database_msg& request, const bzn::storage_base::result
         {
             response.mutable_error()->set_message(bzn::MSG_VALUE_SIZE_TOO_LARGE);
         }
+        else if (result == storage_base::result::key_too_large)
+        {
+            response.mutable_error()->set_message(bzn::MSG_KEY_SIZE_TOO_LARGE);
+        }
         else if (result == storage_base::result::exists)
         {
             response.mutable_error()->set_message(bzn::MSG_RECORD_EXISTS);

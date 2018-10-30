@@ -27,6 +27,11 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
         return storage_base::result::value_too_large;
     }
 
+    if (key.size() > bzn::MAX_KEY_SIZE)
+    {
+        return storage_base::result::key_too_large;
+    }
+
     if (auto search = this->kv_store.find(uuid); search != this->kv_store.end())
     {
         if (search->second.find(key)!= search->second.end() )

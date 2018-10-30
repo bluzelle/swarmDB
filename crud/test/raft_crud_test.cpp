@@ -894,6 +894,22 @@ TEST_F(raft_crud_test, test_that_a_create_fails_if_the_value_size_exceeds_the_li
     this->mh(request, this->mock_session);
 }
 
+TEST_F(raft_crud_test, test_that_a_create_fails_if_the_key_size_exceeds_the_limit)
+{
+    bzn::json_message request = generate_create_request(USER_UUID, std::string(bzn::MAX_KEY_SIZE + 1, 'k'), "");
+
+    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+
+    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
+        [&](std::shared_ptr<std::string> msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            EXPECT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
+        }));
+
+    this->mh(request, this->mock_session);
+}
 
 TEST_F(raft_crud_test, test_that_a_create_command_can_create_largest_value_record)
 {

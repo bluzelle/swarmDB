@@ -68,6 +68,11 @@ namespace bzn
             return bzn::MAX_VALUE_SIZE < size;
         }
 
+        inline bool validate_key_size(size_t size)
+        {
+            return bzn::MAX_KEY_SIZE < size;
+        }
+
         std::shared_ptr<bzn::raft_base>    raft;
         std::shared_ptr<bzn::node_base>    node;
         std::shared_ptr<bzn::storage_base> storage;

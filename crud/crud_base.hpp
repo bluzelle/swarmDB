@@ -28,6 +28,7 @@ namespace bzn
     const std::string MSG_RECORD_NOT_FOUND = "RECORD_NOT_FOUND";
     const std::string MSG_INVALID_ARGUMENTS = "INVALID_ARGUMENTS";
     const std::string MSG_VALUE_SIZE_TOO_LARGE = "VALUE_SIZE_TOO_LARGE";
+    const std::string MSG_KEY_SIZE_TOO_LARGE = "KEY_SIZE_TOO_LARGE";
 
     // this interface is tied too closely with raft usage and will eventually be removed...
     namespace deprecated

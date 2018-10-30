@@ -55,6 +55,11 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
         return storage_base::result::value_too_large;
     }
 
+    if (key.size() > bzn::MAX_KEY_SIZE)
+    {
+        return storage_base::result::key_too_large;
+    }
+
     rocksdb::WriteOptions write_options;
     write_options.sync = true;
 

@@ -132,6 +132,12 @@ raft_crud::handle_create(const bzn::json_message& msg, const database_msg& reque
         return;
     }
 
+    if (this->validate_key_size(request.create().key().size()))
+    {
+        response.mutable_error()->set_message(bzn::MSG_KEY_SIZE_TOO_LARGE);
+        return;
+    }
+
     if (this->storage->has(request.header().db_uuid(), request.create().key()))
     {
 

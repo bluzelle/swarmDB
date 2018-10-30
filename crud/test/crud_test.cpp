@@ -60,6 +60,21 @@ TEST(crud, test_that_create_sends_proper_response)
 
     crud.handle_request(msg, session);
 
+    // fail because key is too big...
+    msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
+        }));
+
+    crud.handle_request(msg, session);
+
     // fail because value is too big...
     msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(

@@ -21,7 +21,8 @@
 
 namespace bzn
 {
-    const size_t MAX_VALUE_SIZE = 307200;
+    const size_t MAX_KEY_SIZE   = 4096;
+    const size_t MAX_VALUE_SIZE = 256000;
 
     class storage_base
     {
@@ -33,7 +34,8 @@ namespace bzn
             not_found,
             exists,
             not_saved,
-            value_too_large
+            value_too_large,
+            key_too_large
         };
 
         virtual ~storage_base() = default;
