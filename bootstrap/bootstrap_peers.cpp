@@ -112,8 +112,7 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
             // uuids
             if (bzn::utils::blacklist::is_blacklisted(uuid))
             {
-                LOG(warning) << "Ignoring blacklisted node with uuid: [" << uuid << "]";
-                continue;
+                throw std::runtime_error(std::string("This node has been actively disallowed from the Bluzelle network. Please contact support@bluzelle.com."));
             }
         }
 

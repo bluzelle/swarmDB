@@ -1512,6 +1512,12 @@ raft::add_self_to_swarm()
     const auto this_address = std::find_if(all_peers.begin(), all_peers.end(),
             [&](const auto& peer){return peer.uuid == this->get_uuid();});
 
+    if (this_address == all_peers.end())
+    {
+        LOG(error) << "Unable to add this peer to the swarm. It may not be in the peers.json file, or it may be blacklisted.";
+        return;
+    }
+
     bzn::json_message request{make_secure_add_peer_request(*this_address, this->signed_key)};
 
     bzn::peer_address_t leader{this->get_leader_unsafe()};
