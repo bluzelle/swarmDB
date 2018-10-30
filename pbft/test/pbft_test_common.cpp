@@ -270,6 +270,22 @@ namespace bzn::test
         return (msg->payload_case() == bzn_envelope::kAudit && parsed.ParseFromString(msg->audit()));
     }
 
+    bool
+    is_viewchange(std::shared_ptr<bzn_envelope> wrapped_msg)
+    {
+        pbft_msg msg;
+        msg.ParseFromString(wrapped_msg->pbft());
+        return msg.type() == PBFT_MSG_VIEWCHANGE;
+    }
+
+    bool
+    is_newview(std::shared_ptr<std::string> wrapped_msg)
+    {
+        pbft_msg msg;
+        msg.ParseFromString(*wrapped_msg);
+        return msg.type() == PBFT_MSG_NEWVIEW;
+    }
+
     bzn_envelope
     from(uuid_t uuid)
     {

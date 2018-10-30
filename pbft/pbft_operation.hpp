@@ -20,7 +20,7 @@
 namespace bzn
 {
     // View, sequence
-    using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
+    using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>; // view #, seq#, hash
 
     // View, sequence
     using log_key_t = std::tuple<uint64_t, uint64_t>;
@@ -106,6 +106,20 @@ namespace bzn
          */
         virtual bool has_request() const = 0;
 
+        const std::string& get_preprepare() const { return this->preprepare_message; };
+
+        const std::set<std::string> get_prepares() const
+        {
+            std::set<std::string> prepares;
+            for (const auto& message : this->prepare_messages)
+            {
+                prepares.insert(message.second);
+            }
+            return prepares;
+        };
+
+    private:
+        const std::shared_ptr<const std::vector<peer_address_t>> peers;
         /**
          * @return do we know the full request associated with this operation, and is it a database request?
          */
@@ -130,6 +144,15 @@ namespace bzn
          * @return the parsed database_msg associated wtih this operation
          */
         virtual const database_msg& get_database_msg() const = 0;
+
+        std::string preprepare_message;
+        std::map<uuid_t, std::string> prepare_messages;  // uuid_t is the sender uuid, prepared messages
+        bzn::encoded_message encoded_request;
+        pbft_request parsed_request;
+
+        bool request_saved = false;
+
+        bool session_saved = false;
 
         virtual ~pbft_operation() = default;
     };

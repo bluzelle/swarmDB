@@ -56,6 +56,8 @@ namespace bzn
         dmsg->set_allocated_create(create);
         request.set_database_msg(dmsg->SerializeAsString());
         request.set_timestamp(this->now());
+        request.set_sender(this->pbft->get_uuid());
+
 
         pbft->handle_request(request);
 
@@ -66,7 +68,7 @@ namespace bzn
     void
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
-        // after preprepare is sent, SUT will send out prepares to all nodes
+        // after preprepares is sent, SUT will send out prepares to all nodes
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 

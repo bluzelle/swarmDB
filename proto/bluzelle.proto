@@ -45,3 +45,20 @@ message bzn_msg
         string json = 11;
     }
 }
+
+enum bzn_msg_type
+{
+    BZN_MSG_UNDEFINED = 0;
+    BZN_MSG_PBFT = 1;
+    BZN_MSG_PBFT_MEMBERSHIP = 2;
+}
+
+message wrapped_bzn_msg
+{
+    // This is stored as a serialized string because we need to sign it, and serialization is not guarenteed to be deterministic
+    bytes payload = 1;
+    bzn_msg_type type = 2;
+
+    string sender = 3;
+    bytes signature = 4;
+}
