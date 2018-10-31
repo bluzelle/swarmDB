@@ -44,6 +44,8 @@ namespace
     const std::string ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER{"ERROR_GET_PEERS_ELECTION_IN_PROGRESS_TRY_LATER"};
     const std::string ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE{"ERROR_GET_PEERS_SELECTED_NODE_IN_UNKNOWN_STATE"};
     const std::string ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER{"ERROR_BOOTSTRAP_LIST_MUST_HAVE_MORE_THAN_ONE_PEER"};
+    const std::string ERROR_UNABLE_TO_ADD_PEER_TO_SWARM{"Unable to add this peer to the swarm. Please ensure that it is listed in peers.json."};
+    const std::string ERROR_PEER_BLACKLISTED{"This node has been actively disallowed from the Bluzelle network. Please contact support@bluzelle.com."};
 }
 
 
