@@ -1512,6 +1512,25 @@ raft::add_self_to_swarm()
     const auto this_address = std::find_if(all_peers.begin(), all_peers.end(),
             [&](const auto& peer){return peer.uuid == this->get_uuid();});
 
+    if (this_address == all_peers.end())
+    {
+        // If peer validation was enabled, it could be that the daemons' uuid
+        // was black listed, in that case bail quickly.
+        if (this->enable_peer_validation && bzn::utils::blacklist::is_blacklisted(this->get_uuid()))
+        {
+            // we handle runtime errors before they reach our
+            // catch(std::exception) block, so tell the user what
+            // the problem is now.
+            LOG(fatal) << ERROR_PEER_BLACKLISTED;
+            throw std::runtime_error(ERROR_PEER_BLACKLISTED);
+        }
+
+        // It could also be that the owner simply made a mistake in the
+        // peers.json file, or forgot to add the peer info
+        LOG(fatal) << ERROR_UNABLE_TO_ADD_PEER_TO_SWARM;
+        throw std::runtime_error(ERROR_UNABLE_TO_ADD_PEER_TO_SWARM);
+    }
+
     bzn::json_message request{make_secure_add_peer_request(*this_address, this->signed_key)};
 
     bzn::peer_address_t leader{this->get_leader_unsafe()};
