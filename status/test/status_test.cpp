@@ -80,8 +80,7 @@ TEST(status_test, test_that_status_request_queries_status_providers)
         }));
 
     EXPECT_CALL(*mock_status_provider, get_name()).WillOnce(Invoke(
-        [](){ return "mock1";})).WillOnce(Invoke(
-            [](){return "mock2";}));
+        [](){ return "mock1";})).WillOnce(Invoke([](){return "mock2";}));
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::json_message>>(), false)).WillOnce(Invoke(
         [&](std::shared_ptr<bzn::json_message> msg, bool)
