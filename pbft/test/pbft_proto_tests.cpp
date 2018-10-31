@@ -149,7 +149,7 @@ namespace bzn
             this->pbft->checkpoint_reached_locally(seq);
         }
 
-        void run_transaction_through_primary()
+        void run_transaction_through_primary(bool commit = true)
         {
             // send request to SUT and handle expected calls
             auto op = send_request();
@@ -159,9 +159,10 @@ namespace bzn
             send_prepares(op);
 
             // send node commits to SUT
-            send_commits(op);
-
-            // catch execution of request?
+            if (commit)
+            {
+                send_commits(op);
+            }
         }
 
         void run_transaction_through_backup()
@@ -171,8 +172,6 @@ namespace bzn
             // send prepares to SUT
 
             // send commits to SUT
-
-            // catch execution of request?
         }
 
     private:
@@ -184,7 +183,7 @@ namespace bzn
     {
         this->build_pbft();
 
-#if 0
+#if 1
         for (size_t i = 0; i < 99; i++)
             run_transaction_through_primary();
         prepare_for_checkpoint(100);
