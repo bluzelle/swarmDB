@@ -28,9 +28,11 @@ namespace
 database_pbft_service::database_pbft_service(
     std::shared_ptr<bzn::asio::io_context_base> io_context,
     std::shared_ptr<bzn::storage_base> unstable_storage,
+    std::shared_ptr<bzn::crud_base> crud,
     bzn::uuid_t uuid)
     : io_context(std::move(io_context))
     , unstable_storage(std::move(unstable_storage))
+    , crud(std::move(crud))
     , uuid(std::move(uuid))
 {
     this->load_next_request_sequence();
@@ -91,17 +93,15 @@ database_pbft_service::process_awaiting_operations()
 
         if (auto session_it = this->sessions_awaiting_response.find(this->next_request_sequence); session_it != this->sessions_awaiting_response.end())
         {
-            // todo: add crud execution...
-            // todo: response will be handled by crud...
+            // session found, but is the connection still around?
+            auto session = session_it->second.lock();
 
-            LOG(info) << "todo: call crud and if session is around a response will be sent by crud";
+            this->crud->handle_request(request.operation(), (session) ? session : nullptr);
         }
         else
         {
-            // todo: add crud execution...
-            // todo: response will be handled by crud...
-
-            LOG(info) << "todo: call crud, but session no longer available so response will not be sent by crud.";
+            // session not found then this was probably loaded from the database...
+            this->crud->handle_request(request.operation(), nullptr);
         }
 
         this->io_context->post(std::bind(this->execute_handler, request, this->next_request_sequence));

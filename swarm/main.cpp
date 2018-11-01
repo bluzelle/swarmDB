@@ -12,33 +12,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <audit/audit.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
+#include <chaos/chaos.hpp>
+#include <crud/crud.hpp>
 #include <crud/raft_crud.hpp>
 #include <crud/subscription_manager.hpp>
-#include <status/status.hpp>
+#include <crypto/crypto.hpp>
+#include <crypto/crypto_base.hpp>
 #include <ethereum/ethereum.hpp>
-#include <node/node.hpp>
-#include <storage/mem_storage.hpp>
-#include <storage/rocksdb_storage.hpp>
 #include <http/server.hpp>
+#include <node/node.hpp>
 #include <options/options.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/support/date_time.hpp>
-#include <boost/log/utility/setup/console.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
-#include <audit/audit.hpp>
-#include <thread>
-#include <pbft/dummy_pbft_service.hpp>
+#include <options/simple_options.hpp>
 #include <pbft/pbft.hpp>
+#include <pbft/database_pbft_service.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <raft/raft.hpp>
-#include <chaos/chaos.hpp>
-#include <options/simple_options.hpp>
-#include <crypto/crypto_base.hpp>
-#include <crypto/crypto.hpp>
+#include <status/status.hpp>
+#include <storage/mem_storage.hpp>
+#include <storage/rocksdb_storage.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/program_options.hpp>
+#include <thread>
 
 
 void
@@ -239,11 +240,20 @@ main(int argc, const char* argv[])
         if (options->pbft_enabled())
         {
             auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
-            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid(), std::make_shared<bzn::dummy_pbft_service>(io_context), failure_detector);
+
+            // todo: for now use mem storage instead of rocksdb...
+            auto unstable_storage = std::make_shared<bzn::mem_storage>();
+            auto stable_storage = std::make_shared<bzn::mem_storage>();
+            auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
+
+            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options->get_uuid(),
+                std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid()), failure_detector);
+
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
             status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
 
+            crud->start();
             pbft->start();
             status->start();
         }

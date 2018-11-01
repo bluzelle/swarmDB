@@ -7,7 +7,7 @@ include(cmake/swarm_version.cmake)
 message("Build version ${PROJECT_VERSION}")
 
 # Setup version header
-configure_file(${PROJECT_SOURCE_DIR}/swarm_version.hpp.in ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/swarm_version.hpp.in ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp ${CMAKE_BINARY_DIR}/swarm_version.hpp)
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp)
 include_directories(${CMAKE_BINARY_DIR})
@@ -117,4 +117,4 @@ add_custom_command(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-add_custom_target(swarn-git-commit ALL DEPENDS swarm_git_commit)
+add_custom_target(swarm-git-commit ALL DEPENDS swarm_git_commit)

@@ -14,7 +14,7 @@
 
 #include <crud/crud.hpp>
 
-using namespace bzn::pbft;
+using namespace bzn;
 
 
 crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager)

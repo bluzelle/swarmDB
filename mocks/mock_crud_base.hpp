@@ -19,16 +19,27 @@
 
 namespace bzn {
 
-    class Mockcrud_base : public deprecated::crud_base {
+    namespace deprecated
+    {
+        class Mockcrud_base : public deprecated::crud_base {
+        public:
+            MOCK_METHOD3(handle_create,
+                void(const bzn::json_message& msg, const database_msg& request, database_response& response));
+            MOCK_METHOD3(handle_read,
+                void(const bzn::json_message& msg, const database_msg& request, database_response& response));
+            MOCK_METHOD3(handle_update,
+                void(const bzn::json_message& msg, const database_msg& request, database_response& response));
+            MOCK_METHOD3(handle_delete,
+                void(const bzn::json_message& msg, const database_msg& request, database_response& response));
+            MOCK_METHOD0(start,
+                void());
+        };
+    }
+
+    class Mockcrud_base : public crud_base {
     public:
-        MOCK_METHOD3(handle_create,
-            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
-        MOCK_METHOD3(handle_read,
-            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
-        MOCK_METHOD3(handle_update,
-            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
-        MOCK_METHOD3(handle_delete,
-            void(const bzn::json_message& msg, const database_msg& request, database_response& response));
+        MOCK_METHOD2(handle_request,
+            void(const database_msg& request, const std::shared_ptr<bzn::session_base>& session));
         MOCK_METHOD0(start,
             void());
     };
