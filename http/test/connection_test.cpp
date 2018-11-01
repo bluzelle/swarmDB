@@ -29,7 +29,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_,_));
@@ -76,7 +76,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_,_));
@@ -124,7 +124,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_, _));
@@ -170,7 +170,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_, _));
@@ -219,7 +219,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_, _));
@@ -265,7 +265,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
 
         EXPECT_CALL(*mock_http_socket, async_write(_, _));
@@ -311,7 +311,7 @@ namespace bzn::http
     {
         auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
         auto mock_http_socket = std::make_unique<bzn::beast::Mockhttp_socket_base>();
-        auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+        auto mock_crud = std::make_shared<bzn::deprecated::Mockcrud_base>();
         auto mock_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
 
         bzn::beast::read_handler rh;

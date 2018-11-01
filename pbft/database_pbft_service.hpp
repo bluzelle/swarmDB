@@ -15,6 +15,7 @@
 #pragma once
 
 #include <include/boost_asio_beast.hpp>
+#include <crud/crud_base.hpp>
 #include <pbft/pbft_failure_detector_base.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <storage/storage_base.hpp>
@@ -28,6 +29,7 @@ namespace bzn
     public:
         database_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context,
                               std::shared_ptr<bzn::storage_base> unstable_storage,
+                              std::shared_ptr<bzn::crud_base> crud,
                               bzn::uuid_t uuid);
 
         virtual ~database_pbft_service();
@@ -52,6 +54,7 @@ namespace bzn
 
         std::shared_ptr<bzn::asio::io_context_base> io_context;
         std::shared_ptr<bzn::storage_base> unstable_storage;
+        std::shared_ptr<bzn::crud_base> crud;
         uint64_t next_request_sequence = 1;
         const bzn::uuid_t uuid;
 

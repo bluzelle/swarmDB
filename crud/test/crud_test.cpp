@@ -22,7 +22,7 @@ using namespace ::testing;
 
 TEST(crud, test_that_create_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -94,7 +94,7 @@ TEST(crud, test_that_create_sends_proper_response)
 
 TEST(crud, test_that_read_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -151,7 +151,7 @@ TEST(crud, test_that_read_sends_proper_response)
 
 TEST(crud, test_that_update_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -209,7 +209,7 @@ TEST(crud, test_that_update_sends_proper_response)
 
 TEST(crud, test_that_delete_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -260,7 +260,7 @@ TEST(crud, test_that_delete_sends_proper_response)
 
 TEST(crud, test_that_has_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -315,7 +315,7 @@ TEST(crud, test_that_has_sends_proper_response)
 
 TEST(crud, test_that_keys_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
@@ -380,7 +380,7 @@ TEST(crud, test_that_keys_sends_proper_response)
 
 TEST(crud, test_that_size_sends_proper_response)
 {
-    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
     database_msg msg;
 
