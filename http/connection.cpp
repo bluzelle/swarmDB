@@ -67,7 +67,7 @@ namespace
 using namespace bzn::http;
 
 
-connection::connection(std::shared_ptr<bzn::asio::io_context_base> io_context, std::unique_ptr<bzn::beast::http_socket_base> http_socket, std::shared_ptr<bzn::crud_base> crud)
+connection::connection(std::shared_ptr<bzn::asio::io_context_base> io_context, std::unique_ptr<bzn::beast::http_socket_base> http_socket, std::shared_ptr<bzn::deprecated::crud_base> crud)
     : http_socket(std::move(http_socket))
     , deadline_timer(io_context->make_unique_steady_timer())
     , crud(std::move(crud))

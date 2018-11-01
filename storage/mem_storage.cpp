@@ -27,6 +27,11 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
         return storage_base::result::value_too_large;
     }
 
+    if (key.size() > bzn::MAX_KEY_SIZE)
+    {
+        return storage_base::result::key_too_large;
+    }
+
     if (auto search = this->kv_store.find(uuid); search != this->kv_store.end())
     {
         if (search->second.find(key)!= search->second.end() )
@@ -161,7 +166,7 @@ mem_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 
 
 // todo: optimize! Track size as it grows and not iterate over every value!
-std::size_t
+std::pair<std::size_t, std::size_t>
 mem_storage::get_size(const bzn::uuid_t& uuid)
 {
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
@@ -171,15 +176,17 @@ mem_storage::get_size(const bzn::uuid_t& uuid)
     if (it == this->kv_store.end())
     {
         // database not found...
-        return 0;
+        return std::make_pair(0,0);
     }
 
-    std::size_t usage{};
+    std::size_t size{};
+    std::size_t keys{};
 
     for (const auto& record : it->second)
     {
-        usage += record.second.size();
+        ++keys;
+        size += record.second.size();
     }
 
-    return usage;
+    return std::make_pair(keys, size);
 }

@@ -13,954 +13,424 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <crud/crud.hpp>
-
-#include <bootstrap/bootstrap_peers.hpp>
-
-#include <mocks/mock_boost_asio_beast.hpp>
-#include <mocks/mock_node_base.hpp>
+#include <storage/mem_storage.hpp>
 #include <mocks/mock_session_base.hpp>
-#include <mocks/mock_raft_base.hpp>
-#include <mocks/mock_storage_base.hpp>
-#include <mocks/mock_subscription_manager_base.hpp>
+#include <algorithm>
 
 using namespace ::testing;
 
 
-namespace
+TEST(crud, test_that_create_sends_proper_response)
 {
-    const bzn::uuid_t TEST_NODE_UUID{"f0645cc2-476b-485d-b589-217be3ca87d5"};
-    const bzn::uuid_t LEADER_UUID{"7110d050-42b3-11e8-842f-0ed5f89f718b"};
-    const bzn::uuid_t USER_UUID{"80174b53-2dda-49f1-9d6a-6a780d4cceca"};
-    const std::string TEST_VALUE = "I2luY2x1ZGUgPG1vY2tzL21vY2tfbm9kZV9iYXNlLmhwcD4NCiNpbmNsdWRlIDxtb2Nrcy9tb2NrX3Nlc3Npb25fYmFzZS5ocHA+DQojaW5jbHVkZSA8bW9ja3MvbW9ja19yYWZ0X2Jhc2UuaHBwPg0KI2luY2x1ZGUgPG1vY2tzL21vY2tfc3RvcmFnZV9iYXNlLmhwcD4NCg==";
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    bzn::json_message generate_generic_request(const bzn::uuid_t& uid, bzn_msg& msg)
-    {
-        msg.mutable_db()->mutable_header()->set_db_uuid(uid);
-        msg.mutable_db()->mutable_header()->set_transaction_id(85746);
+    database_msg msg;
 
-        bzn::json_message request;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
 
-        request["bzn-api"] = "database";
-        request["msg"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
 
-        return request;
-    }
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
 
-    bzn::json_message generate_create_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
-    {
-        bzn_msg msg;
+    crud.handle_request(msg, session);
 
-        msg.mutable_db()->mutable_create()->set_key(key);
-        msg.mutable_db()->mutable_create()->set_value(value);
+    // fail to create same key...
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
+        }));
 
-        return generate_generic_request(uid, msg);
-    }
+    crud.handle_request(msg, session);
 
-    bzn::json_message generate_read_request(const bzn::uuid_t& uid, const std::string& key)
-    {
-        bzn_msg msg;
+    // fail because key is too big...
+    msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
+        }));
 
-        msg.mutable_db()->mutable_read()->set_key(key);
+    crud.handle_request(msg, session);
 
-        return generate_generic_request(uid, msg);
-    }
+    // fail because value is too big...
+    msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
+        }));
 
-    bzn::json_message generate_update_request(const bzn::uuid_t& uid, const std::string& key, const std::string& value)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_update()->set_key(key);
-        msg.mutable_db()->mutable_update()->set_value(value);
-
-        return generate_generic_request(uid, msg);
-    }
-
-    bzn::json_message generate_delete_request(const bzn::uuid_t& uid, const std::string& key)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_delete_()->set_key(key);
-
-        return generate_generic_request(uid, msg);
-    }
-
-    bzn::json_message generate_keys_request(const bzn::uuid_t& uid)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_keys();
-
-        return generate_generic_request(uid, msg);
-    }
-
-    bzn::json_message generate_has_request(const bzn::uuid_t& uid, const std::string& key)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_has()->set_key(key);
-
-        return generate_generic_request(uid, msg);
-    }
-
-    bzn::json_message generate_size_request(const bzn::uuid_t& uid)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_size();
-
-        return generate_generic_request(uid, msg);
-    }
-
-    bzn::json_message generate_subscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_subscribe()->set_key(key);
-
-        return generate_generic_request(uuid, msg);
-    }
-
-    bzn::json_message generate_unsubscription_request(const bzn::uuid_t& uuid, const bzn::key_t& key)
-    {
-        bzn_msg msg;
-
-        msg.mutable_db()->mutable_unsubscribe()->set_key(key);
-
-        return generate_generic_request(uuid, msg);
-    }
+    crud.handle_request(msg, session);
 }
 
 
-class crud_test : public Test
+TEST(crud, test_that_read_sends_proper_response)
 {
-public:
-    crud_test()
-    {
-        this->mock_node = std::make_shared<bzn::Mocknode_base>();
-        this->mock_raft = std::make_shared<bzn::Mockraft_base>();
-        this->mock_storage = std::make_shared<bzn::Mockstorage_base>();
-        this->mock_session = std::make_shared<bzn::Mocksession_base>();
-        this->mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    }
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    void SetUp() final
-    {
-        EXPECT_CALL(*this->mock_node, register_for_message("database", _)).WillOnce(Invoke(
-            [&](const std::string&, auto  mh)
-            {
-                this->mh = mh;
-                return true;
-            }));
+    database_msg msg;
 
-        EXPECT_CALL(*mock_raft, register_commit_handler(_)).WillOnce(Invoke(
-            [&](bzn::raft_base::commit_handler ch) { this->ch = ch; }));
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
 
-        EXPECT_CALL(*mock_subscription_manager, start());
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
 
-        this->crud = std::make_shared<bzn::crud>(mock_node, mock_raft, mock_storage, mock_subscription_manager);
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
+    crud.handle_request(msg, session);
 
-        this->crud->start();
-    }
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
 
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
-    std::shared_ptr<bzn::Mockraft_base> mock_raft;
-    std::shared_ptr<bzn::Mockstorage_base> mock_storage;
-    std::shared_ptr<bzn::Mocksession_base> mock_session;
-    std::shared_ptr<bzn::Mocksubscription_manager_base> mock_subscription_manager;
-
-    bzn::message_handler mh;
-    bzn::raft_base::commit_handler ch;
-    std::shared_ptr<bzn::crud> crud;
-};
-
-
-TEST_F(crud_test, test_that_follower_not_knowing_leader_fails_to_create)
-{
-    auto request = generate_create_request(USER_UUID, "key0", TEST_VALUE);
-
-    EXPECT_CALL(*this->mock_raft, get_state())
-            .WillOnce(Invoke([](){return bzn::raft_state::follower;}));
-
-    // We don't know the leader, maybe this node just started.
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // read key...
+    msg.mutable_read()->set_key("key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
-           database_response resp;
-           ASSERT_TRUE(resp.ParseFromString(*msg));
-           EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
-           EXPECT_EQ(resp.header().db_uuid(), USER_UUID);
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kRead);
+            ASSERT_EQ(resp.read().key(), "key");
+            ASSERT_EQ(resp.read().value(), "value");
         }));
 
-    this->mh(request, this->mock_session);
+    crud.handle_request(msg, session);
+
+    // read invalid key...
+    msg.mutable_read()->set_key("invalid-key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+        }));
+
+    crud.handle_request(msg, session);
+
+    // null session nothing should happen...
+    crud.handle_request(msg, nullptr);
 }
 
 
-TEST_F(crud_test, test_that_follower_knowing_leader_fails_to_create)
+TEST(crud, test_that_update_sends_proper_response)
 {
-    // must respond with error, and respond with leader uuid
-    auto msg = generate_create_request(USER_UUID, "key0", TEST_VALUE);
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
+    database_msg msg;
 
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49153,8080,"iron maiden",LEADER_UUID)));
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
 
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
+    crud.handle_request(msg, session);
+
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
+
+    // update key...
+    msg.mutable_update()->set_key("key");
+    msg.mutable_update()->set_value("updated");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-            EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
-            EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
-            EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49153));
-            EXPECT_EQ(resp.redirect().leader_name(), "iron maiden");
-            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    this->mh(msg, mock_session);
+    crud.handle_request(msg, session);
+
+    // clear msg...
+    msg.mutable_update()->release_key();
+    msg.mutable_update()->release_value();
+
+    // read updated key...
+    msg.mutable_read()->set_key("key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kRead);
+            ASSERT_EQ(resp.read().key(), "key");
+            ASSERT_EQ(resp.read().value(), "updated");
+        }));
+
+    crud.handle_request(msg, session);
 }
 
 
-TEST_F(crud_test, test_that_a_candidate_fails_to_create)
+TEST(crud, test_that_delete_sends_proper_response)
 {
-    // must respond with error
-    auto msg = generate_create_request(USER_UUID, "key0", TEST_VALUE);
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::candidate));
+    database_msg msg;
 
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
+    crud.handle_request(msg, session);
+
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
+
+    // delete key...
+    msg.mutable_delete_()->set_key("key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kError);
-            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    this->mh(msg, mock_session);
+    crud.handle_request(msg, session);
+
+    // delete invalid key...
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+        }));
+
+    crud.handle_request(msg, session);
 }
 
 
-TEST_F(crud_test, test_that_a_leader_can_create_a_new_record)
+TEST(crud, test_that_has_sends_proper_response)
 {
-    // must confirm with raft and create the record in storage
-    // must respond with error
-    auto request = generate_create_request(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==");
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
+    database_msg msg;
 
-    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
 
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
+    crud.handle_request(msg, session);
+
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
+
+    // valid key...
+    msg.mutable_has()->set_key("key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(false));
+    crud.handle_request(msg, session);
 
-    this->mh(request, this->mock_session);
-
-    EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==")).WillOnce(Invoke(
-        [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/, const std::string& /*value*/)
+    // invalid key...
+    msg.mutable_has()->set_key("invalid-key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
-            return bzn::storage_base::result::ok;
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
+    crud.handle_request(msg, session);
 
-    this->ch(request);
+    // null session nothing should happen...
+    crud.handle_request(msg, nullptr);
 }
 
 
-TEST_F(crud_test, test_that_a_leader_fails_to_create_an_existing_record)
+TEST(crud, test_that_keys_sends_proper_response)
 {
-    // record exists, don't bother with raft
-    const std::string key{};
-    const std::string value{"skdif9ek34587fk30df6vm73=="};
-    auto request = generate_create_request(USER_UUID, key, value);
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    // This node is in the leader state.
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
+    database_msg msg;
 
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, key)).WillOnce(Return(true));
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key1");
+    msg.mutable_create()->set_value("value");
 
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).Times(2);
+    crud.handle_request(msg, session);
+
+    // add another...
+    msg.mutable_create()->set_key("key2");
+    crud.handle_request(msg, session);
+
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
+
+    // get keys...
+    msg.mutable_keys();
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
-            EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kKeys);
+            ASSERT_EQ(resp.keys().keys().size(), int(2));
+            // keys are not returned in order created...
+            auto keys = resp.keys().keys();
+            std::sort(keys.begin(), keys.end());
+            ASSERT_EQ(keys[0], "key1");
+            ASSERT_EQ(keys[1], "key2");
         }));
 
-    this->mh(request, this->mock_session);
+    crud.handle_request(msg, session);
+
+    // invalid uuid returns empty message...
+    msg.mutable_header()->set_db_uuid("invalid-uuid");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kKeys);
+            ASSERT_EQ(resp.keys().keys().size(), int(0));
+        }));
+
+    crud.handle_request(msg, session);
+
+    // null session nothing should happen...
+    crud.handle_request(msg, nullptr);
 }
 
 
-TEST_F(crud_test, test_that_a_follower_can_read_an_existing_record)
+TEST(crud, test_that_size_sends_proper_response)
 {
-    // must attempt to read from storage and respond with value
-    // if value does not exist in local storage, respond with error
-    // and give leader uuid if it exists.
+    bzn::pbft::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
 
-    auto request = generate_read_request(USER_UUID, "key0");
+    database_msg msg;
 
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
 
-    EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Invoke(
-        [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
-        {
-            return std::optional<bzn::value_t>("skdif9ek34587fk30df6vm73==");
-        }));
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.read().value(), "skdif9ek34587fk30df6vm73==");
-        }));
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
+    crud.handle_request(msg, session);
 
-    this->mh(request, this->mock_session);
-}
+    // clear msg...
+    msg.mutable_create()->release_key();
+    msg.mutable_create()->release_value();
 
-
-TEST_F(crud_test, test_that_a_follower_apon_failing_to_read_suggests_leader)
-{
-    // same, but refer user to leader id.
-    auto request = generate_read_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state ::follower));
-
-    EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Return(std::nullopt));
-
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillRepeatedly(Return(bzn::peer_address_t("127.0.0.1",49152,8080,"ozzy",LEADER_UUID)));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // get size...
+    msg.mutable_size();
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-            EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
-            EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
-            EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
-            EXPECT_EQ(resp.redirect().leader_name(), "ozzy");
-            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kSize);
+            ASSERT_EQ(resp.size().bytes(), int32_t(5));
+            ASSERT_EQ(resp.size().keys(), int32_t(1));
         }));
 
-    this->mh(request, this->mock_session);
-}
+    crud.handle_request(msg, session);
 
-
-TEST_F(crud_test, test_that_a_candidate_read_fails)
-{
-    // there is an election respond with error
-    auto msg = generate_read_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::candidate));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
+    // invalid uuid returns zero...
+    msg.mutable_header()->set_db_uuid("invalid-uuid");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kError);
-            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
+            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kSize);
+            ASSERT_EQ(resp.size().bytes(), int32_t(0));
+            ASSERT_EQ(resp.size().keys(), int32_t(0));
         }));
 
-    this->mh(msg, mock_session);
-}
+    crud.handle_request(msg, session);
 
-
-TEST_F(crud_test, test_that_a_leader_can_read_existing_record)
-{
-    // must respond with data from storage, if it exists, if it does
-    // not exist respond with data does not exist error.
-    auto request = generate_read_request(USER_UUID,"key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_storage, read(USER_UUID, "key0")).WillOnce(Invoke(
-        [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/)
-        {
-            return std::optional<bzn::value_t>("skdif9ek34587fk30df6vm73==");
-        }));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.read().value(), "skdif9ek34587fk30df6vm73==");
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_knowing_a_leader_attempting_update_fails)
-{
-    // must respond with error, and leader uuid if it
-    auto request = generate_update_request(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1",49152,8080,"punkh",LEADER_UUID)));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-            EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
-            EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
-            EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
-            EXPECT_EQ(resp.redirect().leader_name(), "punkh");
-            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_not_knowing_leader_update_fails)
-{
-    auto request = generate_update_request(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_candidate_update_fails)
-{
-    auto msg = generate_update_request(USER_UUID, "key0", TEST_VALUE);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::candidate));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
-        }));
-
-    this->mh(msg, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_can_update)
-{
-    // if key-value pair exists, must respond with OK, and start the
-    // update process via RAFT, otherwise error - key does not exist.
-    const std::string key{"key0"};
-    auto request = generate_update_request(USER_UUID, key, TEST_VALUE);
-
-    // This node is in the leader state.
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL( *this->mock_storage, has(USER_UUID, key)).WillOnce(Return(true));
-
-    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
-        }));
-
-    this->mh(request, this->mock_session);
-
-    EXPECT_CALL(*this->mock_storage, update(USER_UUID, key, TEST_VALUE));
-
-    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
-
-    this->ch(request);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_cannot_update_a_record_that_does_not_exist)
-{
-    // if key-value pair exists, must respond with OK, and start the
-    // update process via RAFT, otherwise error - key does not exist.
-    const std::string key{"key0"};
-    auto request = generate_update_request(USER_UUID, key, TEST_VALUE);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL( *this->mock_storage, has(USER_UUID, key)).WillOnce(Return(false));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_not_knowing_the_leader_delete_fails)
-{
-    auto request = generate_delete_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("",0,0,"","")));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_knowing_the_leader_delete_fails)
-{
-    // must respond with error, and leader uuid
-    auto request = generate_delete_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    // We don't know the leader, maybe this node just started.
-    EXPECT_CALL(*this->mock_raft, get_leader()).WillOnce(Return(bzn::peer_address_t("127.0.0.1", 49152,8080,"Pantera",LEADER_UUID)));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kRedirect);
-            EXPECT_EQ(resp.redirect().leader_id(), LEADER_UUID);
-            EXPECT_EQ(resp.redirect().leader_host(), "127.0.0.1");
-            EXPECT_EQ(resp.redirect().leader_port(), uint32_t(49152));
-            EXPECT_EQ(resp.redirect().leader_name(), "Pantera");
-            EXPECT_EQ(resp.redirect().leader_http_port(), uint32_t(8080));
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_candidate_delete_fails)
-{
-    // must respond with error
-    auto msg = generate_delete_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::candidate));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_ELECTION_IN_PROGRESS);
-        }));
-
-    this->mh(msg, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_can_delete_an_existing_record)
-{
-    // check for key, if the key does not exist send error message and bail
-    // if the key does exist:
-    //   respond with OK
-    //   start the deletion process via RAFT
-    //   append to log - do not commit
-    //   do concensus via RAFT
-    //   when RAFT calls commit handler perform delete
-
-    const std::string key{"key0"};
-    auto request = generate_delete_request(USER_UUID, key);
-
-    // We tell CRUD that we are the leader
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
-
-    // we fake a call to storage->has and tell CRUD that the record exists
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(true));
-
-    // since we do have a valid record to delete, we tell raft, raft will be cool with it...
-    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
-
-    // we respond to the user with OK.
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
-
-    // OK, run the message handler
-    this->mh(request, mock_session);
-
-    // at this point leader has accepted the request, parsed it, determined that
-    // it's a delete command and sent the command to raft to send to the swarm,
-    // apon reaching concensus RAFT will call the commit handler
-    EXPECT_CALL(*this->mock_storage, remove(USER_UUID, key));
-
-    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
-
-    this->ch(request);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_fails_to_delete_an_nonexisting_record)
-{
-    const std::string key{"key0"};
-    auto request = generate_delete_request(USER_UUID, key);
-
-    // We tell CRUD that we are the leader
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
-
-    // we fake a call to storage->has and tell CRUD that the record exists
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, key)).WillOnce(Return(false));
-
-    // we respond to the user with an error.
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
-        }));
-
-    // OK, run the message handler
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_can_return_all_of_a_users_keys)
-{
-    // Ask local storage for all the keys for the user
-    // package up the keys into a JSON array, send it back to the user
-    auto request = generate_keys_request(USER_UUID);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_storage, get_keys(USER_UUID)).WillOnce(Invoke(
-        [](const bzn::uuid_t& /*uuid*/)
-        {
-            return std::vector<std::string>{"key0", "key1", "key2"};
-        }));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.keys().keys().size(), int(3));
-            EXPECT_EQ(resp.keys().keys(0), "key0");
-            EXPECT_EQ(resp.keys().keys(1), "key1");
-            EXPECT_EQ(resp.keys().keys(2), "key2");
-        }));
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_can_return_all_of_a_users_keys)
-{
-    auto request = generate_keys_request(USER_UUID);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_storage, get_keys(USER_UUID)).WillOnce(Invoke(
-        [](const bzn::uuid_t& /*uuid*/)
-        {
-            return std::vector<std::string>{"key0", "key1", "key2"};
-        }));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.keys().keys().size(), int(3));
-            EXPECT_EQ(resp.keys().keys(0), "key0");
-            EXPECT_EQ(resp.keys().keys(1), "key1");
-            EXPECT_EQ(resp.keys().keys(2), "key2");
-        }));
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_follower_can_respond_to_has_command)
-{
-    // Ask local storage for all the keys for the user
-    auto request = generate_has_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(true));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kHas);
-            // todo: add test for key
-            ASSERT_TRUE(resp.has().has());
-        }));
-
-    this->mh(request, mock_session);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(false));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kHas);
-            ASSERT_FALSE(resp.has().has());
-        }));
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_leader_can_respond_to_has_command)
-{
-    // Ask local storage for all the keys for the user
-    auto request = generate_has_request(USER_UUID, "key0");
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(true));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kHas);
-            ASSERT_TRUE(resp.has().has());
-        }));
-
-    this->mh(request, mock_session);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID, "key0")).WillOnce(Return(false));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::kHas);
-            ASSERT_FALSE(resp.has().has());
-        }));
-
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_leader_can_return_the_size_of_a_database)
-{
-    auto request = generate_size_request(USER_UUID);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::follower));
-
-    EXPECT_CALL(*this->mock_storage, get_size(USER_UUID)).WillOnce(Return(123));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.size().bytes(), 123);
-        }));
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_follower_can_return_the_size_of_a_database)
-{
-    auto request = generate_size_request(USER_UUID);
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_storage, get_size(USER_UUID)).WillOnce(Return(123));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.size().bytes(), 123);
-        }));
-
-    this->mh(request, mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_CRUD_command_fails_when_not_given_bzn_api_or_cmd)
-{
-    auto request = generate_delete_request(USER_UUID, "key");
-
-    request.removeMember("msg");
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_CRUD_COMMAND);
-        }));
-
-    this->mh(request, this->mock_session);
-
-    request["msg"] = "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ";
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_CRUD_COMMAND);
-        }));
-
-    this->mh(request, this->mock_session);
-
-    request["msg"] = ""; // message created is invalid
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_INVALID_ARGUMENTS);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_create_fails_if_the_value_size_exceeds_the_limit)
-{
-    bzn::json_message request = generate_create_request(USER_UUID,"large-value", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_a_create_command_can_create_largest_value_record)
-{
-    bzn::json_message request = generate_create_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'));
-
-    EXPECT_CALL(*this->mock_raft, get_state()).WillRepeatedly(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_raft, append_log(_,_)).WillOnce(Return(true));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
-
-    EXPECT_CALL(*this->mock_storage, has(USER_UUID,"key0")).WillOnce(Return(false));
-
-    this->mh(request, this->mock_session);
-
-    EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'))).WillOnce(Return(bzn::storage_base::result::ok));
-
-    EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
-
-    this->ch(request);
-}
-
-
-TEST_F(crud_test, test_that_a_update_command_fails_when_the_size_of_the_value_exceeds_the_value_size_limit)
-{
-    // if key-value pair exists, must respond with OK, and start the
-    // update process via RAFT, otherwise error - key does not exist.
-    bzn::json_message request = generate_update_request(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE + 1, 'c'));
-
-    // This node is in the leader state.
-    EXPECT_CALL(*this->mock_raft, get_state()).WillOnce(Return(bzn::raft_state::leader));
-
-    EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(),_)).WillOnce(Invoke(
-        [&](std::shared_ptr<std::string> msg, auto)
-        {
-            database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
-        }));
-
-    this->mh(request, this->mock_session);
-}
-
-
-TEST_F(crud_test, test_that_subscription_and_unsubscription_requests_are_handled)
-{
-    // subscribe
-    {
-        bzn::json_message request = generate_subscription_request(USER_UUID, "key0");
-
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
-
-        EXPECT_CALL(*this->mock_subscription_manager, subscribe(USER_UUID, "key0", _, _, _));
-
-        this->mh(request, this->mock_session);
-    }
-
-    // unsubscribe
-    {
-        bzn::json_message request = generate_unsubscription_request(USER_UUID, "key0");
-
-        EXPECT_CALL(*this->mock_session, send_message(An<std::shared_ptr<std::string>>(), _));
-
-        EXPECT_CALL(*this->mock_subscription_manager, unsubscribe(USER_UUID, "key0", _, _, _));
-
-        this->mh(request, this->mock_session);
-    }
+    // null session nothing should happen...
+    crud.handle_request(msg, nullptr);
 }

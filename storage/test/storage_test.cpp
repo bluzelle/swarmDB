@@ -98,11 +98,13 @@ TYPED_TEST(storageTest, test_that_storage_can_create_a_record_and_read_the_same_
 
     const auto returned_record = this->storage->read(USER_UUID, KEY);
 
-    EXPECT_EQ((*returned_record).size(), this->storage->get_size(USER_UUID));
+    EXPECT_EQ((*returned_record).size(), this->storage->get_size(USER_UUID).second);
+    EXPECT_EQ(size_t(1), this->storage->get_size(USER_UUID).first);
 
     // add another one...
     EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "another_key", value));
-    EXPECT_EQ(value.size()*2, this->storage->get_size(USER_UUID));
+    EXPECT_EQ(value.size()*2, this->storage->get_size(USER_UUID).second);
+    EXPECT_EQ(size_t(2), this->storage->get_size(USER_UUID).first);
 
     EXPECT_EQ(*returned_record, value);
 }

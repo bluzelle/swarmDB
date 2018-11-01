@@ -18,7 +18,7 @@
 using namespace bzn::http;
 
 
-server::server(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::crud_base> crud, const boost::asio::ip::tcp::endpoint& ep)
+server::server(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::deprecated::crud_base> crud, const boost::asio::ip::tcp::endpoint& ep)
     : tcp_acceptor(io_context->make_unique_tcp_acceptor(ep))
     , io_context(std::move(io_context))
     , crud(std::move(crud))

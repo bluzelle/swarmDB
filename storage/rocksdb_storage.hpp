@@ -39,7 +39,7 @@ namespace bzn
 
         bool has(const bzn::uuid_t& uuid, const  std::string& key) override;
 
-        std::size_t get_size(const bzn::uuid_t& uuid) override;
+        std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) override;
 
     private:
         std::unique_ptr<rocksdb::DB> db;

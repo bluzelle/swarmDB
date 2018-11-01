@@ -15,6 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
+#include <node/session_base.hpp>
 #include <proto/bluzelle.pb.h>
 
 
@@ -27,19 +28,35 @@ namespace bzn
     const std::string MSG_RECORD_NOT_FOUND = "RECORD_NOT_FOUND";
     const std::string MSG_INVALID_ARGUMENTS = "INVALID_ARGUMENTS";
     const std::string MSG_VALUE_SIZE_TOO_LARGE = "VALUE_SIZE_TOO_LARGE";
+    const std::string MSG_KEY_SIZE_TOO_LARGE = "KEY_SIZE_TOO_LARGE";
+
+    // this interface is tied too closely with raft usage and will eventually be removed...
+    namespace deprecated
+    {
+        class crud_base
+        {
+        public:
+            virtual ~crud_base() = default;
+
+            virtual void handle_create(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
+
+            virtual void handle_read(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
+
+            virtual void handle_update(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
+
+            virtual void handle_delete(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
+
+            virtual void start() = 0;
+        };
+
+    } // namespace deprecated
 
     class crud_base
     {
     public:
         virtual ~crud_base() = default;
 
-        virtual void handle_create(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
-
-        virtual void handle_read(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
-
-        virtual void handle_update(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
-
-        virtual void handle_delete(const bzn::json_message& msg, const database_msg& request, database_response& response) = 0;
+        virtual void handle_request(const database_msg& request, const std::shared_ptr<bzn::session_base>& session) = 0;
 
         virtual void start() = 0;
     };

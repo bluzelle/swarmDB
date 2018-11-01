@@ -19,7 +19,7 @@
 
 namespace bzn {
 
-    class Mockcrud_base : public crud_base {
+    class Mockcrud_base : public deprecated::crud_base {
     public:
         MOCK_METHOD3(handle_create,
             void(const bzn::json_message& msg, const database_msg& request, database_response& response));

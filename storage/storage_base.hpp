@@ -21,7 +21,8 @@
 
 namespace bzn
 {
-    const size_t MAX_VALUE_SIZE = 307200;
+    const size_t MAX_KEY_SIZE   = 4096;
+    const size_t MAX_VALUE_SIZE = 256000;
 
     class storage_base
     {
@@ -33,7 +34,8 @@ namespace bzn
             not_found,
             exists,
             not_saved,
-            value_too_large
+            value_too_large,
+            key_too_large
         };
 
         virtual ~storage_base() = default;
@@ -50,7 +52,7 @@ namespace bzn
         
         virtual bool has(const bzn::uuid_t& uuid, const  std::string& key) = 0;
 
-        virtual std::size_t get_size(const bzn::uuid_t& uuid) = 0;
+        virtual std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) = 0;
     };
 
 } // bzn
