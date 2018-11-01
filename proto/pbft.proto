@@ -78,9 +78,9 @@ enum pbft_msg_type
 
 message pbft_request
 {
-    string operation = 1;
-    uint64 timestamp = 2;
-    string client = 3;
+    //string operation = 1;
+    //uint64 timestamp = 2;
+    //string client = 3;
     pbft_request_type type = 1;
     oneof msg
     {
@@ -89,13 +89,6 @@ message pbft_request
     }
     uint64 timestamp = 4;
     string client = 5;
-}
-
-enum pbft_request_type
-{
-    PBFT_REQ_UNDEFINED = 0;
-    PBFT_REQ_DATABASE = 1;
-    PBFT_REQ_NEW_CONFIG = 2;
 }
 
 message pbft_membership_msg
@@ -129,14 +122,14 @@ message pbft_peer_info
     uint32 http_port = 3;
     string name = 4;
     string uuid = 5;
-    pbft_request_type type = 1;
+    pbft_request_type type = 6;
     oneof msg
     {
-        database_msg operation = 2;
-        pbft_internal_msg command = 3;
+        database_msg operation = 7;
+        pbft_internal_msg command = 8;
     }
-    uint64 timestamp = 4;
-    string client = 5;
+    uint64 timestamp = 9;
+    string client = 10;
 }
 
 enum pbft_internal_msg_type {
@@ -147,7 +140,8 @@ enum pbft_internal_msg_type {
 enum pbft_request_type {
     PBFT_REQ_UNDEFINED = 0;
     PBFT_REQ_DATABASE = 1;
-    PBFT_REQ_INTERNAL = 2;
+    PBFT_REQ_NEW_CONFIG = 2;
+    PBFT_REQ_INTERNAL = 3;
 }
 
 message pbft_internal_msg
@@ -157,16 +151,6 @@ message pbft_internal_msg
     // for new_config
     string configuration = 2;
 }
-
-message pbft_peer_info
-{
-    string host = 1;
-    uint32 port = 2;
-    uint32 http_port = 3;
-    string name = 4;
-    string uuid = 5;
-}
-
 
 message prepared_proof
 {
