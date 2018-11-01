@@ -12,16 +12,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-set(SWARM_GIT_COMMIT "")
+set(SWARM_GIT_COMMIT "unknown")
 
 find_program(GIT_EXECUTABLE NAMES git)
 
 if (GIT_EXECUTABLE)
-    execute_process(COMMAND git describe --tags --dirty OUTPUT_VARIABLE SWARM_GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-endif()
-
-if (NOT SWARM_GIT_COMMIT)
-    set(SWARM_GIT_COMMIT "unknown")
+    execute_process(COMMAND git describe --always --tags --dirty OUTPUT_VARIABLE SWARM_GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/swarm_git_commit.hpp.in ${PROJECT_BINARY_DIR}/swarm_git_commit.hpp.tmp)
