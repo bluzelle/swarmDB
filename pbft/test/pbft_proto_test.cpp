@@ -198,7 +198,7 @@ namespace bzn
         auto dmsg = new database_msg;
         auto create = new database_create;
         create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(++this->index)));
+        create->set_value(std::string("value_" + std::to_string(this->index)));
         dmsg->set_allocated_create(create);
         request->set_allocated_operation(dmsg);
 
@@ -219,7 +219,7 @@ namespace bzn
         auto dmsg = new database_msg;
         auto create = new database_create;
         create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(++this->index)));
+        create->set_value(std::string("value_" + std::to_string(this->index)));
         dmsg->set_allocated_create(create);
         request->set_allocated_operation(dmsg);
 

@@ -25,6 +25,7 @@
 #include <proto/audit.pb.h>
 #include <mutex>
 #include <gtest/gtest_prod.h>
+#include <limits>
 
 namespace
 {
@@ -161,6 +162,7 @@ namespace bzn
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
+        uint64_t first_sequence_to_execute = std::numeric_limits<uint64_t>::max();
 
         uint64_t low_water_mark;
         uint64_t high_water_mark;
