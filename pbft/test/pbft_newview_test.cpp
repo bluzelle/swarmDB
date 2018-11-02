@@ -33,16 +33,45 @@ namespace bzn
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
+
         void
-        send_f_plus_one_viewchange_messages()
+        execute_handle_failure()
+        {
+            // I expect that a replica forced to handle a failure will invalidate
+            // its' view, and cause the replica to send a VIEWCHANGE messsage
+            EXPECT_CALL(*mock_node, send_message_str(_, _))
+                    .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto p) {
+                        wrapped_bzn_msg wmsg;
+                        wmsg.ParseFromString(*p);
+                        pbft_msg view_change;
+                        view_change.ParseFromString(wmsg.payload());
+                        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+                        EXPECT_TRUE(2 == view_change.view());
+                        EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+                    }));
+            this->pbft->handle_failure();
+        }
+
+
+        void
+        check_that_pbft_drops_messages()
+        {
+            // We do not expect the pre-prepares due to the handled message at
+            // the end of the test.
+            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
+                .Times(Exactly(0));
+
+            // nothing will happen with this request, that is there will be no new messages
+            pbft->handle_message(this->preprepare_msg, default_original_msg);
+        }
+
+        void
+        send_some_viewchange_messages(size_t n, bool(*f)(std::shared_ptr<std::string> wrapped_msg))
         {
             size_t count{0};
-            const uint64_t NON_FAULTY_REPLICAS = TEST_PEER_LIST.size() / 3;
-
-            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_viewchange, Eq(true))))
+            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(f, Eq(true))))
                     .Times(Exactly(TEST_PEER_LIST.size()))
-                    .WillRepeatedly(Invoke([&](auto &, auto &) { EXPECT_EQ((NON_FAULTY_REPLICAS + 1), count); }));
-
+                    .WillRepeatedly(Invoke([&](auto &, auto &) { EXPECT_EQ( n, count); }));
 
             const size_t NEW_VIEW = this->pbft->get_view() + 1;
             pbft_msg pbft_msg;
@@ -56,25 +85,80 @@ namespace bzn
                 count++;
                 pbft_msg.set_sender(peer.uuid);
                 this->pbft->handle_message(pbft_msg, this->default_original_msg);
-                LOG(debug) << "\t***this->pbft->get_view(): " << this->pbft->get_view();
-                if (count == (NON_FAULTY_REPLICAS + 1))
+                if (count == n)
                     break;
             }
-
-
         }
-
-
     };
 
+    TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state)
+    {
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
 
+        this->execute_handle_failure();
+
+        // Now the replica's view should be invalid
+        EXPECT_FALSE(this->pbft->is_view_valid());
+    }
+
+    TEST_F(pbft_viewchange_test, pbft_with_invalid_view_drops_messages)
+    {
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+        this->execute_handle_failure();
+        this->check_that_pbft_drops_messages();
+    }
 
     TEST_F(pbft_viewchange_test, pbft_replica_sends_viewchange_message)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
-        this->send_f_plus_one_viewchange_messages();
+        this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
+
+    TEST_F(pbft_viewchange_test, pbft_primary_sends_newview_message)
+    {
+        this->build_pbft();
+        this->send_some_viewchange_messages(2 * this->max_faulty_replicas_allowed(), is_newview);
+    }
+    
+    
+    TEST_F(pbft_viewchange_test, backup_accepts_newview)
+    {
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+
+        EXPECT_TRUE(!pbft->is_primary());
+        const size_t NEW_VIEW = this->pbft->get_view() + 1;
+
+        EXPECT_EQ(this->pbft->get_view(), static_cast<size_t>(1));
+
+        pbft_msg newview; // <NEWVIEW v+1, V -> Viewchange messages, O ->Prepare messages>
+        newview.set_type(PBFT_MSG_NEWVIEW);
+        newview.set_sender(TEST_NODE_UUID);
+        newview.set_view(NEW_VIEW);
+
+        // ??? newview.set_viewchange_messages( < 2f+1 V > )
+
+        // ??? newview.set_preprepare_messages(< O >)
+
+
+        this->pbft->handle_message(newview, this->default_original_msg);
+
+        // it then moves to view v + 1
+        EXPECT_EQ(this->pbft->get_view(), NEW_VIEW);
+
+        // processing the preprepares in O as normal
+        // ????
+        
+    }
+
+
+
+
+
 
 
 
