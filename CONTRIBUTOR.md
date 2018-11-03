@@ -1,4 +1,4 @@
-#Contributing to Bluzelle
+# Contributing to Bluzelle
 
 Welcome to wanting to contribute to Bluzelle! Thank you for taking your time to contribute. 
 
@@ -148,7 +148,7 @@ Another great resource is the Google C++ Style guide (https://google.github.io/s
     * Header files should use newer "#pragma once" instead of traditional #ifdef guard macros.
     * Source and test file naming is based on the class being defined/tested: 
 
-        ex. class this_is_an_example: 
+        class this_is_an_example: 
         {
             ...
             this_is_an_example.hpp
@@ -158,47 +158,48 @@ Another great resource is the Google C++ Style guide (https://google.github.io/s
     * When modifying existing code continue the style that it was created to maintain consistency.
     * Function/method definitions should have return type on a separate line:
 
-            ex. bool
-            class::method()
-            {
-               ...
-               return true;
-            }
+        bool
+        class::method()
+        {
+           ...
+           return true;
+        }
 
     * Use #include<cstdint> for POD types such as uint32_t, uint64_t etc.
     * Do not use "auto" for POD types
     * Use auto for types that can not be defined or are rather verbose such as a lambda or an iterator.
     * Use snake case for class & variable naming:
 
-            ex. class this_is_snake_case
-            { 
-                ...
+        class this_is_snake_case
+        { 
+            ...
 
-        variables:
+    variables:
 
-             uint32_t widget_count;
+         uint32_t widget_count;
 
     * Class layout should be public, protected & private:
 
-            class foo
+        class foo
+        {
+        public:
+        
+            // initialization list layout example...
+            foo(uint32_t foo_counter, uint32_t max_widgets)
+                : foo_counter(foo_counter)
+                , max_widgets(max_widgets)
             {
-            public:
-            
-                // initialization list layout example...
-                foo(uint32_t foo_counter, uint32_t max_widgets)
-                    : foo_counter(foo_counter)
-                    , max_widgets(max_widgets)
-                {
-                }
+            }
 
-            private:
-            
-                uint32_t foo_counter = 0; // prefer class initialization of variable if not passed through constructor
-                const uin32_t max_widgets;
-            };
+        private:
+        
+            uint32_t foo_counter = 0; // prefer class initialization of variable if not passed through constructor
+            const uin32_t max_widgets;
+        };
 
     * Constructor layout should align with the first parameter:
-        ex. foo::foo(unsigned int age,
+        
+        foo::foo(unsigned int age,
                  float weight_in_tonnes,
                  string name,
                  string city,
@@ -217,26 +218,24 @@ Another great resource is the Google C++ Style guide (https://google.github.io/s
     * Code within namespace should be indented
     * Even single lines of code for conditionals and loops should be enclosed by braces. 
     
-        ex. switch(my_value)
+        switch(my_value)
+        {
+            case MY_CONST_GLOBAL:
             {
-                case MY_CONST_GLOBAL:
-                {
-                    ...
-                }
-                break;
-                
-                default:
-                {
-                    ...
-                }
-                break;
+                ...
             }
-                
-               
-                
+            break;
+            
+            default:
+            {
+                ...
+            }
+            break;
+        }
+                   
     * When using multiple levels of namespaces use c++17's syntax:
 
-        ex. namespace bzn::utils
+        namespace bzn::utils
         {
             class ....
 
@@ -245,58 +244,53 @@ Another great resource is the Google C++ Style guide (https://google.github.io/s
     * Use CI's code coverage reporting to help identify untested code and exception cases
     * Create a mockable interface class to help test code that would require complex setup or dependencies such as a server
 
-        ex. class foo_base
+        class foo_base
         {
         public:
             virtual ~foo_base() = default;
             void function_one() const = 0;
             ...
-
-
+            
     * Do not use dynamic cast unless there is a very compelling reason
     * Const casts are not to be used under any circumstances
     * Reinterpret casts are only to be used in situations where “void” pointers are being upcast
-    * Const should be used in every place it can be used, with examples. For example, imagine the following function get_window in some class prototype: 
+    * Const should be used in every place it can be used. For example, imagine the following function get_window in some class prototype: 
         
-        ex. const Window *get_window(const Foo *const some_variable_name) const
+        const Window* get_window(const Foo* const some_variable_name) const
     
     * Derived classes from an interface should be marked as final unless the intent is to use it as a base class.
     * Use references everywhere applicable for function parameters.
     * Globals will be declared const within an unnamed namespace
     
-        ex. namespace
+        namespace
         {
             const uint32_t MY_CONST_GLOBAL = 1337;
         }
         
     * As a fundamental principle, there should be no entropy whatsoever in the code.Some common examples of entropy include the use of static initialization where the order of instantiation is often non-deterministic.
-    * Use c-standard types 
-        
-        ex. uint32_t my_value;
-        
     * Variable names must CLEARLY describe the type and usage
     * Use std::shared_ptr & std::unique_ptr instead of raw pointers.
     * Use const where possible (functions & variables)
     * Do not use typedef, but use "using xyz_t" language feature where new types have a suffix of _t:
 
-        ex. using foo_count_t = uint32_t;
+        using foo_count_t = uint32_t;
 
     * Use new enum classes and specify size type:
 
-        ex. enum class state : uint8_t
+        enum class state : uint8_t
         {
              ...
 
     * Access member variables and functions always using the "this->" pointer. Do not mark member variables with a prefix/postfix pattern.
 
-        ex. this->function_one();
+        this->function_one();
         this->a_member_variable = 0;
 
     * Use Doxygen style comments for all public methods. Base class should have them and derived classes do not require it. 
     * Comment any code that is not obvious, in terms of what it does.
     * Reference symbol should be added to the type and not the variable.
 
-         ex. void function(const some_type& my_type);
+        void function(const some_type& my_type);
 
 ### Best practices
 
@@ -313,7 +307,6 @@ Another great resource is the Google C++ Style guide (https://google.github.io/s
 
     * #includes should use <path/header_file.hpp> and not "header_file.hpp"
 
-        ex. 
         #include <include/boost_asio_beast.hpp>
         #include <node/node_base.hpp>
         #include <node/session_base.hpp>
