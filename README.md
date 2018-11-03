@@ -95,7 +95,7 @@ $ sudo apt-get install ccache
 Ensure that you set your cmake args to pass in:
 
 ```text
--DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/
+-DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/
 ```
 
 The project root can be directly imported into CLion.
@@ -109,7 +109,7 @@ Here are the steps to build the Daemon and unit test application from the comman
 ```text
 $ mkdir build
 $ cd build
-$ cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/ ..
+$ cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
@@ -118,7 +118,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=~/myboost/1_68_0/ ..
+$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
@@ -157,20 +157,20 @@ The configuration file is a JSON format file, as seen in the following example:
 where the properties are:
 
 - "bootstrap_file" - the path to a file containing the list of peers in the swarm that this node will be participating in. See below.
-- "debug_logging" - set this value to true to include debug level log messages in the logs
+- "debug_logging" (optional)- set this value to true to include debug level log messages in the logs
 - "ethereum" - is your Ethereum block chain address, used to pay for transactions.
 - "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
 - "listener_address" - the ip address that SwarmDB will use
 - "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
 - "http_port" - the listen port where a HTTP api is exposed for blockchain integration
-- "log_to_stdout" - directs SwarmDB to log output to stdout when true.
-- "logfile_dir" - location of log files (default: logs/)
-- "logfile_max_size" - approx. maximum combined size of the logs before deletion occurs (default: 512K)
-- "logfile_rotation_size" - approximate size of log file must be before rotation (default: 64K)
-- "max_storage" - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
+- "log_to_stdout" (optional) - directs SwarmDB to log output to stdout when true.
+- "logfile_dir" (optional -- If running on the same machine the log dir MUST be unique for each node) - location of log files (default: logs/)
+- "logfile_max_size" (optional) - approx. maximum combined size of the logs before deletion occurs (default: 512K)
+- "logfile_rotation_size" (optional) - approximate size of log file must be before rotation (default: 64K)
+- "max_storage" (optional) - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
-- "peer_validation_enabled" - set this to true to enable blacklisting and uuid signature verification
-- "signed_key" - a key generated from the node's UUID and the Bluzelle private key. If peer_validation_enabled is set to true, the node owner must provide the node's uuid to a Bluzelle representative who will generate the signed_key. The key must be added to the config file as a single line of text with no carriage returns or line feeds.
+- "peer_validation_enabled" (optional)- set this to true to enable blacklisting and uuid signature verification
+- "signed_key" - (required if peer_validation enabled) a key generated from the node's UUID and the Bluzelle private key. If peer_validation_enabled is set to true, the node owner must provide the node's uuid to a Bluzelle representative who will generate the signed_key. The key must be added to the config file as a single line of text with no carriage returns or line feeds.
 
 All size entries use the same notation as storage: B, K, M, G & T or none
 (bytes)
@@ -212,12 +212,12 @@ nodes as seen in the following example:
         }
     ]
 
-where the Peer object parameters are:
-- "host" - the IP address associated with the external node
+where the Peer object parameters are (ALL PARAMETERS MUST MATCH THE PEER CONFIGURATION):
+- "host" - the IP address associated with the external node 
 - "http_port" - the HTTP port on which the external node listens for HTTP client requests.
 - "name" - the human readable name that the external node uses
-- "port" - the socket address that the external node will listen for protobuf and web socket requests.
-- "uuid" - the universally unique identifier that the external node uses to uniquely identify itself.
+- "port" - the socket address that the external node will listen for protobuf and web socket requests. (listen_port in the config file)
+- "uuid" - the universally unique identifier that the external node uses to uniquely identify itself. This is required to be unique per node and consistent between the peerlist and the config.
 
 Please ensure that a JSON object representing the local node is also included
 in the array of peers.
@@ -296,9 +296,9 @@ Configuration files for Daemon:
 
 // peers.json
 [
-  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "http_port: : 8080, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
-  {"name": "peer2", "host": "127.0.0.1", "port": 50001, "http_port: : 8081, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
-  {"name": "peer3", "host": "127.0.0.1", "port": 50002, "http_port: : 8082, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
+  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "http_port" : 8080, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
+  {"name": "peer2", "host": "127.0.0.1", "port": 50001, "http_port" : 8081, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
+  {"name": "peer3", "host": "127.0.0.1", "port": 50002, "http_port" : 8082, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
 ]
 ```
 
