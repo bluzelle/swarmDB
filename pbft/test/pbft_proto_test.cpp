@@ -26,6 +26,12 @@ namespace bzn
         return this->pbft->max_faulty_nodes();
     }
 
+    void
+    pbft_proto_test::set_first_sequence_to_execute(uint64_t val)
+    {
+        this->pbft->first_sequence_to_execute = val;
+    }
+
     std::shared_ptr<pbft_operation>
     pbft_proto_test::send_request()
     {
@@ -138,9 +144,9 @@ namespace bzn
     {
         // pbft needs a hash for this checkpoint
         EXPECT_CALL(*this->mock_service, service_state_hash(seq)).Times(Exactly(1))
-            .WillRepeatedly(Invoke([&](auto)
+            .WillRepeatedly(Invoke([&](auto s)
             {
-                return std::to_string(seq);
+                return std::to_string(s);
             }));
 
         // after enough commits are sent, SUT will send out checkpoint message to all nodes
@@ -151,8 +157,35 @@ namespace bzn
     void
     pbft_proto_test::force_checkpoint(size_t seq)
     {
-        prepare_for_checkpoint(seq);
         this->pbft->checkpoint_reached_locally(seq);
+    }
+
+
+    void
+    pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence)
+    {
+        pbft_msg cp;
+        cp.set_sequence(sequence);
+        cp.set_type(PBFT_MSG_CHECKPOINT);
+        cp.set_state_hash(std::to_string(sequence));
+
+        auto wmsg = wrap_pbft_msg(cp);
+        wmsg.set_sender(node.uuid);
+        this->pbft->handle_message(cp, wmsg);
+    }
+
+    void
+    pbft_proto_test::stabilize_checkpoint(size_t seq)
+    {
+        for (const auto peer : TEST_PEER_LIST)
+        {
+            if (peer.uuid == this->uuid)
+            {
+                continue;
+            }
+
+            this->send_checkpoint(peer, seq);
+        }
     }
 
     void
@@ -199,15 +232,7 @@ namespace bzn
     }
 
     TEST_F(pbft_proto_test, test_primary_full_checkpoint)
-    {        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        auto dmsg = new database_msg;
-        auto create = new database_create;
-        create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(this->index)));
-        dmsg->set_allocated_create(create);
-        request->set_allocated_operation(dmsg);
-
+    {
         this->build_pbft();
 
         for (size_t i = 0; i < 99; i++)
@@ -220,23 +245,15 @@ namespace bzn
 
     TEST_F(pbft_proto_test, test_primary_quick_checkpoint)
     {
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        auto dmsg = new database_msg;
-        auto create = new database_create;
-        create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(this->index)));
-        dmsg->set_allocated_create(create);
-        request->set_allocated_operation(dmsg);
-
         this->build_pbft();
 
         for (size_t i = 0; i < 9; i++)
         {
             run_transaction_through_primary();
         }
-        force_checkpoint(10);
+        prepare_for_checkpoint(10);
         run_transaction_through_primary();
+        force_checkpoint(10);
     }
 
 

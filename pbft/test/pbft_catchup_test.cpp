@@ -147,6 +147,7 @@ namespace bzn
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
+        this->set_first_sequence_to_execute(std::numeric_limits<uint64_t>::max());
 
         // get the node to request state
         auto primary = this->pbft->get_primary();

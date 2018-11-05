@@ -117,10 +117,6 @@ pbft::start()
                         );
             });
 
-    if (this->in_swarm())
-    {
-        this->first_sequence_to_execute = 0;
-    }
 }
 
 void
