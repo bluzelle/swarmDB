@@ -30,19 +30,19 @@
 using namespace bzn;
 
 pbft::pbft(
-        std::shared_ptr<bzn::node_base> node
-        , std::shared_ptr<bzn::asio::io_context_base> io_context
-        , const bzn::peers_list_t& peers
-        , bzn::uuid_t uuid
-        , std::shared_ptr<pbft_service_base> service
-        , std::shared_ptr<pbft_failure_detector_base> failure_detector
-        , std::shared_ptr<bzn::crypto_base> crypto)
-: node(std::move(node))
-        , uuid(std::move(uuid))
-        , service(std::move(service))
-        , failure_detector(std::move(failure_detector))
-        , io_context(io_context)
-        , audit_heartbeat_timer(this->io_context->make_unique_steady_timer()), crypto(std::move(crypto))
+    std::shared_ptr<bzn::node_base> node
+    , std::shared_ptr<bzn::asio::io_context_base> io_context
+    , const bzn::peers_list_t& peers
+    , bzn::uuid_t uuid
+    , std::shared_ptr<pbft_service_base> service
+    , std::shared_ptr<pbft_failure_detector_base> failure_detector
+    , std::shared_ptr<bzn::crypto_base> crypto)
+    : node(std::move(node))
+    , uuid(std::move(uuid))
+    , service(std::move(service))
+    , failure_detector(std::move(failure_detector))
+    , io_context(io_context)
+    , audit_heartbeat_timer(this->io_context->make_unique_steady_timer()), crypto(std::move(crypto))
 {
     if (peers.empty())
     {
@@ -210,13 +210,13 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
         case PBFT_MSG_COMMIT :
             this->handle_commit(msg, original_msg);
             break;
-        case PBFT_MSG_CHECKPOINT:
+        case PBFT_MSG_CHECKPOINT :
             this->handle_checkpoint(msg, original_msg);
             break;
-        case PBFT_MSG_VIEWCHANGE:
+        case PBFT_MSG_VIEWCHANGE :
             this->handle_viewchange(msg, original_msg);
             break;
-        case PBFT_MSG_NEWVIEW:
+        case PBFT_MSG_NEWVIEW :
             this->handle_newview(msg, original_msg);
             break;
 
@@ -819,12 +819,6 @@ pbft::handle_failure()
         }
     }
 
-
-
-
-
-
-
     // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
     this->broadcast(this->wrap_message(view_change));
 }
@@ -1140,13 +1134,11 @@ pbft::is_view_valid() const
     return this->view_is_valid;
 }
 
-
 bool
 pbft::is_valid_viewchange_message(const pbft_msg& msg) const
 {
     return (msg.type() == PBFT_MSG_VIEWCHANGE) && (msg.view() == this->view + 1);
 }
-
 
 bool
 pbft::is_valid_newview_message(const pbft_msg& msg) const
@@ -1163,11 +1155,6 @@ pbft::is_valid_newview_message(const pbft_msg& msg) const
             return false;
         }
     }
-
-
-
-
-
     //      - The set O is correct
     //          - None of the messages it knows about are lost ???
 //    auto O = msg.preprepare_messages();
@@ -1180,22 +1167,8 @@ pbft::is_valid_newview_message(const pbft_msg& msg) const
 //
 //    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     return (msg.type() == PBFT_MSG_NEWVIEW) && (msg.view() == this->view + 1);
 }
-
 
 void
 pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
@@ -1269,6 +1242,10 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 
             // n = sequence # of last valid checkpoint
             //   = this->stable_checkpoint.first
+
+            auto x = this->latest_stable_checkpoint().first;
+            LOG(debug) << "\t***this->latest_stable_checkpoint().first:[" << x << "]";
+
             view_change.set_sequence(this->latest_stable_checkpoint().first);
 
             // C = a set of local 2*f + 1 valid checkpoint messages

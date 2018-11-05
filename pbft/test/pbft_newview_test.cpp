@@ -33,7 +33,6 @@ namespace bzn
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
-
         void
         execute_handle_failure()
         {
@@ -51,7 +50,6 @@ namespace bzn
                     }));
             this->pbft->handle_failure();
         }
-
 
         void
         check_that_pbft_drops_messages()
@@ -89,6 +87,33 @@ namespace bzn
                     break;
             }
         }
+
+
+        void
+        set_checkpoint(uint64_t sequence)
+        {
+            for (const auto &peer : TEST_PEER_LIST)
+            {
+                pbft_msg msg;
+                msg.set_type(PBFT_MSG_CHECKPOINT);
+                msg.set_view(this->pbft->get_view());
+                msg.set_sequence(sequence);
+                msg.set_state_hash(std::to_string(sequence));
+                msg.set_sender(peer.uuid);
+
+
+                wrapped_bzn_msg wmsg;
+                wmsg.set_type(BZN_MSG_PBFT);
+                wmsg.set_sender(peer.uuid);
+                // wmsg.set_signature(???)
+                wmsg.set_payload(msg.SerializeAsString());
+
+
+
+                this->pbft->handle_message(msg, this->default_original_msg);
+            }
+        }
+
     };
 
     TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state)
@@ -114,6 +139,34 @@ namespace bzn
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
+
+
+        for (size_t i = 0; i < 9; i++)
+        {
+            this->run_transaction_through_backup();
+        }
+        this->force_checkpoint(10);
+        this->run_transaction_through_backup();
+        this->set_checkpoint(10);
+
+
+
+
+
+
+
+
+
+
+        for (size_t i = 11; i < 19; i++)
+        {
+            this->run_transaction_through_backup();
+        }
+        this->force_checkpoint(20);
+        this->run_transaction_through_backup();
+
+
+
         this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
 
@@ -152,14 +205,5 @@ namespace bzn
 
         // processing the preprepares in O as normal
         // ????
-        
     }
-
-
-
-
-
-
-
-
 }

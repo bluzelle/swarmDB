@@ -65,7 +65,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
         ws.send_binary(msg_outer.SerializeToString())
         return
     else:
-        print("Sending: \n{}".format(msg))
+        print("Sending: \n{}".format(msg).expandtabs(4))
         ws.send(json.dumps(req))
 
     print("-" * 60 + '\n')

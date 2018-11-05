@@ -18,7 +18,7 @@
 #include <utils/make_endpoint.hpp>
 #include <gtest/gtest.h>
 
-namespace bzn
+namespace bzn::test
 {
 
     TEST_F(pbft_test, test_requests_create_operations)
@@ -48,15 +48,15 @@ namespace bzn
                     EXPECT_EQ(msg->payload_case(), bzn_envelope::kDatabaseMsg);
                 }));
 
-            this->uuid = SECOND_NODE_UUID;
-            this->build_pbft();
-            EXPECT_FALSE(pbft->is_primary());
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+        EXPECT_FALSE(pbft->is_primary());
 
         pbft->handle_database_message(this->request_msg, this->mock_session);
 
-        }
+    }
 
-        std::set<uint64_t> seen_sequences;
+    std::set<uint64_t> seen_sequences;
 
     void
     save_sequences(const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<bzn_envelope> wrapped_msg)
@@ -72,15 +72,15 @@ namespace bzn
         this->build_pbft();
         EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(Invoke(save_sequences));
 
-            database_msg req, req2;
-            req.mutable_header()->set_transaction_id(5);
-            req2.mutable_header()->set_transaction_id(1055);
+        database_msg req, req2;
+        req.mutable_header()->set_transaction_id(5);
+        req2.mutable_header()->set_transaction_id(1055);
 
-            seen_sequences = std::set<uint64_t>();
-            pbft->handle_database_message(wrap_request(req), this->mock_session);
-            pbft->handle_database_message(wrap_request(req2), this->mock_session);
-            ASSERT_EQ(seen_sequences.size(), 2u);
-        }
+        seen_sequences = std::set<uint64_t>();
+        pbft->handle_database_message(wrap_request(req), this->mock_session);
+        pbft->handle_database_message(wrap_request(req2), this->mock_session);
+        ASSERT_EQ(seen_sequences.size(), 2u);
+    }
 
     TEST_F(pbft_test, test_preprepare_triggers_prepare)
     {
@@ -88,8 +88,8 @@ namespace bzn
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-            this->pbft->handle_message(this->preprepare_msg, default_original_msg);
-        }
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
+    }
 
     TEST_F(pbft_test, test_prepare_contains_uuid)
     {
@@ -97,7 +97,7 @@ namespace bzn
         std::shared_ptr<bzn_envelope> wrapped_msg;
         EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
 
-            this->pbft->handle_message(this->preprepare_msg, default_original_msg);
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
 
         pbft_msg msg_sent;
         msg_sent.ParseFromString(wrapped_msg->pbft());
@@ -111,26 +111,26 @@ namespace bzn
         this->build_pbft();
         EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(0));
 
-            pbft_msg preprepare2(this->preprepare_msg);
-            preprepare2.set_view(6);
+        pbft_msg preprepare2(this->preprepare_msg);
+        preprepare2.set_view(6);
 
-            this->pbft->handle_message(preprepare2, default_original_msg);
-        }
+        this->pbft->handle_message(preprepare2, default_original_msg);
+    }
 
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
     {
         this->build_pbft();
         EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(TEST_PEER_LIST.size()));
 
-            pbft_msg preprepare2(this->preprepare_msg);
-            preprepare2.set_request_hash("some other hash");
+        pbft_msg preprepare2(this->preprepare_msg);
+        preprepare2.set_request_hash("some other hash");
 
 
 
-            this->pbft->handle_message(
-            this->preprepare_msg, default_original_msg);
-            this->pbft->handle_message(preprepare2, default_original_msg);
-        }
+        this->pbft->handle_message(
+        this->preprepare_msg, default_original_msg);
+        this->pbft->handle_message(preprepare2, default_original_msg);
+    }
 
     TEST_F(pbft_test, test_commit_messages_sent)
     {
@@ -140,34 +140,34 @@ namespace bzn
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-            this->pbft->handle_message(this->preprepare_msg, default_original_msg);
-            for (const auto &peer : TEST_PEER_LIST)
-            {
-                pbft_msg prepare = pbft_msg(this->preprepare_msg);
-                prepare.set_type(PBFT_MSG_PREPARE);
-                this->pbft->handle_message(prepare, from(peer.uuid));
-            }
-        }
-
-        TEST_F(pbft_test, test_commits_applied)
+        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
+        for (const auto& peer : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*(this->mock_io_context), post(_)).Times(Exactly(1));
-            this->build_pbft();
-
-            pbft_msg preprepare = pbft_msg(this->preprepare_msg);
-            preprepare.set_sequence(1);
-            this->pbft->handle_message(preprepare, default_original_msg);
-
-            for (const auto &peer : TEST_PEER_LIST)
-            {
-                pbft_msg prepare = pbft_msg(preprepare);
-                pbft_msg commit = pbft_msg(preprepare);
-                prepare.set_type(PBFT_MSG_PREPARE);
-                commit.set_type(PBFT_MSG_COMMIT);
-                this->pbft->handle_message(prepare, from(peer.uuid));
-                this->pbft->handle_message(commit, from(peer.uuid));
-            }
+            pbft_msg prepare = pbft_msg(this->preprepare_msg);
+            prepare.set_type(PBFT_MSG_PREPARE);
+            this->pbft->handle_message(prepare, from(peer.uuid));
         }
+    }
+
+    TEST_F(pbft_test, test_commits_applied)
+    {
+        EXPECT_CALL(*(this->mock_io_context), post(_)).Times(Exactly(1));
+        this->build_pbft();
+
+        pbft_msg preprepare = pbft_msg(this->preprepare_msg);
+        preprepare.set_sequence(1);
+        this->pbft->handle_message(preprepare, default_original_msg);
+
+        for (const auto& peer : TEST_PEER_LIST)
+        {
+            pbft_msg prepare = pbft_msg(preprepare);
+            pbft_msg commit = pbft_msg(preprepare);
+            prepare.set_type(PBFT_MSG_PREPARE);
+            commit.set_type(PBFT_MSG_COMMIT);
+            this->pbft->handle_message(prepare, from(peer.uuid));
+            this->pbft->handle_message(commit, from(peer.uuid));
+        }
+    }
 
     TEST_F(pbft_test, dummy_pbft_service_does_not_crash)
     {
@@ -186,20 +186,20 @@ namespace bzn
         this->database_handler(this->request_msg, mock_session);
     }
 
-        TEST_F(pbft_test, client_request_executed_results_in_message_response)
-        {
-            auto mock_session = std::make_shared<bzn::Mocksession_base>();
-            EXPECT_CALL(*mock_session, send_datagram(_)).Times(Exactly(1));
+    TEST_F(pbft_test, client_request_executed_results_in_message_response)
+    {
+        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        EXPECT_CALL(*mock_session, send_datagram(_)).Times(Exactly(1));
 
         auto peers = std::make_shared<const std::vector<bzn::peer_address_t>>();
         auto op = std::make_shared<pbft_operation>(1, 1, "somehash", peers);
         op->set_session(mock_session);
 
-            dummy_pbft_service service(this->mock_io_context);
-            service.register_execute_handler([](auto) {});
+        dummy_pbft_service service(this->mock_io_context);
+        service.register_execute_handler([](auto){});
 
-            service.apply_operation(op);
-        }
+        service.apply_operation(op);
+    }
 
     TEST_F(pbft_test, messages_after_high_water_mark_dropped)
     {
@@ -207,9 +207,9 @@ namespace bzn
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(0));
 
-            this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
-            pbft->handle_message(preprepare_msg, default_original_msg);
-        }
+        this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
+        pbft->handle_message(preprepare_msg, default_original_msg);
+    }
 
     TEST_F(pbft_test, messages_before_low_water_mark_dropped)
     {
@@ -217,16 +217,15 @@ namespace bzn
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(0));
 
-            this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
-            pbft->handle_message(preprepare_msg, default_original_msg);
-        }
+        this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
+        pbft->handle_message(preprepare_msg, default_original_msg);
+    }
 
-        TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector)
-        {
-            EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
+    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
+        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
 
-            this->uuid = SECOND_NODE_UUID;
-            this->build_pbft();
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
 
             EXPECT_FALSE(pbft->is_primary());
             pbft->handle_database_message(this->request_json, this->mock_session);
@@ -591,35 +590,3 @@ namespace bzn
 
 
         }
-
-
-
-
-
-
-
-
-
-        // we have our SUT
-
-        // 1 - create a request
-        // 2 - SUT does this: pbft->handle_message
-        // 3 - pbft sends a bunch of pre-prepares to "backups" - EXPECT that they are sent
-        // 4 - fake prepares from "backups" to SUT
-        // 5 - Expect the SUT to broadcast commits to all backups
-        // 6a -
-        // 6b -
-
-        // ...
-        // n - goto 1 101 times
-        // n+1
-
-
-
-
-
-
-    }
-
-}
-

@@ -78,9 +78,6 @@ enum pbft_msg_type
 
 message pbft_request
 {
-    //string operation = 1;
-    //uint64 timestamp = 2;
-    //string client = 3;
     pbft_request_type type = 1;
     oneof msg
     {
