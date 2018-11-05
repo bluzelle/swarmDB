@@ -183,22 +183,20 @@ namespace  bzn
 
         // Add our test callback...
         unsigned int callback_execute = 0u;
-        node->register_for_message(BZN_MSG_PBFT, [&](const auto& /*msg*/, auto)
+        node->register_for_message(bzn_envelope::kPbft, [&](const auto& /*msg*/, auto)
         {
             callback_execute++;
         });
 
-        wrapped_bzn_msg bad_msg;
-        bad_msg.set_payload("some stuff");
+        bzn_envelope bad_msg;
+        bad_msg.set_pbft("some stuff");
         bad_msg.set_sender("Elizabeth the Second, by the Grace of God of the United Kingdom, Canada and Her other Realms and Territories Queen, Head of the Commonwealth, Defender of the Faith");
         bad_msg.set_signature("probably not a valid signature");
-        bad_msg.set_type(BZN_MSG_PBFT);
 
-        wrapped_bzn_msg anon_msg;
-        anon_msg.set_payload("some stuff");
+        bzn_envelope anon_msg;
+        anon_msg.set_pbft("some stuff");
         anon_msg.set_sender("");
         anon_msg.set_signature("");
-        anon_msg.set_type(BZN_MSG_PBFT);
 
         node->priv_protobuf_handler(bad_msg, mock_session);
         EXPECT_EQ(callback_execute, 0u);

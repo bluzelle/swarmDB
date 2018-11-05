@@ -29,9 +29,9 @@ namespace bzn
 
         crypto(std::shared_ptr<bzn::options_base> options);
 
-        bool sign(wrapped_bzn_msg& msg) override;
+        bool sign(bzn_envelope& msg) override;
 
-        bool verify(const wrapped_bzn_msg& msg) override;
+        bool verify(const bzn_envelope& msg) override;
 
         std::string hash(const std::string& msg) override;
 
@@ -45,6 +45,8 @@ namespace bzn
         bool load_private_key();
 
         void log_openssl_errors();
+
+        const std::string& extract_payload(const bzn_envelope&);
 
         std::shared_ptr<bzn::options_base> options;
 

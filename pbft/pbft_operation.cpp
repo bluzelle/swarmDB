@@ -27,7 +27,7 @@ pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request re
 }
 
 void
-pbft_operation::record_preprepare(const wrapped_bzn_msg& /*encoded_preprepare*/)
+pbft_operation::record_preprepare(const bzn_envelope& /*encoded_preprepare*/)
 {
     this->preprepare_seen = true;
 }
@@ -39,7 +39,7 @@ pbft_operation::has_preprepare()
 }
 
 void
-pbft_operation::record_prepare(const wrapped_bzn_msg& encoded_prepare)
+pbft_operation::record_prepare(const bzn_envelope& encoded_prepare)
 {
     // TODO: Save message
     this->prepares_seen.insert(encoded_prepare.sender());
@@ -58,7 +58,7 @@ pbft_operation::is_prepared()
 }
 
 void
-pbft_operation::record_commit(const wrapped_bzn_msg& encoded_commit)
+pbft_operation::record_commit(const bzn_envelope& encoded_commit)
 {
     this->commits_seen.insert(encoded_commit.sender());
 }

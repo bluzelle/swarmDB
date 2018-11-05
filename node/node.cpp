@@ -69,7 +69,7 @@ node::register_for_message(const std::string& msg_type, bzn::message_handler msg
 
 
 bool
-node::register_for_message(const bzn_msg_type type, bzn::protobuf_handler msg_handler)
+node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler)
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
@@ -81,7 +81,7 @@ node::register_for_message(const bzn_msg_type type, bzn::protobuf_handler msg_ha
 
     if (this->protobuf_map.find(type) != this->protobuf_map.end())
     {
-        LOG(debug) << bzn_msg_type_Name(type) << " message type already registered";
+        LOG(debug) << type << " message type already registered";
 
         return false;
     }
@@ -143,7 +143,7 @@ node::priv_msg_handler(const Json::Value& msg, std::shared_ptr<bzn::session_base
 }
 
 void
-node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session)
+node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
@@ -156,13 +156,13 @@ node::priv_protobuf_handler(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::ses
         return;
     }
 
-    if (auto it = this->protobuf_map.find(msg.type()); it != this->protobuf_map.end())
+    if (auto it = this->protobuf_map.find(msg.payload_case()); it != this->protobuf_map.end())
     {
         it->second(msg, std::move(session));
     }
     else
     {
-        LOG(debug) << "no handler for message type " << bzn_msg_type_Name(msg.type());
+        LOG(debug) << "no handler for message type " << msg.payload_case();
     }
 
 }
@@ -224,7 +224,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
 }
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<wrapped_bzn_msg> msg)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
 {
     if(msg->sender().empty())
     {

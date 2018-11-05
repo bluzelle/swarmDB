@@ -49,7 +49,7 @@ namespace bzn::test
         pbft_request request_msg;
 
         pbft_msg preprepare_msg;
-        wrapped_bzn_msg default_original_msg;
+        bzn_envelope default_original_msg;
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
@@ -87,7 +87,7 @@ namespace bzn::test
     pbft_msg extract_pbft_msg(std::string msg);
     uuid_t extract_sender(std::string msg);
 
-    wrapped_bzn_msg
+    bzn_envelope
     wrap_pbft_msg(const pbft_msg& msg);
 
     bzn::json_message
@@ -99,5 +99,5 @@ namespace bzn::test
     bool is_checkpoint(std::shared_ptr<std::string> msg);
     bool is_audit(std::shared_ptr<std::string> msg);
 
-    wrapped_bzn_msg from(uuid_t uuid);
+    bzn_envelope from(uuid_t uuid);
 }
