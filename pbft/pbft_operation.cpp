@@ -18,12 +18,55 @@
 
 using namespace bzn;
 
-pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, pbft_request request, std::shared_ptr<const std::vector<peer_address_t>> peers)
+pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, bzn::hash_t request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
         : view(view)
           , sequence(sequence)
-          , request(std::move(request))
+          , request_hash(std::move(request_hash))
           , peers(std::move(peers))
 {
+}
+
+bool
+pbft_operation::has_request()
+{
+    return this->request_saved;
+}
+
+const pbft_request&
+pbft_operation::get_request()
+{
+    if (!this->request_saved)
+    {
+        throw std::runtime_error("Tried to get a request that is not saved");
+    }
+
+    return this->parsed_request;
+}
+
+const bzn::encoded_message&
+pbft_operation::get_encoded_request()
+{
+    if (!this->request_saved)
+    {
+        throw std::runtime_error("Tried to get a request that is not saved");
+    }
+
+    return this->encoded_request;
+}
+
+void
+pbft_operation::record_request(const bzn::encoded_message& wrapped_request)
+{
+    // not actually parsing the request because, for now, its still json
+    this->encoded_request = wrapped_request;
+
+    if (this->parsed_request.ParseFromString(wrapped_request))
+    {
+        LOG(error) << "Tried to record request as something not a valid request (perhaps an old json request?)";
+        // We don't consider this a failure case, for now, because it could be an old json request
+    }
+
+    this->request_saved = true;
 }
 
 void
@@ -54,7 +97,7 @@ pbft_operation::faulty_nodes_bound() const
 bool
 pbft_operation::is_prepared()
 {
-    return this->has_preprepare() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
+    return this->has_request() && this->has_preprepare() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 void
@@ -94,7 +137,7 @@ pbft_operation::end_commit_phase()
 operation_key_t
 pbft_operation::get_operation_key()
 {
-    return std::tuple<uint64_t, uint64_t, hash_t>(this->view, this->sequence, request_hash(this->request));
+    return std::tuple<uint64_t, uint64_t, hash_t>(this->view, this->sequence, this->request_hash);
 }
 
 pbft_operation_state
@@ -106,14 +149,7 @@ pbft_operation::get_state()
 std::string
 pbft_operation::debug_string()
 {
-    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
-}
-
-bzn::hash_t
-pbft_operation::request_hash(const pbft_request& req)
-{
-    // TODO: Actually hash the request; KEP-466
-    return req.ShortDebugString();
+    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->parsed_request.ShortDebugString());
 }
 
 void

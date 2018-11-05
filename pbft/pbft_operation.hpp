@@ -23,7 +23,6 @@
 
 namespace bzn
 {
-    using hash_t = std::string;
     // View, sequence
     using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
 
@@ -40,11 +39,9 @@ namespace bzn
     {
     public:
 
-        pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const std::vector<peer_address_t>> peers);
+        pbft_operation(uint64_t view, uint64_t sequence, bzn::hash_t request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
         void set_session(std::weak_ptr<bzn::session_base>);
-
-        static hash_t request_hash(const pbft_request& req);
 
         operation_key_t get_operation_key();
         pbft_operation_state get_state();
@@ -63,9 +60,15 @@ namespace bzn
 
         std::weak_ptr<bzn::session_base> session();
 
+        const pbft_request& get_request();
+        const bzn::encoded_message& get_encoded_request();
+
+        void record_request(const bzn::encoded_message& encoded_request);
+        bool has_request();
+
         const uint64_t view;
         const uint64_t sequence;
-        const pbft_request request;
+        const bzn::hash_t request_hash;
 
         std::string debug_string();
 
@@ -82,5 +85,9 @@ namespace bzn
 
         std::weak_ptr<bzn::session_base> listener_session;
 
+        bzn::encoded_message encoded_request;
+        pbft_request parsed_request;
+
+        bool request_saved = false;
     };
 }

@@ -40,8 +40,8 @@ namespace
             this->failure_detected = true;
         }
 
-        pbft_request req_a;
-        pbft_request req_b;
+        bzn::hash_t req_a = "a";
+        bzn::hash_t req_b = "b";
 
         void build_failure_detector()
         {
@@ -62,15 +62,6 @@ namespace
                     .WillRepeatedly(Invoke(
                             [&](auto handler){this->request_timer_callback = handler;}
                     ));
-
-            //req_a.set_operation("do something");
-            //req_b.set_operation("do something else");
-
-            req_a.set_client("alice");
-            req_b.set_client("bob");
-
-            req_a.set_timestamp(1);
-            req_b.set_timestamp(2);
         }
     };
 

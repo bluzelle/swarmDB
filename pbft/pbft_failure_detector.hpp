@@ -26,9 +26,9 @@ namespace bzn
     public:
         pbft_failure_detector(std::shared_ptr<bzn::asio::io_context_base>);
 
-        void request_seen(const pbft_request& req) override;
+        void request_seen(const bzn::hash_t& req_hash) override;
 
-        void request_executed(const pbft_request& req) override;
+        void request_executed(const bzn::hash_t& req_hash) override;
 
         void register_failure_handler(std::function<void()> handler) override;
 
@@ -41,7 +41,7 @@ namespace bzn
 
         std::unique_ptr<bzn::asio::steady_timer_base> request_progress_timer;
 
-        std::list<pbft_request> ordered_requests;
+        std::list<bzn::hash_t> ordered_requests;
         std::unordered_set<bzn::hash_t> outstanding_requests;
         std::unordered_set<bzn::hash_t> completed_requests;
 
