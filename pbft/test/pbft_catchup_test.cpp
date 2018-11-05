@@ -57,6 +57,7 @@ namespace bzn
     {
     public:
 
+
         void send_get_state_request(uint64_t sequence)
         {
             pbft_membership_msg msg;
@@ -93,6 +94,19 @@ namespace bzn
 
         bzn::peer_address_t node(*nodes++);
         send_checkpoint(node, 100);
+
+        void
+        send_checkpoint(std::shared_ptr<bzn::pbft> pbft, bzn::peer_address_t node, uint64_t sequence)
+        {
+            pbft_msg cp;
+            cp.set_sequence(sequence);
+            cp.set_type(PBFT_MSG_CHECKPOINT);
+            cp.set_state_hash(std::to_string(sequence));
+
+            auto wmsg = wrap_pbft_msg(cp);
+            wmsg.set_sender(node.uuid);
+            pbft->handle_message(cp, wmsg);
+        }
     }
 
     TEST_F(pbft_catchup_test, node_doesnt_request_state_after_known_checkpoint)

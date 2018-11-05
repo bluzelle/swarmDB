@@ -20,6 +20,12 @@ namespace bzn
 {
     using namespace test;
 
+    size_t
+    pbft_proto_test::faulty_nodes_bound() const
+    {
+        return this->pbft->max_faulty_nodes();
+    }
+
     std::shared_ptr<pbft_operation>
     pbft_proto_test::send_request()
     {

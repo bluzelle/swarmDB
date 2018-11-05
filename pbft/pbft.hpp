@@ -114,6 +114,7 @@ namespace bzn
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn_envelope wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn_envelope wrap_message(const pbft_membership_msg& message, const std::string& debug_info = "") const;
+        bzn::encoded_message wrap_message(const pbft_membership_msg& message, const std::string& debug_info = "");
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
@@ -130,6 +131,7 @@ namespace bzn
 
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+        void maybe_adopt_checkpoint(const checkpoint_t& cp);
         void stabilize_checkpoint(const checkpoint_t& cp);
         const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
         void request_checkpoint_state(const checkpoint_t& cp);
@@ -144,6 +146,7 @@ namespace bzn
         void clear_operations_until(const checkpoint_t&);
 
         bool initialize_configuration(const bzn::peers_list_t& peers);
+        bool in_swarm();
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
         const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
@@ -163,6 +166,7 @@ namespace bzn
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
         uint64_t first_sequence_to_execute = std::numeric_limits<uint64_t>::max();
+        bool joined_swarm = false;
 
         uint64_t low_water_mark;
         uint64_t high_water_mark;
