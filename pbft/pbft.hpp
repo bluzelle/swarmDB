@@ -115,6 +115,9 @@ namespace bzn
         void handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
         void handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
 
+        void primary_handles_viewchange(const pbft_msg& msg);
+        void replica_handles_viewchange(const pbft_msg& msg);
+
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
         void do_preprepared(const std::shared_ptr<pbft_operation>& op);

@@ -71,15 +71,20 @@ namespace bzn
                     .Times(Exactly(TEST_PEER_LIST.size()))
                     .WillRepeatedly(Invoke([&](auto &, auto &) { EXPECT_EQ( n, count); }));
 
-            const size_t NEW_VIEW = this->pbft->get_view() + 1;
             pbft_msg pbft_msg;
             pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);
-            pbft_msg.set_view(NEW_VIEW);
+            pbft_msg.set_view(this->pbft->get_view() + 1);
 
             // let's pretend that the sytem under test is receiving view change messages
             // from the other replicas
             for (const auto &peer : TEST_PEER_LIST)
             {
+                if(peer.uuid == this->uuid)
+                {
+                    continue;
+                }
+                
+                
                 count++;
                 pbft_msg.set_sender(peer.uuid);
                 this->pbft->handle_message(pbft_msg, this->default_original_msg);
@@ -134,8 +139,17 @@ namespace bzn
         this->execute_handle_failure();
         this->check_that_pbft_drops_messages();
     }
-
-    TEST_F(pbft_viewchange_test, pbft_replica_sends_viewchange_message)
+    
+    
+    TEST_F(pbft_viewchange_test, pbft_no_history_replica_sends_viewchange_message_after_receiving_enough_viewchange_messages)
+    {
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+        this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
+    }
+    
+    
+    TEST_F(pbft_viewchange_test, pbft_replica_sends_viewchange_message_with_history)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -148,16 +162,7 @@ namespace bzn
         this->force_checkpoint(10);
         this->run_transaction_through_backup();
         this->set_checkpoint(10);
-
-
-
-
-
-
-
-
-
-
+        
         for (size_t i = 11; i < 19; i++)
         {
             this->run_transaction_through_backup();
