@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <proto/bluzelle.pb.h>
+#include <proto/pbft.pb.h>
 #include <include/boost_asio_beast.hpp>
 
 namespace bzn

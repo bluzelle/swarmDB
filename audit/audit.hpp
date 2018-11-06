@@ -16,7 +16,6 @@
 
 #include <audit/audit_base.hpp>
 #include <node/node_base.hpp>
-#include <proto/bluzelle.pb.h>
 #include <include/boost_asio_beast.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <mutex>

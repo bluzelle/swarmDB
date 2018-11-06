@@ -22,6 +22,7 @@
 #include <pbft/pbft_config_store.hpp>
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
+#include <proto/audit.pb.h>
 #include <mutex>
 #include <gtest/gtest_prod.h>
 

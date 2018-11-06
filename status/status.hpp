@@ -29,12 +29,16 @@ namespace bzn
     public:
         using status_provider_list_t = std::vector<std::weak_ptr<bzn::status_provider_base>>;
 
-        status(std::shared_ptr<bzn::node_base> node, status_provider_list_t&& status_providers);
+        status(std::shared_ptr<bzn::node_base> node, status_provider_list_t&& status_providers, bool pbft_enabled);
 
         void start();
 
     private:
         void handle_ws_status_messages(const bzn::json_message& ws_msg, std::shared_ptr<bzn::session_base> session);
+
+        void handle_status_request_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+
+        bzn::json_message query_modules();
 
         std::shared_ptr<bzn::node_base> node;
 
@@ -42,6 +46,8 @@ namespace bzn
         std::once_flag start_once;
 
         const std::chrono::steady_clock::time_point start_time;
+
+        const bool pbft_enabled;
     };
 
 } // namespace bzn
