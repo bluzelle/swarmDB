@@ -1271,8 +1271,6 @@ pbft::replica_handles_viewchange(const pbft_msg&/*msg*/)
 
 }
 
-
-
 void
 pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
@@ -1301,54 +1299,53 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
     }
 }
 
+
+void
+pbft::replica_handles_newview(const pbft_msg& msg)
+{
+    LOG(debug) << "Backup handling a newview";
+    // KEP-634 - A backup accepts a new-view message for view v+1 if
+    //      - the view change messages are valid
+    if(this->is_valid_newview_message(msg))
+    {
+        LOG(debug) << "\t***new view message is valid.";
+        // the set O is is correct
+        // - get the preprepares from the newview message
+
+
+        // O
+        //const auto preprepare_messages = msg.prepared_proofs(); // pointer to message prepared_proof
+        std::unordered_set<std::string> pre_prepares;
+        for( int i = 0; i < msg.prepared_proofs_size(); ++i)
+        {
+            auto proof = msg.prepared_proofs(i).pre_prepare();
+            pre_prepares.insert(proof);
+        }
+
+        //the preprepares that this replica knows about is
+
+        //this->accepted_preprepares;
+        // we need to compare these to O
+
+        //      - It then moves to view v+1,
+        this->view = msg.view();
+        // processing the preprepares in O as normal. ???
+
+        // DO I need to send the set O to be processed?
+    }
+}
+
 void
 pbft::handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 {
     LOG(debug) << "Handle_newview" << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
     if (this->is_primary())
     {
-        LOG(debug) << "Primaries don't do anything with newview messsages";
+        LOG(debug) << "Primaries don't handle newview messsages";
     }
     else
     {
-        LOG(debug) << "Backup handling a newview";
-        // KEP-634 - A backup accepts a new-view message for view v+1 if
-        //      - the view change messages are valid
-        if(this->is_valid_newview_message(msg))
-        {
-            LOG(debug) << "\t***new view message is valid.";
-            // the set O is is correct
-            // - get the preprepares from the newview message
-
-
-            // O
-            //const auto preprepare_messages = msg.prepared_proofs(); // pointer to message prepared_proof
-            std::unordered_set<std::string> pre_prepares;
-            for( size_t i = 0; msg.prepared_proofs_size(); ++i)
-            {
-
-
-
-                auto proof = msg.prepared_proofs(i); // { bytes pre_prepare = 1; repeated bytes prepare = 2;}
-
-            }
-
-
-
-
-            //the preprepares that this replica knows about is
-            //    this->accepted_preprepares;
-            // we need to compare these to O
-
-
-
-
-            //      - It then moves to view v+1,
-            this->view = msg.view();
-            // processing the preprepares in O as normal. ???
-
-            // DO I need to send the set O to be processed?
-        }
+        this->replica_handles_newview(msg);
     }
 
 }
@@ -1364,7 +1361,6 @@ bzn::json_message
 pbft::get_status()
 {
     bzn::json_message status;
-
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
     status["outstanding_operations_count"] = uint64_t(this->outstanding_operations_count());

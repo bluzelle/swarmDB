@@ -34,7 +34,7 @@ namespace bzn
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
         void
-        execute_handle_failure()
+        execute_handle_failure_expect_sut_to_send_viewchange()
         {
             // I expect that a replica forced to handle a failure will invalidate
             // its' view, and cause the replica to send a VIEWCHANGE messsage
@@ -121,12 +121,12 @@ namespace bzn
 
     };
 
-    TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state)
+    TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
 
-        this->execute_handle_failure();
+        this->execute_handle_failure_expect_sut_to_send_viewchange();
 
         // Now the replica's view should be invalid
         EXPECT_FALSE(this->pbft->is_view_valid());
@@ -136,43 +136,36 @@ namespace bzn
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
-        this->execute_handle_failure();
+        this->execute_handle_failure_expect_sut_to_send_viewchange();
         this->check_that_pbft_drops_messages();
     }
-    
-    
+
     TEST_F(pbft_viewchange_test, pbft_no_history_replica_sends_viewchange_message_after_receiving_enough_viewchange_messages)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
         this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
-    
-    
-    TEST_F(pbft_viewchange_test, pbft_replica_sends_viewchange_message_with_history)
+
+    TEST_F(pbft_viewchange_test, pbft_replica_with_history_sends_viewchange_message)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
 
-
-        for (size_t i = 0; i < 9; i++)
+        for (size_t i = 0; i < 99; i++)
         {
-            this->run_transaction_through_backup();
+            run_transaction_through_primary();
         }
-        this->force_checkpoint(10);
-        this->run_transaction_through_backup();
-        this->set_checkpoint(10);
-        
-        for (size_t i = 11; i < 19; i++)
-        {
-            this->run_transaction_through_backup();
-        }
-        this->force_checkpoint(20);
-        this->run_transaction_through_backup();
+        prepare_for_checkpoint(100);
+        run_transaction_through_primary();
+        stabilize_checkpoint(100);
 
 
 
-        this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
+
+
+
+       // this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
 
     TEST_F(pbft_viewchange_test, pbft_primary_sends_newview_message)

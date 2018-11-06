@@ -48,12 +48,12 @@ message pbft_msg
     repeated string checkpoint_messages = 8;
 
     // for viewchange, and newview (O)
-    // P, p_m ???  O for newview
+    // P, p_m, O
     repeated prepared_proof prepared_proofs = 9;
 
     // for newview
     // V valid view change messages
-    repeated bytes viewchange_messages = 10;
+    repeated bytes viewchange_messages = 11;
 
 }
 
@@ -151,6 +151,6 @@ message pbft_internal_msg
 
 message prepared_proof
 {
-    bytes pre_prepare = 1;
-    repeated bytes prepare = 2;
+    bytes pre_prepare = 1;  // O
+    repeated bytes prepare = 2; // P, P_m
 }
