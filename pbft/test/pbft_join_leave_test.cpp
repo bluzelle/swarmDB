@@ -24,13 +24,13 @@ namespace bzn
 
     MATCHER_P2(message_is_correct_type, msg_type, req_type, "")
     {
-        wrapped_bzn_msg message;
+        bzn_envelope message;
         if (message.ParseFromString(*arg))
         {
-            if (message.type() == bzn_msg_type::BZN_MSG_PBFT)
+            if (message.payload_case() == bzn_envelope::kPbft)
             {
                 pbft_msg pmsg;
-                if (pmsg.ParseFromString(message.payload()))
+                if (pmsg.ParseFromString(message.pbft()))
                 {
                     if (pmsg.type() == msg_type)
                     {
@@ -109,12 +109,11 @@ namespace bzn
             pbft->handle_message(commit, wmsg);
         }
 
-        wrapped_bzn_msg
+        bzn_envelope
         wrap_pbft_membership_msg(const pbft_membership_msg& msg)
         {
-            wrapped_bzn_msg result;
-            result.set_payload(msg.SerializeAsString());
-            result.set_type(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP);
+            bzn_envelope result;
+            result.set_pbft_membership(msg.SerializeAsString());
             return result;
         }
     }

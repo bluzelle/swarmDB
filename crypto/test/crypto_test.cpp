@@ -44,11 +44,11 @@ public:
             "8Mcwr7lq+Hi7/xx7A37wZBHVtCRpaXbJNqRhIErf6FnOZI3m71sQoA==\n"
             "-----END PUBLIC KEY-----\n";
 
-    wrapped_bzn_msg msg;
+    bzn_envelope msg;
 
     crypto_test()
     {
-        this->msg.set_payload("pretend this is a serialized protobuf message");
+        this->msg.set_pbft("pretend this is a serialized protobuf message");
 
         std::ofstream ofile(private_key_file.c_str());
         ofile << test_private_key_pem;
@@ -81,8 +81,8 @@ TEST_F(crypto_test, messages_use_my_public_key)
 
 TEST_F(crypto_test, messages_signed_and_verified)
 {
-    wrapped_bzn_msg msg2 = msg;
-    wrapped_bzn_msg msg3 = msg;
+    bzn_envelope msg2 = msg;
+    bzn_envelope msg3 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));
     EXPECT_TRUE(crypto->verify(msg));
@@ -90,7 +90,7 @@ TEST_F(crypto_test, messages_signed_and_verified)
 
 TEST_F(crypto_test, bad_signature_caught)
 {
-    wrapped_bzn_msg msg2 = msg;
+    bzn_envelope msg2 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));
 
@@ -100,7 +100,7 @@ TEST_F(crypto_test, bad_signature_caught)
 
 TEST_F(crypto_test, bad_sender_caught)
 {
-    wrapped_bzn_msg msg3 = msg;
+    bzn_envelope msg3 = msg;
 
     EXPECT_TRUE(crypto->sign(msg));
 

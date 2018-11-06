@@ -27,7 +27,7 @@ class Mocknode_base : public node_base {
   MOCK_METHOD2(register_for_message,
       bool(const std::string& msg_type, bzn::message_handler message_handler));
   MOCK_METHOD2(register_for_message,
-      bool(const bzn_msg_type msg_type, bzn::protobuf_handler message_handler));
+      bool(const bzn_envelope::PayloadCase msg_type, bzn::protobuf_handler message_handler));
   MOCK_METHOD0(start,
       void());
   MOCK_METHOD2(send_message,

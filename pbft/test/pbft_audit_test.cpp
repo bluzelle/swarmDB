@@ -25,7 +25,7 @@ namespace bzn::test
         this->build_pbft();
         this->pbft->set_audit_enabled(true);
 
-        wrapped_bzn_msg dummy_original_msg;
+        bzn_envelope dummy_original_msg;
         pbft_msg preprepare = pbft_msg(this->preprepare_msg);
         preprepare.set_sequence(1);
         this->pbft->handle_message(preprepare, dummy_original_msg);
@@ -33,9 +33,9 @@ namespace bzn::test
         for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg prepare = pbft_msg(preprepare);
-            wrapped_bzn_msg prepare_wrap;
+            bzn_envelope prepare_wrap;
             pbft_msg commit = pbft_msg(preprepare);
-            wrapped_bzn_msg commit_wrap;
+            bzn_envelope commit_wrap;
             prepare.set_type(PBFT_MSG_PREPARE);
             prepare_wrap.set_sender(peer.uuid);
             commit.set_type(PBFT_MSG_COMMIT);

@@ -45,7 +45,7 @@ namespace
 
         bzn::pbft_operation op;
 
-        wrapped_bzn_msg empty_original_msg;
+        bzn_envelope empty_original_msg;
 
         pbft_operation_test()
                 : op(view, sequence, request, std::make_shared<std::vector<bzn::peer_address_t>>(TEST_PEER_LIST))
@@ -62,12 +62,12 @@ namespace
 
     TEST_F(pbft_operation_test, prepared_after_all_msgs)
     {
-        wrapped_bzn_msg preprepare;
+        bzn_envelope preprepare;
         this->op.record_preprepare(preprepare);
 
         for (const auto& peer : TEST_PEER_LIST)
         {
-            wrapped_bzn_msg msg;
+            bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
         }
@@ -80,7 +80,7 @@ namespace
     {
         for (const auto& peer : TEST_PEER_LIST)
         {
-            wrapped_bzn_msg msg;
+            bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
         }
@@ -91,12 +91,12 @@ namespace
 
     TEST_F(pbft_operation_test, not_prepared_with_2f)
     {
-        wrapped_bzn_msg preprepare;
+        bzn_envelope preprepare;
         this->op.record_preprepare(preprepare);
 
         for (const auto& peer : TEST_2F_PEER_LIST)
         {
-            wrapped_bzn_msg msg;
+            bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
         }
@@ -107,12 +107,12 @@ namespace
 
     TEST_F(pbft_operation_test, prepared_with_2f_PLUS_1)
     {
-        wrapped_bzn_msg preprepare;
+        bzn_envelope preprepare;
         this->op.record_preprepare(preprepare);
 
         for (const auto& peer : TEST_2F_PLUS_1_PEER_LIST)
         {
-            wrapped_bzn_msg msg;
+            bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
         }

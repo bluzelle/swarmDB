@@ -52,7 +52,7 @@ namespace bzn
 
         void start() override;
 
-        void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) override;
+        void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) override;
 
         void handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session);
 
@@ -90,10 +90,10 @@ namespace bzn
         bool preliminary_filter_msg(const pbft_msg& msg);
 
         void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr);
-        void handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_join_or_leave(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
@@ -103,8 +103,8 @@ namespace bzn
         void do_prepared(const std::shared_ptr<pbft_operation>& op);
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
-        void handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
-        void handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session = nullptr);
+        void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
