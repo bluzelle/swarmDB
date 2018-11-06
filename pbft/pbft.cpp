@@ -59,10 +59,10 @@ pbft::start()
     std::call_once(this->start_once,
             [this]()
             {
-                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT,
+                this->node->register_for_message(bzn_envelope::PayloadCase::kPbft,
                         std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP,
+                this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
                     std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
                 this->node->register_for_message("database",
@@ -130,15 +130,15 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    if (msg.type() != BZN_MSG_PBFT)
+    if (msg.payload_case() != bzn_envelope::kPbft )
     {
         LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
     }
 
     pbft_msg inner_msg;
-    if (!inner_msg.ParseFromString(msg.payload()))
+    if (!inner_msg.ParseFromString(msg.pbft()))
     {
         LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -148,10 +148,10 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
 }
 
 void
-pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     pbft_membership_msg inner_msg;
-    if (!inner_msg.ParseFromString(msg.payload()))
+    if (!inner_msg.ParseFromString(msg.pbft_membership()))
     {
         LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -173,7 +173,7 @@ pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn:
 }
 
 void
-pbft::handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
 
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
@@ -270,7 +270,7 @@ pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_
 }
 
 void
-pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // If we've already accepted a preprepare for this view+sequence, and it's not this one, then we should reject this one
     // Note that if we get the same preprepare more than once, we can still accept it
@@ -303,7 +303,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 }
 
 void
-pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Prepare messages are never rejected, assuming the sanity checks passed
     auto op = this->find_operation(msg);
@@ -313,7 +313,7 @@ pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
 }
 
 void
-pbft::handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Commit messages are never rejected, assuming  the sanity checks passed
     auto op = this->find_operation(msg);
@@ -534,9 +534,8 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
 bzn::encoded_message
 pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
-    wrapped_bzn_msg result;
-    result.set_payload(msg.SerializeAsString());
-    result.set_type(bzn_msg_type::BZN_MSG_PBFT);
+    bzn_envelope result;
+    result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
 
     return result.SerializeAsString();
@@ -610,7 +609,7 @@ pbft::checkpoint_reached_locally(uint64_t sequence)
 }
 
 void
-pbft::handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     if (msg.sequence() <= stable_checkpoint.first)
     {

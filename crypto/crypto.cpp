@@ -35,8 +35,45 @@ crypto::crypto(std::shared_ptr<bzn::options_base> options)
     }
 }
 
+const std::string&
+crypto::extract_payload(const bzn_envelope& msg)
+{
+    switch (msg.payload_case())
+    {
+        case bzn_envelope::kPbftRequest :
+        {
+            return msg.pbft_request();
+        }
+        case bzn_envelope::kDatabaseResponse :
+        {
+            return msg.database_response();
+        }
+        case bzn_envelope::kJson :
+        {
+            return msg.json();
+        }
+        case bzn_envelope::kAudit :
+        {
+            return msg.audit();
+        }
+        case bzn_envelope::kPbft :
+        {
+            return msg.pbft();
+        }
+        case bzn_envelope::kPbftMembership :
+        {
+            return msg.pbft_membership();
+        }
+        default :
+        {
+            throw std::runtime_error(
+                    "Crypto does not know how to handle a message with type " + std::to_string(msg.payload_case()));
+        }
+    }
+}
+
 bool
-crypto::verify(const wrapped_bzn_msg& msg)
+crypto::verify(const bzn_envelope& msg)
 {
     BIO_ptr_t bio(BIO_new(BIO_s_mem()), &BIO_free);
     EC_KEY_ptr_t pubkey(nullptr, &EC_KEY_free);
@@ -54,6 +91,7 @@ crypto::verify(const wrapped_bzn_msg& msg)
     std::string signature = msg.signature();
     char* sig_ptr = signature.data();
 
+
     bool result =
             // Reconstruct the PEM file in memory (this is awkward, but it avoids dealing with EC specifics)
             (0 < BIO_write(bio.get(), PEM_PREFIX.c_str(), PEM_PREFIX.length()))
@@ -67,7 +105,7 @@ crypto::verify(const wrapped_bzn_msg& msg)
 
             // Perform the signature validation
             && (1 == EVP_DigestVerifyInit(context.get(), NULL, EVP_sha512(), NULL, key.get()))
-            && (1 == EVP_DigestVerifyUpdate(context.get(), msg.payload().c_str(), msg.payload().length()))
+            && (1 == EVP_DigestVerifyUpdate(context.get(), this->extract_payload(msg).c_str(), this->extract_payload(msg).length()))
             && (1 == EVP_DigestVerifyFinal(context.get(), reinterpret_cast<unsigned char*>(sig_ptr), msg.signature().length()));
 
     /* Any errors here can be attributed to a bad (potentially malicious) incoming message, and we we should not
@@ -79,7 +117,7 @@ crypto::verify(const wrapped_bzn_msg& msg)
 }
 
 bool
-crypto::sign(wrapped_bzn_msg& msg)
+crypto::sign(bzn_envelope& msg)
 {
     if (msg.sender().empty())
     {
@@ -98,7 +136,7 @@ crypto::sign(wrapped_bzn_msg& msg)
     bool result =
             (bool) (context)
             && (1 == EVP_DigestSignInit(context.get(), NULL, EVP_sha512(), NULL, this->private_key_EVP.get()))
-            && (1 == EVP_DigestSignUpdate(context.get(), msg.payload().c_str(), msg.payload().size()))
+            && (1 == EVP_DigestSignUpdate(context.get(), this->extract_payload(msg).c_str(), this->extract_payload(msg).length()))
             && (1 == EVP_DigestSignFinal(context.get(), NULL, &signature_length));
 
     auto deleter = [](unsigned char* ptr){OPENSSL_free(ptr);};

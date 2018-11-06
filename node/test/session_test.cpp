@@ -179,7 +179,7 @@ namespace bzn
 
         ASSERT_FALSE(proto_handler_called);
 
-        wrapped_bzn_msg proto_msg;
+        bzn_envelope proto_msg;
         write_to_buffer(proto_msg.SerializeAsString());
         read_handler(boost::system::error_code(), 0);
 
