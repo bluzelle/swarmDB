@@ -46,7 +46,7 @@ namespace bzn
 
         void log_openssl_errors();
 
-        const std::string& extract_payload(const bzn_envelope&);
+        const std::string& extract_payload(const bzn_envelope& msg);
 
         std::shared_ptr<bzn::options_base> options;
 

@@ -40,14 +40,35 @@ crypto::extract_payload(const bzn_envelope& msg)
 {
     switch (msg.payload_case())
     {
-        case bzn_envelope::kPbftRequest : return msg.pbft_request();
-        case bzn_envelope::kDatabaseResponse : return msg.database_response();
-        case bzn_envelope::kJson : return msg.json();
-        case bzn_envelope::kAudit : return msg.audit();
-        case bzn_envelope::kPbft : return msg.pbft();
-        case bzn_envelope::kPbftMembership : return msg.pbft_membership();
-        default : throw std::runtime_error(
-                "Crypto does not know how to handle a message with type " + std::to_string(msg.payload_case()));
+        case bzn_envelope::kPbftRequest :
+        {
+            return msg.pbft_request();
+        }
+        case bzn_envelope::kDatabaseResponse :
+        {
+            return msg.database_response();
+        }
+        case bzn_envelope::kJson :
+        {
+            return msg.json();
+        }
+        case bzn_envelope::kAudit :
+        {
+            return msg.audit();
+        }
+        case bzn_envelope::kPbft :
+        {
+            return msg.pbft();
+        }
+        case bzn_envelope::kPbftMembership :
+        {
+            return msg.pbft_membership();
+        }
+        default :
+        {
+            throw std::runtime_error(
+                    "Crypto does not know how to handle a message with type " + std::to_string(msg.payload_case()));
+        }
     }
 }
 
