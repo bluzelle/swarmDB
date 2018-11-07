@@ -21,7 +21,7 @@
 #include <bootstrap/peer_address.hpp>
 #include <pbft/pbft_operation.hpp>
 
-#include <proto/bluzelle.pb.h>
+#include <proto/pbft.pb.h>
 
 namespace bzn
 {

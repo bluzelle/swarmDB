@@ -21,7 +21,7 @@
 #include <include/bluzelle.hpp>
 #include <node/node_base.hpp>
 #include <node/session_base.hpp>
-#include <proto/bluzelle.pb.h>
+#include <proto/audit.pb.h>
 
 namespace bzn
 {

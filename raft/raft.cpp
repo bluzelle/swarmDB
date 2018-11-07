@@ -18,7 +18,7 @@
 #include <random>
 #include <algorithm>
 #include <boost/filesystem.hpp>
-#include <proto/bluzelle.pb.h>
+#include <proto/audit.pb.h>
 #include <utils/crypto.hpp>
 #include <utils/blacklist.hpp>
 
