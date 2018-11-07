@@ -32,6 +32,7 @@ try:
     import bluzelle_pb2
     import database_pb2
     import pbft_pb2
+    import status_pb2
 except ImportError as e:
     raise ImportError("{}\n\nTo generate Bluzelle protobuf modules:\n"
                       "\n"
@@ -169,10 +170,12 @@ def size_request():
     msg.db.size.SetInParent()
     return msg
 
+
 def subscribe_request(key):
     msg = bluzelle_pb2.bzn_msg()
     msg.db.subscribe.key = key
     return msg
+
 
 def unsubscribe_request(key):
     global transaction_id
@@ -181,8 +184,29 @@ def unsubscribe_request(key):
     msg.db.unsubscribe.transaction_id = transaction_id
     return msg
 
+
 def status_handler(args):
-    return send_status_request(args.node)
+    global use_pbft
+
+    if not use_pbft:
+        return send_status_request(args.node)
+
+    ws = websocket.create_connection("ws://" + args.node)
+    msg_outer = bluzelle_pb2.bzn_envelope()
+    msg_inner = status_pb2.status_request()
+    msg_outer.status_request = msg_inner.SerializeToString()
+
+    print("Sending: \n{}".format(msg_outer).expandtabs(4))
+    ws.send_binary(msg_outer.SerializeToString())
+    resp = status_pb2.status_response()
+    resp.ParseFromString(ws.recv())
+
+    print("Response: \n{}".format(resp).expandtabs(4))
+    modules = json.loads(resp.module_status_json)
+    print("{}".format(json.dumps(modules,indent=4)))
+    print("-" * 60 + '\n')
+
+    return resp
 
 
 def create_handler(args):

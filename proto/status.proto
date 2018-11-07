@@ -14,31 +14,13 @@
 
 syntax = "proto3";
 
-import "database.proto";
+message status_request {}
 
-message bzn_envelope
+message status_response
 {
-    string sender = 1;
-    bytes signature = 2;
-
-    oneof payload
-    {
-        bytes pbft_request = 3;
-        bytes database_response = 4;
-        bytes json = 5;
-        bytes audit = 6;
-        bytes pbft = 7;
-        bytes pbft_membership = 8;
-        bytes status_request = 9;
-    }
-}
-
-message bzn_msg
-{
-    // Keeping this around for raft
-    oneof msg
-    {
-        database_msg db = 10;
-        string json = 11;
-    }
+    string swarm_version = 1;
+    string swarm_git_commit = 2;
+    string uptime = 3;
+    string module_status_json = 4;
+    bool pbft_enabled = 5;
 }

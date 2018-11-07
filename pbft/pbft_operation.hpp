@@ -15,7 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <proto/bluzelle.pb.h>
+#include <proto/pbft.pb.h>
 #include <bootstrap/bootstrap_peers_base.hpp>
 #include <cstdint>
 #include <string>
