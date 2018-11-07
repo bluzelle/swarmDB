@@ -771,52 +771,22 @@ pbft::notify_audit_failure_detected()
     }
 }
 
+/*!
+ * The timer has expired (i expires in view v) doesn't matter: we must be a backup !this->is_primary()
+ */
 void
 pbft::handle_failure()
 {
-    LOG(fatal) << "Failure detected; view changes not yet implemented\n";
+    LOG(fatal) << "Failure detected; view changes not yet implemented";
     this->notify_audit_failure_detected();
-    //TODO: KEP-332
     this->view_is_valid = false;
-
-    // at this point the timer has expired (i expires in view v)
-    // doesn't matter: we must be a backup !this->is_primary()
-    // Create  view-change message.
-    pbft_msg view_change;
-
-    // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
-    view_change.set_type(PBFT_MSG_VIEWCHANGE);
-
-    // v + 1 = this->view + 1
-    view_change.set_view(this->view + 1);
-
-    // n = sequence # of last valid checkpoint
-    //   = this->stable_checkpoint.first
-    view_change.set_sequence(this->latest_stable_checkpoint().first);
-
-    // C = a set of local 2*f + 1 valid checkpoint messages
-    //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
-    for (const auto& msg : this->stable_checkpoint_proof)
-    {
-        view_change.add_checkpoint_messages(msg.second);
-    }
-
-    // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
-    //     than n
-    // P_m = the pre prepare and the 2 f + 1 prepares
-    //            get the set of operations, frome each operation get the messages..
-
-    // std::set<std::shared_ptr<bzn::pbft_operation>>
-    const auto operations = this->prepared_operations_since_last_checkpoint();
-    for(const auto operation : operations)
-    {
-        prepared_proof* preprep_msg = view_change.add_prepared_proofs();
-        preprep_msg->set_pre_prepare(operation->get_preprepare());
-        for (const auto &prepared : operation->get_prepares())
-        {
-            preprep_msg->add_prepare(prepared);
-        }
-    }
+    pbft_msg view_change{make_viewchange(
+            this->view + 1
+            , this->latest_stable_checkpoint().first
+            , this->stable_checkpoint_proof
+            , this->prepared_operations_since_last_checkpoint()
+            , this->get_uuid()
+            )};
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1205,6 +1175,9 @@ pbft::primary_handles_viewchange(const pbft_msg& /*msg*/)
 
 
 
+
+
+
         this->broadcast(this->wrap_message(new_view));
 
 
@@ -1226,39 +1199,34 @@ pbft::replica_handles_viewchange(const pbft_msg&/*msg*/)
     if (this->valid_view_change_messages.size() == (this->max_faulty_nodes() + 1) )
     {
         LOG(debug) << "Replica has recieved enough view change messages";
+
+        pbft_msg view_change{this->make_viewchange(
+                this->view +1
+                , this->latest_stable_checkpoint().first
+                , this->stable_checkpoint_proof
+                , this->prepared_operations_since_last_checkpoint()
+                , this->get_uuid()
+                )};
+
         // TODO: DRY Refactor the following view_change, it is duplicated in handle_failure
-        pbft_msg view_change;
-        // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
-        view_change.set_type(PBFT_MSG_VIEWCHANGE);
-
-        // v + 1 = this->view + 1
-        view_change.set_view(this->view + 1);
-
-        // n = sequence # of last valid checkpoint
-        //   = this->stable_checkpoint.first
-
-        auto x = this->latest_stable_checkpoint().first;
-        LOG(debug) << "\t***this->latest_stable_checkpoint().first:[" << x << "]";
-
-        view_change.set_sequence(this->latest_stable_checkpoint().first);
-
-        // C = a set of local 2*f + 1 valid checkpoint messages
-        //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
-        for (const auto& msg : this->stable_checkpoint_proof)
-        {
-            view_change.add_checkpoint_messages(msg.second);
-        }
-
-        // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
-        //     than n
-        // P_m = the pre prepare and the 2 f + 1 prepares
-        //            get the set of operations, frome each operation get the messages..
-
-
-
-
-        // i, id of backup
-        view_change.set_sender(this->get_uuid());
+        //pbft_msg view_change;
+        //view_change.set_type(PBFT_MSG_VIEWCHANGE);  // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+//        view_change.set_view(this->view + 1);  // v + 1 = this->view + 1
+//        view_change.set_sequence(this->latest_stable_checkpoint().first); // n = sequence # of last valid checkpoint = this->stable_checkpoint.first
+//
+//        // C = a set of local 2*f + 1 valid checkpoint messages
+//        //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
+//        for (const auto& msg : this->stable_checkpoint_proof)
+//        {
+//            view_change.add_checkpoint_messages(msg.second);
+//        }
+//
+//        // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
+//        //     than n
+//        // P_m = the pre prepare and the 2 f + 1 prepares
+//        //            get the set of operations, frome each operation get the messages..
+//        // i, id of backup
+//        view_change.set_sender(this->get_uuid());
 
 
         // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
@@ -1299,7 +1267,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
     }
 }
 
-
 void
 pbft::replica_handles_newview(const pbft_msg& msg)
 {
@@ -1311,10 +1278,6 @@ pbft::replica_handles_newview(const pbft_msg& msg)
         LOG(debug) << "\t***new view message is valid.";
         // the set O is is correct
         // - get the preprepares from the newview message
-
-
-        // O
-        //const auto preprepare_messages = msg.prepared_proofs(); // pointer to message prepared_proof
         std::unordered_set<std::string> pre_prepares;
         for( int i = 0; i < msg.prepared_proofs_size(); ++i)
         {
@@ -1549,4 +1512,46 @@ pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) 
     }
 
     return false;
+}
+
+/*!
+ * Creates <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+ * @param new_view new view (v+1)
+ * @param n sequence of last stable checkpoint
+ * @param stable_checkpoint_proof used to generate C
+ * @return <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
+ */
+pbft_msg pbft::make_viewchange(
+        int new_view
+        , uint64_t n
+        , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
+        , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations
+        , uuid_t sender)
+{
+    pbft_msg viewchange;
+    viewchange.set_type(PBFT_MSG_VIEWCHANGE);
+    viewchange.set_view(new_view);          // v + 1 = this->view + 1
+    viewchange.set_sequence(n); // n = sequence # of last valid checkpoint
+
+    // C = a set of local 2*f + 1 valid checkpoint messages
+    for (const auto& msg : stable_checkpoint_proof)
+    {
+        viewchange.add_checkpoint_messages(msg.second);
+    }
+
+    // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher than n
+    // P_m = the pre prepare and the 2 f + 1 prepares
+    //            get the set of operations, frome each operation get the messages..
+    for (const auto operation : prepared_operations)
+    {
+        prepared_proof *preprep_msg = viewchange.add_prepared_proofs();
+        preprep_msg->set_pre_prepare(operation->get_preprepare());
+        for (const auto &prepared : operation->get_prepares())
+        {
+            preprep_msg->add_prepare(prepared);
+        }
+    }
+    // i, id of backup
+    viewchange.set_sender(sender);
+    return viewchange;
 }

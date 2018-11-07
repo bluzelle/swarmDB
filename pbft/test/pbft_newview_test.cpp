@@ -69,7 +69,15 @@ namespace bzn
             size_t count{0};
             EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(f, Eq(true))))
                     .Times(Exactly(TEST_PEER_LIST.size()))
-                    .WillRepeatedly(Invoke([&](auto &, auto &) { EXPECT_EQ( n, count); }));
+                    .WillRepeatedly(Invoke([&](auto &, auto &) {
+
+
+                        EXPECT_EQ( n, count);
+
+
+
+
+                    }));
 
             pbft_msg pbft_msg;
             pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);

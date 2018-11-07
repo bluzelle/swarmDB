@@ -235,6 +235,17 @@ namespace bzn
         std::set<std::string> valid_new_view_messages; // should this be in operation?
 
         FRIEND_TEST(pbft_test, full_test);
+
+
+
+        pbft_msg make_viewchange(
+                int new_view
+                , uint64_t n
+                , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
+                , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations
+                , uuid_t sender);
+
+
     };
 
 } // namespace bzn
