@@ -40,6 +40,10 @@ namespace bzn
 
         bzn::hash_t service_state_hash(uint64_t sequence_number) const;
 
+        bzn::service_state_t get_service_state(uint64_t sequence_number) const override;
+
+        bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) override;
+
         void consolidate_log(uint64_t sequence_number);
 
         void register_execute_handler(bzn::execute_handler_t handler);

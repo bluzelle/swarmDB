@@ -106,7 +106,7 @@ database_pbft_service::process_awaiting_operations()
 
         this->io_context->post(std::bind(this->execute_handler, nullptr)); // TODO: need to find the pbft_operation here; requires pbft_operation not being an in-memory construct
 
-        if (auto result = this->unstable_storage->remove(uuid, key); result != bzn::storage_base::result::ok)
+        if (auto result = this->unstable_storage->remove(this->uuid, key); result != bzn::storage_base::result::ok)
         {
             // these are fatal... something bad is going on.
             throw std::runtime_error("Failed to remove pbft_request from database! (" + std::to_string(uint8_t(result)) + ")");
@@ -137,11 +137,49 @@ database_pbft_service::service_state_hash(uint64_t /*sequence_number*/) const
     return "";
 }
 
+bzn::service_state_t
+database_pbft_service::get_service_state(uint64_t sequence_number) const
+{
+    // retrieve database state at this sequence/checkpoint
+    /*
+        return this->crud->get_state(sequence_number);
+    */
+
+    return std::string("state_") + std::to_string(sequence_number);
+}
+
+bool
+database_pbft_service::set_service_state(uint64_t sequence_number, const bzn::service_state_t& /*data*/)
+{
+    // initialize database state from checkpoint data
+    /*
+        if (!this->crud->set_state(sequence_number, data))
+            return false;
+    */
+
+    // remove all backlogged requests prior to checkpoint
+    uint64_t seq = this->next_request_sequence;
+    while (seq <= sequence_number)
+    {
+        const key_t key{std::to_string(seq)};
+        this->unstable_storage->remove(uuid, key);
+        seq++;
+    }
+
+    this->next_request_sequence = seq;
+    this->process_awaiting_operations();
+    return true;
+}
 
 void
 database_pbft_service::consolidate_log(uint64_t sequence_number)
 {
     LOG(info) << "TODO: consolidating log at sequence number " << sequence_number;
+
+    // tell the database to set a checkpoint
+    /*
+        this->crud->remember_state(sequence_number);
+    */
 }
 
 
