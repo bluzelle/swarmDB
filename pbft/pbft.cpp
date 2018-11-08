@@ -23,6 +23,7 @@
 #include <numeric>
 #include <iterator>
 #include <crud/crud_base.hpp>
+#include <random>
 
 using namespace bzn;
 
@@ -423,6 +424,9 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
 {
     checkpoint_t cp(msg.sequence(), msg.state_hash());
 
+    // do we need this checkpoint state?
+    // make sure we don't have this checkpoint locally, but do know of a stablized one
+    // based on the messages sent by peers.
     if (this->unstable_checkpoint_proofs[cp].size() >= this->quorum_size() &&
         this->local_unstable_checkpoints.count(cp) == 0)
     {
@@ -548,7 +552,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     // TODO: this needs to be refactored to be service-agnostic
     if (op->request.type() == PBFT_REQ_DATABASE)
     {
-        // Get a new shared pointer to the operation so that we can give pbft_service ownership on it
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
     }
     else
@@ -780,18 +783,37 @@ pbft::stabilize_checkpoint(const checkpoint_t& cp)
 }
 
 void
-pbft::request_checkpoint_state(const checkpoint_t& cp) const
+pbft::request_checkpoint_state(const checkpoint_t& cp)
 {
     pbft_membership_msg msg;
     msg.set_type(PBFT_MMSG_GET_STATE);
     msg.set_sequence(cp.first);
     msg.set_state_hash(cp.second);
 
-    LOG(info) << boost::format("Requesting checkpoint state for hash %1% at seq %2%")
-        % cp.second % cp.first;
+    auto selected = this->select_peer_for_checkpoint(cp);
+    LOG(info) << boost::format("Requesting checkpoint state for hash %1% at seq %2% from %3%")
+        % cp.second % cp.first % selected.uuid;
 
     auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(msg));
-    this->node->send_message_str(make_endpoint(this->get_primary()), msg_ptr);
+    this->node->send_message_str(make_endpoint(selected), msg_ptr);
+}
+
+const peer_address_t&
+pbft::select_peer_for_checkpoint(const checkpoint_t& cp)
+{
+    // choose one of the peers who vouch for this checkpoint at random
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, this->unstable_checkpoint_proofs[cp].size() - 1);
+
+    auto it = this->unstable_checkpoint_proofs[cp].begin();
+    uint32_t selected = dist(gen);
+    for (size_t i = 0; i < selected; i++)
+    {
+        it++;
+    }
+
+    return this->get_peer_by_uuid(it->first);
 }
 
 std::string
@@ -998,6 +1020,21 @@ const std::vector<bzn::peer_address_t>&
 pbft::current_peers() const
 {
     return *(this->current_peers_ptr());
+}
+
+const peer_address_t&
+pbft::get_peer_by_uuid(const std::string& uuid) const
+{
+    for (auto const& peer : this->current_peers())
+    {
+        if (peer.uuid == uuid)
+        {
+            return peer;
+        }
+    }
+
+    // something went wrong. this uuid should exist
+    throw std::runtime_error("peer missing from peers list");
 }
 
 void

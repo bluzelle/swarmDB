@@ -85,9 +85,9 @@ namespace bzn
             send_checkpoint(node, 100);
         }
 
-        // one more checkpoint message and the node should request state from primary
+        // one more checkpoint message and the node should request state from a random node
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(make_endpoint(primary), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         bzn::peer_address_t node(*nodes++);
@@ -133,9 +133,9 @@ namespace bzn
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
 
-        // get the node to request state from primary
+        // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(make_endpoint(primary), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -163,9 +163,9 @@ namespace bzn
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
 
-        // get the node to request state from primary
+        // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(make_endpoint(primary), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();

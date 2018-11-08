@@ -126,7 +126,8 @@ namespace bzn
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
         void stabilize_checkpoint(const checkpoint_t& cp);
-        void request_checkpoint_state(const checkpoint_t& cp) const;
+        const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
+        void request_checkpoint_state(const checkpoint_t& cp);
         std::string get_checkpoint_state(const checkpoint_t& cp) const;
         void set_checkpoint_state(const checkpoint_t& cp, const std::string& data);
 
@@ -140,6 +141,7 @@ namespace bzn
         bool initialize_configuration(const bzn::peers_list_t& peers);
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
+        const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config);
         bool is_configuration_acceptable_in_new_view(hash_t config_hash);
         bool move_to_new_configuration(hash_t config_hash);
