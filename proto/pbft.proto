@@ -26,8 +26,10 @@ message pbft_msg
     uint64 sequence = 3;
 
     // used for preprepare, prepare, commit
-    // TODO: Most messages should contain only the hash of the request - KEP-344
-    pbft_request request = 4;
+    bytes request_hash = 5;
+
+    // most messages should only have the hash, not the original request
+    bytes request = 4;
 
     // for checkpoints
     string state_hash = 6;

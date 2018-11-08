@@ -86,8 +86,8 @@ namespace bzn::test
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
         preprepare_msg.set_view(1);
-        preprepare_msg.mutable_request()->set_client("bob");
-        preprepare_msg.mutable_request()->set_timestamp(1);
+        preprepare_msg.set_request("hi");
+        preprepare_msg.set_request_hash(this->crypto->hash("hi"));
     }
 
     void
@@ -100,6 +100,7 @@ namespace bzn::test
                 , this->uuid
                 , this->mock_service
                 , this->mock_failure_detector
+                , this->crypto
         );
         this->pbft->set_audit_enabled(false);
         this->pbft->start();

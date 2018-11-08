@@ -50,10 +50,10 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
     std::lock_guard<std::mutex> lock(this->lock);
 
     // store op...
-    if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->sequence), op->request.SerializeAsString());
+    if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->sequence), op->get_request().SerializeAsString());
         result != bzn::storage_base::result::ok)
     {
-        LOG(fatal) << "failed to store pbft request: " << op->request.DebugString() << ", " << uint32_t(result);
+        LOG(fatal) << "failed to store pbft request: " << op->get_request().DebugString() << ", " << uint32_t(result);
 
         // these are fatal... something bad is going on.
         throw std::runtime_error("Failed to store pbft request! (" + std::to_string(uint8_t(result)) + ")");
@@ -104,7 +104,7 @@ database_pbft_service::process_awaiting_operations()
             this->crud->handle_request(request.operation(), nullptr);
         }
 
-        this->io_context->post(std::bind(this->execute_handler, request, this->next_request_sequence));
+        this->io_context->post(std::bind(this->execute_handler, nullptr)); // TODO: need to find the pbft_operation here; requires pbft_operation not being an in-memory construct
 
         if (auto result = this->unstable_storage->remove(uuid, key); result != bzn::storage_base::result::ok)
         {

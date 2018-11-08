@@ -14,7 +14,8 @@
 
 #pragma once
 
-#include <proto/pbft.pb.h>
+#include <include/bluzelle.hpp>
+#include <proto/bluzelle.pb.h>
 #include <include/boost_asio_beast.hpp>
 
 namespace bzn
@@ -24,9 +25,9 @@ namespace bzn
     {
     public:
 
-        virtual void request_seen(const pbft_request& req) = 0;
+        virtual void request_seen(const bzn::hash_t& req_hash) = 0;
 
-        virtual void request_executed(const pbft_request& req) = 0;
+        virtual void request_executed(const bzn::hash_t& req_hash) = 0;
 
         virtual void register_failure_handler(std::function<void()> handler) = 0;
 

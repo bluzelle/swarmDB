@@ -21,7 +21,7 @@
 
 namespace bzn
 {
-    using execute_handler_t = std::function<void(const pbft_request&, uint64_t)>;
+    using execute_handler_t = std::function<void(std::shared_ptr<bzn::pbft_operation>)>;
 
     class pbft_service_base
     {
