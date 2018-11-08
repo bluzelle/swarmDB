@@ -39,38 +39,38 @@ namespace bzn
     {
     public:
 
-        pbft_operation(uint64_t view, uint64_t sequence, bzn::hash_t request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
+        pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
         void set_session(std::weak_ptr<bzn::session_base>);
 
-        operation_key_t get_operation_key();
-        pbft_operation_state get_state();
+        operation_key_t get_operation_key() const;
+        pbft_operation_state get_state() const;
 
         void record_preprepare(const bzn_envelope& encoded_preprepare);
-        bool has_preprepare();
+        bool has_preprepare() const;
 
         void record_prepare(const bzn_envelope& encoded_prepare);
-        bool is_prepared();
+        bool is_prepared() const;
 
         void record_commit(const bzn_envelope& encoded_commit);
-        bool is_committed();
+        bool is_committed() const;
 
         void begin_commit_phase();
         void end_commit_phase();
 
-        std::weak_ptr<bzn::session_base> session();
+        std::weak_ptr<bzn::session_base> session() const;
 
-        const pbft_request& get_request();
-        const bzn::encoded_message& get_encoded_request();
+        const pbft_request& get_request() const;
+        const bzn::encoded_message& get_encoded_request() const;
 
         void record_request(const bzn::encoded_message& encoded_request);
-        bool has_request();
+        bool has_request() const;
 
         const uint64_t view;
         const uint64_t sequence;
         const bzn::hash_t request_hash;
 
-        std::string debug_string();
+        std::string debug_string() const;
 
         size_t faulty_nodes_bound() const;
 
