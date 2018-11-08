@@ -224,6 +224,9 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
+        FRIEND_TEST(pbft_viewchange, make_newview_makes_valid_message);
+        FRIEND_TEST(pbft_viewchange, make_viewchange_makes_valid_message);
+
 
         friend class pbft_proto_test;
 
@@ -236,14 +239,15 @@ namespace bzn
 
         FRIEND_TEST(pbft_test, full_test);
 
+        static pbft_msg make_viewchange(
+                uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof,
+                std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations, uuid_t sender);
 
-
-        pbft_msg make_viewchange(
-                int new_view
-                , uint64_t n
-                , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
-                , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations
-                , uuid_t sender);
+        static pbft_msg make_newview(
+                int new_view_index
+                , std::set<std::string> view_change_messages
+                //, std::map<bzn::log_key_t, bzn::operation_key_t> preprepares
+                );
 
 
     };

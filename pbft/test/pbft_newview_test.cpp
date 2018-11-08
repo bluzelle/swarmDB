@@ -212,4 +212,73 @@ namespace bzn
         // processing the preprepares in O as normal
         // ????
     }
+
+
+    TEST(pbft_viewchange, make_viewchange_makes_valid_message)
+    {
+        uint64_t new_view{4385967}; // next view number
+        uint64_t n{44}; // n = sequence # of last valid checkpoint
+        std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
+                {
+                    std::pair<bzn::uuid_t, std::string> {"uuid_0","checkpoint_0"}
+                    , std::pair<bzn::uuid_t, std::string> {"uuid_1","checkpoint_1"}
+                    , std::pair<bzn::uuid_t, std::string> {"uuid_2","checkpoint_2"}
+                    , std::pair<bzn::uuid_t, std::string> {"uuid_3","checkpoint_3"}
+                    , std::pair<bzn::uuid_t, std::string> {"uuid_4","checkpoint_4"}
+                };
+
+        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations;
+        uuid_t sender{"uuid_0"};
+
+        pbft_msg sut{pbft::make_viewchange(
+                new_view
+                , n
+                , stable_checkpoint_proof
+                , prepared_operations
+                , sender
+                )};
+
+        EXPECT_EQ(sut.type(), PBFT_MSG_VIEWCHANGE);
+        EXPECT_EQ(sut.view(), new_view);
+
+        std::unordered_map<bzn::uuid_t, std::string> sut_proofs;
+        for ( uint8_t i = 0 ; i < sut.checkpoint_messages_size() ; ++i )
+        {
+            const auto c = sut.checkpoint_messages(i);
+            LOG(debug) << c.length();
+            //sut_proofs.insert
+        }
+
+        std::set<std::shared_ptr<bzn::pbft_operation>> sut_prepared_operations;
+        for (uint8_t i = 0 ; i < sut.prepared_proofs_size() ; ++i )
+        {
+            LOG(debug) << sut.prepared_proofs(i).prepare_size();
+        }
+
+        EXPECT_EQ(sut.sender() , sender );
+    }
+
+
+    TEST(pbft_viewchange, make_newview_makes_valid_message)
+    {
+        uint64_t new_view_index{12};
+        std::set<std::string> viewchange_messages {"uuid_0","uuid_1","uuid_2","uuid_3",};
+        pbft_msg sut{pbft::make_newview(new_view_index, viewchange_messages)};
+
+        EXPECT_EQ(sut.type(), PBFT_MSG_NEWVIEW);
+
+        EXPECT_EQ(sut.view(), new_view_index);
+
+        EXPECT_EQ( static_cast<uint64_t>(sut.viewchange_messages_size()), viewchange_messages.size());
+
+        std::set<std::string> sut_viewchange_messages;
+        for(uint8_t i = 0 ; i < sut.viewchange_messages_size() ; ++i )
+        {
+            const auto& viewchange_message = sut.viewchange_messages(i);
+            sut_viewchange_messages.insert(viewchange_message);
+        }
+        EXPECT_TRUE(sut_viewchange_messages == viewchange_messages);
+    }
+
+
 }
