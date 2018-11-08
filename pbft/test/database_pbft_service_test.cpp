@@ -73,8 +73,8 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     EXPECT_CALL(*mock_storage, create(_, _, _)).WillOnce(Return(bzn::storage_base::result::exists));
     EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_base::result::ok));
 
-    pbft_request msg;
-    auto operation = std::make_shared<bzn::pbft_operation>(0, 1, msg, nullptr);
+    auto operation = std::make_shared<bzn::pbft_operation>(0, 1, "somehash", nullptr);
+    operation->record_request("pretend this is a request");
 
     EXPECT_THROW(dps.apply_operation(operation), std::runtime_error);
 }
@@ -89,13 +89,13 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
 
     pbft_request msg;
-
     msg.mutable_operation()->mutable_header()->set_db_uuid(TEST_UUID);
     msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_operation()->mutable_create()->set_key("key2");
     msg.mutable_operation()->mutable_create()->set_value("value2");
 
-    auto operation2 = std::make_shared<bzn::pbft_operation>(0, 2, msg, nullptr);
+    auto operation2 = std::make_shared<bzn::pbft_operation>(0, 2, "somehasha", nullptr);
+    operation2->record_request(msg.SerializeAsString());
 
     dps.apply_operation(operation2);
 
@@ -106,7 +106,8 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_operation()->mutable_create()->set_value("value3");
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
-    auto operation3 = std::make_shared<bzn::pbft_operation>(0, 3, msg, nullptr);
+    auto operation3 = std::make_shared<bzn::pbft_operation>(0, 3, "somehashb", nullptr);
+    operation3->record_request(msg.SerializeAsString());
     operation3->set_session(mock_session);
 
     dps.apply_operation(operation3);
@@ -117,7 +118,8 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_operation()->mutable_create()->set_key("key1");
     msg.mutable_operation()->mutable_create()->set_value("value1");
 
-    auto operation1 = std::make_shared<bzn::pbft_operation>(0, 1, msg, nullptr);
+    auto operation1 = std::make_shared<bzn::pbft_operation>(0, 1, "somehashc", nullptr);
+    operation1->record_request(msg.SerializeAsString());
     operation1->set_session(std::make_shared<bzn::Mocksession_base>());
 
     EXPECT_CALL(*mock_io_context, post(_)).Times(3);

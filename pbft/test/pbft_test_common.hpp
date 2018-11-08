@@ -28,6 +28,8 @@
 #include <mocks/mock_pbft_failure_detector.hpp>
 #include <mocks/mock_pbft_service_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <crypto/crypto.hpp>
+#include <options/options.hpp>
 
 using namespace ::testing;
 
@@ -61,6 +63,9 @@ namespace bzn::test
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
+        std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+        std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
+
         std::shared_ptr<bzn::pbft> pbft;
 
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer =
@@ -68,7 +73,7 @@ namespace bzn::test
 
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
 
-        std::function<void(const pbft_request&, uint64_t)> service_execute_handler;
+        bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
         bzn::message_handler database_handler;
 

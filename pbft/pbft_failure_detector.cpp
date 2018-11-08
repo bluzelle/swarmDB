@@ -39,16 +39,16 @@ pbft_failure_detector::handle_timeout(boost::system::error_code /*ec*/)
 {
     std::lock_guard<std::mutex> lock(this->lock);
 
-    if (this->completed_requests.count(pbft_operation::request_hash(this->ordered_requests.front())) == 0)
+    if (this->completed_requests.count(this->ordered_requests.front())  == 0)
     {
-        LOG(error) << "Failure detector detected unexecuted request " << this->ordered_requests.front().ShortDebugString() << '\n';
+        LOG(error) << "Failure detector detected unexecuted request " << this->ordered_requests.front() << '\n';
         this->start_timer();
         this->io_context->post(std::bind(this->failure_handler));
         return;
     }
 
     while (this->ordered_requests.size() > 0 &&
-           this->completed_requests.count(pbft_operation::request_hash(this->ordered_requests.front())) > 0)
+           this->completed_requests.count(this->ordered_requests.front()) > 0)
     {
         this->ordered_requests.pop_front();
     }
@@ -60,16 +60,14 @@ pbft_failure_detector::handle_timeout(boost::system::error_code /*ec*/)
 }
 
 void
-pbft_failure_detector::request_seen(const pbft_request& req)
+pbft_failure_detector::request_seen(const bzn::hash_t& req_hash)
 {
     std::lock_guard<std::mutex> lock(this->lock);
 
-    hash_t req_hash = pbft_operation::request_hash(req);
-
     if (this->outstanding_requests.count(req_hash) == 0 && this->completed_requests.count(req_hash) == 0)
     {
-        LOG(debug) << "Failure detector recording new request " << req.ShortDebugString() << '\n';
-        this->ordered_requests.emplace_back(req);
+        LOG(debug) << "Failure detector recording new request " << req_hash << '\n';
+        this->ordered_requests.emplace_back(req_hash);
         this->outstanding_requests.emplace(req_hash);
 
         if (this->ordered_requests.size() == 1)
@@ -80,11 +78,9 @@ pbft_failure_detector::request_seen(const pbft_request& req)
 }
 
 void
-pbft_failure_detector::request_executed(const pbft_request& req)
+pbft_failure_detector::request_executed(const bzn::hash_t& req_hash)
 {
     std::lock_guard<std::mutex> lock(this->lock);
-
-    hash_t req_hash = pbft_operation::request_hash(req);
 
     this->outstanding_requests.erase(req_hash);
     this->completed_requests.emplace(req_hash);

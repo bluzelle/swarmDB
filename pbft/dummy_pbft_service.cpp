@@ -40,7 +40,7 @@ dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
         this->send_execute_response(op);
 
         // todo: use shared from this as post could act on a long gone dummy_pbft_service?
-        this->io_context->post(std::bind(this->execute_handler, op->request, this->next_request_sequence));
+        this->io_context->post(std::bind(this->execute_handler, op));
 
         this->waiting_operations.erase(this->next_request_sequence);
         this->next_request_sequence++;
