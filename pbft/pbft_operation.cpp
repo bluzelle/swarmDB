@@ -126,7 +126,7 @@ void
 pbft_operation::record_prepare(const bzn_envelope& encoded_prepare)
 {
     this->prepares_seen.insert(encoded_prepare.sender());
-    this->prepare_messages.insert(std::make_pair(encoded_prepare.sender(), encoded_prepare.payload()));
+    this->prepare_messages.insert(std::make_pair(encoded_prepare.sender(), encoded_prepare.SerializeAsString()));
 }
 
 size_t

@@ -785,7 +785,6 @@ pbft::handle_failure()
             , this->latest_stable_checkpoint().first
             , this->stable_checkpoint_proof
             , this->prepared_operations_since_last_checkpoint()
-            , this->get_uuid()
             )};
     this->broadcast(this->wrap_message(view_change));
 }
@@ -1158,9 +1157,9 @@ pbft::is_valid_newview_message(const pbft_msg& msg) const
  */
 pbft_msg
 pbft::make_newview(
-        int new_view_index
-        , std::set<std::string> view_change_messages
-        //, std::map<bzn::log_key_t, bzn::operation_key_t> /*preprepares*/
+        uint64_t new_view_index
+        , const std::set<pbft_msg>& view_change_messages
+        , const std::map<uint64_t, bzn_envelope>& pre_prepare_messages
         )
 {
     pbft_msg newview;
@@ -1170,29 +1169,94 @@ pbft::make_newview(
     //          V is the set of 2f+1 view change messages
     for (const auto &viewchange : view_change_messages)
     {
-        newview.add_viewchange_messages(viewchange);
+        newview.add_viewchange_messages(viewchange.SerializeAsString());
     }
 
-
-    // TODO:
-    //          O is a set of prepare messages computed by the new primary as follows:
-    //              - Each message in some P from a view-change after the latest stable
-    //              checkpoint is given a new preprepare in the new view
-    //              - If there are gaps, they are filled with null requests
-    //              - These messages are added to the log as normal
-
-
-    // new_view.add_prepared_proofs()
-
-
-
-
-
+    // O
+    for(const auto& preprepare_message : pre_prepare_messages)
+    {
+        *(newview.add_pre_prepare_messages()) = preprepare_message.second;
+    }
 
     return newview;
 }
 
 
+bzn_envelope
+pbft::make_signed_envelope(std::string serialized_pbft_message)
+{
+    bzn_envelope envelope;
+    envelope.set_pbft(serialized_pbft_message);
+    envelope.set_sender(this->get_uuid());
+    this->crypto->sign(envelope);
+    return envelope;
+}
+
+
+pbft_msg
+pbft::build_newview(uint64_t new_view, const std::set<pbft_msg>& viewchange_messages)
+{
+    //  Computing O (set of new preprepares for new-view message)
+    std::map<uint64_t, bzn_envelope> pre_prepares;
+
+    //  - for each of the 2f+1 viewchange messages
+    for(const auto& viewchange_message : viewchange_messages)
+    {
+        //  -- for each operation included in that viewchange message
+
+        for(int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i )
+        {
+            const auto prepared_proof = viewchange_message.prepared_proofs(i);
+
+            //  --- if we have not already created a new preprepare for an operation with that sequence number
+
+            //  ---- Create a new preprepare for that operation using its original sequence number
+            //       and request hash, but using the new view number
+
+            bzn_envelope preprepare_envelope;
+            preprepare_envelope.ParseFromString(prepared_proof.pre_prepare());
+
+            pbft_msg pre_prepare;
+            pre_prepare.ParseFromString(preprepare_envelope.pbft());
+            pre_prepare.set_view(new_view);
+
+            if(pre_prepare.sequence() < this->latest_stable_checkpoint().first)
+            {
+                continue;
+            }
+            pre_prepares[pre_prepare.sequence()] = this->make_signed_envelope(pre_prepare.SerializeAsString());
+        }
+
+        //  - add each preprepare created this way to the new-view message
+    }
+    //  - for each sequence number between the base-sequence number (the last stable checkpoint)
+    //    and the highest sequence number for which a new preprepare was created
+
+
+    uint64_t last_sequence_number = pre_prepares.empty() ? 0 : (pre_prepares.end()--)->first;
+    for(uint64_t i = this->latest_stable_checkpoint().first + 1; i < last_sequence_number ; ++i )
+    {
+        //  -- create a new preprepare for a no-op operation using this sequence number
+        if(pre_prepares.count(i) == 0)
+        {
+            pbft_msg null_message;
+            null_message.set_type(PBFT_MSG_PREPREPARE);
+            null_message.set_view(new_view);
+            null_message.set_sequence(i);
+            null_message.mutable_request()->set_type(PBFT_REQ_NO_OP);
+
+            // Do we need to sign this?
+            bzn_envelope no_op_envelope;
+            no_op_envelope.set_pbft(null_message.SerializeAsString());
+            pre_prepares[i] = no_op_envelope;
+        }
+    }
+    //  - add each preprepare created this way to the new-view message
+    // std::set<std::string> view_change_messages
+    // viewchange_messages
+
+    return this->make_newview(new_view, viewchange_messages, pre_prepares);
+}
 
 
 void
@@ -1204,10 +1268,19 @@ pbft::primary_handles_viewchange(const pbft_msg& /*msg*/)
         // KEP-633 - When the primary of view v+1 receives 2f valid view change messages
         // for view v+1,
 
-        pbft_msg new_view{this->make_newview(
-                this->get_view()+1
-                , this->valid_view_change_messages
-                )};
+
+
+
+        // TODO what the hell
+
+//
+//        pbft_msg new_view{this->make_newview(
+//                this->get_view()+1
+//                , this->valid_view_change_messages
+//                , ???
+//                )};
+//
+//
 
 
 
@@ -1215,9 +1288,7 @@ pbft::primary_handles_viewchange(const pbft_msg& /*msg*/)
 
 
 
-
-
-        this->broadcast(this->wrap_message(new_view));
+//        this->broadcast(this->wrap_message(new_view));
 
 
         LOG(debug) << "Primary is moving to view + 1";
@@ -1244,7 +1315,6 @@ pbft::replica_handles_viewchange(const pbft_msg&/*msg*/)
                 , this->latest_stable_checkpoint().first
                 , this->stable_checkpoint_proof
                 , this->prepared_operations_since_last_checkpoint()
-                , this->get_uuid()
                 )};
 
         // TODO: DRY Refactor the following view_change, it is duplicated in handle_failure
@@ -1279,7 +1349,7 @@ pbft::replica_handles_viewchange(const pbft_msg&/*msg*/)
 }
 
 void
-pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     LOG(debug) << "Handle_viewchange: " << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
 
@@ -1289,12 +1359,17 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
     if (this->is_valid_viewchange_message(msg))
     {
         LOG(debug) << "Recieved a valid viewchange message";
-        this->valid_view_change_messages.emplace(msg.SerializeAsString());
+        this->valid_view_change_messages.emplace(msg.view(), msg.SerializeAsString());
     }
     else
     {
         LOG(debug) << "The viewchange message was invalid, not adding it";
     }
+
+
+    // TODO : save checkpoint
+
+
 
     if (this->is_primary())
     {
@@ -1309,7 +1384,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 
 
 void
-pbft::handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     LOG(debug) << "Handle_newview" << msg.SerializeAsString() << " -- " << original_msg.SerializeAsString();
 
@@ -1562,24 +1637,26 @@ pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) 
 /*!
  * Creates <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
  * @param new_view new view (v+1)
- * @param n sequence of last stable checkpoint
- * @param stable_checkpoint_proof used to generate C
+ * @param base_sequence_number sequence of last stable checkpoint (n)
+ * @param stable_checkpoint_proof proof of checkpoint C
+ * @param prepared_operations set of messages after i was prepared
+ * @param i the uuid of the sender
+ *
  * @return <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
  */
 pbft_msg pbft::make_viewchange(
         uint64_t new_view
-        , uint64_t n
+        , uint64_t base_sequence_number
         , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
-        , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations
-        , uuid_t sender)
+        , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations)
 {
     pbft_msg viewchange;
 
     viewchange.set_type(PBFT_MSG_VIEWCHANGE);
 
-    viewchange.set_view(new_view);      // v + 1 = this->view + 1
+    viewchange.set_view(new_view);                  // v + 1 = this->view + 1
 
-    viewchange.set_sequence(n);         // n = sequence # of last valid checkpoint
+    viewchange.set_sequence(base_sequence_number);  // base_sequence_number = n = sequence # of last valid checkpoint
 
     // C = a set of local 2*f + 1 valid checkpoint messages
     for (const auto& msg : stable_checkpoint_proof)
@@ -1599,8 +1676,6 @@ pbft_msg pbft::make_viewchange(
             prepared_proofs->add_prepare(prepared);
         }
     }
-
-    viewchange.set_sender(sender);      // i, id of backup
 
     return viewchange;
 }

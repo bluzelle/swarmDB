@@ -107,17 +107,16 @@ namespace bzn
         void handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_join_or_leave(const pbft_membership_msg& msg);
+        void handle_checkpoint      (const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_join_or_leave   (const pbft_membership_msg& msg);
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
-        void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
-        void handle_viewchange(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_newview(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_config_message  (const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
+        void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_newview         (const pbft_msg& msg, const bzn_envelope& original_msg);
 
         void primary_handles_viewchange(const pbft_msg& msg);
         void replica_handles_viewchange(const pbft_msg& msg);
-        void replica_handles_newview(const pbft_msg& msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -224,9 +223,8 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
-        FRIEND_TEST(pbft_viewchange, make_newview_makes_valid_message);
+        FRIEND_TEST(pbft_viewchange_test, make_newview_makes_valid_message);
         FRIEND_TEST(pbft_viewchange, make_viewchange_makes_valid_message);
-
 
         friend class pbft_proto_test;
 
@@ -234,21 +232,27 @@ namespace bzn
 
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
 
-        std::set<std::string> valid_view_change_messages; // should this be in operation?
-        std::set<std::string> valid_new_view_messages; // should this be in operation?
+        std::map<uint64_t, std::string> valid_view_change_messages;
+        ///std::set<std::string> valid_new_view_messages; do not store these
 
         FRIEND_TEST(pbft_test, full_test);
 
         static pbft_msg make_viewchange(
-                uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof,
-                std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations, uuid_t sender);
+                uint64_t new_view
+                , uint64_t n
+                , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
+                , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
 
-        static pbft_msg make_newview(
-                int new_view_index
-                , std::set<std::string> view_change_messages
-                //, std::map<bzn::log_key_t, bzn::operation_key_t> preprepares
+        pbft_msg make_newview(
+                uint64_t new_view_index
+                , const std::set<pbft_msg>& view_change_messages
+                , const std::map<uint64_t, bzn_envelope>& pre_prepare_messages
                 );
 
+
+        pbft_msg build_newview(uint64_t new_view, const std::set<pbft_msg>& viewchange_messages);
+
+        bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
 
     };
 
