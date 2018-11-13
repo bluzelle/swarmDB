@@ -97,6 +97,8 @@ namespace bzn
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_join_or_leave(const pbft_membership_msg& msg);
+        void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
+        void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
@@ -108,6 +110,7 @@ namespace bzn
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
+        bzn::encoded_message wrap_message(const pbft_membership_msg& message, const std::string& debug_info = "") const;
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
@@ -122,9 +125,14 @@ namespace bzn
 
         void checkpoint_reached_locally(uint64_t sequence);
         void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+        void stabilize_checkpoint(const checkpoint_t& cp);
+        const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
+        void request_checkpoint_state(const checkpoint_t& cp);
+        std::string get_checkpoint_state(const checkpoint_t& cp) const;
+        void set_checkpoint_state(const checkpoint_t& cp, const std::string& data);
 
         inline size_t quorum_size() const;
-        inline size_t max_faulty_nodes() const;
+        size_t max_faulty_nodes() const;
 
         void clear_local_checkpoints_until(const checkpoint_t&);
         void clear_checkpoint_messages_until(const checkpoint_t&);
@@ -133,6 +141,7 @@ namespace bzn
         bool initialize_configuration(const bzn::peers_list_t& peers);
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
+        const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config);
         bool is_configuration_acceptable_in_new_view(hash_t config_hash);
         bool move_to_new_configuration(hash_t config_hash);
@@ -180,6 +189,8 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
+
+        friend class pbft_proto_test;
 
         std::shared_ptr<crypto_base> crypto;
     };

@@ -13,6 +13,7 @@
 
 #include <pbft/test/pbft_test_common.hpp>
 #include <utils/make_endpoint.hpp>
+#include <pbft/test/pbft_proto_test.hpp>
 
 using namespace ::testing;
 
@@ -136,14 +137,6 @@ namespace bzn
             auto wmsg = wrap_pbft_msg(commit);
             wmsg.set_sender(node.uuid);
             pbft->handle_message(commit, wmsg);
-        }
-
-        bzn_envelope
-        wrap_pbft_membership_msg(const pbft_membership_msg& msg)
-        {
-            bzn_envelope result;
-            result.set_pbft_membership(msg.SerializeAsString());
-            return result;
         }
     }
 

@@ -76,6 +76,7 @@ namespace bzn::test
         bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
         bzn::message_handler database_handler;
+        bzn::protobuf_handler membership_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;
 
@@ -94,6 +95,8 @@ namespace bzn::test
 
     bzn_envelope
     wrap_pbft_msg(const pbft_msg& msg);
+
+    bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg);
 
     bzn::json_message
     wrap_request(const database_msg& msg);
