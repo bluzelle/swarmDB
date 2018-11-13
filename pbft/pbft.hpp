@@ -67,7 +67,7 @@ namespace bzn
 
         bool is_primary() const override;
 
-        const peer_address_t& get_primary() const override;
+        const peer_address_t& get_primary(std::optional<uint64_t> view = std::nullopt) const override;
 
         const bzn::uuid_t& get_uuid() const override;
 
@@ -232,7 +232,7 @@ namespace bzn
 
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
 
-        std::map<uint64_t, std::string> valid_view_change_messages;
+        std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
         ///std::set<std::string> valid_new_view_messages; do not store these
 
         FRIEND_TEST(pbft_test, full_test);
@@ -244,15 +244,17 @@ namespace bzn
                 , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
 
         pbft_msg make_newview(
-                uint64_t new_view_index
-                , const std::set<pbft_msg>& view_change_messages
-                , const std::map<uint64_t, bzn_envelope>& pre_prepare_messages
-                );
+                uint64_t new_view_index, const std::vector<pbft_msg> &view_change_messages,
+                const std::map<uint64_t, bzn_envelope> &pre_prepare_messages
+        );
 
 
-        pbft_msg build_newview(uint64_t new_view, const std::set<pbft_msg>& viewchange_messages);
+        pbft_msg build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages);
 
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
+
+
+        std::optional<bzn::checkpoint_t> validate_checkpoint(const pbft_msg& viewchange_message) const;
 
     };
 

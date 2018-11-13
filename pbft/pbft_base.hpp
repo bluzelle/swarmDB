@@ -15,6 +15,7 @@
 #pragma once
 
 #include <string>
+#include <optional>
 
 #include <node/node_base.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
@@ -36,7 +37,7 @@ namespace bzn
 
         virtual bool is_primary() const = 0;
 
-        virtual const peer_address_t& get_primary() const = 0;
+        virtual const peer_address_t& get_primary(std::optional<uint64_t> view) const = 0;
 
         virtual const bzn::uuid_t& get_uuid() const = 0;
 

@@ -62,15 +62,6 @@ namespace
                     .WillRepeatedly(Invoke(
                             [&](auto handler){this->request_timer_callback = handler;}
                     ));
-
-            //req_a.set_operation("do something");
-            //req_b.set_operation("do something else");
-
-            req_a.set_client("alice");
-            req_b.set_client("bob");
-
-            req_a.set_timestamp(1);
-            req_b.set_timestamp(2);
         }
     };
 
