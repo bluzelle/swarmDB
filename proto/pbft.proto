@@ -75,6 +75,13 @@ message pbft_membership_msg
 
     // for join/leave requests
     pbft_peer_info peer_info = 2;
+
+    // for get_state, set_state
+    uint64 sequence = 3;
+    string state_hash = 4;
+
+    // for set_state
+    string state_data = 5;
 }
 
 enum pbft_membership_msg_type
@@ -82,6 +89,8 @@ enum pbft_membership_msg_type
     PBFT_MMSG_UNDEFINED = 0;
     PBFT_MMSG_JOIN = 1;
     PBFT_MMSG_LEAVE = 2;
+    PBFT_MMSG_GET_STATE = 3;
+    PBFT_MMSG_SET_STATE = 4;
 }
 
 message pbft_peer_info
