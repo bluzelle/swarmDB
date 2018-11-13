@@ -29,7 +29,7 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 
 ```text
 $ export BOOST_VERSION="1.68.0"
-$ export BOOST_INSTALL_DIR="~/myboost"
+$ export BOOST_INSTALL_DIR="$HOME/myboost"
 
 $ mkdir -p ~/myboost
 $ toolchain/install-boost.sh
@@ -59,7 +59,7 @@ Open up a console and install the compatible version of Boost:
 
 ```text
 $ ENV BOOST_VERSION="1.68.0"
-$ ENV BOOST_INSTALL_DIR="~/myboost"
+$ ENV BOOST_INSTALL_DIR="$HOME/myboost"
 
 $ mkdir -p ~/myboost
 $ toolchain/install-boost.sh
