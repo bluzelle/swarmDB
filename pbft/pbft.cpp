@@ -272,7 +272,6 @@ pbft::handle_request(const pbft_request& /*msg*/, const bzn::json_message& origi
     //TODO: conditionally discard based on timestamp - KEP-328
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
-
     auto op = setup_request_operation(original_msg.toStyledString(), session);
     this->do_preprepare(op);
 }
@@ -550,7 +549,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     }
 
     // TODO: this needs to be refactored to be service-agnostic
-    if (op->request.type() == PBFT_REQ_DATABASE)
+    if (op->get_request().type() == PBFT_REQ_DATABASE)
     {
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
     }
@@ -561,8 +560,12 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         msg->set_allocated_nullmsg(new database_nullmsg);
         pbft_request request;
         request.set_allocated_operation(msg);
-        auto new_op = std::make_shared<pbft_operation>(op->view, op->sequence, request, nullptr);
+        auto smsg = request.SerializeAsString();
+        auto new_op = std::make_shared<pbft_operation>(op->view, op->sequence
+            , this->crypto->hash(smsg), nullptr);
+        new_op->record_request(smsg);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
+            request.SerializeAsString();
     }
 }
 

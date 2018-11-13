@@ -26,13 +26,13 @@ namespace bzn
         std::shared_ptr<pbft_operation> send_request();
 
         // send a preprepare message to SUT
-        void send_preprepare(uint64_t sequence, const pbft_request& request);
+        void send_preprepare(uint64_t sequence, const bzn::encoded_message& request);
 
         // send fake prepares from all nodes to SUT
-        void send_prepares(uint64_t sequence, const pbft_request& request);
+        void send_prepares(uint64_t sequence, const bzn::hash_t& request_hash);
 
         // send fake commits from all nodes to SUT
-        void send_commits(uint64_t sequence, const pbft_request& request);
+        void send_commits(uint64_t sequence, const bzn::hash_t& request_hash);
 
         // set expectations for upcoming checkpoint
         void prepare_for_checkpoint(size_t seq);
