@@ -33,6 +33,8 @@ namespace bzn
 
     using session_id = uint64_t;
 
+    using hash_t = std::string;
+
 } // bzn
 
 

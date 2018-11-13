@@ -15,34 +15,30 @@
 syntax = "proto3";
 
 import "database.proto";
-import "audit.proto";
-import "pbft.proto";
+
+message bzn_envelope
+{
+    string sender = 1;
+    bytes signature = 2;
+
+    oneof payload
+    {
+        bytes pbft_request = 3;
+        bytes database_response = 4;
+        bytes json = 5;
+        bytes audit = 6;
+        bytes pbft = 7;
+        bytes pbft_membership = 8;
+        bytes status_request = 9;
+    }
+}
 
 message bzn_msg
 {
+    // Keeping this around for raft
     oneof msg
     {
         database_msg db = 10;
         string json = 11;
-        audit_message audit_message = 12;
-        pbft_msg pbft = 13;
-        pbft_membership_msg membership = 14;
     }
-}
-
-enum bzn_msg_type
-{
-    BZN_MSG_UNDEFINED = 0;
-    BZN_MSG_PBFT = 1;
-    BZN_MSG_PBFT_MEMBERSHIP = 2;
-}
-
-message wrapped_bzn_msg
-{
-    // This is stored as a serialized string because we need to sign it, and serialization is not guarenteed to be deterministic
-    bytes payload = 1;
-    bzn_msg_type type = 2;
-
-    string sender = 3;
-    bytes signature = 4;
 }

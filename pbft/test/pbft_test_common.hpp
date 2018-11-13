@@ -28,6 +28,8 @@
 #include <mocks/mock_pbft_failure_detector.hpp>
 #include <mocks/mock_pbft_service_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <crypto/crypto.hpp>
+#include <options/options.hpp>
 
 using namespace ::testing;
 
@@ -49,7 +51,7 @@ namespace bzn::test
         pbft_request request_msg;
 
         pbft_msg preprepare_msg;
-        wrapped_bzn_msg default_original_msg;
+        bzn_envelope default_original_msg;
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
@@ -61,6 +63,9 @@ namespace bzn::test
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
+        std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+        std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
+
         std::shared_ptr<bzn::pbft> pbft;
 
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer =
@@ -68,7 +73,7 @@ namespace bzn::test
 
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
 
-        std::function<void(const pbft_request&, uint64_t)> service_execute_handler;
+        bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
         bzn::message_handler database_handler;
 
@@ -87,7 +92,7 @@ namespace bzn::test
     pbft_msg extract_pbft_msg(std::string msg);
     uuid_t extract_sender(std::string msg);
 
-    wrapped_bzn_msg
+    bzn_envelope
     wrap_pbft_msg(const pbft_msg& msg);
 
     bzn::json_message
@@ -99,5 +104,5 @@ namespace bzn::test
     bool is_checkpoint(std::shared_ptr<std::string> msg);
     bool is_audit(std::shared_ptr<std::string> msg);
 
-    wrapped_bzn_msg from(uuid_t uuid);
+    bzn_envelope from(uuid_t uuid);
 }

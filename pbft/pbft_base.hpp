@@ -21,7 +21,7 @@
 #include <bootstrap/peer_address.hpp>
 #include <pbft/pbft_operation.hpp>
 
-#include <proto/bluzelle.pb.h>
+#include <proto/pbft.pb.h>
 
 namespace bzn
 {
@@ -32,7 +32,7 @@ namespace bzn
     public:
         virtual void start() = 0;
 
-        virtual void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) = 0;
+        virtual void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) = 0;
 
         virtual bool is_primary() const = 0;
 

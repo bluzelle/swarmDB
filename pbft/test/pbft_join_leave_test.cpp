@@ -22,26 +22,52 @@ namespace bzn
     const bzn::peer_address_t new_peer{"127.0.0.1", 8090, 83, "name_new", "uuid_new"};
     const bzn::peer_address_t new_peer2{"127.0.0.1", 8091, 84, "name_new2", "uuid_new2"};
 
-    MATCHER_P2(message_is_correct_type, msg_type, req_type, "")
+    std::optional<pbft_msg> extract_pbft_msg_option(std::string m)
     {
-        wrapped_bzn_msg message;
-        if (message.ParseFromString(*arg))
+        bzn_envelope message;
+        if (message.ParseFromString(m))
         {
-            if (message.type() == bzn_msg_type::BZN_MSG_PBFT)
+            if (message.payload_case() == bzn_envelope::kPbft)
             {
                 pbft_msg pmsg;
-                if (pmsg.ParseFromString(message.payload()))
+                if (pmsg.ParseFromString(message.pbft()))
                 {
-                    if (pmsg.type() == msg_type)
-                    {
-                        auto req = pmsg.request();
-                        if (req.type() == req_type)
-                        {
-                            return true;
-                        }
-                    }
+                    return pmsg;
                 }
+            }
+        }
+        return {};
+    }
 
+    MATCHER_P(message_has_correct_req_hash, req_hash, "")
+    {
+        auto pmsg = extract_pbft_msg_option(*arg);
+        if (pmsg)
+        {
+            return pmsg->request_hash() == req_hash;
+        }
+        return false;
+    }
+
+    MATCHER_P(message_has_correct_pbft_type, pbft_type, "")
+    {
+        auto pmsg = extract_pbft_msg_option(*arg);
+        if (pmsg)
+        {
+            return pmsg->type() == pbft_type;
+        }
+        return false;
+    }
+
+    MATCHER_P(message_has_req_with_correct_type, req_type, "")
+    {
+        auto pmsg = extract_pbft_msg_option(*arg);
+        if (pmsg)
+        {
+            pbft_request req;
+            if (req.ParseFromString(pmsg->request()))
+            {
+                return req.type() == req_type;
             }
         }
         return false;
@@ -64,14 +90,17 @@ namespace bzn
             preprepare.set_view(1);
             preprepare.set_sequence(100);
             preprepare.set_type(PBFT_MSG_PREPREPARE);
-            preprepare.set_allocated_request(req);
+            preprepare.set_request(req->SerializeAsString());
+            auto crypto = std::make_shared<bzn::crypto>(std::make_shared<bzn::options>());
+            auto expect_hash = crypto->hash(preprepare.request());
+            preprepare.set_request_hash(expect_hash);
 
             // receiving node should send out prepare messsage to everyone
             for (auto const &p : TEST_PEER_LIST)
             {
                 EXPECT_CALL(*(mock_node),
                     send_message_str(bzn::make_endpoint(p),
-                        message_is_correct_type(PBFT_MSG_PREPARE, PBFT_REQ_NEW_CONFIG)))
+                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
                     .Times(Exactly(1));
             }
 
@@ -88,7 +117,7 @@ namespace bzn
             prepare.set_view(op->view);
             prepare.set_sequence(op->sequence);
             prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_allocated_request(new pbft_request(op->request));
+            prepare.set_request_hash(op->request_hash);
 
             auto wmsg = wrap_pbft_msg(prepare);
             wmsg.set_sender(node.uuid);
@@ -102,19 +131,18 @@ namespace bzn
             commit.set_view(op->view);
             commit.set_sequence(op->sequence);
             commit.set_type(PBFT_MSG_COMMIT);
-            commit.set_allocated_request(new pbft_request(op->request));
+            commit.set_request_hash(op->request_hash);
 
             auto wmsg = wrap_pbft_msg(commit);
             wmsg.set_sender(node.uuid);
             pbft->handle_message(commit, wmsg);
         }
 
-        wrapped_bzn_msg
+        bzn_envelope
         wrap_pbft_membership_msg(const pbft_membership_msg& msg)
         {
-            wrapped_bzn_msg result;
-            result.set_payload(msg.SerializeAsString());
-            result.set_type(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP);
+            bzn_envelope result;
+            result.set_pbft_membership(msg.SerializeAsString());
             return result;
         }
     }
@@ -139,7 +167,7 @@ namespace bzn
         {
             EXPECT_CALL(*(this->mock_node),
                 send_message_str(bzn::make_endpoint(p),
-                    message_is_correct_type(PBFT_MSG_PREPREPARE, PBFT_REQ_NEW_CONFIG)))
+                    AllOf(message_has_req_with_correct_type(PBFT_REQ_NEW_CONFIG), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
         }
 
@@ -167,9 +195,9 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message_str(bzn::make_endpoint(p),
-                    message_is_correct_type(PBFT_MSG_PREPREPARE, PBFT_REQ_NEW_CONFIG)))
-                .Times(Exactly(1));
+                    send_message_str(bzn::make_endpoint(p),
+                            AllOf(message_has_req_with_correct_type(PBFT_REQ_NEW_CONFIG), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+                    .Times(Exactly(1));
         }
 
         auto wmsg = wrap_pbft_membership_msg(leave_msg);
@@ -241,7 +269,7 @@ namespace bzn
         {
             EXPECT_CALL(*(mock_node),
                 send_message_str(bzn::make_endpoint(p),
-                    message_is_correct_type(PBFT_MSG_COMMIT, PBFT_REQ_NEW_CONFIG)))
+                    AllOf(message_has_correct_req_hash(msg.request_hash()), message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }
 
@@ -279,7 +307,7 @@ namespace bzn
         {
             EXPECT_CALL(*(mock_node),
                 send_message_str(bzn::make_endpoint(p),
-                    message_is_correct_type(PBFT_MSG_COMMIT, PBFT_REQ_NEW_CONFIG)))
+                    AllOf(message_has_correct_req_hash(msg.request_hash()), message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }
 

@@ -21,7 +21,7 @@ namespace bzn::test
         // This pattern copied from audit_test, to allow us to declare expectations on the timer that pbft will
         // construct
 
-        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_msg_type::BZN_MSG_PBFT, _))
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_envelope::kPbft, _))
                 .Times(Exactly(1))
                 .WillOnce(
                         Invoke(
@@ -32,7 +32,7 @@ namespace bzn::test
                                 }
                         ));
 
-        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP, _))
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_envelope::kPbftMembership, _))
             .Times(Exactly(1))
             .WillOnce(
                 Invoke(
@@ -86,8 +86,8 @@ namespace bzn::test
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
         preprepare_msg.set_view(1);
-        preprepare_msg.mutable_request()->set_client("bob");
-        preprepare_msg.mutable_request()->set_timestamp(1);
+        preprepare_msg.set_request("hi");
+        preprepare_msg.set_request_hash(this->crypto->hash("hi"));
     }
 
     void
@@ -100,6 +100,7 @@ namespace bzn::test
                 , this->uuid
                 , this->mock_service
                 , this->mock_failure_detector
+                , this->crypto
         );
         this->pbft->set_audit_enabled(false);
         this->pbft->start();
@@ -120,27 +121,26 @@ namespace bzn::test
     pbft_msg
     extract_pbft_msg(std::string msg)
     {
-        wrapped_bzn_msg outer;
+        bzn_envelope outer;
         outer.ParseFromString(msg);
         pbft_msg result;
-        result.ParseFromString(outer.payload());
+        result.ParseFromString(outer.pbft());
         return result;
     }
 
     std::string
     extract_sender(std::string msg)
     {
-        wrapped_bzn_msg outer;
+        bzn_envelope outer;
         outer.ParseFromString(msg);
         return outer.sender();
     }
 
-    wrapped_bzn_msg
+    bzn_envelope
     wrap_pbft_msg(const pbft_msg& msg)
     {
-        wrapped_bzn_msg result;
-        result.set_payload(msg.SerializeAsString());
-        result.set_type(bzn_msg_type::BZN_MSG_PBFT);
+        bzn_envelope result;
+        result.set_pbft(msg.SerializeAsString());
         return result;
     }
 
@@ -191,10 +191,10 @@ namespace bzn::test
         return json["bzn-api"] == "audit";
     }
 
-    wrapped_bzn_msg
+    bzn_envelope
     from(uuid_t uuid)
     {
-        wrapped_bzn_msg result;
+        bzn_envelope result;
         result.set_sender(uuid);
         return result;
     }

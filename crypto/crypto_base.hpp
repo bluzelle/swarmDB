@@ -26,14 +26,14 @@ namespace bzn
          * @msg message to sign
          * @return if signature was successful
          */
-        virtual bool sign(wrapped_bzn_msg& msg) = 0;
+        virtual bool sign(bzn_envelope& msg) = 0;
 
         /*
          * verify that the signature on a message is correct and matches its sender
          * @msg message to verify
          * @return signature is present, valid and matches sender
          */
-        virtual bool verify(const wrapped_bzn_msg& msg) = 0;
+        virtual bool verify(const bzn_envelope& msg) = 0;
 
         /*
          * Compute the hash of some message

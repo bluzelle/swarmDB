@@ -12,22 +12,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+syntax = "proto3";
 
-#include <pbft/pbft_failure_detector_base.hpp>
-#include <gmock/gmock.h>
-#include <functional>
+message status_request {}
 
-namespace bzn
+message status_response
 {
-    class Mockpbft_failure_detector_base : public pbft_failure_detector_base
-    {
-    public:
-        MOCK_METHOD1(request_seen, void(const bzn::hash_t& req));
-
-        MOCK_METHOD1(request_executed, void(const bzn::hash_t& req));
-
-        MOCK_METHOD1(register_failure_handler, void(std::function<void()> handler));
-    };
-
+    string swarm_version = 1;
+    string swarm_git_commit = 2;
+    string uptime = 3;
+    string module_status_json = 4;
+    bool pbft_enabled = 5;
 }

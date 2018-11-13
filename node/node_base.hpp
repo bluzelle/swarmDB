@@ -41,7 +41,7 @@ namespace bzn
          * @param msg_handler   callback
          * @return true if registration succeeded
          */
-        virtual bool register_for_message(const bzn_msg_type type, bzn::protobuf_handler msg_handler) = 0;
+        virtual bool register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler) = 0;
 
         /**
          * Start server's listener etc.

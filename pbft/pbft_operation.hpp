@@ -15,7 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <proto/bluzelle.pb.h>
+#include <proto/pbft.pb.h>
 #include <bootstrap/bootstrap_peers_base.hpp>
 #include <cstdint>
 #include <string>
@@ -23,7 +23,6 @@
 
 namespace bzn
 {
-    using hash_t = std::string;
     // View, sequence
     using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
 
@@ -40,34 +39,38 @@ namespace bzn
     {
     public:
 
-        pbft_operation(uint64_t view, uint64_t sequence, pbft_request msg, std::shared_ptr<const std::vector<peer_address_t>> peers);
+        pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
         void set_session(std::weak_ptr<bzn::session_base>);
 
-        static hash_t request_hash(const pbft_request& req);
+        operation_key_t get_operation_key() const;
+        pbft_operation_state get_state() const;
 
-        operation_key_t get_operation_key();
-        pbft_operation_state get_state();
+        void record_preprepare(const bzn_envelope& encoded_preprepare);
+        bool has_preprepare() const;
 
-        void record_preprepare(const wrapped_bzn_msg& encoded_preprepare);
-        bool has_preprepare();
+        void record_prepare(const bzn_envelope& encoded_prepare);
+        bool is_prepared() const;
 
-        void record_prepare(const wrapped_bzn_msg& encoded_prepare);
-        bool is_prepared();
-
-        void record_commit(const wrapped_bzn_msg& encoded_commit);
-        bool is_committed();
+        void record_commit(const bzn_envelope& encoded_commit);
+        bool is_committed() const;
 
         void begin_commit_phase();
         void end_commit_phase();
 
-        std::weak_ptr<bzn::session_base> session();
+        std::weak_ptr<bzn::session_base> session() const;
+
+        const pbft_request& get_request() const;
+        const bzn::encoded_message& get_encoded_request() const;
+
+        void record_request(const bzn::encoded_message& encoded_request);
+        bool has_request() const;
 
         const uint64_t view;
         const uint64_t sequence;
-        const pbft_request request;
+        const bzn::hash_t request_hash;
 
-        std::string debug_string();
+        std::string debug_string() const;
 
         size_t faulty_nodes_bound() const;
 
@@ -82,5 +85,9 @@ namespace bzn
 
         std::weak_ptr<bzn::session_base> listener_session;
 
+        bzn::encoded_message encoded_request;
+        pbft_request parsed_request;
+
+        bool request_saved = false;
     };
 }

@@ -33,6 +33,7 @@ pbft::pbft(
     , bzn::uuid_t uuid
     , std::shared_ptr<pbft_service_base> service
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
+    , std::shared_ptr<bzn::crypto_base> crypto
     )
     : node(std::move(node))
     , uuid(std::move(uuid))
@@ -40,6 +41,7 @@ pbft::pbft(
     , failure_detector(std::move(failure_detector))
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
+    , crypto(std::move(crypto))
 {
     if (peers.empty())
     {
@@ -59,10 +61,10 @@ pbft::start()
     std::call_once(this->start_once,
             [this]()
             {
-                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT,
+                this->node->register_for_message(bzn_envelope::PayloadCase::kPbft,
                         std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->node->register_for_message(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP,
+                this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
                     std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
                 this->node->register_for_message("database",
@@ -74,16 +76,22 @@ pbft::start()
 
                 this->service->register_execute_handler(
                         [weak_this = this->weak_from_this(), fd = this->failure_detector]
-                                (const pbft_request& req, uint64_t sequence)
+                                (std::shared_ptr<pbft_operation> op)
                                         {
-                                            fd->request_executed(req);
+                                            if (!op)
+                                            {
+                                                // TODO: Get real pbft_operation pointers from pbft_service
+                                                LOG(error) << "Ignoring null operation pointer recieved from pbft_service";
+                                            }
 
-                                            if (sequence % CHECKPOINT_INTERVAL == 0)
+                                            fd->request_executed(op->request_hash);
+
+                                            if (op->sequence % CHECKPOINT_INTERVAL == 0)
                                             {
                                                 auto strong_this = weak_this.lock();
                                                 if(strong_this)
                                                 {
-                                                    strong_this->checkpoint_reached_locally(sequence);
+                                                    strong_this->checkpoint_reached_locally(op->sequence);
                                                 }
                                                 else
                                                 {
@@ -130,15 +138,15 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 }
 
 void
-pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    if (msg.type() != BZN_MSG_PBFT)
+    if (msg.payload_case() != bzn_envelope::kPbft )
     {
         LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
     }
 
     pbft_msg inner_msg;
-    if (!inner_msg.ParseFromString(msg.payload()))
+    if (!inner_msg.ParseFromString(msg.pbft()))
     {
         LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -148,10 +156,10 @@ pbft::handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::sessio
 }
 
 void
-pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> /*session*/)
+pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
     pbft_membership_msg inner_msg;
-    if (!inner_msg.ParseFromString(msg.payload()))
+    if (!inner_msg.ParseFromString(msg.pbft_membership()))
     {
         LOG(error) << "Failed to parse payload of wrapped message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -173,7 +181,7 @@ pbft::handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn:
 }
 
 void
-pbft::handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
 
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
@@ -181,11 +189,6 @@ pbft::handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
     if (!this->preliminary_filter_msg(msg))
     {
         return;
-    }
-
-    if (msg.has_request())
-    {
-        this->failure_detector->request_seen(msg.request());
     }
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
@@ -238,10 +241,11 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 std::shared_ptr<pbft_operation>
-pbft::setup_request_operation(const pbft_request& msg, const std::shared_ptr<session_base>& session)
+pbft::setup_request_operation(const bzn::encoded_message& request, const std::shared_ptr<session_base>& session)
 {
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, msg);
+    auto op = this->find_operation(this->view, request_seq, this->crypto->hash(request));
+    op->record_request(request);
 
     if (session)
     {
@@ -252,7 +256,7 @@ pbft::setup_request_operation(const pbft_request& msg, const std::shared_ptr<ses
 }
 
 void
-pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
+pbft::handle_request(const pbft_request& /*msg*/, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
 {
     if (!this->is_primary())
     {
@@ -265,12 +269,27 @@ pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
 
-    auto op = setup_request_operation(msg, session);
+    auto op = setup_request_operation(original_msg.toStyledString(), session);
     this->do_preprepare(op);
 }
 
 void
-pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
+{
+    if (!msg.request().empty() && !op->has_request())
+    {
+        if (this->crypto->hash(msg.request()) != msg.request_hash())
+        {
+            LOG(info) << "Not recording request because its hash does not match";
+            return;
+        }
+
+        op->record_request(msg.request());
+    }
+}
+
+void
+pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // If we've already accepted a preprepare for this view+sequence, and it's not this one, then we should reject this one
     // Note that if we get the same preprepare more than once, we can still accept it
@@ -278,7 +297,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 
     if (auto lookup = this->accepted_preprepares.find(log_key);
         lookup != this->accepted_preprepares.end()
-        && std::get<2>(lookup->second) != pbft_operation::request_hash(msg.request()))
+        && std::get<2>(lookup->second) != msg.request_hash())
     {
 
         LOG(debug) << "Rejecting preprepare because I've already accepted a conflicting one \n";
@@ -288,11 +307,12 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
     {
         auto op = this->find_operation(msg);
         op->record_preprepare(original_msg);
+        this->maybe_record_request(msg, op);
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
         accepted_preprepares[log_key] = op->get_operation_key();
 
-        if (msg.has_request() && msg.request().type() == PBFT_REQ_NEW_CONFIG)
+        if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG)
         {
             this->handle_config_message(msg, op);
         }
@@ -303,22 +323,24 @@ pbft::handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg
 }
 
 void
-pbft::handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Prepare messages are never rejected, assuming the sanity checks passed
     auto op = this->find_operation(msg);
 
     op->record_prepare(original_msg);
+    this->maybe_record_request(msg, op);
     this->maybe_advance_operation_state(op);
 }
 
 void
-pbft::handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Commit messages are never rejected, assuming  the sanity checks passed
     auto op = this->find_operation(msg);
 
     op->record_commit(original_msg);
+    this->maybe_record_request(msg, op);
     this->maybe_advance_operation_state(op);
 }
 
@@ -400,7 +422,7 @@ pbft::common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_t
     pbft_msg msg;
     msg.set_view(op->view);
     msg.set_sequence(op->sequence);
-    msg.set_allocated_request(new pbft_request(op->request));
+    msg.set_request_hash(op->request_hash);
     msg.set_type(type);
 
     return msg;
@@ -412,6 +434,7 @@ pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Doing preprepare for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
+    msg.set_request(op->get_encoded_request());
 
     this->broadcast(this->wrap_message(msg, "preprepare"));
 }
@@ -430,10 +453,10 @@ void
 pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
     // accept new configuration if applicable
-    if (op->request.type() == PBFT_REQ_NEW_CONFIG && op->request.has_config())
+    if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG && op->get_request().has_config())
     {
         pbft_configuration config;
-        if (config.from_string(op->request.config().configuration()))
+        if (config.from_string(op->get_request().config().configuration()))
         {
             this->configurations.enable(config.get_hash());
         }
@@ -451,10 +474,10 @@ void
 pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
     // commit new configuration if applicable
-    if (op->request.type() == PBFT_REQ_NEW_CONFIG && op->request.has_config())
+    if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG && op->get_request().has_config())
     {
         pbft_configuration config;
-        if (config.from_string(op->request.config().configuration()))
+        if (config.from_string(op->get_request().config().configuration()))
         {
             // get rid of all other previous configs, except for currently active one
             this->configurations.remove_prior_to(config.get_hash());
@@ -467,7 +490,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     if (this->audit_enabled)
     {
         audit_message msg;
-        msg.mutable_pbft_commit()->set_operation(pbft_operation::request_hash(op->request));
+        msg.mutable_pbft_commit()->set_operation(op->request_hash);
         msg.mutable_pbft_commit()->set_sequence_number(op->sequence);
         msg.mutable_pbft_commit()->set_sender_uuid(this->uuid);
 
@@ -500,27 +523,26 @@ pbft::get_primary() const
 std::shared_ptr<pbft_operation>
 pbft::find_operation(const pbft_msg& msg)
 {
-    return this->find_operation(msg.view(), msg.sequence(), msg.request());
+    return this->find_operation(msg.view(), msg.sequence(), msg.request_hash());
 }
 
 std::shared_ptr<pbft_operation>
 pbft::find_operation(const std::shared_ptr<pbft_operation>& op)
 {
-    return this->find_operation(op->view, op->sequence, op->request);
+    return this->find_operation(op->view, op->sequence, op->request_hash);
 }
 
 std::shared_ptr<pbft_operation>
-pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& request)
+pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_hash)
 {
-    auto key = bzn::operation_key_t(view, sequence, pbft_operation::request_hash(request));
+    auto key = bzn::operation_key_t(view, sequence, req_hash);
 
     auto lookup = operations.find(key);
     if (lookup == operations.end())
     {
-        LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req "
-                   << request.ShortDebugString();
+        LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req " << req_hash;
 
-        std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, request,
+        std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, req_hash,
                 this->current_peers_ptr());
         auto result = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
 
@@ -534,9 +556,8 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const pbft_request& reque
 bzn::encoded_message
 pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
-    wrapped_bzn_msg result;
-    result.set_payload(msg.SerializeAsString());
-    result.set_type(bzn_msg_type::BZN_MSG_PBFT);
+    bzn_envelope result;
+    result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
 
     return result.SerializeAsString();
@@ -610,7 +631,7 @@ pbft::checkpoint_reached_locally(uint64_t sequence)
 }
 
 void
-pbft::handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg)
+pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     if (msg.sequence() <= stable_checkpoint.first)
     {
@@ -871,7 +892,7 @@ pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
     cfg_msg->set_configuration(config->to_string());
     req.set_allocated_config(cfg_msg);
 
-    auto op  = this->setup_request_operation(req);
+    auto op  = this->setup_request_operation(req.SerializeAsString());
     this->do_preprepare(op);
 }
 
@@ -884,7 +905,7 @@ pbft::is_configuration_acceptable_in_new_view(hash_t config_hash)
 void
 pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
 {
-    auto const& request = op->request;
+    auto const& request = op->get_request();
     assert(request.type() == PBFT_REQ_NEW_CONFIG);
     auto config = std::make_shared<pbft_configuration>();
     if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(request.config().configuration()))

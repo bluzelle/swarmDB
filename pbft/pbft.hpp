@@ -22,6 +22,7 @@
 #include <pbft/pbft_config_store.hpp>
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
+#include <proto/audit.pb.h>
 #include <mutex>
 #include <gtest/gtest_prod.h>
 
@@ -48,11 +49,12 @@ namespace bzn
             , bzn::uuid_t uuid
             , std::shared_ptr<pbft_service_base> service
             , std::shared_ptr<pbft_failure_detector_base> failure_detector
+            , std::shared_ptr<bzn::crypto_base> crypto
             );
 
         void start() override;
 
-        void handle_message(const pbft_msg& msg, const wrapped_bzn_msg& original_msg) override;
+        void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) override;
 
         void handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session);
 
@@ -83,17 +85,17 @@ namespace bzn
         bzn::json_message get_status() override;
 
     private:
-        std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const pbft_request& request);
+        std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
         std::shared_ptr<pbft_operation> find_operation(const std::shared_ptr<pbft_operation>& op);
 
         bool preliminary_filter_msg(const pbft_msg& msg);
 
         void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr);
-        void handle_preprepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_prepare(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_commit(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
-        void handle_checkpoint(const pbft_msg& msg, const wrapped_bzn_msg& original_msg);
+        void handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_join_or_leave(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
@@ -103,13 +105,13 @@ namespace bzn
         void do_prepared(const std::shared_ptr<pbft_operation>& op);
         void do_committed(const std::shared_ptr<pbft_operation>& op);
 
-        void handle_bzn_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session);
-        void handle_membership_message(const wrapped_bzn_msg& msg, std::shared_ptr<bzn::session_base> session = nullptr);
+        void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
         bzn::encoded_message wrap_message(const pbft_msg& message, const std::string& debug_info = "");
         bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
-        std::shared_ptr<pbft_operation> setup_request_operation(const pbft_request& msg
+        std::shared_ptr<pbft_operation> setup_request_operation(const bzn::encoded_message& msg
             , const std::shared_ptr<session_base>& session = nullptr);
 
         void broadcast(const bzn::encoded_message& message);
@@ -135,6 +137,8 @@ namespace bzn
         bool is_configuration_acceptable_in_new_view(hash_t config_hash);
         bool move_to_new_configuration(hash_t config_hash);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
+
+        void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
