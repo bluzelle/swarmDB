@@ -26,7 +26,9 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
                               {database_msg::kDelete, std::bind(&crud::handle_delete, this, std::placeholders::_1, std::placeholders::_2)},
                               {database_msg::kHas,    std::bind(&crud::handle_has,    this, std::placeholders::_1, std::placeholders::_2)},
                               {database_msg::kKeys,   std::bind(&crud::handle_keys,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kSize,   std::bind(&crud::handle_size,   this, std::placeholders::_1, std::placeholders::_2)}}
+                              {database_msg::kSize,   std::bind(&crud::handle_size,   this, std::placeholders::_1, std::placeholders::_2)},
+                              {database_msg::kSubscribe,   std::bind(&crud::handle_subscribe,   this, std::placeholders::_1, std::placeholders::_2)},
+                              {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, std::placeholders::_1, std::placeholders::_2)}}
 {
 }
 
@@ -34,7 +36,11 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
 void
 crud::start()
 {
-    // todo: subscription manager startup...
+    std::call_once(this->start_once,
+        [this]()
+        {
+            this->subscription_manager->start();
+        });
 }
 
 
@@ -220,4 +226,43 @@ crud::handle_size(const database_msg& request, std::shared_ptr<bzn::session_base
     }
 
     LOG(warning) << "session no longer available. SIZE not executed.";
+}
+
+
+void
+crud::handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    if (session)
+    {
+        database_response response;
+
+        this->subscription_manager->subscribe(request.header().db_uuid(), request.subscribe().key(),
+            request.header().transaction_id(), response, session);
+
+        this->send_response(request, storage_base::result::ok, std::move(response), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. SUBSCRIBE not executed.";
+}
+
+
+void
+crud::handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    if (session)
+    {
+        database_response response;
+
+        this->subscription_manager->unsubscribe(request.header().db_uuid(), request.unsubscribe().key(),
+            request.unsubscribe().transaction_id(), response, session);
+
+        this->send_response(request, storage_base::result::ok, std::move(response), session);
+
+        return;
+    }
+
+    // subscription manager will cleanup stale sessions...
+    LOG(warning) << "session no longer available. UNSUBSCRIBE not executed.";
 }
