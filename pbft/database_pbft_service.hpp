@@ -36,8 +36,6 @@ namespace bzn
 
         void apply_operation(const std::shared_ptr<bzn::pbft_operation>& op) override;
 
-        void query(const pbft_request& request, uint64_t sequence_number) const override;
-
         bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
 
         bzn::service_state_t get_service_state(uint64_t sequence_number) const override;

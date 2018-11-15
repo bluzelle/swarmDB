@@ -118,17 +118,6 @@ database_pbft_service::process_awaiting_operations()
     }
 }
 
-
-void
-database_pbft_service::query(const pbft_request& request, uint64_t sequence_number) const
-{
-    // TODO: not sure how this works...
-
-    LOG(info) << "Querying " << request.ShortDebugString()
-              << " against ver " << std::min(sequence_number, this->next_request_sequence - 1);
-}
-
-
 bzn::hash_t
 database_pbft_service::service_state_hash(uint64_t /*sequence_number*/) const
 {
