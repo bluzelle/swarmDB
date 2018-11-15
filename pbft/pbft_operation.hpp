@@ -42,6 +42,8 @@ namespace bzn
         pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
         void set_session(std::weak_ptr<bzn::session_base>);
+        std::weak_ptr<bzn::session_base> session() const;
+        bool has_session() const;
 
         operation_key_t get_operation_key() const;
         pbft_operation_state get_state() const;
@@ -57,9 +59,6 @@ namespace bzn
 
         void begin_commit_phase();
         void end_commit_phase();
-
-        std::weak_ptr<bzn::session_base> session() const;
-
 
         void record_request(const bzn_envelope& encoded_request);
         bool has_request() const;
@@ -94,5 +93,6 @@ namespace bzn
         pbft_config_msg parsed_config;
 
         bool request_saved = false;
+        bool session_saved = false;
     };
 }

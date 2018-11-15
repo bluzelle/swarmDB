@@ -204,6 +204,8 @@ namespace bzn
         friend class pbft_proto_test;
 
         std::shared_ptr<crypto_base> crypto;
+
+        std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
     };
 
 } // namespace bzn
