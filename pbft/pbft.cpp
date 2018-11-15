@@ -783,6 +783,7 @@ pbft::stabilize_checkpoint(const checkpoint_t& cp)
     this->high_water_mark = std::max(this->high_water_mark,
         cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS * CHECKPOINT_INTERVAL));
 
+    this->service->consolidate_log(cp.first);
 }
 
 void
@@ -822,16 +823,17 @@ pbft::select_peer_for_checkpoint(const checkpoint_t& cp)
 std::string
 pbft::get_checkpoint_state(const checkpoint_t& cp) const
 {
-    // TODO: call service to retrieve state at this checkpoint
-    return std::string("state_") + cp.second;
+    // call service to retrieve state at this checkpoint
+    return this->service->get_service_state(cp.first);
 }
 
 void
-pbft::set_checkpoint_state(const checkpoint_t& /*cp*/, const std::string& /*data*/)
+pbft::set_checkpoint_state(const checkpoint_t& cp, const std::string& data)
 {
-    // TODO: set the service state at the given checkpoint sequence
+    // set the service state at the given checkpoint sequence
     // the service is expected to load the state and discard any pending operations
     // prior to the sequence number, then execute any subsequent operations sequentially
+    this->service->set_service_state(cp.first, data);
 }
 
 void

@@ -34,6 +34,8 @@ namespace bzn
 
     using session_id = uint64_t;
 
+    using service_state_t = std::string;
+
     using hash_t = std::string;
 
 } // bzn
