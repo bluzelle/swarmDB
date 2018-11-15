@@ -34,15 +34,17 @@ namespace bzn
 
         virtual ~database_pbft_service();
 
-        void apply_operation(const std::shared_ptr<bzn::pbft_operation>& op);
+        void apply_operation(const std::shared_ptr<bzn::pbft_operation>& op) override;
 
-        void query(const pbft_request& request, uint64_t sequence_number) const;
+        bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
 
-        bzn::hash_t service_state_hash(uint64_t sequence_number) const;
+        bzn::service_state_t get_service_state(uint64_t sequence_number) const override;
 
-        void consolidate_log(uint64_t sequence_number);
+        bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) override;
 
-        void register_execute_handler(bzn::execute_handler_t handler);
+        void consolidate_log(uint64_t sequence_number) override;
+
+        void register_execute_handler(bzn::execute_handler_t handler) override;
 
         uint64_t applied_requests_count() const;
 

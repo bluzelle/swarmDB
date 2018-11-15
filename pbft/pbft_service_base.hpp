@@ -71,17 +71,20 @@ namespace bzn
         virtual void apply_operation(const std::shared_ptr<pbft_operation>& op) = 0;
 
         /*
-         * Apply some read-only operation to the history of the service at some particular sequence number (either the
-         * sequence number is >= any the service has seen before because we want the most recent version, or we are
-         * querying some stable checkpoint to introduce a new node).
-         */
-        virtual void query(const pbft_request& request, uint64_t sequence_number) const = 0;
-
-        /*
          * Get the hash of the database state (presumably this will be a merkle tree root, but the details don't matter
          * for now)- same semantics as query
          */
         virtual bzn::hash_t service_state_hash(uint64_t sequence_number) const = 0;
+
+        /*
+         * Get the full database state at the given sequence number, if available
+         */
+        virtual bzn::service_state_t get_service_state(uint64_t sequence_number) const = 0;
+
+        /*
+         * Set the full database state at the given sequence number
+         */
+        virtual bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) = 0;
 
         /*
          * A checkpoint has been stabilized, so we no longer need any history from before then.

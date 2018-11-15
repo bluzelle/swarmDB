@@ -160,3 +160,53 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     ASSERT_EQ(uint64_t(3), dps.applied_requests_count());
 }
+
+namespace test
+{
+    void do_operation(uint64_t seq, bzn::database_pbft_service &dps)
+    {
+        pbft_request msg;
+        msg.mutable_operation()->mutable_header()->set_db_uuid(TEST_UUID);
+        msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(seq));
+        msg.mutable_operation()->mutable_create()->set_key("key" + std::to_string(seq));
+        msg.mutable_operation()->mutable_create()->set_value("value" + std::to_string(seq));
+
+        auto operation = std::make_shared<bzn::pbft_operation>(0, seq, "somehash" + std::to_string(seq), nullptr);
+        operation->record_request(msg.SerializeAsString());
+        dps.apply_operation(operation);
+    }
+
+    uint64_t database_msg_seq(const database_msg& msg)
+    {
+        return msg.header().transaction_id();
+    }
+}
+
+TEST(database_pbft_service, test_that_set_state_catches_up_backlogged_operations)
+{
+    auto mem_storage = std::make_shared<bzn::mem_storage>();
+    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+    auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+
+    bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
+
+    test::do_operation(99, dps);
+    test::do_operation(100, dps);
+    test::do_operation(101, dps);
+    test::do_operation(102, dps);
+    ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
+
+    // only the last two operations should be applied after we set the state @ 100
+    EXPECT_CALL(*mock_crud, handle_request(ResultOf(test::database_msg_seq, 101), _))
+        .Times(Exactly(1));
+    EXPECT_CALL(*mock_crud, handle_request(ResultOf(test::database_msg_seq, 102), _))
+        .Times(Exactly(1));
+    EXPECT_CALL(*mock_io_context, post(_))
+        .Times(Exactly(2));
+
+    // push state for checkpoint at sequence 100
+    dps.set_service_state(100, "state_at_sequence_100");
+
+    // operations applied should be caught up now
+    ASSERT_EQ(uint64_t(102), dps.applied_requests_count());
+}
