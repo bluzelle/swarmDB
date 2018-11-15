@@ -48,6 +48,10 @@ namespace bzn
 
         void handle_size(const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
+        void handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
+        void handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
         void send_response(const database_msg& request, bzn::storage_base::result result, database_response&& response,
             std::shared_ptr<bzn::session_base>& session);
 
@@ -57,6 +61,8 @@ namespace bzn
         using message_handler_t = std::function<void(const database_msg& request, std::shared_ptr<bzn::session_base> session)>;
 
         std::unordered_map<database_msg::MsgCase, message_handler_t> message_handlers;
+
+        std::once_flag start_once;
     };
 
 } // namespace bzn

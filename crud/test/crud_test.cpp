@@ -15,6 +15,7 @@
 #include <crud/crud.hpp>
 #include <storage/mem_storage.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <mocks/mock_subscription_manager_base.hpp>
 #include <algorithm>
 
 using namespace ::testing;
@@ -433,4 +434,68 @@ TEST(crud, test_that_size_sends_proper_response)
 
     // null session nothing should happen...
     crud.handle_request(msg, nullptr);
+}
+
+
+TEST(curd, test_that_subscribe_request_calls_subscription_manager)
+{
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
+
+    EXPECT_CALL(*mock_subscription_manager, start());
+
+    crud.start();
+
+    // subscribe...
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_subscribe()->set_key("key");
+
+    // nothing should happen...
+    crud.handle_request(msg, nullptr);
+
+    // try again with a valid session...
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_subscription_manager, subscribe(msg.header().db_uuid(), msg.subscribe().key(),
+        msg.header().transaction_id(), _, _));
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request(msg, mock_session);
+}
+
+
+TEST(curd, test_that_unsubscribe_request_calls_subscription_manager)
+{
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
+
+    EXPECT_CALL(*mock_subscription_manager, start());
+
+    crud.start();
+
+    // unsubscribe...
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_unsubscribe()->set_key("key");
+    msg.mutable_unsubscribe()->set_transaction_id(321);
+
+    // nothing should happen...
+    crud.handle_request(msg, nullptr);
+    
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_subscription_manager, unsubscribe(msg.header().db_uuid(), msg.unsubscribe().key(),
+        msg.unsubscribe().transaction_id(), _, _));
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request(msg, mock_session);
 }
