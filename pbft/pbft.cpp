@@ -24,6 +24,7 @@
 #include <iterator>
 #include <crud/crud_base.hpp>
 #include <random>
+#include <chrono>
 
 using namespace bzn;
 
@@ -245,10 +246,11 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 std::shared_ptr<pbft_operation>
-pbft::setup_request_operation(const bzn::encoded_message& request, const std::shared_ptr<session_base>& session)
+pbft::setup_request_operation(const bzn::encoded_message& request, const request_hash_t& hash,
+    const std::shared_ptr<session_base>& session)
 {
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, this->crypto->hash(request));
+    auto op = this->find_operation(this->view, request_seq, hash);
     op->record_request(request);
 
     if (session)
@@ -260,7 +262,7 @@ pbft::setup_request_operation(const bzn::encoded_message& request, const std::sh
 }
 
 void
-pbft::handle_request(const pbft_request& /*msg*/, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
+pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
 {
     if (!this->is_primary())
     {
@@ -269,10 +271,26 @@ pbft::handle_request(const pbft_request& /*msg*/, const bzn::json_message& origi
         return;
     }
 
-    //TODO: conditionally discard based on timestamp - KEP-328
+    if (msg.timestamp() < (this->now() - MAX_REQUEST_AGE_MS))
+    {
+        // TODO: send error message to client
+        LOG(info) << "Rejecting old request: " << original_msg.toStyledString();
+        return;
+    }
 
-    //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
-    auto op = setup_request_operation(original_msg.toStyledString(), session);
+    auto smsg = original_msg.toStyledString();
+    auto hash = this->crypto->hash(smsg);
+
+    // keep track of what requests we've seen based on timestamp and only send preprepares once
+    if (this->already_seen_request(msg, hash))
+    {
+        // TODO: send error message to client
+        LOG(info) << "Rejecting duplicate request: " << original_msg.toStyledString();
+        return;
+    }
+    this->saw_request(msg, hash);
+
+    auto op = setup_request_operation(smsg, hash, session);
     this->do_preprepare(op);
 }
 
@@ -784,6 +802,10 @@ pbft::stabilize_checkpoint(const checkpoint_t& cp)
         cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS * CHECKPOINT_INTERVAL));
 
     this->service->consolidate_log(cp.first);
+
+    // remove seen requests older than our time threshold
+    this->recent_requests.erase(this->recent_requests.begin(),
+        this->recent_requests.upper_bound(this->now() - MAX_REQUEST_AGE_MS));
 }
 
 void
@@ -919,7 +941,7 @@ pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn
 
     pbft_request req;
     *req.mutable_operation() = msg.db();
-    req.set_timestamp(0); //TODO: KEP-611
+    req.set_timestamp(this->now()); //TODO: the timestamp needs to come from the client
 
     this->handle_request(req, json, session);
 
@@ -1051,7 +1073,8 @@ pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
     cfg_msg->set_configuration(config->to_string());
     req.set_allocated_config(cfg_msg);
 
-    auto op  = this->setup_request_operation(req.SerializeAsString());
+    auto smsg = req.SerializeAsString();
+    auto op  = this->setup_request_operation(smsg, this->crypto->hash(smsg));
     this->do_preprepare(op);
 }
 
@@ -1094,4 +1117,33 @@ bool
 pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* config */)
 {
     return true;
+}
+
+timestamp_t
+pbft::now() const
+{
+    return static_cast<timestamp_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count());
+}
+
+void
+pbft::saw_request(const pbft_request& req, const request_hash_t& hash)
+{
+    this->recent_requests.insert(std::make_pair(req.timestamp(),
+        std::make_pair(req.client(), hash)));
+}
+
+bool
+pbft::already_seen_request(const pbft_request& req, const request_hash_t& hash) const
+{
+    auto range = this->recent_requests.equal_range(req.timestamp());
+    for (auto r = range.first; r != range.second; r++)
+    {
+        if (r->second.first == req.client() && r->second.second == hash)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
