@@ -1110,48 +1110,61 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message) const
 }
 
 
+std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>>
+pbft::read_checkpoint_hashes(const pbft_msg& viewchange_message) const
+{
+    std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes;
+    for(size_t i{0} ; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()) ; ++i)
+    {
+        bzn_envelope envelope;
+        if (envelope.ParseFromString(viewchange_message.checkpoint_messages(i)))
+        {
+            LOG (error) << "Checkpoint validation failure - unable to parse envelope";
+            continue;
+        }
+
+        if (!this->crypto->verify(envelope))
+        {
+            LOG (error) << "Checkpoint validation failure - unable to verify envelope";
+            continue;  // TODO: log these failures
+        }
+
+        auto result1 = std::find_if (
+                std::begin( this->current_peers())
+                , std::end( this->current_peers())
+                , [&](const auto& address)
+                {
+                    return envelope.sender() == address.uuid;
+                });
+
+        if (result1 == this->current_peers().end())
+        {
+            LOG (error) << "Checkpoint validation failure - checkpoint message came from peer not in the peers list";
+            continue;
+        }
+
+        pbft_msg checkpoint_message;
+        if (!checkpoint_message.ParseFromString(envelope.pbft()))
+        {
+            LOG(debug) << "Checkpoint validation failure - unable to parse checkpoint message";
+            continue;
+        }
+
+        checkpoint_hashes[checkpoint_t(checkpoint_message.sequence(), checkpoint_message.state_hash())].insert(envelope.sender());
+    }
+    return checkpoint_hashes;
+}
+
 std::optional<bzn::checkpoint_t>
 pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
 {
     //with viewchange_message.checkpoint_messages
     //are there 2f+1 checkpoint messages each from a different nodes that are in the swarm
     // that have the same checkpoint hash and valid signatures
-    //
-    if(static_cast<size_t>(viewchange_message.checkpoint_messages_size()) >= 2 * this->max_faulty_nodes() + 1 )
+
+    if (static_cast<size_t>(viewchange_message.checkpoint_messages_size()) >= 2 * this->max_faulty_nodes() + 1 )
     {
-        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes;
-
-        for(size_t i{0} ; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()) ; ++i)
-        {
-            bzn_envelope envelope;
-            envelope.ParseFromString(viewchange_message.checkpoint_messages(i));
-
-            if(!this->crypto->verify(envelope))
-            {
-                continue;  // TODO: log these failures
-            }
-
-            auto result1 = std::find_if(
-                    std::begin( this->current_peers())
-                    , std::end( this->current_peers())
-                    , [&](const auto& address)
-                    {
-                        return this->get_uuid() == address.uuid;
-                    });
-            if(result1 == this->current_peers().end())
-            {
-                continue;
-            }
-
-            pbft_msg checkpoint_message;
-            if(!checkpoint_message.ParseFromString(envelope.pbft()))
-            {
-                continue;
-            }
-
-            checkpoint_hashes[checkpoint_t(checkpoint_message.sequence(), checkpoint_message.state_hash())].insert(envelope.sender());
-        }
-
+        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes{this->read_checkpoint_hashes(viewchange_message)};
 
         //  std::pair<bzn::checkpoint_t , std::set<bzn::uuid_t>>
         const auto p = std::find_if(
@@ -1159,39 +1172,22 @@ pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
                 checkpoint_hashes.end(),
                 [&](const auto& pair){ return pair.second.size() >= 2 * this->max_faulty_nodes() + 1;}
                 );
-
-
-        if(p != checkpoint_hashes.end())
+        if (p != checkpoint_hashes.end())
         {
             return p->first;
         }
     }
     else
     {
-        LOG(error) << "Not a valid VIEWCHANGE message: less than (2f+1) checkpoint messages";
+        LOG(error) << "Checkpoint validation failure - not a valid VIEWCHANGE message: less than (2f+1) checkpoint messages";
     }
-
-
-
     return std::nullopt;
-
-
-
-
-
-
-
-
-
-
-
     // Isabel: there needs to be validation here
     // Everything that the view-change message claims, it also provides proofs for. We need to check
     // all those proofs.
     // Also, I think we can view-change to views other than the immediately next one. Remember that we don't actually
     // do anything until we get 2f+1 of these; so if we're in view 5 and we get 2f+1 view change messages wanting to
     // change to view 30, then it's pretty clear that we're not actually in view 5.
-
 }
 
 bool

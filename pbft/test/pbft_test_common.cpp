@@ -90,8 +90,13 @@ namespace bzn::test
     }
 
     void
-    pbft_test::build_pbft()
+    pbft_test::build_pbft(bool use_mock_crypto)
     {
+        if(use_mock_crypto)
+        {
+            this->crypto = this->mock_crypto;
+        }
+
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context

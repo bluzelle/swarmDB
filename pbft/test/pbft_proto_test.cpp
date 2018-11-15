@@ -26,12 +26,6 @@ namespace bzn
         return this->pbft->max_faulty_nodes();
     }
 
-    void
-    pbft_proto_test::set_first_sequence_to_execute(uint64_t val)
-    {
-        this->pbft->first_sequence_to_execute = val;
-    }
-
     std::shared_ptr<pbft_operation>
     pbft_proto_test::send_request()
     {
@@ -45,7 +39,8 @@ namespace bzn
                 if (msg.ParseFromString(wmsg->pbft()))
                 {
                     if (operation == nullptr)
-                        operation = this->pbft->find_operation(this->view, msg.sequence(), msg.request());
+                    {
+                        operation = this->pbft->find_operation(this->view, msg.sequence(), msg.request_hash());
 
                         // the SUT needs the pre-prepare it sends to itself in order to execute state machine
                         this->send_preprepare(operation->sequence, operation->get_request());
@@ -90,20 +85,20 @@ namespace bzn
 
     // send fake prepares from all nodes to SUT
     void
-    pbft_proto_test::send_prepares(uint64_t sequence, const pbft_request& request)
+    pbft_proto_test::send_prepares(uint64_t sequence, const bzn::hash_t& request_hash)
     {
         // after prepares are sent, SUT will send out commits to all nodes
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_commit, Eq(true)))).Times(
                 Exactly(TEST_PEER_LIST.size()));
 
-        for (const auto peer : TEST_PEER_LIST)
+        for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg prepare;
 
             prepare.set_view(this->view);
             prepare.set_sequence(sequence);
             prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_allocated_request(new pbft_request(request));
+            prepare.set_request_hash(request_hash);
             auto wmsg = wrap_pbft_msg(prepare);
             wmsg.set_sender(peer.uuid);
             pbft->handle_message(prepare, wmsg);
@@ -112,31 +107,27 @@ namespace bzn
 
     // send fake commits from all nodes to SUT
     void
-    pbft_proto_test::send_commits(uint64_t sequence, const pbft_request& request)
+    pbft_proto_test::send_commits(uint64_t sequence, const bzn::hash_t& request_hash)
     {
         // after commits are sent, SUT will post the operation for execution
         // we want to simulate that it's been executed successfully
-        EXPECT_CALL(*(this->mock_io_context), post(_)).Times(Exactly(1))
-            .WillRepeatedly(Invoke([&](auto)
-            {
-                //this->service_execute_handler(operation->request, operation->sequence);
-            }));
+        EXPECT_CALL(*(this->mock_io_context), post(_)).Times(Exactly(1));
 
-        for (const auto peer : TEST_PEER_LIST)
+        for (const auto& peer : TEST_PEER_LIST)
         {
             pbft_msg commit;
 
             commit.set_view(this->view);
             commit.set_sequence(sequence);
             commit.set_type(PBFT_MSG_COMMIT);
-            commit.set_allocated_request(new pbft_request(request));
+            commit.set_request_hash(request_hash);
             auto wmsg = wrap_pbft_msg(commit);
             wmsg.set_sender(peer.uuid);
             pbft->handle_message(commit, wmsg);
         }
 
         // tell pbft that this operation has been executed
-        this->service_execute_handler(request, sequence);
+        this->service_execute_handler(this->pbft->find_operation(this->view, sequence, request_hash));
     }
 
     void
@@ -160,7 +151,6 @@ namespace bzn
         this->pbft->checkpoint_reached_locally(seq);
     }
 
-
     void
     pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence)
     {
@@ -177,7 +167,7 @@ namespace bzn
     void
     pbft_proto_test::stabilize_checkpoint(size_t seq)
     {
-        for (const auto peer : TEST_PEER_LIST)
+        for (const auto& peer : TEST_PEER_LIST)
         {
             if (peer.uuid == this->uuid)
             {
@@ -196,12 +186,12 @@ namespace bzn
         ASSERT_NE(op, nullptr);
 
         // send node prepares to SUT
-        send_prepares(op->sequence, op->request);
+        send_prepares(op->sequence, op->request_hash);
 
         // send node commits to SUT
         if (commit)
         {
-            send_commits(op->sequence, op->get_request());
+            send_commits(op->sequence, op->request_hash);
         }
     }
 
@@ -218,7 +208,7 @@ namespace bzn
         request.set_database_msg(dmsg->SerializeAsString());
 
         // send pre-prepare to SUT
-        send_preprepare(this->index, request);
+        send_preprepare(this->index, request.SerializeAsString());
 
         // send prepares to SUT
         auto request_hash = this->pbft->crypto->hash(request);
@@ -227,7 +217,7 @@ namespace bzn
         // send commits to SUT
         if (commit)
         {
-            send_commits(this->index, request);
+            send_commits(this->index, request_hash);
         }
     }
 
@@ -279,9 +269,9 @@ namespace bzn
         {
             run_transaction_through_backup();
         }
-        force_checkpoint(10);
+        prepare_for_checkpoint(10);
         run_transaction_through_backup();
+        force_checkpoint(10);
     }
-
 }
 
