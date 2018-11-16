@@ -43,7 +43,7 @@ namespace bzn::test
                     }
                 ));
 
-        EXPECT_CALL(*(this->mock_node), register_for_message("database", _))
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_envelope::kDatabaseMsg, _))
                 .Times(Exactly(1))
                 .WillOnce(
                         Invoke(
@@ -78,17 +78,15 @@ namespace bzn::test
                                 { this->service_execute_handler = handler; }
                         ));
 
-        this->request_msg.set_allocated_operation(new database_msg());
-
-        this->request_json["bzn-api"] = "database";
-        this->request_json["msg"] = boost::beast::detail::base64_encode(this->request_msg.SerializeAsString());
+        database_msg db;
+        this->request_msg.set_database_msg(db.SerializeAsString());
 
         preprepare_msg = pbft_msg();
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
         preprepare_msg.set_view(1);
-        preprepare_msg.set_request("hi");
-        preprepare_msg.set_request_hash(this->crypto->hash("hi"));
+        preprepare_msg.set_allocated_request(new bzn_envelope(this->request_msg));
+        preprepare_msg.set_request_hash(this->crypto->hash(this->request_msg));
     }
 
     void
@@ -120,12 +118,10 @@ namespace bzn::test
     }
 
     pbft_msg
-    extract_pbft_msg(std::string msg)
+    extract_pbft_msg(bzn_envelope msg)
     {
-        bzn_envelope outer;
-        outer.ParseFromString(msg);
         pbft_msg result;
-        result.ParseFromString(outer.pbft());
+        result.ParseFromString(msg.pbft());
         return result;
     }
 
@@ -154,8 +150,12 @@ namespace bzn::test
     }
 
     bool
-    is_preprepare(std::shared_ptr<std::string> wrapped_msg)
+    is_preprepare(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
+        if (wrapped_msg->payload_case() != bzn_envelope::kPbft)
+        {
+            return false;
+        }
 
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
@@ -163,27 +163,42 @@ namespace bzn::test
     }
 
     bool
-    is_prepare(std::shared_ptr<std::string> wrapped_msg)
+    is_prepare(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
+        if (wrapped_msg->payload_case() != bzn_envelope::kPbft)
+        {
+            return false;
+        }
+
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_PREPARE && msg.view() > 0 && msg.sequence() > 0;
     }
 
     bool
-    is_commit(std::shared_ptr<std::string> wrapped_msg)
+    is_commit(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
+        if (wrapped_msg->payload_case() != bzn_envelope::kPbft)
+        {
+            return false;
+        }
+
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_COMMIT && msg.view() > 0 && msg.sequence() > 0;
     }
 
     bool
-    is_checkpoint(std::shared_ptr<std::string> wrapped_msg)
+    is_checkpoint(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
+        if (wrapped_msg->payload_case() != bzn_envelope::kPbft)
+        {
+            return false;
+        }
+
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
-        return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && extract_sender(*wrapped_msg) != "" && msg.state_hash() != "";
+        return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && wrapped_msg->sender() != "" && msg.state_hash() != "";
     }
 
     bool
@@ -208,13 +223,12 @@ namespace bzn::test
         return result;
     }
 
-    bzn::json_message
+    bzn_envelope
     wrap_request(const database_msg& db)
     {
-        bzn::json_message json;
-        json["msg"] = boost::beast::detail::base64_encode(db.SerializeAsString());
-        json["bzn-api"] = "database";
+        bzn_envelope env;
+        env.set_database_msg(db.SerializeAsString());
 
-        return json;
+        return env;
     }
 }

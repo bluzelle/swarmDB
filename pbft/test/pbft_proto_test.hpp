@@ -26,7 +26,7 @@ namespace bzn
         std::shared_ptr<pbft_operation> send_request();
 
         // send a preprepare message to SUT
-        void send_preprepare(uint64_t sequence, const bzn::encoded_message& request);
+        void send_preprepare(uint64_t sequence, const bzn_envelope& request);
 
         // send fake prepares from all nodes to SUT
         void send_prepares(uint64_t sequence, const bzn::hash_t& request_hash);

@@ -218,7 +218,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
 }
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
+node::send_message_json(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
 {
     this->send_message_str(ep, std::make_shared<bzn::encoded_message>(msg->toStyledString()));
 }

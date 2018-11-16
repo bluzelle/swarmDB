@@ -60,11 +60,15 @@ namespace bzn
 
         std::weak_ptr<bzn::session_base> session() const;
 
-        const pbft_request& get_request() const;
-        const bzn::encoded_message& get_encoded_request() const;
 
-        void record_request(const bzn::encoded_message& encoded_request);
+        void record_request(const bzn_envelope& encoded_request);
         bool has_request() const;
+        bool has_db_request() const;
+        bool has_config_request() const;
+
+        const bzn_envelope& get_request() const;
+        const pbft_config_msg& get_config_request() const;
+        const database_msg& get_database_msg() const;
 
         const uint64_t view;
         const uint64_t sequence;
@@ -85,8 +89,9 @@ namespace bzn
 
         std::weak_ptr<bzn::session_base> listener_session;
 
-        bzn::encoded_message encoded_request;
-        pbft_request parsed_request;
+        bzn_envelope request;
+        database_msg parsed_db;
+        pbft_config_msg parsed_config;
 
         bool request_saved = false;
     };

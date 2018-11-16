@@ -26,45 +26,43 @@ namespace bzn::test
         this->build_pbft();
         ASSERT_TRUE(pbft->is_primary());
         ASSERT_EQ(0u, pbft->outstanding_operations_count());
-        pbft->handle_database_message(this->request_json, this->mock_session);
+        pbft->handle_database_message(this->request_msg, this->mock_session);
         ASSERT_EQ(1u, pbft->outstanding_operations_count());
     }
 
     TEST_F(pbft_test, test_requests_fire_preprepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
-        pbft->handle_database_message(this->request_json, this->mock_session);
+        pbft->handle_database_message(this->request_msg, this->mock_session);
     }
 
     TEST_F(pbft_test, test_forwarded_to_primary_when_not_primary)
     {
-        boost::asio::ip::tcp::endpoint msg_sent_to;
-        bzn::json_message msg_sent;
-
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(1).WillRepeatedly(Invoke(
+        EXPECT_CALL(*mock_node, send_message(_, A<std::shared_ptr<bzn_envelope>>())).Times(1).WillRepeatedly(Invoke(
                 [&](auto ep, auto msg)
                 {
                     EXPECT_EQ(ep, make_endpoint(this->pbft->get_primary()));
-                    EXPECT_EQ((*msg)["bzn-api"], "database");
+                    EXPECT_EQ(msg->payload_case(), bzn_envelope::kDatabaseMsg);
                 }));
 
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
         EXPECT_FALSE(pbft->is_primary());
 
-        pbft->handle_database_message(this->request_json, this->mock_session);
+        pbft->handle_database_message(this->request_msg, this->mock_session);
 
     }
 
     std::set<uint64_t> seen_sequences;
 
     void
-    save_sequences(const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<std::string> wrapped_msg)
+    save_sequences(const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<bzn_envelope> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
+        pbft_msg msg;
+        msg.ParseFromString(wrapped_msg->pbft());
         seen_sequences.insert(msg.sequence());
     }
 
@@ -72,7 +70,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_different_requests_get_different_sequences)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(Invoke(save_sequences));
+        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(Invoke(save_sequences));
 
         database_msg req, req2;
         req.mutable_header()->set_transaction_id(5);
@@ -87,7 +85,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_preprepare_triggers_prepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -96,21 +94,22 @@ namespace bzn::test
     TEST_F(pbft_test, test_prepare_contains_uuid)
     {
         this->build_pbft();
-        std::shared_ptr<std::string> wrapped_msg;
-        EXPECT_CALL(*mock_node, send_message_str(_, _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
+        std::shared_ptr<bzn_envelope> wrapped_msg;
+        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
 
-        pbft_msg msg_sent = extract_pbft_msg(*wrapped_msg);
+        pbft_msg msg_sent;
+        msg_sent.ParseFromString(wrapped_msg->pbft());
 
-        ASSERT_EQ(extract_sender(*wrapped_msg), this->pbft->get_uuid());
-        ASSERT_EQ(extract_sender(*wrapped_msg), TEST_NODE_UUID);
+        ASSERT_EQ(wrapped_msg->sender(), this->pbft->get_uuid());
+        ASSERT_EQ(wrapped_msg->sender(), TEST_NODE_UUID);
     }
 
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, _)).Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(0));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_view(6);
@@ -121,7 +120,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, _)).Times(Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*mock_node, send_message(_, _)).Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_request_hash("some other hash");
@@ -133,9 +132,9 @@ namespace bzn::test
     TEST_F(pbft_test, test_commit_messages_sent)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_commit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -169,40 +168,19 @@ namespace bzn::test
 
     TEST_F(pbft_test, dummy_pbft_service_does_not_crash)
     {
-        mock_service->query(request_msg, 0);
+        database_msg db;
+        mock_service->query(db, 0);
         mock_service->consolidate_log(2);
     }
 
     TEST_F(pbft_test, client_request_results_in_message_ack)
     {
-        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
-        std::string last_err;
-
-        EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>(), _)).WillRepeatedly(Invoke(
-                [&](auto msg, auto)
-                {
-                    database_response resp;
-                    resp.ParseFromString(*msg);
-
-                    last_err = resp.error().message();
-                }
-                ));
-
         this->build_pbft();
-        bzn::json_message msg;
-        msg["bzn-api"] = "database";
+        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
-        this->database_handler(msg, mock_session);
-        EXPECT_NE(last_err, "");
+        EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>(), _)).Times(Exactly(1));
 
-        msg["msg"] = "not a valid crud message";
-        this->database_handler(msg, mock_session);
-        EXPECT_NE(last_err, "");
-
-        bzn_msg payload;
-        msg["msg"] = boost::beast::detail::base64_encode(payload.SerializeAsString());
-        this->database_handler(msg, mock_session);
-        EXPECT_EQ(last_err, "");
+        this->database_handler(this->request_msg, mock_session);
     }
 
     TEST_F(pbft_test, client_request_executed_results_in_message_response)
@@ -210,7 +188,6 @@ namespace bzn::test
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
         EXPECT_CALL(*mock_session, send_datagram(_)).Times(Exactly(1));
 
-        pbft_request msg;
         auto peers = std::make_shared<const std::vector<bzn::peer_address_t>>();
         auto op = std::make_shared<pbft_operation>(1, 1, "somehash", peers);
         op->set_session(mock_session);
@@ -224,7 +201,7 @@ namespace bzn::test
     TEST_F(pbft_test, messages_after_high_water_mark_dropped)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(0));
 
         this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
@@ -234,7 +211,7 @@ namespace bzn::test
     TEST_F(pbft_test, messages_before_low_water_mark_dropped)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(0));
 
         this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
@@ -248,6 +225,6 @@ namespace bzn::test
         this->build_pbft();
 
         EXPECT_FALSE(pbft->is_primary());
-        pbft->handle_database_message(this->request_json, this->mock_session);
+        pbft->handle_database_message(this->request_msg, this->mock_session);
     }
 }

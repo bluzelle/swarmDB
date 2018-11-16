@@ -25,7 +25,7 @@ namespace bzn {
       MOCK_METHOD1(apply_operation,
           void(std::shared_ptr<bzn::pbft_operation>));
       MOCK_CONST_METHOD2(query,
-          void(const pbft_request& request, uint64_t sequence_number));
+          void(const database_msg& request, uint64_t sequence_number));
       MOCK_CONST_METHOD1(service_state_hash,
           bzn::hash_t(uint64_t sequence_number));
       MOCK_METHOD1(consolidate_log,

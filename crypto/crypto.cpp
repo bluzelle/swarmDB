@@ -40,9 +40,13 @@ crypto::extract_payload(const bzn_envelope& msg)
 {
     switch (msg.payload_case())
     {
-        case bzn_envelope::kPbftRequest :
+        case bzn_envelope::kDatabaseMsg :
         {
-            return msg.pbft_request();
+            return msg.database_msg();
+        }
+        case bzn_envelope::kPbftInternalRequest :
+        {
+            return msg.pbft_internal_request();
         }
         case bzn_envelope::kDatabaseResponse :
         {
@@ -206,6 +210,15 @@ crypto::hash(const std::string& msg)
     }
 
     return std::string(reinterpret_cast<char*>(hash_buffer.get()), md_size);
+}
+
+std::string
+crypto::hash(const bzn_envelope& msg)
+{
+    // We are assuming that msg.sender() and msg.payload_case() have
+    // constant-ish length, which is probably true if the signature was checked
+    // on the way in
+    return this->hash(msg.sender() + std::to_string(msg.payload_case()) + this->extract_payload(msg));
 }
 
 void

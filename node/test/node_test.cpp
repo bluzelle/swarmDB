@@ -251,7 +251,7 @@ namespace  bzn
                 return std::move(mock_websocket_stream);
             }));
 
-        node->send_message(TEST_ENDPOINT, std::make_shared<bzn::json_message>("{}"));
+        node->send_message_json(TEST_ENDPOINT, std::make_shared<bzn::json_message>("{}"));
 
         // call with no error to validate handshake...
         connect_handler(boost::system::error_code());

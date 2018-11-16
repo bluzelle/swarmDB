@@ -35,6 +35,8 @@ namespace bzn
 
         std::string hash(const std::string& msg) override;
 
+        std::string hash(const bzn_envelope& msg) override;
+
     private:
 
         using EC_KEY_ptr_t = std::unique_ptr<EC_KEY, decltype(&::EC_KEY_free)>;

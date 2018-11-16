@@ -31,52 +31,42 @@ namespace bzn
     {
         // after request is sent, SUT will send out pre-prepares to all nodes
         auto operation = std::shared_ptr<pbft_operation>();
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()))
-            .WillRepeatedly(Invoke([&](auto, auto enc_bzn_msg)
+            .WillRepeatedly(Invoke([&](auto, auto wmsg)
             {
-                bzn_envelope wmsg;
-                wmsg.ParseFromString(*enc_bzn_msg);
-
                 pbft_msg msg;
-                if (msg.ParseFromString(wmsg.pbft()))
+                if (msg.ParseFromString(wmsg->pbft()))
                 {
                     if (operation == nullptr)
                     {
                         operation = this->pbft->find_operation(this->view, msg.sequence(), msg.request_hash());
 
                         // the SUT needs the pre-prepare it sends to itself in order to execute state machine
-                        this->send_preprepare(operation->sequence, operation->get_encoded_request());
+                        this->send_preprepare(operation->sequence, operation->get_request());
                     }
                 }
             }));
 
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        request->set_timestamp(this->now());
+        bzn_envelope request;
         auto dmsg = new database_msg;
         auto create = new database_create;
         create->set_key(std::string("key_" + std::to_string(++this->index)));
         create->set_value(std::string("value_" + std::to_string(this->index)));
         dmsg->set_allocated_create(create);
-        request->set_allocated_operation(dmsg);
+        request.set_database_msg(dmsg->SerializeAsString());
 
-        bzn_msg wmsg;
-
-
-        bzn::json_message json_msg;
-        json_msg["msg"] = request->SerializeAsString();
-        pbft->handle_request(*request, json_msg);
+        pbft->handle_request(request);
 
         return operation;
     }
 
     // send a preprepare message to SUT
     void
-    pbft_proto_test::send_preprepare(uint64_t sequence, const bzn::encoded_message& request)
+    pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
         // after preprepare is sent, SUT will send out prepares to all nodes
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_prepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 
         auto peer = *(TEST_PEER_LIST.begin());
@@ -85,7 +75,7 @@ namespace bzn
         preprepare.set_view(this->view);
         preprepare.set_sequence(sequence);
         preprepare.set_type(PBFT_MSG_PREPREPARE);
-        preprepare.set_request(request);
+        preprepare.set_allocated_request(new bzn_envelope(request));
         preprepare.set_request_hash(this->pbft->crypto->hash(request));
         auto wmsg = wrap_pbft_msg(preprepare);
         wmsg.set_sender(peer.uuid);
@@ -97,7 +87,7 @@ namespace bzn
     pbft_proto_test::send_prepares(uint64_t sequence, const bzn::hash_t& request_hash)
     {
         // after prepares are sent, SUT will send out commits to all nodes
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_commit, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_commit, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 
         for (const auto& peer : TEST_PEER_LIST)
@@ -150,7 +140,7 @@ namespace bzn
             }));
 
         // after enough commits are sent, SUT will send out checkpoint message to all nodes
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_checkpoint, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_checkpoint, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
     }
 
@@ -208,20 +198,19 @@ namespace bzn
     pbft_proto_test::run_transaction_through_backup(bool commit)
     {
         // create request
-        pbft_request request;
-        request.set_type(PBFT_REQ_DATABASE);
+        bzn_envelope request;
         auto dmsg = new database_msg;
         auto create = new database_create;
         create->set_key(std::string("key_" + std::to_string(++this->index)));
         create->set_value(std::string("value_" + std::to_string(this->index)));
         dmsg->set_allocated_create(create);
-        request.set_allocated_operation(dmsg);
+        request.set_database_msg(dmsg->SerializeAsString());
 
         // send pre-prepare to SUT
-        send_preprepare(this->index, request.SerializeAsString());
+        send_preprepare(this->index, request);
 
         // send prepares to SUT
-        auto request_hash = this->pbft->crypto->hash(request.SerializeAsString());
+        auto request_hash = this->pbft->crypto->hash(request);
         send_prepares(this->index, request_hash);
 
         // send commits to SUT

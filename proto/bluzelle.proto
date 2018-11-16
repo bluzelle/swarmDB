@@ -23,7 +23,9 @@ message bzn_envelope
 
     oneof payload
     {
-        bytes pbft_request = 3;
+        bytes database_msg = 10;
+        bytes pbft_internal_request = 11;
+
         bytes database_response = 4;
         bytes json = 5;
         bytes audit = 6;
