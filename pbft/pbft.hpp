@@ -91,7 +91,7 @@ namespace bzn
 
         bzn::json_message get_status() override;
 
-        bool is_valid_viewchange_message(const pbft_msg& msg) const;
+        bool is_valid_viewchange_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
         bool is_valid_newview_message(const pbft_msg& msg) const;
 
         uint64_t get_view() const { return this->view; }
@@ -115,8 +115,8 @@ namespace bzn
         void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_newview         (const pbft_msg& msg, const bzn_envelope& original_msg);
 
-        void primary_handles_viewchange(const pbft_msg& msg);
-        void replica_handles_viewchange(const pbft_msg& msg);
+//        void primary_handles_viewchange(const pbft_msg& msg);
+//        void replica_handles_viewchange(const pbft_msg& msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -235,6 +235,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, primary_handle_newview);
         FRIEND_TEST(pbft_viewchange_test, backup_handle_newview);
         FRIEND_TEST(pbft_viewchange_test, read_checkpoint_hashes);
+        FRIEND_TEST(pbft_viewchange_test, is_peer);
 
         friend class pbft_proto_test;
 
@@ -267,6 +268,12 @@ namespace bzn
         std::optional<bzn::checkpoint_t> validate_checkpoint(const pbft_msg& viewchange_message) const;
 
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> read_checkpoint_hashes(const pbft_msg& viewchange_message) const;
+        void save_checkpoint(const pbft_msg& msg);
+
+        void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares);
+
+        bool is_peer(const bzn::uuid_t& peer) const;
+
 
     };
 
