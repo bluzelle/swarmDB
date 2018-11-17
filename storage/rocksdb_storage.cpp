@@ -65,6 +65,8 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
 
     if (!this->has(uuid, key))
     {
+        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
         auto s = this->db->Put(write_options, generate_key(uuid,key), value);
 
         if (!s.ok())
@@ -85,6 +87,8 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
 std::optional<bzn::value_t>
 rocksdb_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     bzn::value_t value;
     auto s = this->db->Get(rocksdb::ReadOptions(), generate_key(uuid, key), &value);
 
@@ -107,6 +111,8 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
 
     if (this->has(uuid,key))
     {
+        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
         rocksdb::WriteOptions write_options;
         write_options.sync = true;
 
@@ -135,6 +141,7 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 
     if (this->has(uuid, key))
     {
+        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
         auto s = this->db->Delete(write_options, generate_key(uuid, key));
 
@@ -153,6 +160,8 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 std::vector<bzn::key_t>
 rocksdb_storage::get_keys(const bzn::uuid_t& uuid)
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
 
     std::vector<bzn::key_t> v;
@@ -170,9 +179,10 @@ rocksdb_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 {
     const bzn::key_t has_key = generate_key(uuid, key);
 
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
 
-    // todo: there must be a better way?
     for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
     {
         if (iter->key() == has_key)
@@ -193,6 +203,8 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
     std::size_t size{};
     std::size_t keys{};
 
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
     {
         ++keys;
@@ -200,4 +212,32 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
     }
 
     return std::make_pair(keys, size);
+}
+
+
+storage_base::result
+rocksdb_storage::remove(const bzn::uuid_t& uuid)
+{
+    rocksdb::WriteOptions write_options;
+    write_options.sync = true;
+
+    std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    std::size_t keys_removed{};
+
+    for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
+    {
+        auto s = this->db->Delete(write_options, iter->key());
+
+        if (!s.ok())
+        {
+            LOG(error) << "delete failed: " << uuid << ":" <<  s.ToString();
+        }
+
+        ++keys_removed;
+    }
+
+    return (keys_removed) ? storage_base::result::ok : storage_base::result::not_found;
 }

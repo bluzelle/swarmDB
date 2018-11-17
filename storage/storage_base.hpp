@@ -35,7 +35,8 @@ namespace bzn
             exists,
             not_saved,
             value_too_large,
-            key_too_large
+            key_too_large,
+            db_not_found
         };
 
         virtual ~storage_base() = default;
@@ -53,6 +54,8 @@ namespace bzn
         virtual bool has(const bzn::uuid_t& uuid, const  std::string& key) = 0;
 
         virtual std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) = 0;
+
+        virtual storage_base::result remove(const bzn::uuid_t& uuid) = 0;
     };
 
 } // bzn
