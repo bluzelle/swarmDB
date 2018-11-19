@@ -92,7 +92,7 @@ namespace bzn
         bzn::json_message get_status() override;
 
         bool is_valid_viewchange_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
-        bool is_valid_newview_message(const pbft_msg& msg) const;
+        bool is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
 
         uint64_t get_view() const { return this->view; }
 
@@ -273,6 +273,15 @@ namespace bzn
         void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares);
 
         bool is_peer(const bzn::uuid_t& peer) const;
+
+        bool get_sequences_and_request_hashes_from_proofs(
+                const pbft_msg& viewchange_msg
+                , std::set<uint64_t>& sequences
+                , std::set<std::string>& request_hashes) const;
+
+        bool validate_preprepare_sequences(const pbft_msg& viewchange_msg, std::set<uint64_t>& sequences) const;
+
+        bool validate_preprepare_request_hashes( const pbft_msg& viewchange_msg , std::set<std::string> request_hashes) const;
 
 
     };

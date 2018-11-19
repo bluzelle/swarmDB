@@ -93,7 +93,7 @@ pbft::start()
                                             if (op->sequence % CHECKPOINT_INTERVAL == 0)
                                             {
                                                 auto strong_this = weak_this.lock();
-                                                if(strong_this)
+                                                if (strong_this)
                                                 {
                                                     strong_this->checkpoint_reached_locally(op->sequence);
                                                 }
@@ -1014,7 +1014,7 @@ pbft::clear_operations_until(const checkpoint_t& cp)
     auto it = this->operations.begin();
     while (it != this->operations.end())
     {
-        if(it->second->sequence <= cp.first)
+        if (it->second->sequence <= cp.first)
         {
             it = this->operations.erase(it);
             ops_removed++;
@@ -1105,115 +1105,6 @@ pbft::is_view_valid() const
 
 
 bool
-pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg ) const
-{
-
-    if (!this->is_peer(original_msg.sender()))
-    {
-        LOG(error) << "is_valid_viewchange_message - message not from a peer";
-        return false;
-    }
-
-    // the checkpoint is valid  (validate checkpoint_
-    const auto valid_checkpoint = this->validate_checkpoint(viewchange_message);
-
-    if (valid_checkpoint == std::nullopt)
-    {
-        LOG(error) << "is_valid_viewchange_message - the checkpoint is invald";
-        return false;
-    }
-
-    // all the the prepared proofs are valid  (contains a pre prepare and 2f+1 mathcin prepares)
-    for(int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i)
-    {
-        std::set<uuid_t> senders;
-
-        bzn_envelope pre_prepare_envelope;
-
-        if (!pre_prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).pre_prepare()))
-        {
-            return false;
-        }
-
-        if ( this->is_peer(pre_prepare_envelope.sender()))
-        {
-            return false;
-        }
-
-        if (!this->crypto->verify(pre_prepare_envelope))
-        {
-            return false;
-        }
-
-        pbft_msg preprepare_message;
-        preprepare_message.ParseFromString(pre_prepare_envelope.pbft());
-
-        // sequence number greater than checkpoint
-
-
-        if( !(preprepare_message.sequence() > valid_checkpoint->first ) )
-        {
-            return false;
-        }
-
-
-        for ( int j{0} ; j < viewchange_message.prepared_proofs(i).prepare_size() ; ++j )
-        {
-            // TODO: combine the ifs
-            bzn_envelope prepare_envelope;
-            if (!prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).prepare(j)))
-            {
-                return false;
-            }
-
-
-            senders.insert(prepare_envelope.sender());
-
-            if (!this->is_peer(prepare_envelope.sender()))
-            {
-                return false;
-            }
-
-            if (!this->crypto->verify(prepare_envelope))
-            {
-                return false;
-            }
-
-            // does is sequence number, view number and hash match those of the pre prepare
-            pbft_msg prepare_msg;
-            if (!prepare_msg.ParseFromString(prepare_envelope.pbft()))
-            {
-                return false;
-            }
-
-            if (preprepare_message.sequence() != prepare_msg.sequence())
-            {
-                return false;
-            }
-
-            if (preprepare_message.view() != prepare_msg.view())
-            {
-                return false;
-            }
-
-            if (preprepare_message.request_hash() != prepare_msg.request_hash())
-            {
-                return false;
-            }
-        }
-
-        if(senders.size() < 2 * this->max_faulty_nodes() +1)
-        {
-            return false;
-        }
-    }
-
-    return this->validate_checkpoint(viewchange_message) != std::nullopt;
-}
-
-
-
-bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {
     return std::find_if (
@@ -1231,7 +1122,7 @@ std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>>
 pbft::read_checkpoint_hashes(const pbft_msg& viewchange_message) const
 {
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes;
-    for(size_t i{0} ; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()) ; ++i)
+    for (size_t i{0} ; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()) ; ++i)
     {
         bzn_envelope envelope;
         if (envelope.ParseFromString(viewchange_message.checkpoint_messages(i)))
@@ -1256,7 +1147,7 @@ pbft::read_checkpoint_hashes(const pbft_msg& viewchange_message) const
 
 //        if (result1 == this->current_peers().end())
 
-        if(this->is_peer(envelope.sender()))
+        if (this->is_peer(envelope.sender()))
         {
             LOG (error) << "Checkpoint validation failure - checkpoint message came from peer not in the peers list";
             continue;
@@ -1310,81 +1201,225 @@ pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
 }
 
 bool
-pbft::is_valid_newview_message(const pbft_msg& msg) const
+pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg ) const
 {
-    //    - does it contain 2f+1 viewchange messages
+    if (!this->is_peer(original_msg.sender()))
+    {
+        return false;
+    }
+
+    const auto valid_checkpoint = this->validate_checkpoint(viewchange_message);
+    if (valid_checkpoint == std::nullopt)
+    {
+        LOG(error) << "is_valid_viewchange_message - the checkpoint is invald";
+        return false;
+    }
+
+    // all the the prepared proofs are valid  (contains a pre prepare and 2f+1 mathcin prepares)
+    for(int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i)
+    {
+        bzn_envelope pre_prepare_envelope;
+        if (
+                !pre_prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).pre_prepare())
+                && !this->is_peer(pre_prepare_envelope.sender())
+                && !this->crypto->verify(pre_prepare_envelope))
+        {
+            return false;
+        }
+
+        pbft_msg preprepare_message;
+        if (
+                !preprepare_message.ParseFromString(pre_prepare_envelope.pbft())
+                && !(preprepare_message.sequence() > valid_checkpoint->first ) )
+        {
+            return false;
+        }
+
+        std::set<uuid_t> senders;
+        bzn_envelope prepare_envelope;
+        for ( int j{0} ; j < viewchange_message.prepared_proofs(i).prepare_size() ; ++j )
+        {
+            if (
+                    !prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).prepare(j))
+                    && !this->is_peer(prepare_envelope.sender())
+                    && !this->crypto->verify(prepare_envelope))
+            {
+                return false;
+            }
+
+            // does is sequence number, view number and hash match those of the pre prepare
+            if (
+                pbft_msg prepare_msg;
+                    !prepare_msg.ParseFromString(prepare_envelope.pbft())
+                    && preprepare_message.sequence() != prepare_msg.sequence()
+                    && preprepare_message.view() != prepare_msg.view()
+                    && preprepare_message.request_hash() != prepare_msg.request_hash()
+                    )
+            {
+                return false;
+            }
+
+            senders.insert(prepare_envelope.sender());
+        }
+
+        if (senders.size() < 2 * this->max_faulty_nodes() + 1 )
+        {
+            return false;
+        }
+    }
+
+    return this->validate_checkpoint(viewchange_message) != std::nullopt;
+}
+
+
+bool
+pbft::get_sequences_and_request_hashes_from_proofs(
+        const pbft_msg& viewchange_msg
+        , std::set<uint64_t>& sequences
+        , std::set<std::string>& request_hashes) const
+{
+    bzn_envelope    proof_envelope;
+    for (int j{0} ; j < viewchange_msg.prepared_proofs_size() ; ++j )
+    {
+        // --- add the sequence/hash to a set
+        prepared_proof prepared_proof = viewchange_msg.prepared_proofs(j);
+
+        pbft_msg msg;
+        if (
+                bzn_envelope envelope;
+                !envelope.ParseFromString(prepared_proof.pre_prepare())
+                && !this->is_peer(envelope.sender())
+                && !msg.ParseFromString(envelope.pbft()))
+        {
+            return false;
+        }
+
+        sequences.insert(msg.sequence());
+        request_hashes.insert(msg.request_hash());
+    }
+    return true;
+}
+
+
+bool
+pbft::validate_preprepare_sequences(
+        const pbft_msg& viewchange_msg
+        , std::set<uint64_t>& sequences) const
+{
+    // - for each sequence/hash in that set
+    // -- does the viewchange contain a preprepare for that sequence/hash
+    pbft_msg pre_prep_msg;
+    for (const auto& sequence : sequences)
+    {
+        bool has_sequence = false;
+        for (int j{0} ; j < viewchange_msg.pre_prepare_messages_size(); ++j)
+        {
+            const bzn_envelope pre_prep_env{viewchange_msg.pre_prepare_messages(j)};
+
+            if (!pre_prep_msg.ParseFromString(pre_prep_env.pbft()))
+            {
+                return false;
+            }
+
+            if (sequence == pre_prep_msg.sequence())
+            {
+                has_sequence = true;
+                break;
+            }
+        }
+        if (!has_sequence)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool
+pbft::validate_preprepare_request_hashes(
+        const pbft_msg& viewchange_msg
+        , std::set<std::string> request_hashes
+        ) const
+{
+    pbft_msg pre_prep_msg;
+    for (const auto& request_hash : request_hashes)
+    {
+        bool has_request_hash = false;
+        for (int j{0} ; j < viewchange_msg.pre_prepare_messages_size() ; ++j)
+        {
+            const bzn_envelope& pre_prep_env{viewchange_msg.pre_prepare_messages(j)};
+
+            if (!pre_prep_msg.ParseFromString(pre_prep_env.pbft()))
+            {
+                return false;
+            }
+
+            if (request_hash == pre_prep_msg.request_hash())
+            {
+                has_request_hash = true;
+                break;
+            }
+        }
+        if (!has_request_hash)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool
+pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*original_msg*/) const
+{
+    // - does it contain 2f+1 viewchange messages
     if (static_cast<size_t>(msg.viewchange_messages_size()) < 2 * this->max_faulty_nodes() + 1)
     {
         return false;
     }
 
-//    //   *** - are each of those viewchange messages valid - done
-//    for (int i{0} ; i < msg.viewchange_messages_size() ; ++i)
-//    {
-//        if (this->is_valid_viewchange_message())
-//    }
-
-    for(int i{0} ; i < msg.viewchange_messages_size() ; ++i )
+    pbft_msg viewchange_msg;
+    for (int i{0} ; i < msg.viewchange_messages_size() ; ++i)
     {
+        // - are each of those viewchange messages valid?
+        if (
+                bzn_envelope original_msg;
+                !original_msg.ParseFromString(viewchange_msg.viewchange_messages(i))
+                && !viewchange_msg.ParseFromString(original_msg.pbft())
+                && !this->is_valid_viewchange_message(viewchange_msg, original_msg)
+                )
 
-        //    - for each viewchange
-        //    -- for each prepared proof in that viewchange
-//        for()
+        {
+            return false;
+        }
 
+        // we have a valid viewchange message, viewchange_msg
+        // -- for each prepared proof in that viewchange
+        // -- is that preprepare valid
 
+        std::set<uint64_t>      sequences;
+        std::set<std::string>   request_hashes;
 
+        if (!this->get_sequences_and_request_hashes_from_proofs(
+                viewchange_msg
+                , sequences
+                , request_hashes))
+        {
+            return false;
+        }
 
-        //    --- add the sequence/hash to a set
-        //    - for each sequence/hash in that set
-        //    -- does the viewchange contain a preprepare for that sequence/hash
-        //    -- is that preprepare valid
-
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-    // the view change messages are valid
-    auto V = msg.viewchange_messages();
-    LOG(debug) << " Are the viewchange messages valid: [" << V.size() << "]";
-    for(const auto& v : V)
-    {
-        pbft_msg viewchange;
-        viewchange.ParseFromString(v);
-
-        // TODO Isabel :Can we use is_valid_viewchange()?
-
-
-
-
-        //  Also need to make sure the view changes are from different nodes
-
-        if ( (viewchange.type() != PBFT_MSG_VIEWCHANGE) || (viewchange.view()!= this->get_view()+1) )
+        if (
+                !this->validate_preprepare_sequences(viewchange_msg, sequences)
+                && !this->validate_preprepare_request_hashes(viewchange_msg, request_hashes)
+        )
         {
             return false;
         }
     }
-    //      - The set O is correct
-    //          - None of the messages it knows about are lost ???
-//    auto O = msg.preprepare_messages();
-//    LOG(debug) << " Are the prepare messages, O, valid: [" << V.size() << "]";
-//    // ?? O.size() == this->prepared_operations_since_last_checkpoint().size()
-//
-//    for(const auto& o : O)
-//    {
-//        LOG (debug) << o;
-//
-//    }
 
-    return (msg.type() == PBFT_MSG_NEWVIEW) && (msg.view() == this->view + 1);
+    // TODO did the viewchanges come from different replicas?
+    return true;
 }
 
 
@@ -1414,7 +1449,7 @@ pbft::make_newview(
     }
 
     // O
-    for(const auto& preprepare_message : pre_prepare_messages)
+    for (const auto& preprepare_message : pre_prepare_messages)
     {
         *(newview.add_pre_prepare_messages()) = preprepare_message.second;
     }
@@ -1427,10 +1462,10 @@ void
 pbft::fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares)
 {
     uint64_t last_sequence_number = pre_prepares.empty() ? 0 : (pre_prepares.end()--)->first;
-    for(uint64_t i = this->latest_stable_checkpoint().first + 1; i < last_sequence_number ; ++i )
+    for (uint64_t i = this->latest_stable_checkpoint().first + 1; i < last_sequence_number ; ++i )
     {
         //  -- create a new preprepare for a no-op operation using this sequence number
-        if(pre_prepares.count(i) == 0)
+        if (pre_prepares.count(i) == 0)
         {
             pbft_msg null_message;
             null_message.set_type(PBFT_MSG_PREPREPARE);
@@ -1454,11 +1489,11 @@ pbft::build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_m
     std::map<uint64_t, bzn_envelope> pre_prepares;
 
     //  - for each of the 2f+1 viewchange messages
-    for(const auto& viewchange_message : viewchange_messages)
+    for (const auto& viewchange_message : viewchange_messages)
     {
         //  -- for each operation included in that viewchange message
 
-        for(int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i )
+        for (int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i )
         {
             const auto prepared_proof = viewchange_message.prepared_proofs(i);
 
@@ -1474,7 +1509,7 @@ pbft::build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_m
             pre_prepare.ParseFromString(preprepare_envelope.pbft());
             pre_prepare.set_view(new_view);
 
-            if(pre_prepare.sequence() < this->latest_stable_checkpoint().first)
+            if (pre_prepare.sequence() < this->latest_stable_checkpoint().first)
             {
                 continue;
             }
@@ -1509,97 +1544,6 @@ pbft::make_signed_envelope(std::string serialized_pbft_message)
 }
 
 
-
-//void
-//pbft::primary_handles_viewchange(const pbft_msg& /*msg*/)
-//{
-//    if (this->valid_view_change_messages.size() >= 2 * this->max_faulty_nodes() + 1)
-//    {
-//        LOG(debug) << "Primary is handling viewchange";
-//        // KEP-633 - When the primary of view v+1 receives 2f valid view change messages
-//        // for view v+1,
-//
-//
-//
-//
-//        // TODO what the hell
-//
-////
-////        pbft_msg new_view{this->make_newview(
-////                this->get_view()+1
-////                , this->valid_view_change_messages
-////                , ???
-////                )};
-////
-////
-//
-//
-//
-//
-//
-//
-//
-////        this->broadcast(this->wrap_message(new_view));
-//
-//
-//        LOG(debug) << "Primary is moving to view + 1";
-//        this->view += 1;
-//        this->view_is_valid = true;
-//        this->valid_view_change_messages.clear();
-//    }
-//    else
-//    {
-//        LOG(debug) << "Primary has not recieved enough viewchange messages: no action performed";
-//    }
-//}
-
-
-//void
-//pbft::replica_handles_viewchange(const pbft_msg&/*msg*/)
-//{
-//    if (this->valid_view_change_messages.size() == (this->max_faulty_nodes() + 1) )
-//    {
-//        LOG(debug) << "Replica has recieved enough view change messages";
-//
-//        pbft_msg view_change{this->make_viewchange(
-//                this->view +1
-//                , this->latest_stable_checkpoint().first
-//                , this->stable_checkpoint_proof
-//                , this->prepared_operations_since_last_checkpoint()
-//                )};
-//
-//        // TODO: DRY Refactor the following view_change, it is duplicated in handle_failure
-//        //pbft_msg view_change;
-//        //view_change.set_type(PBFT_MSG_VIEWCHANGE);  // <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
-////        view_change.set_view(this->view + 1);  // v + 1 = this->view + 1
-////        view_change.set_sequence(this->latest_stable_checkpoint().first); // n = sequence # of last valid checkpoint = this->stable_checkpoint.first
-////
-////        // C = a set of local 2*f + 1 valid checkpoint messages
-////        //   = ?? I can get: **** this->stable_checkpoint_proof is a set of 2*f+1 map of uuid's to strings <- is this correct?
-////        for (const auto& msg : this->stable_checkpoint_proof)
-////        {
-////            view_change.add_checkpoint_messages(msg.second);
-////        }
-////
-////        // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher
-////        //     than n
-////        // P_m = the pre prepare and the 2 f + 1 prepares
-////        //            get the set of operations, frome each operation get the messages..
-////        // i, id of backup
-////        view_change.set_sender(this->get_uuid());
-//
-//
-//        // std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint()
-//        this->broadcast(this->wrap_message(view_change));
-//    }
-//    else
-//    {
-//        LOG(debug) << "Replica has not recieved enough view change messages";
-//    }
-//
-//}
-
-
 void
 pbft::save_checkpoint(const pbft_msg& msg)
 {
@@ -1609,7 +1553,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
         const auto checkpoint_msg = msg.checkpoint_messages(i);
         bzn_envelope original_checkpoint;
         original_checkpoint.ParseFromString(checkpoint_msg);
-        if(!this->crypto->verify(original_checkpoint))
+        if (!this->crypto->verify(original_checkpoint))
         {
             continue;
         }
@@ -1732,9 +1676,9 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
 
 void
-pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& /*original_msg*/)
+pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    if (!this->is_valid_newview_message(msg))
+    if (!this->is_valid_newview_message(msg, original_msg))
     {
         LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message ";
         return;
@@ -1744,7 +1688,7 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& /*original_msg*/)
 
     this->view = msg.view();
 
-    for(size_t i{0} ; i < static_cast<size_t>(msg.pre_prepare_messages_size()) ; ++i)
+    for (size_t i{0} ; i < static_cast<size_t>(msg.pre_prepare_messages_size()) ; ++i)
     {
         const bzn_envelope original_msg = msg.pre_prepare_messages(i);
         pbft_msg msg;
@@ -1988,7 +1932,7 @@ pbft_msg pbft::make_viewchange(
     // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher than n
     // P_m = the pre prepare and the 2 f + 1 prepares
     //            get the set of operations, frome each operation get the messages..
-    for (const auto operation : prepared_operations)
+    for (const auto& operation : prepared_operations)
     {
         prepared_proof *prepared_proofs = viewchange.add_prepared_proofs();
         prepared_proofs->set_pre_prepare(operation->get_preprepare());
