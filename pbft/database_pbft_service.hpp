@@ -38,9 +38,11 @@ namespace bzn
 
         bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
 
-        bzn::service_state_t get_service_state(uint64_t sequence_number) const override;
+        std::shared_ptr<bzn::service_state_t> get_service_state(uint64_t sequence_number) const override;
 
         bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) override;
+
+        void save_service_state_at(uint64_t sequence_number) override;
 
         void consolidate_log(uint64_t sequence_number) override;
 
@@ -66,6 +68,8 @@ namespace bzn
 
         std::once_flag start_once;
         std::mutex lock;
+        uint64_t next_checkpoint = 0;
+        uint64_t last_checkpoint = 0;
     };
 
 } // bzn

@@ -72,10 +72,10 @@ dummy_pbft_service::service_state_hash(uint64_t sequence_number) const
     return "I don't actually have a database [" + std::to_string(sequence_number) + "]";
 }
 
-bzn::service_state_t
+std::shared_ptr<bzn::service_state_t>
 dummy_pbft_service::get_service_state(uint64_t sequence_number) const
 {
-    return "I don't actually have a database [" + std::to_string(sequence_number) + "]";
+    return std::make_shared<std::string>("I don't actually have a database [" + std::to_string(sequence_number) + "]");
 }
 
 bool
@@ -84,7 +84,10 @@ dummy_pbft_service::set_service_state(uint64_t /*sequence_number*/, const bzn::s
     return true;
 }
 
-
+void
+dummy_pbft_service::save_service_state_at(uint64_t /*sequence_number*/)
+{
+}
 
 void
 dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>& op)

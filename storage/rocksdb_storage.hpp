@@ -44,6 +44,12 @@ namespace bzn
 
         storage_base::result remove(const bzn::uuid_t& uuid) override;
 
+        bool create_snapshot() override;
+
+        std::shared_ptr<std::string> get_snapshot() override;
+
+        bool load_snapshot(const std::string& data) override;
+
     private:
         std::unique_ptr<rocksdb::DB> db;
 

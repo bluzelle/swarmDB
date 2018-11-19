@@ -42,6 +42,12 @@ namespace bzn {
             void(const database_msg& request, const std::shared_ptr<bzn::session_base>& session));
         MOCK_METHOD0(start,
             void());
+        MOCK_METHOD0(save_state,
+            bool());
+        MOCK_METHOD0(get_saved_state,
+            std::shared_ptr<std::string>());
+        MOCK_METHOD1(load_state,
+            bool(const std::string&));
     };
 
 }  // namespace bzn

@@ -214,6 +214,9 @@ TEST(database_pbft_service, test_that_set_state_catches_up_backlogged_operations
         .Times(Exactly(2));
 
     // push state for checkpoint at sequence 100
+    EXPECT_CALL(*mock_crud, load_state(_))
+        .Times(Exactly(1))
+        .WillOnce(Invoke([](auto &) {return true;}));
     dps.set_service_state(100, "state_at_sequence_100");
 
     // operations applied should be caught up now
