@@ -17,16 +17,10 @@
 #include <mocks/mock_session_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 
-namespace
-{
-
-};
-
-
 namespace bzn
 {
 
-    class pbft_viewchange_test : public pbft_proto_test
+    class pbft_newview_test : public pbft_proto_test
     {
     public:
 
@@ -136,7 +130,7 @@ namespace bzn
 
     };
 
-    TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
+    TEST_F(pbft_newview_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -147,7 +141,7 @@ namespace bzn
         EXPECT_FALSE(this->pbft->is_view_valid());
     }
 
-    TEST_F(pbft_viewchange_test, pbft_with_invalid_view_drops_messages)
+    TEST_F(pbft_newview_test, pbft_with_invalid_view_drops_messages)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -155,14 +149,14 @@ namespace bzn
         this->check_that_pbft_drops_messages();
     }
 
-    TEST_F(pbft_viewchange_test, pbft_no_history_replica_sends_viewchange_message_after_receiving_enough_viewchange_messages)
+    TEST_F(pbft_newview_test, pbft_no_history_replica_sends_viewchange_message_after_receiving_enough_viewchange_messages)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
         this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
 
-    TEST_F(pbft_viewchange_test, pbft_replica_with_history_sends_viewchange_message)
+    TEST_F(pbft_newview_test, pbft_replica_with_history_sends_viewchange_message)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -183,14 +177,14 @@ namespace bzn
        // this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
 
-    TEST_F(pbft_viewchange_test, pbft_primary_sends_newview_message)
+    TEST_F(pbft_newview_test, pbft_primary_sends_newview_message)
     {
         this->build_pbft();
         this->send_some_viewchange_messages(2 * this->max_faulty_replicas_allowed(), is_newview);
     }
     
     
-    TEST_F(pbft_viewchange_test, backup_accepts_newview)
+    TEST_F(pbft_newview_test, backup_accepts_newview)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -220,97 +214,12 @@ namespace bzn
         // ????
     }
 
-
-    TEST(pbft_viewchange, make_viewchange_makes_valid_message)
-    {
-        uint64_t new_view{4385967}; // next view number
-        uint64_t n{44}; // n = sequence # of last valid checkpoint
-        std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
-                {
-                    std::pair<bzn::uuid_t, std::string> {"uuid_0","checkpoint_0"}
-                    , std::pair<bzn::uuid_t, std::string> {"uuid_1","checkpoint_1"}
-                    , std::pair<bzn::uuid_t, std::string> {"uuid_2","checkpoint_2"}
-                    , std::pair<bzn::uuid_t, std::string> {"uuid_3","checkpoint_3"}
-                    , std::pair<bzn::uuid_t, std::string> {"uuid_4","checkpoint_4"}
-                };
-
-        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations;
-        uuid_t sender{"uuid_0"};
-
-        pbft_msg sut{pbft::make_viewchange(
-                new_view
-                , n
-                , stable_checkpoint_proof
-                , prepared_operations
-                )};
-
-        EXPECT_EQ(sut.type(), PBFT_MSG_VIEWCHANGE);
-        EXPECT_EQ(sut.view(), new_view);
-
-        std::unordered_map<bzn::uuid_t, std::string> sut_proofs;
-        for ( uint8_t i = 0 ; i < sut.checkpoint_messages_size() ; ++i )
-        {
-            const auto c = sut.checkpoint_messages(i);
-            LOG(debug) << c.length();
-            //sut_proofs.insert
-        }
-
-        std::set<std::shared_ptr<bzn::pbft_operation>> sut_prepared_operations;
-        for (uint8_t i = 0 ; i < sut.prepared_proofs_size() ; ++i )
-        {
-            LOG(debug) << sut.prepared_proofs(i).prepare_size();
-        }
-
-
-    }
-
-
     ////////////////////////////////////////////////////////////////////////////////////////
-    TEST_F(pbft_viewchange_test, is_valid_view)
-    {
-        this->build_pbft();
-        // initially the view should be valid
-        EXPECT_TRUE(this->pbft->is_view_valid());
-
-        // after a failure the view should be invalid
-        this->pbft->handle_failure();
-        EXPECT_FALSE(this->pbft->is_view_valid());
-    }
-
-    TEST_F(pbft_viewchange_test, make_viewchange_message)
-    {
-        const uint64_t new_view_index = 13124;
-        const uint64_t base_sequence_number = 9475;
-        std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof;
-        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations;
-
-        this->build_pbft();
-
-        pbft_msg viewchange = this->pbft->make_viewchange(
-                new_view_index
-                , base_sequence_number
-                , stable_checkpoint_proof
-                , prepared_operations
-        );
-
-        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
-        EXPECT_EQ(new_view_index, viewchange.view());
-        EXPECT_EQ(base_sequence_number, viewchange.sequence());
-
-        // TODO stable_checkpoint_proof and prepared_operations
 
 
 
 
-
-
-
-
-
-    }
-
-
-    TEST_F(pbft_viewchange_test, make_newview)
+    TEST_F(pbft_newview_test, make_newview)
     {
         const uint64_t                   new_view_index = 13124;
         std::vector<pbft_msg>            view_change_messages;
@@ -332,7 +241,7 @@ namespace bzn
     }
 
 
-    TEST_F(pbft_viewchange_test, build_newview)
+    TEST_F(pbft_newview_test, build_newview)
     {
         const uint64_t          new_view_index = 34867;
         std::vector<pbft_msg>   viewchange_messages;
@@ -351,7 +260,7 @@ namespace bzn
 
 
     // TODO fix "Failed to read pem file: "
-    TEST_F(pbft_viewchange_test, make_signed_envelope)
+    TEST_F(pbft_newview_test, make_signed_envelope)
     {
         this->build_pbft();
 
@@ -368,7 +277,7 @@ namespace bzn
         // TODO test signature...
     }
 
-    TEST_F(pbft_viewchange_test, validate_checkpoint)
+    TEST_F(pbft_newview_test, validate_checkpoint)
     {
 
         EXPECT_CALL(*mock_crypto, verify(_))
@@ -437,23 +346,8 @@ namespace bzn
 
     }
 
-
-    // is_valid_viewchange_message
-
-    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
-    {
-        this->build_pbft();
-
-        bzn_envelope envelope;
-        pbft_msg viewchange;
-
-        EXPECT_FALSE(this->pbft->is_valid_viewchange_message(viewchange, envelope));
-
-    }
-
-
     // bool is_valid_newview_message(const pbft_msg& msg) const;
-    TEST_F(pbft_viewchange_test, is_valid_newview_message)
+    TEST_F(pbft_newview_test, is_valid_newview_message)
     {
         this->build_pbft();
         pbft_msg newview;
@@ -463,31 +357,9 @@ namespace bzn
     }
 
 
-    // void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
-    TEST_F(pbft_viewchange_test, primary_handle_viewchange)
-    {
-        this->build_pbft();
-
-        pbft_msg msg;
-        bzn_envelope original_msg;
-        this->pbft->handle_viewchange(msg, original_msg);
-    }
-
-
-    TEST_F(pbft_viewchange_test, backup_handle_viewchange)
-    {
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-        pbft_msg msg;
-        bzn_envelope original_msg;
-
-        this->pbft->handle_viewchange(msg, original_msg);
-    }
-
 
     // void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
-    TEST_F(pbft_viewchange_test, primary_handle_newview)
+    TEST_F(pbft_newview_test, primary_handle_newview)
     {
         this->build_pbft();
 
@@ -499,7 +371,7 @@ namespace bzn
     }
 
     // void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
-    TEST_F(pbft_viewchange_test, backup_handle_newview)
+    TEST_F(pbft_newview_test, backup_handle_newview)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
@@ -511,7 +383,9 @@ namespace bzn
 
     }
 
-    TEST_F(pbft_viewchange_test, read_checkpoint_hashes)
+
+
+    TEST_F(pbft_newview_test, read_checkpoint_hashes)
     {
         this->build_pbft(true);
 
@@ -549,21 +423,13 @@ namespace bzn
         }
     }
 
-    TEST_F(pbft_viewchange_test, is_peer)
-    {
-        const bzn::peer_address_t NOT_PEER{  "127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
-        this->build_pbft();
-
-        for(const auto& peer : TEST_PEER_LIST)
-        {
-            EXPECT_TRUE(this->pbft->is_peer(peer.uuid));
-        }
-
-        EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
-    }
 
 
-//    TEST_F(pbft_viewchange_test, make_newview_makes_valid_message)
+
+
+
+
+//    TEST_F(pbft_newview_test, make_newview_makes_valid_message)
 //    {
 //        uint64_t new_view_index{12};
 //        std::set<std::string> viewchange_messages {"uuid_0","uuid_1","uuid_2","uuid_3",};
@@ -584,5 +450,60 @@ namespace bzn
 //        EXPECT_TRUE(sut_viewchange_messages == viewchange_messages);
 //    }
 
+
+
+
+
+    // TODO move the following tests to pbft_test
+    TEST_F(pbft_newview_test, test_is_peer)
+    {
+        const bzn::peer_address_t NOT_PEER{  "127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
+        this->build_pbft();
+
+        for(const auto& peer : TEST_PEER_LIST)
+        {
+            EXPECT_TRUE(this->pbft->is_peer(peer.uuid));
+        }
+
+        EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
+    }
+
+
+    TEST_F(pbft_newview_test, test_get_primary)
+    {
+        build_pbft();
+
+        // the pbft sut must be the current view's primay
+        EXPECT_EQ(this->uuid, this->pbft->get_primary().uuid);
+
+        this->pbft->view++;
+        EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
+
+        // given a view, get_primary must provide the address of a primare
+        for (size_t view{0} ; view<100 ; ++ view)
+        {
+            const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
+
+            const auto primary = std::find_if(
+                    TEST_PEER_LIST.begin()
+                    , TEST_PEER_LIST.end()
+                    , [&](const auto& peer)
+                    {
+                        return uuid==peer.uuid;
+                    });
+            EXPECT_TRUE(primary != TEST_PEER_LIST.end());
+        }
+    }
+
+    TEST_F(pbft_newview_test, is_valid_view)
+    {
+        this->build_pbft();
+        // initially the view should be valid
+        EXPECT_TRUE(this->pbft->is_view_valid());
+
+        // after a failure the view should be invalid
+        this->pbft->handle_failure();
+        EXPECT_FALSE(this->pbft->is_view_valid());
+    }
 
 }

@@ -115,9 +115,6 @@ namespace bzn
         void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_newview         (const pbft_msg& msg, const bzn_envelope& original_msg);
 
-//        void primary_handles_viewchange(const pbft_msg& msg);
-//        void replica_handles_viewchange(const pbft_msg& msg);
-
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
         void do_preprepared(const std::shared_ptr<pbft_operation>& op);
@@ -160,7 +157,6 @@ namespace bzn
         void clear_operations_until(const checkpoint_t&);
 
         bool initialize_configuration(const bzn::peers_list_t& peers);
-        bool in_swarm();
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
         const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
@@ -223,19 +219,27 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
-        FRIEND_TEST(pbft_viewchange_test, make_newview_makes_valid_message);
-        FRIEND_TEST(pbft_viewchange, make_viewchange_makes_valid_message);
-        FRIEND_TEST(pbft_viewchange_test, make_viewchange_message);
-        FRIEND_TEST(pbft_viewchange_test, make_newview);
-        FRIEND_TEST(pbft_viewchange_test, build_newview);
-        FRIEND_TEST(pbft_viewchange_test, make_signed_envelope);
-        FRIEND_TEST(pbft_viewchange_test, validate_checkpoint);
+
+
+        FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, primary_handle_viewchange);
         FRIEND_TEST(pbft_viewchange_test, backup_handle_viewchange);
-        FRIEND_TEST(pbft_viewchange_test, primary_handle_newview);
-        FRIEND_TEST(pbft_viewchange_test, backup_handle_newview);
-        FRIEND_TEST(pbft_viewchange_test, read_checkpoint_hashes);
-        FRIEND_TEST(pbft_viewchange_test, is_peer);
+        FRIEND_TEST(pbft_viewchange_test, make_viewchange_message);
+        FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
+
+
+        FRIEND_TEST(pbft_newview_test, make_newview_makes_valid_message);
+        FRIEND_TEST(pbft_newview_test, make_newview);
+        FRIEND_TEST(pbft_newview_test, build_newview);
+        FRIEND_TEST(pbft_newview_test, make_signed_envelope);
+        FRIEND_TEST(pbft_newview_test, validate_checkpoint);
+        FRIEND_TEST(pbft_newview_test, primary_handle_newview);
+        FRIEND_TEST(pbft_newview_test, backup_handle_newview);
+        FRIEND_TEST(pbft_newview_test, read_checkpoint_hashes);
+
+
+        FRIEND_TEST(pbft_newview_test, test_is_peer);
+        FRIEND_TEST(pbft_newview_test, test_get_primary);
 
         friend class pbft_proto_test;
 
@@ -244,7 +248,6 @@ namespace bzn
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
 
         std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
-        ///std::set<std::string> valid_new_view_messages; do not store these
 
         FRIEND_TEST(pbft_test, full_test);
 
@@ -259,11 +262,9 @@ namespace bzn
                 const std::map<uint64_t, bzn_envelope> &pre_prepare_messages
         );
 
-
         pbft_msg build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages);
 
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
-
 
         std::optional<bzn::checkpoint_t> validate_checkpoint(const pbft_msg& viewchange_message) const;
 
@@ -282,8 +283,6 @@ namespace bzn
         bool validate_preprepare_sequences(const pbft_msg& viewchange_msg, std::set<uint64_t>& sequences) const;
 
         bool validate_preprepare_request_hashes( const pbft_msg& viewchange_msg , std::set<std::string> request_hashes) const;
-
-
     };
 
 } // namespace bzn

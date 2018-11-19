@@ -12,7 +12,9 @@ set(test_srcs
     pbft_timestamp_test.cpp
     database_pbft_service_test.cpp
     pbft_proto_test.cpp
-    pbft_newview_test.cpp)
+    pbft_newview_test.cpp
+    pbft_viewchange_test.cpp
+    )
 
 set(test_libs pbft crypto options ${Protobuf_LIBRARIES} bootstrap storage)
 

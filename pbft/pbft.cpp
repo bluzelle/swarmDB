@@ -1570,7 +1570,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     LOG(debug) << "Handle_viewchange: " << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
 
-    // Does this need to be a valid view? What is a valid vew change messsage? For now check that it is for view + 1;
     if (this->is_valid_viewchange_message(msg, original_msg))
     {
         LOG(debug) << "handle_viewchange - adding valid viewchange message";
@@ -1604,6 +1603,8 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
+
+
     // When a replica recieves f + 1 view change messages it sends one as well
     // should it be == or >=  ?
     if (this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1)
@@ -1623,8 +1624,9 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     // When the primary of the new view recieves 2f valid view change messages for the new view
     // the primary of new view broadcasts NEWVIEW
-    if (this->valid_view_change_messages.size() == 2 * this->max_faulty_nodes()
-        && this->get_primary(msg.view()).uuid == this->get_uuid() )
+    if (
+            this->valid_view_change_messages.size() == 2 * this->max_faulty_nodes()
+            && this->get_primary(msg.view()).uuid == this->get_uuid() )
     {
         // create the newview and and broadcast it
 
@@ -1632,9 +1634,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
         // -- we want a of set<pbft_msg>
 
         std::vector<pbft_msg> viewchange_messages;
-
-
-
         for(const auto& view_change_msg : viewchange->second)
         {
             pbft_msg pbft_viewchange;
@@ -1646,9 +1645,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
             // Since sets require hashable objects we needed to use vectors and
             // do our own uniqueness testing.
-
-
-
             auto found_iter = std::find_if(
                     std::cbegin(viewchange_messages)
                     , std::cend(viewchange_messages)
@@ -1657,8 +1653,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
                             return !google::protobuf::util::MessageDifferencer::Equals(viewchange, pbft_viewchange);
                         }
                     );
-
-
             if ( found_iter == viewchange_messages.end())
             {
                 viewchange_messages.emplace_back(pbft_viewchange);
@@ -1688,6 +1682,7 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     this->view = msg.view();
 
+    // after moving to the new view processes the preprepares
     for (size_t i{0} ; i < static_cast<size_t>(msg.pre_prepare_messages_size()) ; ++i)
     {
         const bzn_envelope original_msg = msg.pre_prepare_messages(i);
