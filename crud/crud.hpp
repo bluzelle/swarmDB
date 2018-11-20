@@ -19,6 +19,7 @@
 #include <crud/subscription_manager_base.hpp>
 #include <node/node_base.hpp>
 #include <storage/storage_base.hpp>
+#include <shared_mutex>
 
 
 namespace bzn
@@ -28,7 +29,7 @@ namespace bzn
     public:
         crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager);
 
-        void handle_request(const database_msg& request, const std::shared_ptr<bzn::session_base>& session) override;
+        void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base>& session) override;
 
         void start() override;
 
@@ -40,41 +41,53 @@ namespace bzn
 
     private:
 
-        void handle_create_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_delete_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_has_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_create(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_create(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_read(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_read(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_update(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_update(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_delete(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_delete(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_has(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_has(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_keys(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_keys(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_size(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_size(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_subscribe(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_unsubscribe(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void send_response(const database_msg& request, bzn::storage_base::result result, database_response&& response,
-            std::shared_ptr<bzn::session_base>& session);
+        void send_response(const database_msg& request, bzn::storage_result result, database_response&& response,
+                           std::shared_ptr<bzn::session_base>& session);
+
+        // helpers...
+        std::pair<bool, Json::Value> get_database_permissions(const bzn::uuid_t& uuid) const;
+
+        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id) const;
+
+        bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& json) const;
+
+        bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& json) const;
 
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
 
-        using message_handler_t = std::function<void(const database_msg& request, std::shared_ptr<bzn::session_base> session)>;
+        using message_handler_t = std::function<void(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)>;
 
         std::unordered_map<database_msg::MsgCase, message_handler_t> message_handlers;
 
         std::once_flag start_once;
+
+        std::shared_mutex lock; // for multi-reader and single writer access
+
     };
 
 } // namespace bzn

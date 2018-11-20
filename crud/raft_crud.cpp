@@ -258,7 +258,7 @@ raft_crud::handle_size(const bzn::json_message& /*msg*/, const database_msg& req
 bool
 raft_crud::commit_create(const database_msg& msg)
 {
-    if (this->storage->create(msg.header().db_uuid(), msg.create().key(), msg.create().value()) != storage_base::result::ok)
+    if (this->storage->create(msg.header().db_uuid(), msg.create().key(), msg.create().value()) != bzn::storage_result::ok)
     {
         LOG(error) << "Request:" <<msg.header().transaction_id() << " Create failed";
         return false;
@@ -271,7 +271,7 @@ raft_crud::commit_create(const database_msg& msg)
 bool
 raft_crud::commit_update(const database_msg& msg)
 {
-    if (this->storage->update(msg.header().db_uuid(), msg.update().key(), msg.update().value()) != storage_base::result::ok)
+    if (this->storage->update(msg.header().db_uuid(), msg.update().key(), msg.update().value()) != bzn::storage_result::ok)
     {
         LOG(error) << "Request:" << msg.header().transaction_id() << " Update failed";
         return false;
@@ -284,7 +284,7 @@ raft_crud::commit_update(const database_msg& msg)
 bool
 raft_crud::commit_delete(const database_msg& msg)
 {
-    if (this->storage->remove(msg.header().db_uuid(), msg.delete_().key()) != storage_base::result::ok)
+    if (this->storage->remove(msg.header().db_uuid(), msg.delete_().key()) != bzn::storage_result::ok)
     {
         LOG(error) << "Request:" << msg.header().transaction_id() << " Delete failed";
         return false;

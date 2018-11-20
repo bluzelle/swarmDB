@@ -21,26 +21,26 @@
 using namespace bzn;
 
 
-storage_base::result
+bzn::storage_result
 mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
-        return storage_base::result::value_too_large;
+        return bzn::storage_result::value_too_large;
     }
 
     if (key.size() > bzn::MAX_KEY_SIZE)
     {
-        return storage_base::result::key_too_large;
+        return bzn::storage_result::key_too_large;
     }
 
     if (auto search = this->kv_store.find(uuid); search != this->kv_store.end())
     {
         if (search->second.find(key)!= search->second.end() )
         {
-            return storage_base::result::exists;
+            return bzn::storage_result::exists;
         }
     }
 
@@ -53,10 +53,10 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
     }
     else
     {
-        return storage_base::result::exists;
+        return bzn::storage_result::exists;
     }
 
-    return storage_base::result::ok;
+    return bzn::storage_result::ok;
 }
 
 
@@ -83,21 +83,21 @@ mem_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 }
 
 
-storage_base::result
+bzn::storage_result
 mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
-        return storage_base::result::value_too_large;
+        return bzn::storage_result::value_too_large;
     }
 
     auto search = this->kv_store.find(uuid);
 
     if (search == this->kv_store.end())
     {
-        return bzn::storage_base::result::not_found;
+        return bzn::storage_result::not_found;
     }
 
 
@@ -107,15 +107,15 @@ mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     if (inner_search == inner_db.end())
     {
-        return bzn::storage_base::result::not_found;
+        return bzn::storage_result::not_found;
     }
 
     inner_search->second = value;
-    return storage_base::result::ok;
+    return bzn::storage_result::ok;
 }
 
 
-storage_base::result
+bzn::storage_result
 mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
@@ -124,18 +124,18 @@ mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 
     if (search == this->kv_store.end())
     {
-        return storage_base::result::not_found;
+        return bzn::storage_result::not_found;
     }
 
     auto record = search->second.find(key);
 
     if (record == search->second.end())
     {
-        return storage_base::result::not_found;
+        return bzn::storage_result::not_found;
     }
 
     search->second.erase(record);
-    return storage_base::result::ok;
+    return bzn::storage_result::ok;
 }
 
 
@@ -196,7 +196,7 @@ mem_storage::get_size(const bzn::uuid_t& uuid)
 }
 
 
-storage_base::result
+bzn::storage_result
 mem_storage::remove(const bzn::uuid_t& uuid)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
@@ -205,10 +205,10 @@ mem_storage::remove(const bzn::uuid_t& uuid)
     {
         this->kv_store.erase(it);
 
-        return storage_base::result::ok;
+        return bzn::storage_result::ok;
     }
 
-    return storage_base::result::not_found;
+    return bzn::storage_result::not_found;
 }
 
 bool
