@@ -1203,7 +1203,7 @@ pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
 bool
 pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg ) const
 {
-    if (!this->is_peer(original_msg.sender()))
+    if (!this->is_peer(original_msg.sender()))// TODO: Ask Isabel if this is redundant...
     {
         return false;
     }
@@ -1221,8 +1221,8 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         bzn_envelope pre_prepare_envelope;
         if (
                 !pre_prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).pre_prepare())
-                && !this->is_peer(pre_prepare_envelope.sender())
-                && !this->crypto->verify(pre_prepare_envelope))
+                || !this->is_peer(pre_prepare_envelope.sender())
+                || !this->crypto->verify(pre_prepare_envelope))
         {
             return false;
         }
@@ -1230,7 +1230,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         pbft_msg preprepare_message;
         if (
                 !preprepare_message.ParseFromString(pre_prepare_envelope.pbft())
-                && !(preprepare_message.sequence() > valid_checkpoint->first ) )
+                || !( preprepare_message.sequence() > valid_checkpoint->first ) )
         {
             return false;
         }
@@ -1241,22 +1241,22 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         {
             if (
                     !prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).prepare(j))
-                    && !this->is_peer(prepare_envelope.sender())
-                    && !this->crypto->verify(prepare_envelope))
+                    || !this->is_peer(prepare_envelope.sender())
+                    || !this->crypto->verify(prepare_envelope))
             {
-                return false;
+                return false; // TODO: Isabel, should these be continue
             }
 
             // does is sequence number, view number and hash match those of the pre prepare
             if (
                 pbft_msg prepare_msg;
                     !prepare_msg.ParseFromString(prepare_envelope.pbft())
-                    && preprepare_message.sequence() != prepare_msg.sequence()
-                    && preprepare_message.view() != prepare_msg.view()
-                    && preprepare_message.request_hash() != prepare_msg.request_hash()
+                    || preprepare_message.sequence() != prepare_msg.sequence()
+                    || preprepare_message.view() != prepare_msg.view()
+                    || preprepare_message.request_hash() != prepare_msg.request_hash()
                     )
             {
-                return false;
+                return false; // TODO: Isabel, should these be continue
             }
 
             senders.insert(prepare_envelope.sender());
@@ -1268,7 +1268,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         }
     }
 
-    return this->validate_checkpoint(viewchange_message) != std::nullopt;
+    return valid_checkpoint != std::nullopt;
 }
 
 
@@ -1386,8 +1386,8 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         if (
                 bzn_envelope original_msg;
                 !original_msg.ParseFromString(viewchange_msg.viewchange_messages(i))
-                && !viewchange_msg.ParseFromString(original_msg.pbft())
-                && !this->is_valid_viewchange_message(viewchange_msg, original_msg)
+                || !viewchange_msg.ParseFromString(original_msg.pbft())
+                || !this->is_valid_viewchange_message(viewchange_msg, original_msg)
                 )
 
         {
