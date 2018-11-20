@@ -26,6 +26,7 @@ namespace bzn
     const std::string MSG_ELECTION_IN_PROGRESS = "ELECTION_IN_PROGRESS";
     const std::string MSG_RECORD_EXISTS = "RECORD_EXISTS";
     const std::string MSG_RECORD_NOT_FOUND = "RECORD_NOT_FOUND";
+    const std::string MSG_DATABASE_NOT_FOUND = "DATABASE_NOT_FOUND";
     const std::string MSG_INVALID_ARGUMENTS = "INVALID_ARGUMENTS";
     const std::string MSG_VALUE_SIZE_TOO_LARGE = "VALUE_SIZE_TOO_LARGE";
     const std::string MSG_KEY_SIZE_TOO_LARGE = "KEY_SIZE_TOO_LARGE";

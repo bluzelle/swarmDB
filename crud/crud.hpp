@@ -34,6 +34,12 @@ namespace bzn
 
     private:
 
+        void handle_create_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
+        void handle_delete_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
+        void handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
         void handle_create(const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
         void handle_read(const database_msg& request, std::shared_ptr<bzn::session_base> session);

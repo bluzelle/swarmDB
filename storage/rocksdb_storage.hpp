@@ -18,6 +18,7 @@
 #include <storage/storage_base.hpp>
 #include <options/options_base.hpp>
 #include <rocksdb/db.h>
+#include <shared_mutex>
 
 
 namespace bzn
@@ -41,9 +42,12 @@ namespace bzn
 
         std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) override;
 
+        storage_base::result remove(const bzn::uuid_t& uuid) override;
+
     private:
         std::unique_ptr<rocksdb::DB> db;
 
+        std::shared_mutex lock; // for multi-reader and single writer access
     };
 
 } // bzn

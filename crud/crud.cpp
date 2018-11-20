@@ -16,6 +16,11 @@
 
 using namespace bzn;
 
+namespace
+{
+    const std::string PERMISSION_UUID{"PERMS"};
+}
+
 
 crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager)
            : storage(std::move(storage))
@@ -28,7 +33,10 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
                               {database_msg::kKeys,   std::bind(&crud::handle_keys,   this, std::placeholders::_1, std::placeholders::_2)},
                               {database_msg::kSize,   std::bind(&crud::handle_size,   this, std::placeholders::_1, std::placeholders::_2)},
                               {database_msg::kSubscribe,   std::bind(&crud::handle_subscribe,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, std::placeholders::_1, std::placeholders::_2)}}
+                              {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, std::placeholders::_1, std::placeholders::_2)},
+                              {database_msg::kCreateDb,    std::bind(&crud::handle_create_db,   this, std::placeholders::_1, std::placeholders::_2)},
+                              {database_msg::kDeleteDb,    std::bind(&crud::handle_delete_db,   this, std::placeholders::_1, std::placeholders::_2)},
+                              {database_msg::kHasDb,       std::bind(&crud::handle_has_db,      this, std::placeholders::_1, std::placeholders::_2)}}
 {
 }
 
@@ -84,6 +92,10 @@ crud::send_response(const database_msg& request, const bzn::storage_base::result
         {
             response.mutable_error()->set_message(bzn::MSG_RECORD_NOT_FOUND);
         }
+        else if (result == storage_base::result::db_not_found)
+        {
+            response.mutable_error()->set_message(bzn::MSG_DATABASE_NOT_FOUND);
+        }
         else
         {
             LOG(error) << "unknown error code: " << uint32_t(result);
@@ -97,7 +109,12 @@ crud::send_response(const database_msg& request, const bzn::storage_base::result
 void
 crud::handle_create(const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    auto result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+    storage_base::result result{storage_base::result::db_not_found};
+
+    if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    {
+        result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+    }
 
     if (session)
     {
@@ -265,4 +282,73 @@ crud::handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::sessi
 
     // subscription manager will cleanup stale sessions...
     LOG(warning) << "session no longer available. UNSUBSCRIBE not executed.";
+}
+
+
+void
+crud::handle_create_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    storage_base::result result;
+
+    if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    {
+        result = storage_base::result::exists;
+    }
+    else
+    {
+        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), "<todo>");
+    }
+
+    if (session)
+    {
+        this->send_response(request, result, database_response(), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. CREATE DB response not sent.";
+}
+
+
+void
+crud::handle_delete_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    storage_base::result result;
+
+    if (!this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    {
+        result = storage_base::result::not_found;
+    }
+    else
+    {
+        result = this->storage->remove(PERMISSION_UUID, request.header().db_uuid());
+
+        this->storage->remove(request.header().db_uuid());
+    }
+
+    if (session)
+    {
+        this->send_response(request, result, database_response(), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. DELETE DB response not sent.";
+}
+
+
+void
+crud::handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    if (session)
+    {
+        const bool has_db = this->storage->has(PERMISSION_UUID, request.header().db_uuid());
+
+        this->send_response(request, (has_db) ? storage_base::result::ok : storage_base::result::not_found,
+            database_response(), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. HAS DB not executed.";
 }
