@@ -424,6 +424,18 @@ namespace bzn
     }
 
 
+    TEST_F(pbft_newview_test, test_validate_preprepare_sequences)
+    {
+        this->build_pbft();
+
+        pbft_msg viewchange_msg;
+        std::set<uint64_t> sequences;
+
+        EXPECT_FALSE(this->pbft->validate_preprepare_sequences( viewchange_msg, sequences));
+
+        EXPECT_TRUE(false); // test not written
+    }
+
 
 
 

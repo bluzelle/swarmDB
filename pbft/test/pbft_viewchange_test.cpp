@@ -264,6 +264,57 @@ namespace bzn
 
     }
 
+    TEST_F(pbft_viewchange_test, test_make_viewchange_output)
+    {
+        this->build_pbft();
+
+        size_t const oldview = this->pbft->get_view();
+
+        for(size_t i{0} ; i < 99 ; ++i)
+        {
+            run_transaction_through_primary();
+        }
+        prepare_for_checkpoint(100);
+
+
+        // expect checkpoint message
+        run_transaction_through_primary();
+        run_transaction_through_primary();
+        run_transaction_through_primary();
+
+
+        bzn_envelope viewchange_env;
+        EXPECT_CALL(*mock_node, send_message_str(_, _))
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message) {
+                    viewchange_env.ParseFromString(*encoded_message);
+                }));
+        this->pbft->handle_failure();
+
+
+        EXPECT_EQ(this->pbft->get_uuid(), viewchange_env.sender());
+
+        pbft_msg viewchange;
+        EXPECT_TRUE(viewchange.ParseFromString(viewchange_env.pbft()));
+
+        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
+
+        EXPECT_EQ(uint64_t(oldview + 1), viewchange.view());
+
+        EXPECT_EQ(uint64_t(103), viewchange.sequence());
+
+
+
+        LOG(debug) << viewchange.SerializeAsString();
+
+        EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, viewchange_env));
+
+
+
+
+
+
+    }
+
 
 
 
