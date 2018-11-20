@@ -50,6 +50,8 @@ namespace bzn
 
         const std::string& extract_payload(const bzn_envelope& msg);
 
+        const std::string deterministic_serialize(const bzn_envelope& msg);
+
         std::shared_ptr<bzn::options_base> options;
 
         EVP_PKEY_ptr_t private_key_EVP = EVP_PKEY_ptr_t(nullptr, &EVP_PKEY_free);

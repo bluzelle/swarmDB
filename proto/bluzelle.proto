@@ -20,18 +20,19 @@ message bzn_envelope
 {
     string sender = 1;
     bytes signature = 2;
+    uint64 timestamp = 3;
 
     oneof payload
     {
         bytes database_msg = 10;
         bytes pbft_internal_request = 11;
 
-        bytes database_response = 4;
-        bytes json = 5;
-        bytes audit = 6;
-        bytes pbft = 7;
-        bytes pbft_membership = 8;
-        bytes status_request = 9;
+        bytes database_response = 12;
+        bytes json = 13;
+        bytes audit = 14;
+        bytes pbft = 15;
+        bytes pbft_membership = 16;
+        bytes status_request = 17;
     }
 }
 

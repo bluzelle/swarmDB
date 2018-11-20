@@ -55,6 +55,7 @@ namespace bzn
         create->set_value(std::string("value_" + std::to_string(this->index)));
         dmsg->set_allocated_create(create);
         request.set_database_msg(dmsg->SerializeAsString());
+        request.set_timestamp(this->now());
 
         pbft->handle_request(request);
 

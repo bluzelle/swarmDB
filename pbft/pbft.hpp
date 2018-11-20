@@ -153,8 +153,8 @@ namespace bzn
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
         timestamp_t now() const;
-        bool already_seen_request(const pbft_request& msg, const request_hash_t& hash) const;
-        void saw_request(const pbft_request& msg, const request_hash_t& hash);
+        bool already_seen_request(const bzn_envelope& msg, const request_hash_t& hash) const;
+        void saw_request(const bzn_envelope& msg, const request_hash_t& hash);
 
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf

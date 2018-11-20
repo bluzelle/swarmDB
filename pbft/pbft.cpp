@@ -271,24 +271,23 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
-    if (msg.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || msg.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
+    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
-            << original_msg.toStyledString();
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
         return;
     }
 
     auto hash = this->crypto->hash(request_env);
 
     // keep track of what requests we've seen based on timestamp and only send preprepares once
-    if (this->already_seen_request(msg, hash))
+    if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << original_msg.toStyledString();
+        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString();
         return;
     }
-    this->saw_request(msg, hash);
+    this->saw_request(request_env, hash);
 
     //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
     auto op = setup_request_operation(request_env, session);
@@ -929,14 +928,12 @@ pbft::max_faulty_nodes() const
 void
 pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
-    *response.mutable_header() = msg.db().header();
-
-    pbft_request req;
-    *req.mutable_operation() = msg.db();
-    req.set_timestamp(this->now()); //TODO: the timestamp needs to come from the client
+    // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
+    bzn_envelope mutable_msg(msg);
+    mutable_msg.set_timestamp(this->now());
 
     LOG(debug) << "got database message";
-    this->handle_request(msg, session);
+    this->handle_request(mutable_msg, session);
 
     database_response response;
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
@@ -1118,19 +1115,19 @@ pbft::now() const
 }
 
 void
-pbft::saw_request(const pbft_request& req, const request_hash_t& hash)
+pbft::saw_request(const bzn_envelope& req, const request_hash_t& hash)
 {
     this->recent_requests.insert(std::make_pair(req.timestamp(),
-        std::make_pair(req.client(), hash)));
+        std::make_pair(req.sender(), hash)));
 }
 
 bool
-pbft::already_seen_request(const pbft_request& req, const request_hash_t& hash) const
+pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) const
 {
     auto range = this->recent_requests.equal_range(req.timestamp());
     for (auto r = range.first; r != range.second; r++)
     {
-        if (r->second.first == req.client() && r->second.second == hash)
+        if (r->second.first == req.sender() && r->second.second == hash)
         {
             return true;
         }

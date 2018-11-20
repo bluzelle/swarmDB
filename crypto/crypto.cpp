@@ -76,6 +76,28 @@ crypto::extract_payload(const bzn_envelope& msg)
     }
 }
 
+const std::string
+crypto::deterministic_serialize(const bzn_envelope& msg)
+{
+    // I don't like hand-rolling this, but doing it here lets us do it in one place, while avoiding implementing
+    // it for every message type
+
+    std::vector<std::string> tokens = {msg.sender(), std::to_string(msg.payload_case()), this->extract_payload(msg), std::to_string(msg.timestamp())};
+
+    // this construction defeats an attack where the adversary blurs the lines between the fields. if we simply
+    // concatenate the fields, then consider the two messages
+    //     {sender: "foo", payload: "bar"}
+    //     {sender: "foobar", payload: ""}
+    // they may have the same serialization - and therefore the same signature.
+    std::string result = "";
+    for (const auto& token : tokens)
+    {
+        result += (std::to_string(token.length()) + "|" + token);
+    }
+
+    return result;
+}
+
 bool
 crypto::verify(const bzn_envelope& msg)
 {
@@ -90,11 +112,12 @@ crypto::verify(const bzn_envelope& msg)
         return false;
     }
 
+    const auto msg_text = this->deterministic_serialize(msg);
+
     // In openssl 1.0.1 (but not newer versions), EVP_DigestVerifyFinal strangely expects the signature as
     // a non-const pointer.
     std::string signature = msg.signature();
     char* sig_ptr = signature.data();
-
 
     bool result =
             // Reconstruct the PEM file in memory (this is awkward, but it avoids dealing with EC specifics)
@@ -109,7 +132,7 @@ crypto::verify(const bzn_envelope& msg)
 
             // Perform the signature validation
             && (1 == EVP_DigestVerifyInit(context.get(), NULL, EVP_sha512(), NULL, key.get()))
-            && (1 == EVP_DigestVerifyUpdate(context.get(), this->extract_payload(msg).c_str(), this->extract_payload(msg).length()))
+            && (1 == EVP_DigestVerifyUpdate(context.get(), msg_text.c_str(), msg_text.length()))
             && (1 == EVP_DigestVerifyFinal(context.get(), reinterpret_cast<unsigned char*>(sig_ptr), msg.signature().length()));
 
     /* Any errors here can be attributed to a bad (potentially malicious) incoming message, and we we should not
@@ -134,13 +157,15 @@ crypto::sign(bzn_envelope& msg)
         return false;
     }
 
+    const auto msg_text = this->deterministic_serialize(msg);
+
     EVP_MD_CTX_ptr_t context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
     size_t signature_length = 0;
 
     bool result =
             (bool) (context)
             && (1 == EVP_DigestSignInit(context.get(), NULL, EVP_sha512(), NULL, this->private_key_EVP.get()))
-            && (1 == EVP_DigestSignUpdate(context.get(), this->extract_payload(msg).c_str(), this->extract_payload(msg).length()))
+            && (1 == EVP_DigestSignUpdate(context.get(), msg_text.c_str(), msg_text.length()))
             && (1 == EVP_DigestSignFinal(context.get(), NULL, &signature_length));
 
     auto deleter = [](unsigned char* ptr){OPENSSL_free(ptr);};
@@ -215,10 +240,7 @@ crypto::hash(const std::string& msg)
 std::string
 crypto::hash(const bzn_envelope& msg)
 {
-    // We are assuming that msg.sender() and msg.payload_case() have
-    // constant-ish length, which is probably true if the signature was checked
-    // on the way in
-    return this->hash(msg.sender() + std::to_string(msg.payload_case()) + this->extract_payload(msg));
+    return this->hash(this->deterministic_serialize(msg));
 }
 
 void

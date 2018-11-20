@@ -66,8 +66,8 @@ namespace bzn
         { return this->pbft->now(); }
 
         // send request to pbft
-        void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr)
-        { this->pbft->handle_request(msg, original_msg, session); }
+        void handle_request(const bzn_envelope& msg, const std::shared_ptr<session_base>& session = nullptr)
+        { this->pbft->handle_request(msg, session); }
     };
 }
 
