@@ -86,6 +86,7 @@ pbft_operation::record_request(const bzn_envelope& wrapped_request)
         if (!this->parsed_db.ParseFromString(wrapped_request.database_msg()))
         {
             LOG(error) << "Failed to parse database request";
+            LOG(error) << wrapped_request.database_msg();
             return;
         }
     }
