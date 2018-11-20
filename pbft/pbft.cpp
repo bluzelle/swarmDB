@@ -271,10 +271,11 @@ pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_
         return;
     }
 
-    if (msg.timestamp() < (this->now() - MAX_REQUEST_AGE_MS))
+    if (msg.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || msg.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting old request: " << original_msg.toStyledString();
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
+            << original_msg.toStyledString();
         return;
     }
 
