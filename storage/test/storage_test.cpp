@@ -254,3 +254,13 @@ TYPED_TEST(storageTest, test_that_storage_fails_to_update_with_a_value_that_exce
     EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
     EXPECT_EQ(expected_value, *this->storage->read(USER_UUID, KEY));
 }
+
+
+TYPED_TEST(storageTest, test_that_storage_can_remove_all_keys_values_associated_with_a_uuid)
+{
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key1", ""));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key2", ""));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key3", ""));
+    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->remove(USER_UUID));
+    EXPECT_EQ(std::nullopt, this->storage->read(USER_UUID, KEY));
+}

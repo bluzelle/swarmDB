@@ -37,6 +37,10 @@ message database_msg
         database_unsubscribe    unsubscribe = 10;
 
         database_nullmsg        nullmsg = 11;
+
+        database_request        create_db = 12;
+        database_request        delete_db = 13;
+        database_has_db         has_db = 14;
     }
 }
 
@@ -84,6 +88,8 @@ message database_has
     string key = 1;
 }
 
+message database_has_db{}
+
 message database_subscription_update
 {
     enum operation_type
@@ -111,6 +117,12 @@ message database_redirect_response
 message database_has_response
 {
     string key = 1;
+    bool has = 2;
+}
+
+message database_has_db_response
+{
+    string uuid = 1;
     bool has = 2;
 }
 
@@ -151,6 +163,7 @@ message database_response
         database_keys_response          keys = 6;
         database_size_response          size = 7;
         database_error                  error = 8;
+        database_has_db_response        has_db = 9;
     }
 }
 

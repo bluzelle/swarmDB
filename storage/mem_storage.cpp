@@ -190,3 +190,19 @@ mem_storage::get_size(const bzn::uuid_t& uuid)
 
     return std::make_pair(keys, size);
 }
+
+
+storage_base::result
+mem_storage::remove(const bzn::uuid_t& uuid)
+{
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    if (auto it = this->kv_store.find(uuid); it != this->kv_store.end())
+    {
+        this->kv_store.erase(it);
+
+        return storage_base::result::ok;
+    }
+
+    return storage_base::result::not_found;
+}

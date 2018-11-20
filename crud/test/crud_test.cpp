@@ -42,6 +42,39 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.error().message(), bzn::MSG_DATABASE_NOT_FOUND);
+        }));
+
+    crud.handle_request(msg, session);
+
+    // now create the db...
+    msg.release_create();
+    msg.mutable_create_db();
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
+
+    crud.handle_request(msg, session);
+
+    // now test creates...
+    msg.release_create_db();
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -101,6 +134,12 @@ TEST(crud, test_that_read_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test reads...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -158,6 +197,12 @@ TEST(crud, test_that_update_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test updates...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -216,6 +261,12 @@ TEST(crud, test_that_delete_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test deletes...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -267,6 +318,12 @@ TEST(crud, test_that_has_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test has...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -322,6 +379,12 @@ TEST(crud, test_that_keys_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test keys...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key1");
     msg.mutable_create()->set_value("value");
 
@@ -387,6 +450,12 @@ TEST(crud, test_that_size_sends_proper_response)
 
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud.handle_request(msg, nullptr);
+
+    // test size...
+    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -437,7 +506,7 @@ TEST(crud, test_that_size_sends_proper_response)
 }
 
 
-TEST(curd, test_that_subscribe_request_calls_subscription_manager)
+TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
@@ -469,7 +538,7 @@ TEST(curd, test_that_subscribe_request_calls_subscription_manager)
 }
 
 
-TEST(curd, test_that_unsubscribe_request_calls_subscription_manager)
+TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
@@ -496,6 +565,130 @@ TEST(curd, test_that_unsubscribe_request_calls_subscription_manager)
         msg.unsubscribe().transaction_id(), _, _));
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request(msg, mock_session);
+}
+
+
+TEST(crud, test_that_has_db_request_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // has db...
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_has_db();
+
+    // nothing should happen...
+    crud.handle_request(msg, nullptr);
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+        }));
+
+    crud.handle_request(msg, mock_session);
+}
+
+
+TEST(crud, test_that_create_db_request_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // create database...
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create_db();
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            EXPECT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
+
+    crud.handle_request(msg, mock_session);
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
+        }));
+
+    // try to create it again...
+    crud.handle_request(msg, mock_session);
+}
+
+
+TEST(crud, test_that_delete_db_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // delete database...
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_delete_db();
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+        }));
+
+    crud.handle_request(msg, mock_session);
+
+    // create a database...
+    msg.release_delete_db();
+    msg.mutable_create_db();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request(msg, mock_session);
+
+    // delete database...
+    msg.release_create_db();
+    msg.mutable_delete_db();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
 
     crud.handle_request(msg, mock_session);
 }
