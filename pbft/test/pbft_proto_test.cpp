@@ -53,6 +53,7 @@ namespace bzn
 
         auto request = new pbft_request();
         request->set_type(PBFT_REQ_DATABASE);
+        request->set_timestamp(this->now());
         auto dmsg = new database_msg;
         auto create = new database_create;
         create->set_key(std::string("key_" + std::to_string(++this->index)));

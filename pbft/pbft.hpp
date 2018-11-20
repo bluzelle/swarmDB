@@ -32,12 +32,14 @@ namespace
     const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
+    const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
 }
 
 namespace bzn
 {
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
+    using timestamp_t = uint64_t;
 
     class pbft final : public bzn::pbft_base, public bzn::status_provider_base, public std::enable_shared_from_this<pbft>
     {
@@ -115,7 +117,7 @@ namespace bzn
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn::encoded_message& msg
-            , const std::shared_ptr<session_base>& session = nullptr);
+            , const request_hash_t& hash, const std::shared_ptr<session_base>& session = nullptr);
 
         void broadcast(const bzn::encoded_message& message);
 
@@ -149,6 +151,11 @@ namespace bzn
 
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
+        timestamp_t now() const;
+        bool already_seen_request(const pbft_request& msg, const request_hash_t& hash) const;
+        void saw_request(const pbft_request& msg, const request_hash_t& hash);
+
+
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
@@ -181,6 +188,8 @@ namespace bzn
         std::set<checkpoint_t> local_unstable_checkpoints;
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
         pbft_config_store configurations;
+
+        std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
 
         FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
         FRIEND_TEST(pbft_test, valid_leave_request_test);
