@@ -60,6 +60,14 @@ namespace bzn
 
         // current view
         uint64_t view = 1;
+
+        // get the current time in milliseconds
+        uint64_t now()
+        { return this->pbft->now(); }
+
+        // send request to pbft
+        void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr)
+        { this->pbft->handle_request(msg, original_msg, session); }
     };
 }
 
