@@ -227,7 +227,12 @@ raft::request_vote_request()
             // todo: use resolver on hostname...
             auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
 
-            this->node->send_message(ep, std::make_shared<bzn::json_message>(bzn::create_request_vote_request(this->uuid, this->current_term, this->raft_log->size(), this->last_log_term)));
+            this->node->send_message_json(ep, std::make_shared<bzn::json_message>(bzn::create_request_vote_request(
+                                        this->uuid
+                                        , this->current_term
+                                        , this->raft_log->size()
+                                        , this->last_log_term
+                                )));
         }
         catch(const std::exception& ex)
         {
@@ -847,7 +852,7 @@ raft::notify_leader_status()
     for (const auto& peer : this->get_all_peers())
     {
         auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
-        this->node->send_message(ep, json_ptr);
+        this->node->send_message_json(ep, json_ptr);
     }
 }
 
@@ -872,7 +877,7 @@ raft::notify_commit(size_t log_index, const std::string& operation)
     for (const auto& peer : this->get_all_peers())
     {
         auto ep = boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string(peer.host), peer.port};
-        this->node->send_message(ep, json_ptr);
+        this->node->send_message_json(ep, json_ptr);
     }
 }
 
@@ -917,7 +922,7 @@ raft::request_append_entries()
 
             LOG(debug) << "Sending request:\n" << req->toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
 
-            this->node->send_message(ep, req);
+            this->node->send_message_json(ep, req);
         }
         catch(const std::exception& ex)
         {
@@ -1477,7 +1482,7 @@ raft::auto_add_peer_if_required()
     msg["bzn-api"] = "raft";
     msg["cmd"] = "get_peers";
     LOG(debug) << "RAFT - sending get_peers to [" << end_point.address().to_string() << ":" << end_point.port() << "]";
-    this->node->send_message(end_point, std::make_shared<bzn::json_message>(msg));
+    this->node->send_message_json(end_point, std::make_shared<bzn::json_message>(msg));
 }
 
 
@@ -1539,7 +1544,6 @@ raft::add_self_to_swarm()
     LOG(debug) << "RAFT sending add_peer command to the leader:\n" << request.toStyledString();
 
 
-
-    this->node->send_message(end_point, std::make_shared<bzn::json_message>(request));
+    this->node->send_message_json(end_point, std::make_shared<bzn::json_message>(request));
 }
 

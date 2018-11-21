@@ -199,7 +199,7 @@ namespace bzn
         //  2) I'm the follower, here's the leader
         //  3) I'm a candidate, there might be an election happening, try later
         // We will handle the first option:
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly( Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly( Invoke(
                 [&](const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<bzn::json_message> msg)
                 {
                     const auto request = *msg;
@@ -262,7 +262,7 @@ namespace bzn
         //  3) I'm a candidate, there might be an election happening, try later
         // Handling option 2, ask follower, follower returns Leader, ask leader
         bzn::json_message response;
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly( Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly( Invoke(
                 [&](const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
                 {
                     const auto request = *msg;
@@ -353,7 +353,7 @@ namespace bzn
         //  1) I'm the leader here are the peers
         //  2) I'm the follower, here's the leader
         //  3) I'm a candidate, there might be an election happening, try later
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly( Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly( Invoke(
                 [&](const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
                 {
                     static size_t count;
@@ -455,7 +455,7 @@ namespace bzn
         //  1) I'm the leader here are the peers
         //  2) I'm the follower, here's the leader
         //  3) I'm a candidate, there might be an election happening, try later
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly( Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly( Invoke(
                 [&](const boost::asio::ip::tcp::endpoint& /*ep*/, std::shared_ptr<bzn::json_message> msg)
                 {
                     static size_t count;

@@ -33,27 +33,22 @@ namespace bzn
         auto dmsg = new database_msg;
         dmsg->set_allocated_create(create);
 
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        request->set_allocated_operation(dmsg);
+        auto request = new bzn_envelope();
+        request->set_database_msg(dmsg->SerializeAsString());
         request->set_timestamp(this->now());
-        request->set_client(TEST_NODE_UUID);
-
-        bzn::json_message json_msg;
-        json_msg["msg"] = request->SerializeAsString();
+        request->set_sender(TEST_NODE_UUID);
 
         // the first time we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request, json_msg);
+        this->handle_request(*request);
 
-        auto request2 = new pbft_request(*request);
-        auto json_msg2 = json_msg;
+        auto request2 = new bzn_envelope(*request);
 
         // this time no pre-prepare should be issued
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(0));
-        this->handle_request(*request2, json_msg2);
+        this->handle_request(*request2);
     }
 
     TEST_F(pbft_proto_test, similar_request_generates_preprepare)
@@ -68,31 +63,25 @@ namespace bzn
         auto dmsg = new database_msg;
         dmsg->set_allocated_create(create);
 
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        request->set_allocated_operation(dmsg);
+        auto request = new bzn_envelope();
+        request->set_database_msg(dmsg->SerializeAsString());
         request->set_timestamp(this->now());
-        request->set_client(TEST_NODE_UUID);
-
-        bzn::json_message json_msg;
-        json_msg["msg"] = request->SerializeAsString();
+        request->set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request, json_msg);
+        this->handle_request(*request);
 
 
         // send a second message the same as first but with a slightly different timestamp
-        auto request2 = new pbft_request(*request);
+        auto request2 = new bzn_envelope(*request);
         request2->set_timestamp(request2->timestamp() + 1);
-        bzn::json_message json_msg2;
-        json_msg2["msg"] = request2->SerializeAsString();
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request2, json_msg2);
+        this->handle_request(*request2);
 
 
         // send a third message the same as first but with same timestamp and different operation
@@ -102,15 +91,13 @@ namespace bzn
 
         auto dmsg3 = new database_msg;
         dmsg3->set_allocated_create(create3);
-        auto request3 = new pbft_request(*request);
-        request3->set_allocated_operation(dmsg3);
-        bzn::json_message json_msg3;
-        json_msg3["msg"] = request3->SerializeAsString();
+        auto request3 = new bzn_envelope(*request);
+        request3->set_database_msg(dmsg3->SerializeAsString());
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request3, json_msg3);
+        this->handle_request(*request3);
     }
 
     TEST_F(pbft_proto_test, same_request_from_different_client_generates_preprepare)
@@ -125,30 +112,24 @@ namespace bzn
         auto dmsg = new database_msg;
         dmsg->set_allocated_create(create);
 
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        request->set_allocated_operation(dmsg);
+        auto request = new bzn_envelope();
+        request->set_database_msg(dmsg->SerializeAsString());
         request->set_timestamp(this->now());
-        request->set_client(TEST_NODE_UUID);
-
-        bzn::json_message json_msg;
-        json_msg["msg"] = request->SerializeAsString();
+        request->set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request, json_msg);
+        this->handle_request(*request);
 
         // send a second message the same as first but from different client
-        auto request2 = new pbft_request(*request);
-        request2->set_client(SECOND_NODE_UUID);
-        bzn::json_message json_msg2;
-        json_msg2["msg"] = request2->SerializeAsString();
+        auto request2 = new bzn_envelope(*request);
+        request2->set_sender(SECOND_NODE_UUID);
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
-        this->handle_request(*request2, json_msg2);
+        this->handle_request(*request2);
     }
 
     TEST_F(pbft_proto_test, old_request_is_rejected)
@@ -162,19 +143,15 @@ namespace bzn
         auto dmsg = new database_msg;
         dmsg->set_allocated_create(create);
 
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        request->set_allocated_operation(dmsg);
-        request->set_timestamp(this->now() - MAX_REQUEST_AGE_MS - 1);
-        request->set_client(TEST_NODE_UUID);
-
-        bzn::json_message json_msg;
-        json_msg["msg"] = request->SerializeAsString();
+        auto request = new bzn_envelope();
+        request->set_database_msg(dmsg->SerializeAsString());
+        request->set_timestamp(0);
+        request->set_sender(TEST_NODE_UUID);
 
         // we should NOT get pre-prepare messages since this is an old request
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(0));
-        this->handle_request(*request, json_msg);
+        this->handle_request(*request);
     }
 
     TEST_F(pbft_proto_test, range_test)

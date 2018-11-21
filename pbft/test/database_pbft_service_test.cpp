@@ -74,7 +74,10 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_base::result::ok));
 
     auto operation = std::make_shared<bzn::pbft_operation>(0, 1, "somehash", nullptr);
-    operation->record_request("pretend this is a request");
+    database_msg dmsg;
+    bzn_envelope request;
+    request.set_database_msg(dmsg.SerializeAsString());
+    operation->record_request(request);
 
     EXPECT_THROW(dps.apply_operation(operation), std::runtime_error);
 }
@@ -88,38 +91,42 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
 
-    pbft_request msg;
-    msg.mutable_operation()->mutable_header()->set_db_uuid(TEST_UUID);
-    msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(123));
-    msg.mutable_operation()->mutable_create()->set_key("key2");
-    msg.mutable_operation()->mutable_create()->set_value("value2");
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid(TEST_UUID);
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key2");
+    msg.mutable_create()->set_value("value2");
 
     auto operation2 = std::make_shared<bzn::pbft_operation>(0, 2, "somehasha", nullptr);
-    operation2->record_request(msg.SerializeAsString());
+    bzn_envelope env;
+    env.set_database_msg(msg.SerializeAsString());
+    operation2->record_request(env);
 
     dps.apply_operation(operation2);
 
     ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
 
-    msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(321));
-    msg.mutable_operation()->mutable_create()->set_key("key3");
-    msg.mutable_operation()->mutable_create()->set_value("value3");
+    msg.mutable_header()->set_transaction_id(uint64_t(321));
+    msg.mutable_create()->set_key("key3");
+    msg.mutable_create()->set_value("value3");
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
     auto operation3 = std::make_shared<bzn::pbft_operation>(0, 3, "somehashb", nullptr);
-    operation3->record_request(msg.SerializeAsString());
+    env.set_database_msg(msg.SerializeAsString());
+    operation3->record_request(env);
     operation3->set_session(mock_session);
 
     dps.apply_operation(operation3);
 
     ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
 
-    msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(321));
-    msg.mutable_operation()->mutable_create()->set_key("key1");
-    msg.mutable_operation()->mutable_create()->set_value("value1");
+    msg.mutable_header()->set_transaction_id(uint64_t(321));
+    msg.mutable_create()->set_key("key1");
+    msg.mutable_create()->set_value("value1");
 
     auto operation1 = std::make_shared<bzn::pbft_operation>(0, 1, "somehashc", nullptr);
-    operation1->record_request(msg.SerializeAsString());
+    env.set_database_msg(msg.SerializeAsString());
+    operation1->record_request(env);
     operation1->set_session(std::make_shared<bzn::Mocksession_base>());
 
     EXPECT_CALL(*mock_io_context, post(_)).Times(3);
@@ -165,14 +172,16 @@ namespace test
 {
     void do_operation(uint64_t seq, bzn::database_pbft_service &dps)
     {
-        pbft_request msg;
-        msg.mutable_operation()->mutable_header()->set_db_uuid(TEST_UUID);
-        msg.mutable_operation()->mutable_header()->set_transaction_id(uint64_t(seq));
-        msg.mutable_operation()->mutable_create()->set_key("key" + std::to_string(seq));
-        msg.mutable_operation()->mutable_create()->set_value("value" + std::to_string(seq));
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid(TEST_UUID);
+        msg.mutable_header()->set_transaction_id(uint64_t(seq));
+        msg.mutable_create()->set_key("key" + std::to_string(seq));
+        msg.mutable_create()->set_value("value" + std::to_string(seq));
 
         auto operation = std::make_shared<bzn::pbft_operation>(0, seq, "somehash" + std::to_string(seq), nullptr);
-        operation->record_request(msg.SerializeAsString());
+        bzn_envelope env;
+        env.set_database_msg(msg.SerializeAsString());
+        operation->record_request(env);
         dps.apply_operation(operation);
     }
 

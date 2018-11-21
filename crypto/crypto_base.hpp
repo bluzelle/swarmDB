@@ -36,11 +36,17 @@ namespace bzn
         virtual bool verify(const bzn_envelope& msg) = 0;
 
         /*
-         * Compute the hash of some message
+         * Compute the hash of some string
          * @msg data
          * @return hash value
          */
         virtual std::string hash(const std::string& msg) = 0;
+
+        /*
+         * @msg data
+         * @return hash value
+         */
+        virtual std::string hash(const bzn_envelope& msg) = 0;
 
         virtual ~crypto_base() = default;
     };

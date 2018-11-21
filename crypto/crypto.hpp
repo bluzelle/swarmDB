@@ -35,6 +35,8 @@ namespace bzn
 
         std::string hash(const std::string& msg) override;
 
+        std::string hash(const bzn_envelope& msg) override;
+
     private:
 
         using EC_KEY_ptr_t = std::unique_ptr<EC_KEY, decltype(&::EC_KEY_free)>;
@@ -47,6 +49,8 @@ namespace bzn
         void log_openssl_errors();
 
         const std::string& extract_payload(const bzn_envelope& msg);
+
+        const std::string deterministic_serialize(const bzn_envelope& msg);
 
         std::shared_ptr<bzn::options_base> options;
 

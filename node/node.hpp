@@ -40,9 +40,9 @@ namespace bzn
 
         void start() override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) override;
+        void send_message_json(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg);
+        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) override;
 
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 

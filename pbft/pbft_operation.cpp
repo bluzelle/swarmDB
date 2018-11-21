@@ -32,7 +32,19 @@ pbft_operation::has_request() const
     return this->request_saved;
 }
 
-const pbft_request&
+bool
+pbft_operation::has_db_request() const
+{
+    return this->has_request() && this->request.payload_case() == bzn_envelope::kDatabaseMsg;
+}
+
+bool
+pbft_operation::has_config_request() const
+{
+    return this->has_request() && this->request.payload_case() == bzn_envelope::kPbftInternalRequest;
+}
+
+const bzn_envelope&
 pbft_operation::get_request() const
 {
     if (!this->request_saved)
@@ -40,33 +52,61 @@ pbft_operation::get_request() const
         throw std::runtime_error("Tried to get a request that is not saved");
     }
 
-    return this->parsed_request;
+    return this->request;
 }
 
-const bzn::encoded_message&
-pbft_operation::get_encoded_request() const
+const pbft_config_msg&
+pbft_operation::get_config_request() const
 {
-    if (!this->request_saved)
+    if (!this->has_config_request())
     {
-        throw std::runtime_error("Tried to get a request that is not saved");
+        throw std::runtime_error("Tried to get a config request that is not saved");
     }
 
-    return this->encoded_request;
+    return this->parsed_config;
+}
+
+const database_msg&
+pbft_operation::get_database_msg() const
+{
+    if (!this->has_db_request())
+    {
+        throw std::runtime_error("Tried to get a db request that is not saved");
+    }
+
+    return this->parsed_db;
 }
 
 void
-pbft_operation::record_request(const bzn::encoded_message& wrapped_request)
+pbft_operation::record_request(const bzn_envelope& wrapped_request)
 {
-    // not actually parsing the request because, for now, its still json
-    this->encoded_request = wrapped_request;
 
-    if (this->parsed_request.ParseFromString(wrapped_request))
+    if (wrapped_request.payload_case() == bzn_envelope::kDatabaseMsg)
     {
-        LOG(error) << "Tried to record request as something not a valid request (perhaps an old json request?)";
-        // We don't consider this a failure case, for now, because it could be an old json request
+        if (!this->parsed_db.ParseFromString(wrapped_request.database_msg()))
+        {
+            LOG(error) << "Failed to parse database request";
+            LOG(error) << wrapped_request.database_msg();
+            return;
+        }
+    }
+    else if (wrapped_request.payload_case() == bzn_envelope::kPbftInternalRequest)
+    {
+        if (!this->parsed_config.ParseFromString(wrapped_request.pbft_internal_request()))
+        {
+            LOG(error) << "Failed to parse pbft internal request";
+            return;
+        }
+    }
+    else
+    {
+        LOG(error) << "Tried to record request as envelope that does not actually contain a request type";
+        return;
     }
 
+    this->request = wrapped_request;
     this->request_saved = true;
+
 }
 
 void
@@ -149,7 +189,7 @@ pbft_operation::get_state() const
 std::string
 pbft_operation::debug_string() const
 {
-    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->parsed_request.ShortDebugString());
+    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
 }
 
 void

@@ -26,7 +26,7 @@ namespace bzn
         std::shared_ptr<pbft_operation> send_request();
 
         // send a preprepare message to SUT
-        void send_preprepare(uint64_t sequence, const bzn::encoded_message& request);
+        void send_preprepare(uint64_t sequence, const bzn_envelope& request);
 
         // send fake prepares from all nodes to SUT
         void send_prepares(uint64_t sequence, const bzn::hash_t& request_hash);
@@ -66,8 +66,8 @@ namespace bzn
         { return this->pbft->now(); }
 
         // send request to pbft
-        void handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session = nullptr)
-        { this->pbft->handle_request(msg, original_msg, session); }
+        void handle_request(const bzn_envelope& msg, const std::shared_ptr<session_base>& session = nullptr)
+        { this->pbft->handle_request(msg, session); }
     };
 }
 

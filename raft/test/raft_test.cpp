@@ -437,7 +437,7 @@ namespace bzn
 
         // we should see requests for votes... and then the Append Requests
         // The "+1" is raft asking if it is in the swarm
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2 + 1);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2 + 1);
 
         // expire timer...
         wh(boost::system::error_code());
@@ -484,7 +484,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size());
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times(TEST_PEER_LIST.size());
 
         // expire timer...
         wh(boost::system::error_code());
@@ -538,7 +538,7 @@ namespace bzn
 
         // we should see requests for votes...
         std::vector<bzn::message_handler> mh_req;
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times(TEST_PEER_LIST.size() - 1).WillRepeatedly(Invoke(
             [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "RequestVote");
@@ -549,7 +549,7 @@ namespace bzn
 
         // heartbeat timer expired and we should be sending requests...
         std::vector<bzn::message_handler> mh_resp;
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2).WillRepeatedly(Invoke(
             [&](const auto&, const auto& msg)
             {
                 EXPECT_EQ((*msg)["cmd"].asString(), "AppendEntries");
@@ -650,7 +650,7 @@ namespace bzn
         EXPECT_EQ(raft->get_status()["state"].asString(), "follower");
 
         // we should see requests...
-        EXPECT_CALL(*mock_node, send_message(_, _)).Times(11);
+        EXPECT_CALL(*mock_node, send_message_json(_, _)).Times(11);
 
         // expire election timer...
         wh(boost::system::error_code());
@@ -1092,7 +1092,7 @@ namespace bzn
         // let's try a raft in candidate state, expire timer...
         // the current state must be follower
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times(TEST_PEER_LIST.size() - 1);
         wh(boost::system::error_code());
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
@@ -1155,7 +1155,7 @@ namespace bzn
         // let's try a raft in candidate state, expire timer...
         // the current state must be follower
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() - 1);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times(TEST_PEER_LIST.size() - 1);
         wh(boost::system::error_code());
         EXPECT_EQ(raft->get_state(), bzn::raft_state::candidate);
 
@@ -1203,7 +1203,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1271,7 +1271,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1371,7 +1371,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1411,7 +1411,7 @@ namespace bzn
         EXPECT_FALSE(std::find(new_peers.begin(), new_peers.end(), new_peer) == new_peers.end());
 
 
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly(Invoke(
                 [](const auto& /*session*/, const auto& /*msg*/)
                 {
                     //std::cout << msg->toStyledString();
@@ -1461,7 +1461,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1539,7 +1539,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1594,7 +1594,7 @@ namespace bzn
         raft->in_a_swarm = true;
 
         // lets make this raft the leader by responding to requests for votes
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times((TEST_PEER_LIST.size() - 1) * 2);
 
         wh(boost::system::error_code());
 
@@ -1827,7 +1827,7 @@ namespace bzn
         // expire election timer...
 
         // we should see requests...
-        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(
+        EXPECT_CALL(*mock_node, send_message_json(_, _)).WillRepeatedly(
                 Invoke([](const auto&, const auto& /*msg*/){
 
                 })
@@ -1901,7 +1901,7 @@ namespace bzn
         auto raft = this->start_raft(TEST_FOUR_PEER_LIST, asio_wait_handler, bzn_msg_handler);
 
         // we should see 3 vote requests once the raft under test becomes a candidate...
-        EXPECT_CALL(*mock_node, send_message(_, _))
+        EXPECT_CALL(*mock_node, send_message_json(_, _))
                 .WillRepeatedly(Invoke(
                         [&](const auto&, const auto& msg)
                         {
@@ -1990,7 +1990,7 @@ namespace bzn
 
         EXPECT_EQ(raft->get_state(), bzn::raft_state::leader);
 
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly(Invoke(
                 [](const auto& /*session*/, const auto& msg)
                 {
                     std::cout << msg->toStyledString();
@@ -1999,7 +1999,7 @@ namespace bzn
 
         // attempting to add an invalid peer must fail
         {
-            EXPECT_CALL(*this->mock_node, send_message(_, _)).WillRepeatedly(Invoke(
+            EXPECT_CALL(*this->mock_node, send_message_json(_, _)).WillRepeatedly(Invoke(
                     [](const auto& /*session*/, const auto& /*msg*/)
                     {
                         //std::cout << msg->toStyledString();
@@ -2117,7 +2117,7 @@ namespace bzn
         raft->start();
 
         // we should see requests...
-        EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(
+        EXPECT_CALL(*mock_node, send_message_json(_, _)).WillRepeatedly(
                 Invoke([](const auto&, const auto& /*msg*/){ })
         );
 
@@ -2183,7 +2183,7 @@ namespace bzn
         raft->start();
 
         // don't care about the handler...
-        EXPECT_CALL(*this->mock_node, send_message(_, _)).Times(TEST_PEER_LIST.size() );
+        EXPECT_CALL(*this->mock_node, send_message_json(_, _)).Times(TEST_PEER_LIST.size() );
 
         // expire timer...
         wh(boost::system::error_code());

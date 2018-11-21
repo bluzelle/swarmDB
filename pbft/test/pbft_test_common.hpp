@@ -47,15 +47,14 @@ namespace bzn::test
     class pbft_test : public Test
     {
     public:
-        bzn::json_message request_json;
-        pbft_request request_msg;
+        bzn_envelope request_msg;
 
         pbft_msg preprepare_msg;
         bzn_envelope default_original_msg;
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base >>();
+        std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<bzn::Mocknode_base>();
         std::shared_ptr<bzn::Mockpbft_failure_detector_base> mock_failure_detector =
                 std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =
@@ -75,7 +74,7 @@ namespace bzn::test
 
         bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
-        bzn::message_handler database_handler;
+        bzn::protobuf_handler database_handler;
         bzn::protobuf_handler membership_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;
@@ -98,13 +97,13 @@ namespace bzn::test
 
     bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg);
 
-    bzn::json_message
+    bzn_envelope
     wrap_request(const database_msg& msg);
 
-    bool is_preprepare(std::shared_ptr<std::string> msg);
-    bool is_prepare(std::shared_ptr<std::string> msg);
-    bool is_commit(std::shared_ptr<std::string> msg);
-    bool is_checkpoint(std::shared_ptr<std::string> msg);
+    bool is_preprepare(std::shared_ptr<bzn_envelope> msg);
+    bool is_prepare(std::shared_ptr<bzn_envelope> msg);
+    bool is_commit(std::shared_ptr<bzn_envelope> msg);
+    bool is_checkpoint(std::shared_ptr<bzn_envelope> msg);
     bool is_audit(std::shared_ptr<std::string> msg);
 
     bzn_envelope from(uuid_t uuid);

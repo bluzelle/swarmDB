@@ -69,7 +69,7 @@ pbft::start()
                 this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
                     std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->node->register_for_message("database",
+                this->node->register_for_message(bzn_envelope::kDatabaseMsg,
                         std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
                 this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
@@ -84,6 +84,7 @@ pbft::start()
                                             {
                                                 // TODO: Get real pbft_operation pointers from pbft_service
                                                 LOG(error) << "Ignoring null operation pointer recieved from pbft_service";
+                                                return;
                                             }
 
                                             fd->request_executed(op->request_hash);
@@ -246,12 +247,11 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 std::shared_ptr<pbft_operation>
-pbft::setup_request_operation(const bzn::encoded_message& request, const request_hash_t& hash,
-    const std::shared_ptr<session_base>& session)
+pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t& request_hash, const std::shared_ptr<session_base>& session)
 {
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, hash);
-    op->record_request(request);
+    auto op = this->find_operation(this->view, request_seq, request_hash);
+    op->record_request(request_env);
 
     if (session)
     {
@@ -262,43 +262,40 @@ pbft::setup_request_operation(const bzn::encoded_message& request, const request
 }
 
 void
-pbft::handle_request(const pbft_request& msg, const bzn::json_message& original_msg, const std::shared_ptr<session_base>& session)
+pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
     if (!this->is_primary())
     {
-        LOG(info) << "Forwarding request to primary: " << original_msg.toStyledString();
-        this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn::json_message>(original_msg));
+        LOG(info) << "Forwarding request to primary";
+        this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
         return;
     }
 
-    if (msg.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || msg.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
+    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
-            << original_msg.toStyledString();
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
         return;
     }
 
-    auto smsg = original_msg.toStyledString();
-    auto hash = this->crypto->hash(smsg);
+    auto hash = this->crypto->hash(request_env);
 
     // keep track of what requests we've seen based on timestamp and only send preprepares once
-    if (this->already_seen_request(msg, hash))
+    if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << original_msg.toStyledString();
+        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString();
         return;
     }
-    this->saw_request(msg, hash);
-
-    auto op = setup_request_operation(smsg, hash, session);
+    this->saw_request(request_env, hash);
+    auto op = setup_request_operation(request_env, hash, session);
     this->do_preprepare(op);
 }
 
 void
 pbft::maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
 {
-    if (!msg.request().empty() && !op->has_request())
+    if (msg.has_request() && !op->has_request())
     {
         if (this->crypto->hash(msg.request()) != msg.request_hash())
         {
@@ -334,7 +331,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
         accepted_preprepares[log_key] = op->get_operation_key();
 
-        if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG)
+        if (op->has_config_request())
         {
             this->handle_config_message(msg, op);
         }
@@ -427,7 +424,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         reply.set_state_hash(req_cp.second);
         reply.set_state_data(this->get_checkpoint_state(req_cp));
 
-        auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply));
+        auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
         session->send_datagram(msg_ptr);
     }
     else
@@ -462,8 +459,21 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
 }
 
 void
+pbft::broadcast(const bzn_envelope& msg)
+{
+    auto msg_ptr = std::make_shared<bzn_envelope>(msg);
+
+    for (const auto& peer : this->current_peers())
+    {
+        this->node->send_message(make_endpoint(peer), msg_ptr);
+    }
+}
+
+void
 pbft::broadcast(const bzn::encoded_message& msg)
 {
+    // broadcast(bzn_envelope) is preferred, this is kept for now because audit still uses json wrapping
+
     auto msg_ptr = std::make_shared<bzn::encoded_message>(msg);
 
     for (const auto& peer : this->current_peers())
@@ -504,7 +514,7 @@ pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Doing preprepare for operation " << op->debug_string();
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
-    msg.set_request(op->get_encoded_request());
+    msg.set_allocated_request(new bzn_envelope(op->get_request()));
 
     this->broadcast(this->wrap_message(msg, "preprepare"));
 }
@@ -523,10 +533,10 @@ void
 pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
     // accept new configuration if applicable
-    if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG && op->get_request().has_config())
+    if (op->has_config_request())
     {
         pbft_configuration config;
-        if (config.from_string(op->get_request().config().configuration()))
+        if (config.from_string(op->get_config_request().configuration()))
         {
             this->configurations.enable(config.get_hash());
         }
@@ -544,10 +554,10 @@ void
 pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
     // commit new configuration if applicable
-    if (op->has_request() && op->get_request().type() == PBFT_REQ_NEW_CONFIG && op->get_request().has_config())
+    if (op->has_config_request())
     {
         pbft_configuration config;
-        if (config.from_string(op->get_request().config().configuration()))
+        if (config.from_string(op->get_config_request().configuration()))
         {
             // get rid of all other previous configs, except for currently active one
             this->configurations.remove_prior_to(config.get_hash());
@@ -568,7 +578,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     }
 
     // TODO: this needs to be refactored to be service-agnostic
-    if (op->get_request().type() == PBFT_REQ_DATABASE)
+    if (op->has_db_request())
     {
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
     }
@@ -577,12 +587,11 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         // the service needs sequentially sequenced operations. post a null request to fill in this hole
         auto msg = new database_msg;
         msg->set_allocated_nullmsg(new database_nullmsg);
-        pbft_request request;
-        request.set_allocated_operation(msg);
-        auto smsg = request.SerializeAsString();
+        bzn_envelope request;
+        request.set_database_msg(msg->SerializeAsString());
         auto new_op = std::make_shared<pbft_operation>(op->view, op->sequence
-            , this->crypto->hash(smsg), nullptr);
-        new_op->record_request(smsg);
+            , this->crypto->hash(request), nullptr);
+        new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
             request.SerializeAsString();
     }
@@ -640,24 +649,24 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_ha
     return lookup->second;
 }
 
-bzn::encoded_message
+bzn_envelope
 pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 {
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
 
-    return result.SerializeAsString();
+    return result;
 }
 
-bzn::encoded_message
+bzn_envelope
 pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_info*/) const
 {
     bzn_envelope result;
     result.set_pbft_membership(msg.SerializeAsString());
     result.set_sender(this->uuid);
 
-    return result.SerializeAsString();
+    return result;
 }
 
 bzn::encoded_message
@@ -821,8 +830,8 @@ pbft::request_checkpoint_state(const checkpoint_t& cp)
     LOG(info) << boost::format("Requesting checkpoint state for hash %1% at seq %2% from %3%")
         % cp.second % cp.first % selected.uuid;
 
-    auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(msg));
-    this->node->send_message_str(make_endpoint(selected), msg_ptr);
+    auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(msg));
+    this->node->send_message(make_endpoint(selected), msg_ptr);
 }
 
 const peer_address_t&
@@ -915,37 +924,16 @@ pbft::max_faulty_nodes() const
 }
 
 void
-pbft::handle_database_message(const bzn::json_message& json, std::shared_ptr<bzn::session_base> session)
+pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
-    bzn_msg msg;
+    // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
+    bzn_envelope mutable_msg(msg);
+    mutable_msg.set_timestamp(this->now());
+
+    LOG(debug) << "got database message";
+    this->handle_request(mutable_msg, session);
+
     database_response response;
-
-    LOG(debug) << "got database message: " << json.toStyledString();
-
-    if (!json.isMember("msg"))
-    {
-        LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
-        return;
-    }
-
-    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["msg"].asString())))
-    {
-        LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
-        return;
-    }
-
-    *response.mutable_header() = msg.db().header();
-
-    pbft_request req;
-    *req.mutable_operation() = msg.db();
-    req.set_timestamp(this->now()); //TODO: the timestamp needs to come from the client
-
-    this->handle_request(req, json, session);
-
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
 }
@@ -1068,14 +1056,12 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 void
 pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
 {
-    pbft_request req;
-    req.set_type(PBFT_REQ_NEW_CONFIG);
     auto cfg_msg = new pbft_config_msg;
     cfg_msg->set_configuration(config->to_string());
-    req.set_allocated_config(cfg_msg);
+    bzn_envelope req;
+    req.set_pbft_internal_request(cfg_msg->SerializeAsString());
 
-    auto smsg = req.SerializeAsString();
-    auto op  = this->setup_request_operation(smsg, this->crypto->hash(smsg));
+    auto op = this->setup_request_operation(req, this->crypto->hash(req));
     this->do_preprepare(op);
 }
 
@@ -1088,10 +1074,9 @@ pbft::is_configuration_acceptable_in_new_view(hash_t config_hash)
 void
 pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
 {
-    auto const& request = op->get_request();
-    assert(request.type() == PBFT_REQ_NEW_CONFIG);
+    assert(op->has_config_request());
     auto config = std::make_shared<pbft_configuration>();
-    if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(request.config().configuration()))
+    if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(op->get_config_request().configuration()))
     {
         if (this->proposed_config_is_acceptable(config))
         {
@@ -1128,19 +1113,19 @@ pbft::now() const
 }
 
 void
-pbft::saw_request(const pbft_request& req, const request_hash_t& hash)
+pbft::saw_request(const bzn_envelope& req, const request_hash_t& hash)
 {
     this->recent_requests.insert(std::make_pair(req.timestamp(),
-        std::make_pair(req.client(), hash)));
+        std::make_pair(req.sender(), hash)));
 }
 
 bool
-pbft::already_seen_request(const pbft_request& req, const request_hash_t& hash) const
+pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) const
 {
     auto range = this->recent_requests.equal_range(req.timestamp());
     for (auto r = range.first; r != range.second; r++)
     {
-        if (r->second.first == req.client() && r->second.second == hash)
+        if (r->second.first == req.sender() && r->second.second == hash)
         {
             return true;
         }
