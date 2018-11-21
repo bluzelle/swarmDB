@@ -277,7 +277,7 @@ namespace bzn
         // TODO test signature...
     }
 
-    TEST_F(pbft_newview_test, validate_checkpoint)
+    TEST_F(pbft_newview_test, validate_viewchange_checkpoints)
     {
 
         EXPECT_CALL(*mock_crypto, verify(_))
@@ -301,7 +301,7 @@ namespace bzn
         // There are no checkpoints to validate
         //std::optional valid_checkpoint = ;
 
-        EXPECT_EQ(std::nullopt, this->pbft->validate_checkpoint(viewchange_message));
+        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
 
         pbft_msg viewchange;
         // Must reject viewchange with less than 2f+1 checkpoint messages
@@ -313,14 +313,14 @@ namespace bzn
             viewchange_message.add_checkpoint_messages(viewchange.SerializeAsString());
         }
 
-        EXPECT_EQ(std::nullopt, this->pbft->validate_checkpoint(viewchange_message));
+        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
 
         // add one more bad checkpoint
         viewchange.set_type(PBFT_MSG_CHECKPOINT);
         viewchange.set_view(2123);
 
         viewchange_message.add_checkpoint_messages(viewchange.SerializeAsString());
-        EXPECT_EQ(std::nullopt, this->pbft->validate_checkpoint(viewchange_message));
+        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
 
 
 
@@ -385,21 +385,21 @@ namespace bzn
 
 
 
-    TEST_F(pbft_newview_test, read_checkpoint_hashes)
+    TEST_F(pbft_newview_test, validate_and_extract_checkpoint_hashes)
     {
         this->build_pbft(true);
 
         pbft_msg viewchange_message;
 
         // there should be no checkpoints
-        EXPECT_EQ( (size_t)0 , this->pbft->read_checkpoint_hashes(viewchange_message).size());
+        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
 
 //        // add an empty envelope
         bzn_envelope envelope;
 //        viewchange_message.add_checkpoint_messages(envelope.SerializeAsString());
 
         // there should be no checkpoints
-        EXPECT_EQ( (size_t)0 , this->pbft->read_checkpoint_hashes(viewchange_message).size());
+        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
 
         viewchange_message.clear_checkpoint_messages();
 

@@ -658,7 +658,7 @@ pbft::is_primary() const
 }
 
 const peer_address_t&
-pbft::get_primary(std::optional<uint64_t> view) const
+pbft::get_primary(std::optional<uint64_t> view ) const
 {
     return this->current_peers()[view.value_or(this->view) % this->current_peers().size()];
 }
@@ -1118,55 +1118,53 @@ pbft::is_peer(const bzn::uuid_t& sender) const
 
 
 std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>>
-pbft::read_checkpoint_hashes(const pbft_msg& viewchange_message) const
+pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const
 {
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes;
     for (size_t i{0} ; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()) ; ++i)
     {
         bzn_envelope envelope;
-        if (envelope.ParseFromString(viewchange_message.checkpoint_messages(i)))
+        pbft_msg checkpoint_message;
+        if (
+            !envelope.ParseFromString(viewchange_message.checkpoint_messages(i))
+            || !this->crypto->verify(envelope)
+            || !this->is_peer(envelope.sender())
+            || !checkpoint_message.ParseFromString(envelope.pbft())
+            )
         {
             LOG (error) << "Checkpoint validation failure - unable to parse envelope";
             continue;
         }
 
-        if (!this->crypto->verify(envelope))
-        {
-            LOG (error) << "Checkpoint validation failure - unable to verify envelope";
-            continue;  // TODO: log these failures
-        }
-
-        if (this->is_peer(envelope.sender()))
-        {
-            LOG (error) << "Checkpoint validation failure - checkpoint message came from peer not in the peers list";
-            continue;
-        }
-
-        pbft_msg checkpoint_message;
-        if (!checkpoint_message.ParseFromString(envelope.pbft()))
-        {
-            LOG(debug) << "Checkpoint validation failure - unable to parse checkpoint message";
-            continue;
-        }
-
-        checkpoint_hashes[checkpoint_t(checkpoint_message.sequence(), checkpoint_message.state_hash())].insert(envelope.sender());
+        checkpoint_hashes[checkpoint_t(
+                checkpoint_message.sequence(),
+                checkpoint_message.state_hash())].insert(envelope.sender());
     }
     return checkpoint_hashes;
 }
 
+
+/**
+ * Given a VIEWCHANGE message this method ensures that there are 2f+1 from each
+ * unique replica in the swarm that have the same checkpoint hash.
+ *
+ * @param viewchange_message
+ * @return
+ */
 std::optional<bzn::checkpoint_t>
-pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
+pbft::validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const
 {
     //with viewchange_message.checkpoint_messages
     //are there 2f+1 checkpoint messages each from a different nodes that are in the swarm
     // that have the same checkpoint hash and valid signatures
     size_t checkpoint_message_count = size_t(viewchange_message.checkpoint_messages_size());
 
-    LOG(debug) << "validate_checkpoint - checkpoint_message_count: " << checkpoint_message_count;
+    LOG(debug) << "validate_viewchange_checkpoints - checkpoint_message_count: " << checkpoint_message_count;
 
     if ( checkpoint_message_count >= 2 * this->max_faulty_nodes() + 1 )
     {
-        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes{this->read_checkpoint_hashes(viewchange_message)};
+        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes{
+                this->validate_and_extract_checkpoint_hashes(viewchange_message)};
 
         const auto p = std::find_if(//  std::pair<bzn::checkpoint_t , std::set<bzn::uuid_t>>
                 checkpoint_hashes.begin(),
@@ -1180,7 +1178,7 @@ pbft::validate_checkpoint(const pbft_msg& viewchange_message) const
     }
     else
     {
-        LOG(error) << "validate_checkpoint - not a valid VIEWCHANGE message: less than (2f+1) checkpoint messages";
+        LOG(error) << "validate_viewchange_checkpoints - not a valid VIEWCHANGE message: less than (2f+1) checkpoint messages";
     }
     return std::nullopt;
     // Isabel: there needs to be validation here
@@ -1199,7 +1197,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         return false;
     }
 
-    const auto valid_checkpoint = this->validate_checkpoint(viewchange_message);
+    const auto valid_checkpoint = this->validate_viewchange_checkpoints(viewchange_message);
     if (valid_checkpoint == std::nullopt)
     {
         LOG(error) << "is_valid_viewchange_message - the checkpoint is invald";
@@ -1207,7 +1205,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
     }
 
     // all the the prepared proofs are valid  (contains a pre prepare and 2f+1 mathcin prepares)
-    for(int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i)
+    for (int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i)
     {
         bzn_envelope pre_prepare_envelope;
         if (
@@ -1221,8 +1219,11 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         pbft_msg preprepare_message;
         if (
                 !preprepare_message.ParseFromString(pre_prepare_envelope.pbft())
-                || !( preprepare_message.sequence() > valid_checkpoint->first ) )
+                || ( preprepare_message.sequence() <= valid_checkpoint->first ) )
         {
+            // if a preprepare message has a sequence number that is not
+            // greater than the the valid checkpoint that we know about, this
+            // must mean that the message is out of date or incorrect.
             return false;
         }
 
@@ -1235,10 +1236,10 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
                     || !this->is_peer(prepare_envelope.sender())
                     || !this->crypto->verify(prepare_envelope))
             {
-                return false; // TODO: Isabel, should these be continue
+                return false; // TODO: Isabel, should these be continue?
             }
 
-            // does is sequence number, view number and hash match those of the pre prepare
+            // does the sequence number, view number and hash match those of the pre prepare
             if (
                     pbft_msg prepare_msg;
                     !prepare_msg.ParseFromString(prepare_envelope.pbft())
@@ -1247,7 +1248,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
                     || preprepare_message.request_hash() != prepare_msg.request_hash()
                     )
             {
-                return false; // TODO: Isabel, should these be continue
+                return false; // TODO: Isabel, should these be continue?
             }
 
             senders.insert(prepare_envelope.sender());
@@ -1266,10 +1267,8 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
 bool
 pbft::get_sequences_and_request_hashes_from_proofs(
         const pbft_msg& viewchange_msg
-        , std::set<uint64_t>& sequences
-        , std::set<std::string>& request_hashes) const
+        , std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs ) const
 {
-    bzn_envelope    proof_envelope;
     for (int j{0} ; j < viewchange_msg.prepared_proofs_size() ; ++j )
     {
         // --- add the sequence/hash to a set
@@ -1284,13 +1283,10 @@ pbft::get_sequences_and_request_hashes_from_proofs(
         {
             return false;
         }
-
-        sequences.insert(msg.sequence());
-        request_hashes.insert(msg.request_hash());
+        sequence_request_pairs.insert(std::make_pair(msg.sequence(), msg.request_hash() ));
     }
     return true;
 }
-
 
 bool
 pbft::validate_preprepare_sequences(
@@ -1382,31 +1378,40 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
                 )
 
         {
-            return false;
+            return false;  // TODO: Isabel should we do a continue and count the good messages
         }
 
         // we have a valid viewchange message, viewchange_msg
         // -- for each prepared proof in that viewchange
         // -- is that preprepare valid
 
-        std::set<uint64_t>      sequences;
-        std::set<std::string>   request_hashes;
+        // TODO: I've buggered this up quite well....
+
+//        std::set<uint64_t>      sequences;
+//        std::set<std::string>   request_hashes;
+        std::set<std::pair<uint64_t, std::string>> sequence_request_pairs;
 
         if (!this->get_sequences_and_request_hashes_from_proofs(
                 viewchange_msg
-                , sequences
-                , request_hashes))
+                , sequence_request_pairs))
         {
-            return false;
+            return false; // TODO: Isabel should we do a continue and count the good messages
         }
 
-        if (
-                !this->validate_preprepare_sequences(viewchange_msg, sequences)
-                || !this->validate_preprepare_request_hashes(viewchange_msg, request_hashes)
-        )
-        {
-            return false;
-        }
+//        if (
+//                !this->validate_preprepare_sequences(viewchange_msg, )
+//                || !this->validate_preprepare_request_hashes(viewchange_msg, request_hashes)
+//        )
+//        {
+//            return false; // TODO: Isabel should we do a continue and count the good messages
+//        }
+
+
+        //
+
+
+
+
     }
 
     // TODO did the viewchanges come from different replicas?
@@ -1538,18 +1543,19 @@ void
 pbft::save_checkpoint(const pbft_msg& msg)
 {
     // TODO : save checkpoint
+    pbft_msg message;
     for (int i{0} ; i < msg.checkpoint_messages_size() ; ++i )
     {
         const auto checkpoint_msg = msg.checkpoint_messages(i);
         bzn_envelope original_checkpoint;
-        original_checkpoint.ParseFromString(checkpoint_msg);
-        if (!this->crypto->verify(original_checkpoint))
+        if (
+                original_checkpoint.ParseFromString(checkpoint_msg)
+                || !this->crypto->verify(original_checkpoint) // TODO: we may have already done this
+                || !message.ParseFromString(original_checkpoint.pbft())
+           )
         {
             continue;
         }
-
-        pbft_msg message;
-        message.ParseFromString(original_checkpoint.pbft());
         this->handle_checkpoint(message, original_checkpoint);
     }
 }
@@ -1573,6 +1579,37 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     this->save_checkpoint(msg);
 
+
+
+
+// this needs to be done for ALL replicas....
+    // When a replica recieves f + 1 view change messages it sends one as well
+    // should it be == or >=  ?
+    if (
+            this->view_is_valid
+            && this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1)
+    {
+        // replica sends VIEWCHANGE message
+        LOG (debug) << "handle_viewchange - replica is broadcasting viewchange message";
+        pbft_msg viewchange_message{
+                make_viewchange(
+                        msg.view()
+                        , this->latest_stable_checkpoint().first
+                        , this->stable_checkpoint_proof
+                        , this->prepared_operations_since_last_checkpoint())  // TODO: Isabel - just the prepared operations? Should we do everything that's prepared including those that are committed...
+        };
+
+
+
+        this->view_is_valid = false;
+        this->broadcast(this->wrap_message(viewchange_message));
+    }
+
+
+
+
+
+    // TODO move this to the end...
     // we want to filter std::map<uint64_t, std::set<bzn_envelope>> valid_view_change_messages for
     // 1) we would be the primary for that view
     // 2) that view is greater than the current view
@@ -1594,22 +1631,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
 
 
-    // When a replica recieves f + 1 view change messages it sends one as well
-    // should it be == or >=  ?
-    if (this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1)
-    {
-        // replica sends VIEWCHANGE message
-        LOG (debug) << "handle_viewchange - replica is broadcasting viewchange message";
-        pbft_msg viewchange_message{
-            make_viewchange(
-                    msg.view()
-                    , this->latest_stable_checkpoint().first
-                    , this->stable_checkpoint_proof
-                    , this->prepared_operations_since_last_checkpoint())
-        };
-
-        this->broadcast(this->wrap_message(viewchange_message));
-    }
 
     // When the primary of the new view recieves 2f valid view change messages for the new view
     // the primary of new view broadcasts NEWVIEW
@@ -1623,7 +1644,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
         // -- we want a of set<pbft_msg>
 
         std::vector<pbft_msg> viewchange_messages;
-        for(const auto& view_change_msg : viewchange->second)
+        for (const auto& view_change_msg : viewchange->second)
         {
             pbft_msg pbft_viewchange;
             if (!pbft_viewchange.ParseFromString(view_change_msg))
@@ -1634,6 +1655,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
             // Since sets require hashable objects we needed to use vectors and
             // do our own uniqueness testing.
+            // TODO: use a set with a hash function
             auto found_iter = std::find_if(
                     std::cbegin(viewchange_messages)
                     , std::cend(viewchange_messages)
@@ -1668,6 +1690,7 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     LOG(debug) << "handle_newview - recieved valid NEWVIEW message";
 
     this->view = msg.view();
+    this->view_is_valid = true;
 
     // after moving to the new view processes the preprepares
     for (size_t i{0} ; i < static_cast<size_t>(msg.pre_prepare_messages_size()) ; ++i)
@@ -1714,7 +1737,7 @@ pbft::get_status()
     status["view"] = this->view;
 
     status["peer_index"] = bzn::json_message();
-    for(const auto& p : this->current_peers())
+    for (const auto& p : this->current_peers())
     {
         bzn::json_message peer;
         peer["host"] = p.host;

@@ -276,38 +276,55 @@ namespace bzn
         }
         prepare_for_checkpoint(100);
 
-
         // expect checkpoint message
         run_transaction_through_primary();
-        run_transaction_through_primary();
-        run_transaction_through_primary();
+        this->stabilize_checkpoint(100);
+
+        run_transaction_through_primary(false);
+        run_transaction_through_primary(false);
 
 
-        bzn_envelope viewchange_env;
-        EXPECT_CALL(*mock_node, send_message_str(_, _))
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(test::is_viewchange, Eq(true))))
                 .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message) {
-                    viewchange_env.ParseFromString(*encoded_message);
+                    bzn_envelope viewchange_env;
+                    EXPECT_TRUE(viewchange_env.ParseFromString(*encoded_message));
+                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env.sender());
+
+                    pbft_msg viewchange;
+                    EXPECT_TRUE(viewchange.ParseFromString(viewchange_env.pbft()));
+
+                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
+
+                    EXPECT_EQ(uint64_t(oldview + 1), viewchange.view());
+
+                    EXPECT_EQ(uint64_t(100), viewchange.sequence());
+
+                    EXPECT_TRUE( size_t(viewchange.checkpoint_messages_size()) >= 2 * this->faulty_nodes_bound() + 1 );
+
+                    EXPECT_EQ( viewchange.prepared_proofs_size(), 2);
+
+                    EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, viewchange_env));
                 }));
         this->pbft->handle_failure();
 
 
-        EXPECT_EQ(this->pbft->get_uuid(), viewchange_env.sender());
 
-        pbft_msg viewchange;
-        EXPECT_TRUE(viewchange.ParseFromString(viewchange_env.pbft()));
-
-        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
-
-        EXPECT_EQ(uint64_t(oldview + 1), viewchange.view());
-
-        EXPECT_EQ(uint64_t(103), viewchange.sequence());
-
-
-
-        LOG(debug) << viewchange.SerializeAsString();
-
-        EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, viewchange_env));
-
+//
+//        pbft_msg viewchange;
+//        EXPECT_TRUE(viewchange.ParseFromString(viewchange_env.pbft()));
+//
+//        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
+//
+//        EXPECT_EQ(uint64_t(oldview + 1), viewchange.view());
+//
+//        EXPECT_EQ(uint64_t(103), viewchange.sequence());
+//
+//
+//
+//        LOG(debug) << viewchange.SerializeAsString();
+//
+//        EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, viewchange_env));
+//
 
 
 

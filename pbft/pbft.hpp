@@ -107,13 +107,13 @@ namespace bzn
         void handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_checkpoint      (const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_join_or_leave   (const pbft_membership_msg& msg);
+        void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_join_or_leave(const pbft_membership_msg& msg);
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
-        void handle_config_message  (const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
-        void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_newview         (const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
+        void handle_viewchange    (const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_newview       (const pbft_msg& msg, const bzn_envelope& original_msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -234,15 +234,17 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, make_newview_makes_valid_message);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
-        FRIEND_TEST(pbft_newview_test, validate_checkpoint);
+        FRIEND_TEST(pbft_newview_test, validate_viewchange_checkpoints);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);
         FRIEND_TEST(pbft_newview_test, backup_handle_newview);
-        FRIEND_TEST(pbft_newview_test, read_checkpoint_hashes);
+        FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_newview_test, test_validate_preprepare_sequences);
 
 
         FRIEND_TEST(pbft_newview_test, test_is_peer);
         FRIEND_TEST(pbft_newview_test, test_get_primary);
+
+        FRIEND_TEST(pbft_test, full_test);
 
         friend class pbft_proto_test;
 
@@ -251,8 +253,6 @@ namespace bzn
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
 
         std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
-
-        FRIEND_TEST(pbft_test, full_test);
 
         static pbft_msg make_viewchange(
                 uint64_t new_view
@@ -269,9 +269,10 @@ namespace bzn
 
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
 
-        std::optional<bzn::checkpoint_t> validate_checkpoint(const pbft_msg& viewchange_message) const;
+        std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
 
-        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> read_checkpoint_hashes(const pbft_msg& viewchange_message) const;
+        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(
+                const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
 
         void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares);
@@ -280,8 +281,7 @@ namespace bzn
 
         bool get_sequences_and_request_hashes_from_proofs(
                 const pbft_msg& viewchange_msg
-                , std::set<uint64_t>& sequences
-                , std::set<std::string>& request_hashes) const;
+                , std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
 
         bool validate_preprepare_sequences(const pbft_msg& viewchange_msg, std::set<uint64_t>& sequences) const;
 
