@@ -247,10 +247,10 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 std::shared_ptr<pbft_operation>
-pbft::setup_request_operation(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
+pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t& request_hash, const std::shared_ptr<session_base>& session)
 {
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, this->crypto->hash(request_env));
+    auto op = this->find_operation(this->view, request_seq, request_hash);
     op->record_request(request_env);
 
     if (session)
@@ -288,9 +288,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
     this->saw_request(request_env, hash);
-
-    //TODO: keep track of what requests we've seen based on timestamp and only send preprepares once - KEP-329
-    auto op = setup_request_operation(request_env, session);
+    auto op = setup_request_operation(request_env, hash, session);
     this->do_preprepare(op);
 }
 
@@ -1063,7 +1061,7 @@ pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
     bzn_envelope req;
     req.set_pbft_internal_request(cfg_msg->SerializeAsString());
 
-    auto op = this->setup_request_operation(req);
+    auto op = this->setup_request_operation(req, this->crypto->hash(req));
     this->do_preprepare(op);
 }
 

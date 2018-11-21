@@ -117,6 +117,7 @@ namespace bzn
         
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn_envelope& msg
+            , const bzn::hash_t& request_hash
             , const std::shared_ptr<session_base>& session = nullptr);
 
         void broadcast(const bzn_envelope& message);
