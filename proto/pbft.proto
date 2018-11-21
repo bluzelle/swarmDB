@@ -15,6 +15,7 @@
 syntax = "proto3";
 
 import "database.proto";
+import "bluzelle.proto";
 
 message pbft_msg
 {
@@ -29,7 +30,7 @@ message pbft_msg
     bytes request_hash = 5;
 
     // most messages should only have the hash, not the original request
-    bytes request = 4;
+    bzn_envelope request = 4;
 
     // for checkpoints
     string state_hash = 6;
@@ -48,18 +49,6 @@ enum pbft_msg_type
     PBFT_MSG_PREPARE = 3;
     PBFT_MSG_COMMIT = 4;
     PBFT_MSG_CHECKPOINT = 5;
-}
-
-message pbft_request
-{
-    pbft_request_type type = 1;
-    oneof msg
-    {
-        database_msg operation = 2;
-        pbft_config_msg config = 3;
-    }
-    uint64 timestamp = 4;
-    string client = 5;
 }
 
 enum pbft_request_type

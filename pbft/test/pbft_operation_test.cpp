@@ -39,7 +39,7 @@ namespace
     class pbft_operation_test : public Test
     {
     public:
-        pbft_request request;
+        bzn_envelope request;
         bzn::hash_t request_hash = "somehash";
         uint64_t view = 6;
         uint64_t sequence = 19;
@@ -51,6 +51,8 @@ namespace
         pbft_operation_test()
                 : op(view, sequence, request_hash, std::make_shared<std::vector<bzn::peer_address_t>>(TEST_PEER_LIST))
         {
+            database_msg msg;
+            request.set_database_msg(msg.SerializeAsString());
         }
     };
 
@@ -71,7 +73,7 @@ namespace
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
-            op.record_request("pretend this is a request");
+            op.record_request(this->request);
         }
 
         EXPECT_TRUE(this->op.is_prepared());
@@ -132,7 +134,7 @@ namespace
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
             op.record_prepare(msg);
-            op.record_request("pretend this is a request");
+            op.record_request(this->request);
         }
 
         EXPECT_TRUE(this->op.is_prepared());

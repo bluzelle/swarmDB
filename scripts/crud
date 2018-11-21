@@ -59,17 +59,9 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     req["msg"] = base64.b64encode(msg.SerializeToString())
 
     if use_pbft:
-        msg_outer = bluzelle_pb2.wrapped_bzn_msg()
-        msg_outer.type = 1 # BZN_MSG_PBFT
+        msg_outer = bluzelle_pb2.bzn_envelope()
+        msg_outer.database_msg = msg.db.SerializeToString()
 
-        msg_inner = pbft_pb2.pbft_msg()
-        msg_inner.type = 1 # PBFT_MSG_REQUEST
-        msg_inner.request.operation.CopyFrom(msg.db)
-        msg_inner.request.client = "crud cli"
-        msg_inner.request.timestamp = 0 # TODO
-        msg_outer.payload = msg_inner.SerializeToString()
-
-        print("Sending: \n{}".format(msg_outer).expandtabs(4))
         ws.send_binary(msg_outer.SerializeToString())
         return
     else:

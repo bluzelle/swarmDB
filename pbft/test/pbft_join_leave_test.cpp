@@ -23,18 +23,14 @@ namespace bzn
     const bzn::peer_address_t new_peer{"127.0.0.1", 8090, 83, "name_new", "uuid_new"};
     const bzn::peer_address_t new_peer2{"127.0.0.1", 8091, 84, "name_new2", "uuid_new2"};
 
-    std::optional<pbft_msg> extract_pbft_msg_option(std::string m)
+    std::optional<pbft_msg> extract_pbft_msg_option(bzn_envelope message)
     {
-        bzn_envelope message;
-        if (message.ParseFromString(m))
+        if (message.payload_case() == bzn_envelope::kPbft)
         {
-            if (message.payload_case() == bzn_envelope::kPbft)
+            pbft_msg pmsg;
+            if (pmsg.ParseFromString(message.pbft()))
             {
-                pbft_msg pmsg;
-                if (pmsg.ParseFromString(message.pbft()))
-                {
-                    return pmsg;
-                }
+                return pmsg;
             }
         }
         return {};
@@ -65,10 +61,9 @@ namespace bzn
         auto pmsg = extract_pbft_msg_option(*arg);
         if (pmsg)
         {
-            pbft_request req;
-            if (req.ParseFromString(pmsg->request()))
+            if (pmsg->has_request())
             {
-                return req.type() == req_type;
+                return pmsg->request().payload_case() == req_type;
             }
         }
         return false;
@@ -81,17 +76,16 @@ namespace bzn
             , const bzn::pbft_configuration &config)
         {
             // make and "send" a pre-prepare message for a new_config
-            auto req = new pbft_request;
-            req->set_type(PBFT_REQ_NEW_CONFIG);
+            auto req = new bzn_envelope;
             auto cfg_msg = new pbft_config_msg;
             cfg_msg->set_configuration(config.to_string());
-            req->set_allocated_config(cfg_msg);
+            req->set_pbft_internal_request(cfg_msg->SerializeAsString());
 
             pbft_msg preprepare;
             preprepare.set_view(1);
             preprepare.set_sequence(100);
             preprepare.set_type(PBFT_MSG_PREPREPARE);
-            preprepare.set_request(req->SerializeAsString());
+            preprepare.set_allocated_request(new bzn_envelope(*req));
             auto crypto = std::make_shared<bzn::crypto>(std::make_shared<bzn::options>());
             auto expect_hash = crypto->hash(preprepare.request());
             preprepare.set_request_hash(expect_hash);
@@ -100,7 +94,7 @@ namespace bzn
             for (auto const &p : TEST_PEER_LIST)
             {
                 EXPECT_CALL(*(mock_node),
-                    send_message_str(bzn::make_endpoint(p),
+                    send_message(bzn::make_endpoint(p),
                         AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
                     .Times(Exactly(1));
             }
@@ -159,8 +153,8 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message_str(bzn::make_endpoint(p),
-                    AllOf(message_has_req_with_correct_type(PBFT_REQ_NEW_CONFIG), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+                send_message(bzn::make_endpoint(p),
+                    AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
         }
 
@@ -188,8 +182,8 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                    send_message_str(bzn::make_endpoint(p),
-                            AllOf(message_has_req_with_correct_type(PBFT_REQ_NEW_CONFIG), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+                    send_message(bzn::make_endpoint(p),
+                            AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest), message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                     .Times(Exactly(1));
         }
 
@@ -261,7 +255,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(mock_node),
-                send_message_str(bzn::make_endpoint(p),
+                send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()), message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }
@@ -299,7 +293,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(mock_node),
-                send_message_str(bzn::make_endpoint(p),
+                send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()), message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }

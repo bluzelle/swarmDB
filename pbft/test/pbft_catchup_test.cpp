@@ -32,11 +32,12 @@ namespace bzn
         }
 
         bool
-        is_get_state(std::shared_ptr<std::string> wrapped_msg)
+        is_get_state(std::shared_ptr<bzn_envelope> wrapped_msg)
         {
-            pbft_membership_msg msg = extract_pbft_membership_msg(*wrapped_msg);
+            pbft_membership_msg msg;
+            msg.ParseFromString(wrapped_msg->pbft_membership());
 
-            return msg.type() == PBFT_MMSG_GET_STATE && msg.sequence() > 0 && !(extract_sender(*wrapped_msg).empty())
+            return msg.type() == PBFT_MMSG_GET_STATE && msg.sequence() > 0 && !wrapped_msg->sender().empty()
                 && !msg.state_hash().empty();
         }
 
@@ -74,7 +75,7 @@ namespace bzn
         this->build_pbft();
 
         // node shouldn't be sending any checkpoint messages right now
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_checkpoint, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_checkpoint, Eq(true))))
             .Times((Exactly(0)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -87,7 +88,7 @@ namespace bzn
 
         // one more checkpoint message and the node should request state from a random node
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         bzn::peer_address_t node(*nodes++);
@@ -106,7 +107,7 @@ namespace bzn
         }
 
         // since the node has this checkpoint it should NOT request state for it
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(0)));
         stabilize_checkpoint(100);
     }
@@ -135,7 +136,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -165,7 +166,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
