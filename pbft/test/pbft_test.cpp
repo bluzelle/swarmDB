@@ -221,211 +221,6 @@ namespace bzn::test
         pbft->handle_message(preprepare_msg, default_original_msg);
     }
 
-    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector)
-    {
-        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
-
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-            EXPECT_FALSE(pbft->is_primary());
-            pbft->handle_database_message(this->request_json, this->mock_session);
-        }
-
-
-        ////////////////////////////////////////////////////////////////
-        // TODO: move to new module
-
-        TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
-        {
-            // I expect that a replica forced to handle a failure will invalidate
-            // its' view, and cause the replica to send a VIEWCHANGE messsage
-            EXPECT_CALL(*mock_node, send_message_str(_, _))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto p) {
-                    wrapped_bzn_msg wmsg;
-                    wmsg.ParseFromString(*p);
-                    pbft_msg view_change;
-                    view_change.ParseFromString(wmsg.payload());
-                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                    EXPECT_TRUE(2 == view_change.view());
-                    EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-                }));
-
-            this->uuid = SECOND_NODE_UUID;
-            this->build_pbft();
-
-            // force the failure.
-            this->pbft->handle_failure();
-
-            // Now the replicas' view should be invalid
-            EXPECT_FALSE(this->pbft->is_view_valid());
-        }
-
-
-        TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
-        {
-            EXPECT_CALL(*mock_node, send_message_str(_, _))
-                .Times(Exactly(4)); // there are 4 nodes in the test swarm
-
-            // We do not expect the pre-prepares due to the handled message at
-            // the end of the test.
-            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-                .Times(Exactly(0));
-
-            this->build_pbft();
-
-            // invalidate the view - this will send 4 send_message_str VIEWCHANGE messages
-            this->pbft->handle_failure();
-
-            // nothing will happen with this request, that is there will be no new messages
-            pbft->handle_message(this->preprepare_msg, default_original_msg);
-        }
-
-
-        TEST_F(pbft_test, pbft_replica_sends_viewchange_message)
-        {
-            // When a replica receives f+1 view change messages, it sends one as
-            // well even if its timer has not yet expired - KEP-632
-            const uint64_t NON_FAULTY_REPLICAS = TEST_PEER_LIST.size() / 3;
-
-            this->uuid = SECOND_NODE_UUID;
-            this->build_pbft();
-
-            const size_t NEW_VIEW = this->pbft->get_view() + 1;
-            EXPECT_FALSE(pbft->is_primary());
-            size_t count{0};
-            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](auto &, auto &) { ASSERT_EQ((NON_FAULTY_REPLICAS + 1), count); }));
-            pbft_msg pbft_msg;
-            pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);
-            pbft_msg.set_view(NEW_VIEW);
-
-            // let's pretend that the sytem under test is receiving view change messages
-            // from the other replicas
-            for (const auto &peer : TEST_PEER_LIST)
-            {
-                count++;
-                pbft_msg.set_sender(peer.uuid);
-                this->pbft->handle_message(pbft_msg, this->default_original_msg);
-                LOG(debug) << "\t***this->pbft->get_view(): " << this->pbft->get_view();
-                if (count == (NON_FAULTY_REPLICAS + 1))
-                    break;
-            }
-
-            EXPECT_EQ(NEW_VIEW, this->pbft->get_view());
-            EXPECT_TRUE(this->pbft->is_view_valid());
-        }
-
-
-        TEST_F(pbft_test, pbft_primary_sends_newview_message)
-        {
-            const uint64_t NON_FAULTY_REPLICAS = TEST_PEER_LIST.size() / 3;
-            this->build_pbft();
-            EXPECT_TRUE(pbft->is_primary());
-            size_t count{0};
-
-            // We are expecting the primary to send the newview message after 2f of
-            // the replicas have sent thier view change messages.
-            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_newview, Eq(true))))
-                .WillRepeatedly(Invoke([&](auto &, auto &) { ASSERT_TRUE((2 * NON_FAULTY_REPLICAS) == count); }));
-
-            pbft_msg view_change_msg;
-            view_change_msg.set_type(PBFT_MSG_VIEWCHANGE);
-            view_change_msg.set_view(this->pbft->get_view() + 1);
-
-            for (const auto &peer : TEST_PEER_LIST)
-            {
-                count++;
-                view_change_msg.set_sender(peer.uuid);
-                this->pbft->handle_message(view_change_msg, this->default_original_msg);
-            }
-        }
-
-    TEST_F(pbft_test, pbft_starts_in_a_valid_view_state)
-    {
-        this->build_pbft();
-        EXPECT_TRUE(this->pbft->is_view_valid());
-    }
-
-    TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
-    {
-        EXPECT_CALL( *mock_node, send_message_str(_, _))
-                .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
-                {
-                    wrapped_bzn_msg wmsg;
-                    wmsg.ParseFromString(*p);
-                    pbft_msg view_change;
-                    view_change.ParseFromString(wmsg.payload());
-
-                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                    EXPECT_TRUE( 2 == view_change.view());
-                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-
-
-                }));
-
-
-        this->build_pbft();
-        this->pbft->handle_failure();
-        EXPECT_FALSE(this->pbft->is_view_valid());
-    }
-
-    TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
-    {
-
-        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-                .Times(Exactly(0));
-        this->build_pbft();
-        this->pbft->handle_failure();
-        pbft->handle_message(this->request_msg);
-    }
-
-
-
-    TEST_F(pbft_test, pbft_starts_in_a_valid_view_state)
-    {
-        this->build_pbft();
-        EXPECT_TRUE(this->pbft->is_view_valid());
-    }
-
-    TEST_F(pbft_test, backup_accepts_newview)
-    {
-        EXPECT_CALL( *mock_node, send_message_str(_, _))
-                .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
-                {
-                    wrapped_bzn_msg wmsg;
-                    wmsg.ParseFromString(*p);
-                    pbft_msg view_change;
-                    view_change.ParseFromString(wmsg.payload());
-
-                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                    EXPECT_TRUE( 2 == view_change.view());
-                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-
-                }));
-
-        this->build_pbft();
-        this->pbft->handle_failure();
-        EXPECT_FALSE(this->pbft->is_view_valid());
-    }
-
-    TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
-    {
-
-        EXPECT_CALL(*mock_node, send_message_str(_, _))
-                .Times(Exactly(4)); // there are 4 nodes in the test swarm
-
-        this->build_pbft();
-
-        // invalidate the view - this will send 4 send_message_str messages
-        this->pbft->handle_failure();
-
-        // nothing will happen with this request
-        pbft->handle_message(this->request_msg);
-    }
-
-
-
     TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
         EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
 
@@ -477,10 +272,6 @@ namespace bzn::test
 
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
-        EXPECT_TRUE(!pbft->is_primary());
-        const size_t NEW_VIEW = this->pbft->get_view() + 1;
-
-            EXPECT_EQ(this->pbft->get_view(), static_cast<size_t>(1));
 
         EXPECT_FALSE(pbft->is_primary());
         this->request_msg.set_timestamp(now());
@@ -493,103 +284,199 @@ namespace bzn::test
 
         this->send_commits(1, 1, hash);
     }
+}
 
-
-        void
-        create_and_send_request(std::shared_ptr<pbft> pbft)
-        {
-            auto request = new pbft_request();
-            request->set_type(PBFT_REQ_DATABASE);
-            pbft_msg msg;
-            msg.set_type(PBFT_MSG_PREPREPARE);
-
-            pbft->handle_request(msg, wrap_pbft_msg(msg));
-
-
-            msg.set_allocated_request(request);
-            pbft->handle_message(msg, wrap_pbft_msg(msg));
-        }
-
-        void
-        send_prepares(std::shared_ptr<pbft> pbft)
-        {
-            auto request = new pbft_request();
-            pbft_msg msg;
-            msg.set_allocated_request(request);
-            pbft->handle_message(msg, wrap_pbft_msg(msg));
-        }
-        EXPECT_FALSE(pbft->is_primary());
-        pbft->handle_database_message(this->request_json, this->mock_session);
-    }
-
-    using namespace test;
-    TEST_F(pbft_test, full_test)
-    {
-        this->build_pbft();
-
-        auto operation = std::shared_ptr<pbft_operation>();
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_preprepare, Eq(true)))).Times(
-                Exactly(TEST_PEER_LIST.size()))
-            .WillRepeatedly(Invoke([&](auto, auto enc_bzn_msg) {
-                wrapped_bzn_msg wmsg;
-                wmsg.ParseFromString(*enc_bzn_msg);
-
-
-                pbft_msg msg;
-                if (msg.ParseFromString(wmsg.payload()))
-                {
-                    if (operation == nullptr)
-                        operation = this->pbft->find_operation(this->pbft->get_view(), msg.sequence(), msg.request());
-                }
-            }));
-
-
-        EXPECT_CALL(*this->mock_node, send_message_str(_, ResultOf(test::is_commit, Eq(true)))).Times(
-                        Exactly(TEST_PEER_LIST.size()))
-                .WillRepeatedly(Invoke([&](auto, auto /*enc_bzn_msg*/) {
-                    /*pbft_msg msg;
-                    if (msg.ParseFromString(*enc_bzn_msg))
-                    {
-                        if (op == nullptr)
-                            op = this->pbft->find_operation(this->pbft->get_view(), msg.sequence(), msg.request());
-                    }*/
-                }));
-
-
-
-
-
-
-        // sending the initial request from a client
-        auto request = new pbft_request();
-        request->set_type(PBFT_REQ_DATABASE);
-        bzn::json_message empty_json_msg;
-        pbft->handle_request(*request, empty_json_msg);
-        ASSERT_NE(operation, nullptr);
-
-
-
-
-
-        // now we fake sending prepare messages from the backups
-        for (const auto peer : TEST_PEER_LIST)
-        {
-            pbft_msg prepare;
-
-            prepare.set_view(operation->view);
-            prepare.set_sequence(operation->sequence);
-            prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_allocated_request(new pbft_request(operation->request));
-
-
-            auto wmsg = wrap_pbft_msg(prepare);
-
-            // TEST_PEER_LIST
-
-            wmsg.set_sender(peer.uuid);
-
-            pbft->handle_message(prepare, wmsg);
-
-
-
-        }
+//    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector)
+//    {
+//        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
+//
+//        this->uuid = SECOND_NODE_UUID;
+//        this->build_pbft();
+//
+//            EXPECT_FALSE(pbft->is_primary());
+//            pbft->handle_database_message(this->request_msg, this->mock_session);
+//        }
+//
+//
+//        ////////////////////////////////////////////////////////////////
+//        // TODO: move to new module
+//
+//        TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
+//        {
+//            // I expect that a replica forced to handle a failure will invalidate
+//            // its' view, and cause the replica to send a VIEWCHANGE messsage
+//            EXPECT_CALL(*mock_node, send_message_str(_, _))
+//                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto p) {
+//                    wrapped_bzn_msg wmsg;
+//                    wmsg.ParseFromString(*p);
+//                    pbft_msg view_change;
+//                    view_change.ParseFromString(wmsg.payload());
+//                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+//                    EXPECT_TRUE(2 == view_change.view());
+//                    EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+//                }));
+//
+//            this->uuid = SECOND_NODE_UUID;
+//            this->build_pbft();
+//
+//            // force the failure.
+//            this->pbft->handle_failure();
+//
+//            // Now the replicas' view should be invalid
+//            EXPECT_FALSE(this->pbft->is_view_valid());
+//        }
+//
+//
+//        TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
+//        {
+//            EXPECT_CALL(*mock_node, send_message_str(_, _))
+//                .Times(Exactly(4)); // there are 4 nodes in the test swarm
+//
+//            // We do not expect the pre-prepares due to the handled message at
+//            // the end of the test.
+//            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
+//                .Times(Exactly(0));
+//
+//            this->build_pbft();
+//
+//            // invalidate the view - this will send 4 send_message_str VIEWCHANGE messages
+//            this->pbft->handle_failure();
+//
+//            // nothing will happen with this request, that is there will be no new messages
+//            pbft->handle_message(this->preprepare_msg, default_original_msg);
+//        }
+//
+//
+//        TEST_F(pbft_test, pbft_replica_sends_viewchange_message)
+//        {
+//            // When a replica receives f+1 view change messages, it sends one as
+//            // well even if its timer has not yet expired - KEP-632
+//            const uint64_t NON_FAULTY_REPLICAS = TEST_PEER_LIST.size() / 3;
+//
+//            this->uuid = SECOND_NODE_UUID;
+//            this->build_pbft();
+//
+//            const size_t NEW_VIEW = this->pbft->get_view() + 1;
+//            EXPECT_FALSE(pbft->is_primary());
+//            size_t count{0};
+//            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_viewchange, Eq(true))))
+//                .WillRepeatedly(Invoke([&](auto &, auto &) { ASSERT_EQ((NON_FAULTY_REPLICAS + 1), count); }));
+//            pbft_msg pbft_msg;
+//            pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);
+//            pbft_msg.set_view(NEW_VIEW);
+//
+//            // let's pretend that the sytem under test is receiving view change messages
+//            // from the other replicas
+//            for (const auto &peer : TEST_PEER_LIST)
+//            {
+//                count++;
+//                this->pbft->handle_message(pbft_msg, this->default_original_msg);
+//                LOG(debug) << "\t***this->pbft->get_view(): " << this->pbft->get_view();
+//                if (count == (NON_FAULTY_REPLICAS + 1))
+//                    break;
+//            }
+//
+//            EXPECT_EQ(NEW_VIEW, this->pbft->get_view());
+//            EXPECT_TRUE(this->pbft->is_view_valid());
+//        }
+//
+//
+//
+//    TEST_F(pbft_test, pbft_starts_in_a_valid_view_state)
+//    {
+//        this->build_pbft();
+//        EXPECT_TRUE(this->pbft->is_view_valid());
+//    }
+//
+//    TEST_F(pbft_test, pbft_handle_failure_causes_invalid_view_state)
+//    {
+//        EXPECT_CALL( *mock_node, send_message_str(_, _))
+//                .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
+//                {
+//                    wrapped_bzn_msg wmsg;
+//                    wmsg.ParseFromString(*p);
+//                    pbft_msg view_change;
+//                    view_change.ParseFromString(wmsg.payload());
+//
+//                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+//                    EXPECT_TRUE( 2 == view_change.view());
+//                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+//
+//
+//                }));
+//
+//
+//        this->build_pbft();
+//        this->pbft->handle_failure();
+//        EXPECT_FALSE(this->pbft->is_view_valid());
+//    }
+//
+//    TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
+//    {
+//
+//        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
+//                .Times(Exactly(0));
+//        this->build_pbft();
+//        this->pbft->handle_failure();
+//        pbft->handle_message(this->request_msg);
+//    }
+//
+//
+//
+//    TEST_F(pbft_test, pbft_starts_in_a_valid_view_state)
+//    {
+//        this->build_pbft();
+//        EXPECT_TRUE(this->pbft->is_view_valid());
+//    }
+//
+//    TEST_F(pbft_test, backup_accepts_newview)
+//    {
+//        EXPECT_CALL( *mock_node, send_message_str(_, _))
+//                .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto p)
+//                {
+//                    wrapped_bzn_msg wmsg;
+//                    wmsg.ParseFromString(*p);
+//                    pbft_msg view_change;
+//                    view_change.ParseFromString(wmsg.payload());
+//
+//                    EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+//                    EXPECT_TRUE( 2 == view_change.view());
+//                    EXPECT_TRUE( this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+//
+//                }));
+//
+//        this->build_pbft();
+//        this->pbft->handle_failure();
+//        EXPECT_FALSE(this->pbft->is_view_valid());
+//    }
+//
+//    TEST_F(pbft_test, pbft_with_invalid_view_drops_messages)
+//    {
+//
+//        EXPECT_CALL(*mock_node, send_message_str(_, _))
+//                .Times(Exactly(4)); // there are 4 nodes in the test swarm
+//
+//        this->build_pbft();
+//
+//        // invalidate the view - this will send 4 send_message_str messages
+//        this->pbft->handle_failure();
+//
+//        // nothing will happen with this request
+//        pbft->handle_message(this->request_msg);
+//    }
+//
+//
+//
+//    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
+//        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
+//
+//        this->uuid = SECOND_NODE_UUID;
+//        this->build_pbft();
+//        EXPECT_TRUE(!pbft->is_primary());
+//        const size_t NEW_VIEW = this->pbft->get_view() + 1;
+//
+//            EXPECT_EQ(this->pbft->get_view(), static_cast<size_t>(1));
+//
+//        EXPECT_FALSE(pbft->is_primary());
+//        pbft->handle_database_message(this->request_msg, this->mock_session);
+//    }

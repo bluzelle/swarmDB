@@ -27,5 +27,7 @@ namespace bzn
         MOCK_METHOD1(verify, bool(const bzn_envelope& msg));
 
         MOCK_METHOD1(hash, std::string(const std::string& msg));
+
+        MOCK_METHOD1(hash,  std::string(const bzn_envelope& msg));
     };
 }

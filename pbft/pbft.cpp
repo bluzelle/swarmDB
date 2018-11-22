@@ -914,7 +914,10 @@ pbft::request_checkpoint_state(const checkpoint_t& cp)
     LOG(info) << boost::format("Requesting checkpoint state for hash %1% at seq %2% from %3%")
         % cp.second % cp.first % selected.uuid;
 
-    auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(msg));
+    auto msg_ptr = std::make_shared<bzn_envelope>();
+    msg_ptr->set_pbft_membership(msg.SerializeAsString());
+
+
     this->node->send_message(make_endpoint(selected), msg_ptr);
 }
 
@@ -1054,33 +1057,6 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
     this->handle_request(mutable_msg, session);
 
     database_response response;
-
-    LOG(debug) << "got database message: " << json.toStyledString();
-
-    if (!json.isMember("msg"))
-    {
-        LOG(error) << "Invalid message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
-        return;
-    }
-
-    if (!msg.ParseFromString(boost::beast::detail::base64_decode(json["msg"].asString())))
-    {
-        LOG(error) << "Failed to decode message: " << json.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
-        session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), true);
-        return;
-    }
-
-    *response.mutable_header() = msg.db().header();
-
-    pbft_request req;
-    *req.mutable_operation() = msg.db();
-    req.set_timestamp(this->now()); //TODO: the timestamp needs to come from the client
-
-    this->handle_request(req, json, session);
-
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
     session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
 }
@@ -1456,17 +1432,20 @@ pbft::fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepare
         if (pre_prepares.find(i) == pre_prepares.end())
         {
             // TODO: See pbft.cpp: do_committed (near the bottom),can we DRY this up?
-
+            // TODO: Get Paul to review this - had to make this compile after rebase
             // the service needs sequentially sequenced operations. post a null request to fill in this hole
             auto msg = new database_msg;
             msg->set_allocated_nullmsg(new database_nullmsg);
             pbft_request request;
             request.set_allocated_operation(msg);
             auto smsg = request.SerializeAsString();
-            pbft_msg null_message;
-            null_message.set_request(request.SerializeAsString());
 
-            pre_prepares[i] = this->make_signed_envelope(null_message.SerializeAsString());
+            bzn_envelope null_request_envelope;
+
+            std::string serialized_databse_msg {msg->SerializeAsString()};
+
+            null_request_envelope.set_allocated_database_msg(&serialized_databse_msg);
+            pre_prepares[i] = this->make_signed_envelope(null_request_envelope.SerializeAsString());
         }
     }
 }

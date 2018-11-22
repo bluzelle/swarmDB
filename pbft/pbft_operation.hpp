@@ -104,6 +104,11 @@ namespace bzn
         database_msg parsed_db;
         pbft_config_msg parsed_config;
 
+        std::string preprepare_message;
+        std::map<uuid_t, std::string> prepare_messages;  // uuid_t is the sender uuid, prepared messages
+        bzn::encoded_message encoded_request;
+        pbft_request parsed_request;
+
         bool request_saved = false;
         bool session_saved = false;
     };

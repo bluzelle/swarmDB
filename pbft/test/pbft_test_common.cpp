@@ -285,14 +285,16 @@ namespace bzn::test
     bool
     is_viewchange(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
+        pbft_msg msg;
+        msg.ParseFromString(*wrapped_msg);
         return msg.type() == PBFT_MSG_VIEWCHANGE;
     }
 
     bool
     is_newview(std::shared_ptr<std::string> wrapped_msg)
     {
-        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
+        pbft_msg msg;
+        msg.ParseFromString(*wrapped_msg);
         return msg.type() == PBFT_MSG_NEWVIEW;
     }
 

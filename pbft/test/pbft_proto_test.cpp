@@ -76,8 +76,8 @@ namespace bzn
         preprepare.set_view(this->view);
         preprepare.set_sequence(sequence);
         preprepare.set_type(PBFT_MSG_PREPREPARE);
-        preprepare.set_allocated_request((new bzn_envelope(request));
-        preprepare.set_request_hash(this->pbft->crypto->hash(request)));
+        preprepare.set_allocated_request((new bzn_envelope(request)));
+        preprepare.set_request_hash(this->pbft->crypto->hash(request));
         auto wmsg = wrap_pbft_msg(preprepare);
         wmsg.set_sender(peer.uuid);
         pbft->handle_message(preprepare, wmsg);
@@ -208,7 +208,7 @@ namespace bzn
         request.set_database_msg(dmsg->SerializeAsString());
 
         // send pre-prepare to SUT
-        send_preprepare(this->index, request.SerializeAsString());
+        send_preprepare(this->index, request);
 
         // send prepares to SUT
         auto request_hash = this->pbft->crypto->hash(request);
