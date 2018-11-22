@@ -89,12 +89,15 @@ namespace bzn
 
         bool is_view_valid() const;
 
+        uint64_t get_view() const { return this->view; }
+
         bzn::json_message get_status() override;
 
         bool is_valid_viewchange_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
+
         bool is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
 
-        uint64_t get_view() const { return this->view; }
+
 
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
@@ -275,7 +278,7 @@ namespace bzn
                 const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
 
-        void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares);
+        void fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepares);
 
         bool is_peer(const bzn::uuid_t& peer) const;
 

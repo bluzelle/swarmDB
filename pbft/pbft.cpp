@@ -38,7 +38,8 @@ pbft::pbft(
     , bzn::uuid_t uuid
     , std::shared_ptr<pbft_service_base> service
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
-    , std::shared_ptr<bzn::crypto_base> crypto)
+    , std::shared_ptr<bzn::crypto_base> crypto
+    )
     : node(std::move(node))
     , uuid(std::move(uuid))
     , service(std::move(service))
@@ -1192,7 +1193,7 @@ pbft::validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const
 bool
 pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg ) const
 {
-    if (!this->is_peer(original_msg.sender()))// TODO: Ask Isabel if this is redundant...
+    if (!this->is_peer(original_msg.sender()))// TODO: Rich - If redundant, keep this check
     {
         return false;
     }
@@ -1236,7 +1237,8 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
                     || !this->is_peer(prepare_envelope.sender())
                     || !this->crypto->verify(prepare_envelope))
             {
-                return false; // TODO: Isabel, should these be continue?
+                // TODO: Log when bailing
+                return false;
             }
 
             // does the sequence number, view number and hash match those of the pre prepare
@@ -1248,7 +1250,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
                     || preprepare_message.request_hash() != prepare_msg.request_hash()
                     )
             {
-                return false; // TODO: Isabel, should these be continue?
+                return false;
             }
 
             senders.insert(prepare_envelope.sender());
@@ -1272,7 +1274,7 @@ pbft::get_sequences_and_request_hashes_from_proofs(
     for (int j{0} ; j < viewchange_msg.prepared_proofs_size() ; ++j )
     {
         // --- add the sequence/hash to a set
-        prepared_proof prepared_proof = viewchange_msg.prepared_proofs(j);
+        auto prepared_proof = viewchange_msg.prepared_proofs(j);
 
         pbft_msg msg;
         if (
@@ -1288,7 +1290,8 @@ pbft::get_sequences_and_request_hashes_from_proofs(
     return true;
 }
 
-bool
+
+bool  // TODO: Remove
 pbft::validate_preprepare_sequences(
         const pbft_msg& viewchange_msg
         , std::set<uint64_t>& sequences) const
@@ -1323,7 +1326,7 @@ pbft::validate_preprepare_sequences(
 }
 
 
-bool
+bool // TODO: Remove
 pbft::validate_preprepare_request_hashes(
         const pbft_msg& viewchange_msg
         , std::set<std::string> request_hashes
@@ -1378,7 +1381,7 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
                 )
 
         {
-            return false;  // TODO: Isabel should we do a continue and count the good messages
+            return false;
         }
 
         // we have a valid viewchange message, viewchange_msg
@@ -1395,8 +1398,13 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
                 viewchange_msg
                 , sequence_request_pairs))
         {
-            return false; // TODO: Isabel should we do a continue and count the good messages
+            return false;
         }
+
+        // TODO: validate
+        // each *pair* must match a pre-prepare in the the newview message...
+
+
 
 //        if (
 //                !this->validate_preprepare_sequences(viewchange_msg, )
@@ -1414,26 +1422,31 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
 
     }
 
-    // TODO did the viewchanges come from different replicas?
+    // TODO: did the viewchanges come from different replicas?
+
+
+
     return true;
 }
 
 void
-pbft::fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares)
+pbft::fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepares)
 {
     uint64_t last_sequence_number = pre_prepares.empty() ? 0 : (pre_prepares.end()--)->first;
     for (uint64_t i = this->latest_stable_checkpoint().first + 1; i < last_sequence_number ; ++i )
     {
         //  -- create a new preprepare for a no-op operation using this sequence number
-        if (pre_prepares.count(i) == 0)
+        if (pre_prepares.find(i) == pre_prepares.end())
         {
-            pbft_msg null_message;
-            null_message.set_type(PBFT_MSG_PREPREPARE);
-            null_message.set_view(new_view);
-            null_message.set_sequence(i);
+            // TODO: See pbft.cpp: do_committed (near the bottom),can we DRY this up?
 
+            // the service needs sequentially sequenced operations. post a null request to fill in this hole
+            auto msg = new database_msg;
+            msg->set_allocated_nullmsg(new database_nullmsg);
             pbft_request request;
-            request.set_type(PBFT_REQ_NO_OP);
+            request.set_allocated_operation(msg);
+            auto smsg = request.SerializeAsString();
+            pbft_msg null_message;
             null_message.set_request(request.SerializeAsString());
 
             pre_prepares[i] = this->make_signed_envelope(null_message.SerializeAsString());
@@ -1518,7 +1531,7 @@ pbft::build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_m
     //    and the highest sequence number for which a new preprepare was created
 
     // Fill in missing messages with no ops
-    this->fill_in_missing_pre_prepares(new_view, pre_prepares);
+    this->fill_in_missing_pre_prepares(pre_prepares);
 
     //  - add each preprepare created this way to the new-view message
     // std::set<std::string> view_change_messages
@@ -1539,10 +1552,13 @@ pbft::make_signed_envelope(std::string serialized_pbft_message)
 }
 
 
+/**
+ *
+ * @param msg
+ */
 void
 pbft::save_checkpoint(const pbft_msg& msg)
 {
-    // TODO : save checkpoint
     pbft_msg message;
     for (int i{0} ; i < msg.checkpoint_messages_size() ; ++i )
     {
@@ -1550,7 +1566,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
         bzn_envelope original_checkpoint;
         if (
                 original_checkpoint.ParseFromString(checkpoint_msg)
-                || !this->crypto->verify(original_checkpoint) // TODO: we may have already done this
+                || !this->crypto->verify(original_checkpoint) // TODO: consider removing this - check with debugger
                 || !message.ParseFromString(original_checkpoint.pbft())
            )
         {
@@ -1579,9 +1595,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     this->save_checkpoint(msg);
 
-
-
-
 // this needs to be done for ALL replicas....
     // When a replica recieves f + 1 view change messages it sends one as well
     // should it be == or >=  ?
@@ -1596,7 +1609,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
                         msg.view()
                         , this->latest_stable_checkpoint().first
                         , this->stable_checkpoint_proof
-                        , this->prepared_operations_since_last_checkpoint())  // TODO: Isabel - just the prepared operations? Should we do everything that's prepared including those that are committed...
+                        , this->prepared_operations_since_last_checkpoint())
         };
 
 
@@ -1865,7 +1878,7 @@ pbft::prepared_operations_since_last_checkpoint()
     // TODO functional filter...
     for (const auto& p : this->operations)
     {
-        if (p.second->is_prepared() && !p.second->is_committed())
+        if ( p.second->is_prepared() )
         {
             if (p.second->sequence > this->latest_stable_checkpoint().first)
             {
@@ -1938,7 +1951,7 @@ pbft_msg pbft::make_viewchange(
     //            get the set of operations, frome each operation get the messages..
     for (const auto& operation : prepared_operations)
     {
-        prepared_proof *prepared_proofs = viewchange.add_prepared_proofs();
+        auto prepared_proofs = viewchange.add_prepared_proofs();
         prepared_proofs->set_pre_prepare(operation->get_preprepare());
         for (const auto &prepared : operation->get_prepares())
         {
