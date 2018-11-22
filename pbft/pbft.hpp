@@ -285,10 +285,6 @@ namespace bzn
         bool get_sequences_and_request_hashes_from_proofs(
                 const pbft_msg& viewchange_msg
                 , std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
-
-        bool validate_preprepare_sequences(const pbft_msg& viewchange_msg, std::set<uint64_t>& sequences) const;
-
-        bool validate_preprepare_request_hashes( const pbft_msg& viewchange_msg , std::set<std::string> request_hashes) const;
     };
 
 } // namespace bzn
