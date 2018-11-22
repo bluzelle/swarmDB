@@ -187,6 +187,7 @@ namespace bzn
         void fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepares);
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
+        void replica_broadcasts_viewchange(const pbft_msg& msg);
 
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
@@ -237,6 +238,7 @@ namespace bzn
 
         // VIEWCHANGE/NEWVIEW members
         bool view_is_valid = true;
+        uint64_t last_view_sent{0};
         std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
 
         FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);

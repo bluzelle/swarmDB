@@ -1496,13 +1496,30 @@ pbft::save_checkpoint(const pbft_msg& msg)
 
 
 void
+pbft::replica_broadcasts_viewchange(const pbft_msg& msg)
+{
+    // replica sends VIEWCHANGE message
+    pbft_msg viewchange_message{
+            make_viewchange(
+                    msg.view()
+                    , this->latest_stable_checkpoint().first
+                    , this->stable_checkpoint_proof
+                    , this->prepared_operations_since_last_checkpoint())
+    };
+
+    this->view_is_valid = false;
+    this->last_view_sent = msg.view();
+    this->broadcast(this->wrap_message(viewchange_message));
+
+}
+
+
+
+void
 pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    LOG(debug) << "Handle_viewchange: " << msg.SerializeAsString()  << " -- " << original_msg.SerializeAsString();
-
     if (this->is_valid_viewchange_message(msg, original_msg))
     {
-        LOG(debug) << "handle_viewchange - adding valid viewchange message";
         this->valid_view_change_messages[msg.view()].insert(original_msg.SerializeAsString());
     }
     else
@@ -1513,32 +1530,15 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     this->save_checkpoint(msg);
 
-// this needs to be done for ALL replicas....
     // When a replica recieves f + 1 view change messages it sends one as well
     // should it be == or >=  ?
     if (
             this->view_is_valid
-            && this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1)
+            && this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1
+            && msg.view() > this->last_view_sent)
     {
-        // replica sends VIEWCHANGE message
-        LOG (debug) << "handle_viewchange - replica is broadcasting viewchange message";
-        pbft_msg viewchange_message{
-                make_viewchange(
-                        msg.view()
-                        , this->latest_stable_checkpoint().first
-                        , this->stable_checkpoint_proof
-                        , this->prepared_operations_since_last_checkpoint())
-        };
-
-
-
-        this->view_is_valid = false;
-        this->broadcast(this->wrap_message(viewchange_message));
+        this->replica_broadcasts_viewchange(msg);
     }
-
-
-
-
 
     // TODO move this to the end...
     // we want to filter std::map<uint64_t, std::set<bzn_envelope>> valid_view_change_messages for
@@ -1601,11 +1601,15 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
             }
         }
 
-        auto new_view = this->build_newview(viewchange->first, viewchange_messages);
-        this->broadcast(this->wrap_message(new_view));
+        this->broadcast(
+                this->wrap_message(
+                        this->build_newview(
+                                viewchange->first
+                                , viewchange_messages)));
 
         // primary of the new view moves to new view
         this->view = msg.view();
+        this->view_is_valid = true;
     }
 }
 
