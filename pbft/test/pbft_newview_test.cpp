@@ -89,20 +89,19 @@ namespace bzn
             // from the other replicas
             for (const auto &peer : TEST_PEER_LIST)
             {
-                if(peer.uuid == this->uuid)
+                if (peer.uuid == this->uuid)
                 {
                     continue;
                 }
-                
-                
-                count++;
 
+                count++;
                 this->pbft->handle_message(pbft_msg, this->default_original_msg);
                 if (count == n)
+                {
                     break;
+                }
             }
         }
-
 
         void
         set_checkpoint(uint64_t sequence)
@@ -115,14 +114,11 @@ namespace bzn
                 msg.set_sequence(sequence);
                 msg.set_state_hash(std::to_string(sequence));
 
-
                 wrapped_bzn_msg wmsg;
                 wmsg.set_type(BZN_MSG_PBFT);
                 wmsg.set_sender(peer.uuid);
                 // wmsg.set_signature(???)
                 wmsg.set_payload(msg.SerializeAsString());
-
-
 
                 this->pbft->handle_message(msg, this->default_original_msg);
             }
@@ -259,77 +255,6 @@ namespace bzn
     }
 
 
-
-
-    TEST_F(pbft_newview_test, validate_viewchange_checkpoints)
-    {
-
-        EXPECT_CALL(*mock_crypto, verify(_))
-            .Times(AnyNumber())
-            .WillRepeatedly(
-                    Invoke(
-                            [](const auto& envelope)
-                            {
-                                LOG(debug) << envelope.SerializeAsString();
-                                return true;
-                            }));
-
-
-
-
-
-
-        this->build_pbft(true);
-        pbft_msg viewchange_message;
-
-        // There are no checkpoints to validate
-        //std::optional valid_checkpoint = ;
-
-        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
-
-        pbft_msg viewchange;
-        // Must reject viewchange with less than 2f+1 checkpoint messages
-        for(uint32_t i{0} ; i < 2 * this->faulty_nodes_bound() ; ++i )
-        {
-            viewchange.set_type(PBFT_MSG_CHECKPOINT);
-            viewchange.set_view(2123);
-
-            viewchange_message.add_checkpoint_messages(viewchange.SerializeAsString());
-        }
-
-        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
-
-        // add one more bad checkpoint
-        viewchange.set_type(PBFT_MSG_CHECKPOINT);
-        viewchange.set_view(2123);
-
-        viewchange_message.add_checkpoint_messages(viewchange.SerializeAsString());
-        EXPECT_EQ(std::nullopt, this->pbft->validate_viewchange_checkpoints(viewchange_message));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // TODO must reject viewchange with bad checkpoints
-
-        // TODO must accept valid viewchange
-
-    }
-
     // bool is_valid_newview_message(const pbft_msg& msg) const;
     TEST_F(pbft_newview_test, is_valid_newview_message)
     {
@@ -448,8 +373,7 @@ namespace bzn
         {
             const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
 
-            const auto primary = std::find_if(
-                    TEST_PEER_LIST.begin()
+            const auto primary = std::find_if(TEST_PEER_LIST.begin()
                     , TEST_PEER_LIST.end()
                     , [&](const auto& peer)
                     {

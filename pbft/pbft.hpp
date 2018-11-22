@@ -248,6 +248,7 @@ namespace bzn
         // good tests
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
+        FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
 
         // bad tests
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
@@ -260,7 +261,6 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, make_newview_makes_valid_message);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
-        FRIEND_TEST(pbft_newview_test, validate_viewchange_checkpoints);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);
         FRIEND_TEST(pbft_newview_test, backup_handle_newview);
         FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);

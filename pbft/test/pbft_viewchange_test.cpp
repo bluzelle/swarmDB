@@ -89,7 +89,7 @@ namespace bzn
             // from the other replicas
             for (const auto &peer : TEST_PEER_LIST)
             {
-                if(peer.uuid == this->uuid)
+                if (peer.uuid == this->uuid)
                 {
                     continue;
                 }
@@ -164,6 +164,53 @@ namespace bzn
     }
 
 
+    TEST_F(pbft_viewchange_test, validate_viewchange_checkpoints)
+    {
+        this->build_pbft();
+
+        for(size_t i{0} ; i < 99 ; ++i)
+        {
+            run_transaction_through_primary();
+        }
+        prepare_for_checkpoint(100);
+
+        // expect checkpoint message
+        run_transaction_through_primary();
+        this->stabilize_checkpoint(100);
+
+        run_transaction_through_primary(false);
+        run_transaction_through_primary(false);
+
+        EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(test::is_viewchange, Eq(true))))
+        .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message)
+            {
+                bzn_envelope viewchange_env;
+                EXPECT_TRUE(viewchange_env.ParseFromString(*encoded_message));
+
+                pbft_msg viewchange_message;
+                EXPECT_TRUE(viewchange_message.ParseFromString(viewchange_env.pbft()));
+
+                auto checkpoint = this->pbft->validate_viewchange_checkpoints(viewchange_message);
+
+                EXPECT_EQ(uint64_t(100), checkpoint->first);
+
+
+            }));
+
+
+
+        //this->pbft->validate_viewchange_checkpoints(const pbft_msg &viewchange_message)
+
+
+
+
+
+
+
+    }
+
+
+
 
 
 
@@ -172,6 +219,7 @@ namespace bzn
 
 
     ////////////////////////////////////////////////////////////////////////
+    // bad tests
 
 
     TEST_F(pbft_viewchange_test, is_valid_viewchange_message)

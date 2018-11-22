@@ -92,7 +92,7 @@ namespace bzn::test
     void
     pbft_test::build_pbft(bool use_mock_crypto)
     {
-        if(use_mock_crypto)
+        if (use_mock_crypto)
         {
             this->crypto = nullptr;
             this->crypto = mock_crypto;

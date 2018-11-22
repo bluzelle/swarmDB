@@ -45,7 +45,8 @@ pbft::pbft(
     , service(std::move(service))
     , failure_detector(std::move(failure_detector))
     , io_context(io_context)
-    , audit_heartbeat_timer(this->io_context->make_unique_steady_timer()), crypto(std::move(crypto))
+    , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
+    , crypto(std::move(crypto))
 {
     if (peers.empty())
     {
@@ -145,7 +146,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
 void
 pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
 {
-    if (msg.payload_case() != bzn_envelope::kPbft )
+    if (msg.payload_case() != bzn_envelope::kPbft)
     {
         LOG(error) << "Got misdirected message " << msg.DebugString().substr(0, MAX_MESSAGE_SIZE);
     }
@@ -230,19 +231,17 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
-    if (
-            !this->is_view_valid()
-            && ( msg.type() != PBFT_MSG_CHECKPOINT || msg.type() != PBFT_MSG_VIEWCHANGE || msg.type() != PBFT_MSG_NEWVIEW) )
+    if (!this->is_view_valid()
+        && ( msg.type() != PBFT_MSG_CHECKPOINT || msg.type() != PBFT_MSG_VIEWCHANGE || msg.type() != PBFT_MSG_NEWVIEW))
     {
         LOG(debug) << "Dropping message because local view is invalid";
         return false;
     }
 
     auto t = msg.type();
-    if (
-            t == PBFT_MSG_PREPREPARE
-            || t == PBFT_MSG_PREPARE
-            || t == PBFT_MSG_COMMIT)
+    if (t == PBFT_MSG_PREPREPARE
+        || t == PBFT_MSG_PREPARE
+        || t == PBFT_MSG_COMMIT)
     {
         if (msg.view() != this->view)
         {
@@ -1033,14 +1032,12 @@ pbft::is_view_valid() const
 bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {
-    return std::find_if (
-            std::begin( this->current_peers())
+    return std::find_if (std::begin( this->current_peers())
             , std::end( this->current_peers())
             , [&](const auto& address)
             {
                 return sender== address.uuid;
             }) != this->current_peers().end();
-
 }
 
 
@@ -1052,19 +1049,16 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     {
         bzn_envelope envelope;
         pbft_msg checkpoint_message;
-        if (
-            !envelope.ParseFromString(viewchange_message.checkpoint_messages(i))
+        if (!envelope.ParseFromString(viewchange_message.checkpoint_messages(i))
             || !this->crypto->verify(envelope)
             || !this->is_peer(envelope.sender())
-            || !checkpoint_message.ParseFromString(envelope.pbft())
-            )
+            || !checkpoint_message.ParseFromString(envelope.pbft()))
         {
             LOG (error) << "Checkpoint validation failure - unable to parse envelope";
             continue;
         }
 
-        checkpoint_hashes[checkpoint_t(
-                checkpoint_message.sequence(),
+        checkpoint_hashes[checkpoint_t(checkpoint_message.sequence(),
                 checkpoint_message.state_hash())].insert(envelope.sender());
     }
     return checkpoint_hashes;
@@ -1086,7 +1080,7 @@ pbft::validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const
     // that have the same checkpoint hash and valid signatures
     size_t checkpoint_message_count = size_t(viewchange_message.checkpoint_messages_size());
 
-    if ( checkpoint_message_count >= 2 * this->max_faulty_nodes() + 1 )
+    if (checkpoint_message_count >= 2 * this->max_faulty_nodes() + 1)
     {
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes{
                 this->validate_and_extract_checkpoint_hashes(viewchange_message)};
@@ -1135,20 +1129,17 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
     for (int i{0} ; i < viewchange_message.prepared_proofs_size() ; ++i)
     {
 
-        if (
-                !pre_prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).pre_prepare())
-                || !this->is_peer(pre_prepare_envelope.sender())
-                || !this->crypto->verify(pre_prepare_envelope))
+        if (!pre_prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).pre_prepare())
+            || !this->is_peer(pre_prepare_envelope.sender())
+            || !this->crypto->verify(pre_prepare_envelope))
         {
             LOG(error) << "is_valid_viewchange_message - a pre prepare message has a bad envelope";
             return false;
         }
 
-
         pbft_msg preprepare_message;
-        if (
-                !preprepare_message.ParseFromString(pre_prepare_envelope.pbft())
-                || ( preprepare_message.sequence() <= valid_checkpoint->first ) )
+        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft())
+            || ( preprepare_message.sequence() <= valid_checkpoint->first ))
         {
             LOG(error) << "is_valid_viewchange_message - a pre prepare message has an invalid sequence number";
             return false;
@@ -1158,22 +1149,20 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         bzn_envelope prepare_envelope;
         for ( int j{0} ; j < viewchange_message.prepared_proofs(i).prepare_size() ; ++j )
         {
-            if (
-                    !prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).prepare(j))
-                    || !this->is_peer(prepare_envelope.sender())
-                    || !this->crypto->verify(prepare_envelope))
+            if (!prepare_envelope.ParseFromString(viewchange_message.prepared_proofs(i).prepare(j))
+                || !this->is_peer(prepare_envelope.sender())
+                || !this->crypto->verify(prepare_envelope))
             {
                 LOG(error) << "is_valid_viewchange_message - a prepare message has a bad envelope";
                 return false;
             }
 
             // does the sequence number, view number and hash match those of the pre prepare
-            if (
-                    pbft_msg prepare_msg;
-                    !prepare_msg.ParseFromString(prepare_envelope.pbft())
-                    || preprepare_message.sequence() != prepare_msg.sequence()
-                    || preprepare_message.view() != prepare_msg.view()
-                    || preprepare_message.request_hash() != prepare_msg.request_hash() )
+            if (pbft_msg prepare_msg;
+                !prepare_msg.ParseFromString(prepare_envelope.pbft())
+                || preprepare_message.sequence() != prepare_msg.sequence()
+                || preprepare_message.view() != prepare_msg.view()
+                || preprepare_message.request_hash() != prepare_msg.request_hash())
             {
                 LOG(error) << "is_valid_viewchange_message - a prepare message is invalid";
                 return false;
@@ -1182,7 +1171,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
             senders.insert(prepare_envelope.sender());
         }
 
-        if (senders.size() < 2 * this->max_faulty_nodes() + 1 )
+        if (senders.size() < 2 * this->max_faulty_nodes() + 1)
         {
             LOG(error) << "is_valid_viewchange_message - there were not enough valid viewchange messages";
             return false;
@@ -1203,15 +1192,14 @@ pbft::get_sequences_and_request_hashes_from_proofs(
         auto prepared_proof = viewchange_msg.prepared_proofs(j);
 
         pbft_msg msg;
-        if (
-                bzn_envelope envelope;
-                !envelope.ParseFromString(prepared_proof.pre_prepare())
-                || !this->is_peer(envelope.sender())
-                || !msg.ParseFromString(envelope.pbft()))
+        if (bzn_envelope envelope;
+            !envelope.ParseFromString(prepared_proof.pre_prepare())
+            || !this->is_peer(envelope.sender())
+            || !msg.ParseFromString(envelope.pbft()))
         {
             return false;
         }
-        sequence_request_pairs.insert(std::make_pair(msg.sequence(), msg.request_hash() ));
+        sequence_request_pairs.insert(std::make_pair(msg.sequence(), msg.request_hash()));
     }
     return true;
 }
@@ -1233,12 +1221,9 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
 
         bzn_envelope original_msg;
         // - are each of those viewchange messages valid?
-        if (
-                !original_msg.ParseFromString(viewchange_msg.viewchange_messages(i))
-                || !viewchange_msg.ParseFromString(original_msg.pbft())
-                || !this->is_valid_viewchange_message(viewchange_msg, original_msg)
-                )
-
+        if (!original_msg.ParseFromString(viewchange_msg.viewchange_messages(i))
+            || !viewchange_msg.ParseFromString(original_msg.pbft())
+            || !this->is_valid_viewchange_message(viewchange_msg, original_msg))
         {
             return false;
         }
@@ -1274,28 +1259,38 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
                 }
 
                 // did we find the sequence?
-                if(
-                        sequence == pre_prepare.sequence()
-                        && request_hash == pre_prepare.request_hash())
+                if (sequence == pre_prepare.sequence()
+                    && request_hash == pre_prepare.request_hash())
                 {
                     matched_pre_prepares.emplace_back(pre_prepare);
-                    continue;
+                    break;
                 }
             }
         }
 
-        if( matched_pre_prepares.size() != size_t(msg.pre_prepare_messages_size()) )
+        if (matched_pre_prepares.size() != size_t(msg.pre_prepare_messages_size()))
         {
             LOG (error) << "is_valid_newview_message - unexpected sequence/request hash count";
             return false;
         }
     }
 
-    if ( viewchange_senders.size() != size_t(msg.viewchange_messages_size()) )
+
+    if (viewchange_senders.size() != size_t(msg.viewchange_messages_size()))
     {
         LOG (error) << "is_valid_newview_message - unexpected viewchange message count";
         return false;
     }
+
+    // TODO does every hash have a matching pre-prepare check the sizes
+
+
+
+
+
+    // TODO missing sequence numbers
+
+
 
     return true;
 }
@@ -1430,11 +1425,9 @@ pbft::save_checkpoint(const pbft_msg& msg)
     {
         const auto checkpoint_msg = msg.checkpoint_messages(i);
         bzn_envelope original_checkpoint;
-        if (
-                original_checkpoint.ParseFromString(checkpoint_msg)
-                || !this->crypto->verify(original_checkpoint) // TODO: consider removing this - check with debugger
-                || !message.ParseFromString(original_checkpoint.pbft())
-           )
+        if (original_checkpoint.ParseFromString(checkpoint_msg)
+            || !this->crypto->verify(original_checkpoint) // TODO: consider removing this - check with debugger
+            || !message.ParseFromString(original_checkpoint.pbft()))
         {
             continue;
         }
@@ -1480,10 +1473,9 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     // When a replica recieves f + 1 view change messages it sends one as well
     // should it be == or >=  ?
-    if (
-            this->view_is_valid
-            && this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1
-            && msg.view() > this->last_view_sent)
+    if (this->view_is_valid
+        && this->valid_view_change_messages.size() == this->max_faulty_nodes() + 1
+        && msg.view() > this->last_view_sent)
     {
         this->replica_broadcasts_viewchange(msg);
     }
@@ -1505,17 +1497,14 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     if (viewchange == this->valid_view_change_messages.end())
     {
-        LOG (error) << "handle_viewchange - no valid viewchange messages";
+        LOG (debug) << "handle_viewchange - not enough viewchange messages";
         return;
     }
 
-
-
     // When the primary of the new view recieves 2f valid view change messages for the new view
     // the primary of new view broadcasts NEWVIEW
-    if (
-            this->valid_view_change_messages.size() == 2 * this->max_faulty_nodes()
-            && this->get_primary(msg.view()).uuid == this->get_uuid() )
+
+    // TODO Refactor into method
     {
         // create the newview and and broadcast it
 
@@ -1543,7 +1532,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
                             return !google::protobuf::util::MessageDifferencer::Equals(viewchange, pbft_viewchange);
                         }
                     );
-            if ( found_iter == viewchange_messages.end())
+            if (found_iter == viewchange_messages.end())
             {
                 viewchange_messages.emplace_back(pbft_viewchange);
             }
@@ -1580,8 +1569,10 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     {
         const bzn_envelope original_msg = msg.pre_prepare_messages(i);
         pbft_msg msg;
-        assert(msg.ParseFromString(original_msg.pbft()));
-        this->handle_preprepare( msg, original_msg);
+        if (msg.ParseFromString(original_msg.pbft()))
+        {
+            this->handle_preprepare( msg, original_msg);
+        }
     }
 }
 
@@ -1747,7 +1738,7 @@ pbft::prepared_operations_since_last_checkpoint()
     std::set<std::shared_ptr<bzn::pbft_operation>> retval;
     for (const auto& p : this->operations)
     {
-        if ( p.second->is_prepared() )
+        if (p.second->is_prepared())
         {
             if (p.second->sequence > this->latest_stable_checkpoint().first)
             {
