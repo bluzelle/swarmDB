@@ -150,6 +150,23 @@ namespace bzn
     }
 
 
+    TEST_F(pbft_viewchange_test, test_is_peer)
+    {
+        const bzn::peer_address_t NOT_PEER{  "127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
+        this->build_pbft();
+
+        for(const auto& peer : TEST_PEER_LIST)
+        {
+            EXPECT_TRUE(this->pbft->is_peer(peer.uuid));
+        }
+
+        EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
+    }
+
+
+
+
+
 
 
 

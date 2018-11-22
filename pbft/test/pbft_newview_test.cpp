@@ -433,24 +433,6 @@ namespace bzn
 //    }
 
 
-
-
-
-    // TODO move the following tests to pbft_test
-    TEST_F(pbft_newview_test, test_is_peer)
-    {
-        const bzn::peer_address_t NOT_PEER{  "127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
-        this->build_pbft();
-
-        for(const auto& peer : TEST_PEER_LIST)
-        {
-            EXPECT_TRUE(this->pbft->is_peer(peer.uuid));
-        }
-
-        EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
-    }
-
-
     TEST_F(pbft_newview_test, test_get_primary)
     {
         build_pbft();
