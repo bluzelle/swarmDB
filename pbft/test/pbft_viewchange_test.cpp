@@ -126,31 +126,27 @@ namespace bzn
             }
         }
     };
-    
-    
+
+
+    /////////////////////////
     TEST_F(pbft_viewchange_test, test_make_signed_envelope)
     {
-        const std::string REQUEST_HASH{"request hash"};
-        
-        
+        const std::string sender_uuid{"sender_uuid"};
+        const std::string signature{"signature"};
+        // This is not a test of crypto::sign, just that crypto::sign is being called.
         this->build_pbft(true);
-        
+
         pbft_msg message;
-        message.set_type(PBFT_MSG_VIEWCHANGE);
-        message.set_request_hash("request");
-        
-       
-        
-        
-        
-        this->pbft->make_signed_envelope(message.SerializeAsString());
-        
-        
-        
-        
-        
-        
-        
+        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
+        {
+            msg.set_sender(sender_uuid);
+            msg.set_signature(signature);
+            return true;
+        }));
+
+        auto signed_envelope = this->pbft->make_signed_envelope(message.SerializeAsString());
+        EXPECT_EQ(sender_uuid, signed_envelope.sender());
+        EXPECT_EQ(signature, signed_envelope.signature());
     }
 
 

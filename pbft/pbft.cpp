@@ -642,7 +642,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
             , this->crypto->hash(request), nullptr);
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
-            request.SerializeAsString();
     }
 }
 
@@ -727,17 +726,6 @@ pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_in
     result.set_sender(this->uuid);
 
     return result;
-}
-
-bzn::encoded_message
-pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_info*/)
-{
-    wrapped_bzn_msg result;
-    result.set_payload(msg.SerializeAsString());
-    result.set_type(bzn_msg_type::BZN_MSG_PBFT_MEMBERSHIP);
-    result.set_sender(this->uuid);
-
-    return result.SerializeAsString();
 }
 
 bzn::encoded_message
@@ -833,14 +821,7 @@ pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
     checkpoint_t cp(msg.sequence(), msg.state_hash());
 
     this->unstable_checkpoint_proofs[cp][original_msg.sender()] = original_msg.SerializeAsString();
-    if (msg.sequence() > this->first_sequence_to_execute)
-    {
-        this->maybe_stabilize_checkpoint(cp);
-    }
-    else
-    {
-        this->maybe_adopt_checkpoint(cp);
-    }
+    this->maybe_stabilize_checkpoint(cp);
 }
 
 bzn::checkpoint_t
@@ -955,39 +936,6 @@ pbft::set_checkpoint_state(const checkpoint_t& cp, const std::string& data)
     // the service is expected to load the state and discard any pending operations
     // prior to the sequence number, then execute any subsequent operations sequentially
     this->service->set_service_state(cp.first, data);
-}
-
-void
-pbft::maybe_adopt_checkpoint(const checkpoint_t& cp)
-{
-    if (this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
-    {
-        return;
-    }
-
-    pbft_membership_msg msg;
-    msg.set_type(PBFT_MMSG_GET_STATE);
-    msg.set_sequence(cp.first);
-    msg.set_state_hash(cp.second);
-
-    auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(msg));
-    this->node->send_message_str(make_endpoint(this->get_primary()), msg_ptr);
-
-
-
-//    this->stable_checkpoint = cp;
-//    this->stable_checkpoint_proof = this->unstable_checkpoint_proofs[cp];
-//
-//    LOG(info) << boost::format("Checkpoint %1% at seq %2% is now stable; clearing old data")
-//                 % cp.second
-//                 % cp.first;
-//
-//    this->clear_local_checkpoints_until(cp);
-//    this->clear_checkpoint_messages_until(cp);
-//    this->clear_operations_until(cp);
-//
-//    this->low_water_mark = std::max(this->low_water_mark, cp.first);
-//    this->high_water_mark = std::max(this->high_water_mark, cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS*CHECKPOINT_INTERVAL));
 }
 
 void

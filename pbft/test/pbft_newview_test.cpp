@@ -259,23 +259,7 @@ namespace bzn
     }
 
 
-    // TODO fix "Failed to read pem file: "
-    TEST_F(pbft_newview_test, make_signed_envelope)
-    {
-        this->build_pbft();
 
-        std::string serialized_pbft_message;
-
-        bzn_envelope envelope{
-            this->pbft->make_signed_envelope(serialized_pbft_message)};
-
-        EXPECT_EQ(envelope.sender(), this->pbft->get_uuid());
-
-        pbft_msg message;
-        message.ParseFromString(envelope.pbft());
-        EXPECT_EQ(message.type(), PBFT_MSG_UNDEFINED);
-        // TODO test signature...
-    }
 
     TEST_F(pbft_newview_test, validate_viewchange_checkpoints)
     {

@@ -94,8 +94,10 @@ namespace bzn::test
     {
         if(use_mock_crypto)
         {
-            this->crypto = this->mock_crypto;
+            this->crypto = nullptr;
+            this->crypto = mock_crypto;
         }
+
 
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
