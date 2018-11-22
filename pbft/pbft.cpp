@@ -783,7 +783,9 @@ pbft::handle_failure()
 {
     this->notify_audit_failure_detected();
     this->view_is_valid = false;
-    pbft_msg view_change{make_viewchange(
+    pbft_msg view_change
+    {
+            pbft::make_viewchange(
             this->view + 1
             , this->latest_stable_checkpoint().first
             , this->stable_checkpoint_proof
@@ -1136,8 +1138,6 @@ pbft::validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const
     // that have the same checkpoint hash and valid signatures
     size_t checkpoint_message_count = size_t(viewchange_message.checkpoint_messages_size());
 
-    LOG(debug) << "validate_viewchange_checkpoints - checkpoint_message_count: " << checkpoint_message_count;
-
     if ( checkpoint_message_count >= 2 * this->max_faulty_nodes() + 1 )
     {
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes{
@@ -1169,7 +1169,7 @@ pbft::validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const
 bool
 pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg ) const
 {
-    if (!this->is_peer(original_msg.sender()))// TODO: Rich - If redundant, keep this checkm remove the other
+    if (!this->is_peer(original_msg.sender()))// TODO: Rich - If redundant, keep this check, remove the other
     {
         LOG(debug) << "is_valid_viewchange_message - message not from a peer";
         return false;
@@ -1269,75 +1269,6 @@ pbft::get_sequences_and_request_hashes_from_proofs(
 }
 
 
-//bool  // TODO: Remove
-//pbft::validate_preprepare_sequences(
-//        const pbft_msg& viewchange_msg
-//        , std::set<uint64_t>& sequences) const
-//{
-//    // - for each sequence/hash in that set
-//    // -- does the viewchange contain a preprepare for that sequence/hash
-//    pbft_msg pre_prep_msg;
-//    for (const auto& sequence : sequences)
-//    {
-//        bool has_sequence = false;
-//        for (int j{0} ; j < viewchange_msg.pre_prepare_messages_size(); ++j)
-//        {
-//            const bzn_envelope pre_prep_env{viewchange_msg.pre_prepare_messages(j)};
-//
-//            if (!pre_prep_msg.ParseFromString(pre_prep_env.pbft()))
-//            {
-//                return false;
-//            }
-//
-//            if (sequence == pre_prep_msg.sequence())
-//            {
-//                has_sequence = true;
-//                break;
-//            }
-//        }
-//        if (!has_sequence)
-//        {
-//            return false;
-//        }
-//    }
-//    return true;
-//}
-//
-//
-//bool // TODO: Remove
-//pbft::validate_preprepare_request_hashes(
-//        const pbft_msg& viewchange_msg
-//        , std::set<std::string> request_hashes
-//        ) const
-//{
-//    pbft_msg pre_prep_msg;
-//    for (const auto& request_hash : request_hashes)
-//    {
-//        bool has_request_hash = false;
-//        for (int j{0} ; j < viewchange_msg.pre_prepare_messages_size() ; ++j)
-//        {
-//            const bzn_envelope& pre_prep_env{viewchange_msg.pre_prepare_messages(j)};
-//
-//            if (!pre_prep_msg.ParseFromString(pre_prep_env.pbft()))
-//            {
-//                return false;
-//            }
-//
-//            if (request_hash == pre_prep_msg.request_hash())
-//            {
-//                has_request_hash = true;
-//                break;
-//            }
-//        }
-//        if (!has_request_hash)
-//        {
-//            return false;
-//        }
-//    }
-//    return true;
-//}
-
-
 bool
 pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*original_msg*/) const
 {
@@ -1374,7 +1305,6 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
             return false;
         }
 
-        // TODO: validate
         // each *pair* must match a pre-prepare in the the newview message...
         std::vector<pbft_msg> matched_pre_prepares;
         for(const auto sequence_requesthash : sequence_request_pairs )
@@ -1923,7 +1853,8 @@ pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) 
  *
  * @return <VIEW-CHANGE v+1, n, C, P, i>_sigma_i
  */
-pbft_msg pbft::make_viewchange(
+pbft_msg
+pbft::make_viewchange(
         uint64_t new_view
         , uint64_t base_sequence_number
         , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof

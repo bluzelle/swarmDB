@@ -175,10 +175,24 @@ namespace bzn
         void saw_request(const bzn_envelope& msg, const request_hash_t& hash);
 
 
+        // VIEWCHANGE/NEWVIEW Helper methods
+        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
+        pbft_msg make_newview(uint64_t new_view_index, const std::vector<pbft_msg> &view_change_messages, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages);
+        pbft_msg build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages);
+        bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
+        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
+        std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
+        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
+        void save_checkpoint(const pbft_msg& msg);
+        void fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepares);
+        bool is_peer(const bzn::uuid_t& peer) const;
+        bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
+
+
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
         uint64_t next_issued_sequence_number = 1;
-        bool     view_is_valid = true;
+
         uint64_t first_sequence_to_execute = 0;
         bool joined_swarm = false;
 
@@ -188,32 +202,42 @@ namespace bzn
         std::shared_ptr<bzn::node_base> node;
 
         const bzn::uuid_t uuid;
+
         std::shared_ptr<pbft_service_base> service;
 
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex pbft_lock;
 
-        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
-
         std::map<bzn::operation_key_t, std::shared_ptr<bzn::pbft_operation>> operations;
+
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
 
         std::once_flag start_once;
 
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
+
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
 
         bool audit_enabled = true;
 
         checkpoint_t stable_checkpoint{0, INITIAL_CHECKPOINT_HASH};
+
         std::unordered_map<uuid_t, std::string> stable_checkpoint_proof;
 
         std::set<checkpoint_t> local_unstable_checkpoints;
+
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
+
         pbft_config_store configurations;
 
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
+
+        std::shared_ptr<crypto_base> crypto;
+
+        // VIEWCHANGE/NEWVIEW members
+        bool view_is_valid = true;
+        std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
 
         FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
         FRIEND_TEST(pbft_test, valid_leave_request_test);
@@ -222,10 +246,9 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
         FRIEND_TEST(pbft_test, test_new_config_commit_handling);
         FRIEND_TEST(pbft_test, test_move_to_new_config);
+        FRIEND_TEST(pbft_test, full_test);
 
-
-
-        FRIEND_TEST(pbft_newview_test, make_signed_envelope);
+        FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
 
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, primary_handle_viewchange);
@@ -233,7 +256,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
 
-
+        FRIEND_TEST(pbft_newview_test, make_signed_envelope);
         FRIEND_TEST(pbft_newview_test, make_newview_makes_valid_message);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
@@ -242,12 +265,8 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, backup_handle_newview);
         FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_newview_test, test_validate_preprepare_sequences);
-
-
         FRIEND_TEST(pbft_newview_test, test_is_peer);
         FRIEND_TEST(pbft_newview_test, test_get_primary);
-
-        FRIEND_TEST(pbft_test, full_test);
 
         friend class pbft_proto_test;
 

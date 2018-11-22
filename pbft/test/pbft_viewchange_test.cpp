@@ -126,6 +126,39 @@ namespace bzn
             }
         }
     };
+    
+    
+    TEST_F(pbft_viewchange_test, test_make_signed_envelope)
+    {
+        const std::string REQUEST_HASH{"request hash"};
+        
+        
+        this->build_pbft(true);
+        
+        pbft_msg message;
+        message.set_type(PBFT_MSG_VIEWCHANGE);
+        message.set_request_hash("request");
+        
+       
+        
+        
+        
+        this->pbft->make_signed_envelope(message.SerializeAsString());
+        
+        
+        
+        
+        
+        
+        
+    }
+
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////
 
 
     TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
