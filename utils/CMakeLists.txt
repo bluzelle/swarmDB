@@ -5,6 +5,8 @@ add_library(utils STATIC
         blacklist.hpp
         make_endpoint.hpp
         make_endpoint.cpp
+        bytes_to_debug_string.cpp
+        bytes_to_debug_string.hpp
         crypto.cpp
         crypto.hpp)
 

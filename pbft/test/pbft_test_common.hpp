@@ -54,7 +54,7 @@ namespace bzn::test
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<bzn::Mocknode_base>();
+        std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
         std::shared_ptr<bzn::Mockpbft_failure_detector_base> mock_failure_detector =
                 std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =
@@ -86,8 +86,15 @@ namespace bzn::test
         void build_pbft();
 
         void TearDown();
+
+        void send_preprepare(uint64_t view, uint64_t sequence, bzn::hash_t req_hash, std::optional<bzn_envelope> request);
+        void send_prepares(uint64_t view, uint64_t sequence, bzn::hash_t req_hash);
+        void send_commits(uint64_t view, uint64_t sequence, bzn::hash_t req_hash);
+
+
     };
 
+    uint64_t now();
 
     pbft_msg extract_pbft_msg(std::string msg);
     uuid_t extract_sender(std::string msg);

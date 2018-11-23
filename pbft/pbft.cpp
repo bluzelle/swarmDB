@@ -14,6 +14,7 @@
 
 #include <pbft/pbft.hpp>
 #include <utils/make_endpoint.hpp>
+#include <utils/bytes_to_debug_string.hpp>
 #include <google/protobuf/text_format.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/format.hpp>
@@ -268,6 +269,35 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     {
         LOG(info) << "Forwarding request to primary";
         this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
+
+        const bzn::hash_t req_hash = this->crypto->hash(request_env);
+
+        const auto existing_operation = std::find_if(this->operations.begin(), this->operations.end(),
+            // This search is inefficient for in-memory operations, but the db lookup that will replace it is not
+            [&](const auto& pair)
+            {
+                return std::get<2>(pair.first) == req_hash;
+            });
+
+        // If we already have an operation for this request_hash, attach the session to it
+        if (existing_operation != this->operations.end())
+        {
+            const std::shared_ptr<bzn::pbft_operation>& op = existing_operation->second;
+            LOG(debug) << "We already had an operation for that request hash; attaching session to it";
+
+            if (!op->has_session())
+            {
+                op->set_session(session);
+            }
+        }
+        else
+        {
+            LOG(debug) << "Saving session because we don't have an operation for this hash: " << bzn::bytes_to_debug_string(req_hash);
+            this->sessions_waiting_on_forwarded_requests[req_hash] = session;
+        }
+
+        this->failure_detector->request_seen(req_hash);
+
         return;
     }
 
@@ -580,7 +610,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     // TODO: this needs to be refactored to be service-agnostic
     if (op->has_db_request())
     {
-        this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, this->find_operation(op)));
+        this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, op));
     }
     else
     {
@@ -636,14 +666,25 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_ha
     auto lookup = operations.find(key);
     if (lookup == operations.end())
     {
-        LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req " << req_hash;
+        LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req " << bytes_to_debug_string(req_hash);
 
         std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, req_hash,
                 this->current_peers_ptr());
-        auto result = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
+        bool added;
+        std::tie(std::ignore, added) = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
+        assert(added);
 
-        assert(result.second);
-        return result.first->second;
+        auto session_pair = this->sessions_waiting_on_forwarded_requests.find(req_hash);
+        if (session_pair != this->sessions_waiting_on_forwarded_requests.end())
+        {
+            LOG(debug) << "Attaching pending session to new operation";
+            std::weak_ptr<bzn::session_base> session;
+            std::tie(std::ignore, session) = *session_pair;
+            op->set_session(session);
+            this->sessions_waiting_on_forwarded_requests.erase(req_hash);
+        }
+
+        return op;
     }
 
     return lookup->second;
@@ -928,7 +969,10 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
 {
     // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
     bzn_envelope mutable_msg(msg);
-    mutable_msg.set_timestamp(this->now());
+    if (msg.timestamp() == 0)
+    {
+        mutable_msg.set_timestamp(this->now());
+    }
 
     LOG(debug) << "got database message";
     this->handle_request(mutable_msg, session);
