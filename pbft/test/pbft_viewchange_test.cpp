@@ -28,44 +28,6 @@ namespace bzn
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
         void
-        execute_handle_failure_expect_sut_to_send_viewchange()
-        {
-            // I expect that a replica forced to handle a failure will invalidate
-            // its' view, and cause the replica to send a VIEWCHANGE messsage
-            EXPECT_CALL(*mock_node, send_message_str(_, _))
-                    .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message) {
-                        bzn_envelope envelope;
-                        envelope.ParseFromString(*encoded_message);
-
-
-
-                        pbft_msg view_change;
-                        view_change.ParseFromString(envelope.pbft());
-                        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                        EXPECT_TRUE(2 == view_change.view());
-                        EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-
-
-
-
-
-                    }));
-            this->pbft->handle_failure();
-        }
-
-        void
-        check_that_pbft_drops_messages()
-        {
-//            // We do not expect the pre-prepares due to the handled message at
-//            // the end of the test.
-//            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-//                    .Times(Exactly(0));
-//
-//            // nothing will happen with this request, that is there will be no new messages
-//            pbft->handle_message(this->preprepare_msg, default_original_msg);
-        }
-
-        void
         send_some_viewchange_messages(size_t n, bool(*f)(std::shared_ptr<std::string> wrapped_msg))
         {
             size_t count{0};
@@ -119,7 +81,7 @@ namespace bzn
                 wrapped_bzn_msg wmsg;
                 wmsg.set_type(BZN_MSG_PBFT);
                 wmsg.set_sender(peer.uuid);
-                // wmsg.set_signature(???)
+
                 wmsg.set_payload(msg.SerializeAsString());
 
                 this->pbft->handle_message(msg, this->default_original_msg);
@@ -134,15 +96,15 @@ namespace bzn
         const std::string sender_uuid{"sender_uuid"};
         const std::string signature{"signature"};
         // This is not a test of crypto::sign, just that crypto::sign is being called.
-        this->build_pbft(true);
+        this->build_pbft();
 
         pbft_msg message;
-        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
-        {
-            msg.set_sender(sender_uuid);
-            msg.set_signature(signature);
-            return true;
-        }));
+//        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
+//        {
+//            msg.set_sender(sender_uuid);
+//            msg.set_signature(signature);
+//            return true;
+//        }));
 
         auto signed_envelope = this->pbft->make_signed_envelope(message.SerializeAsString());
         EXPECT_EQ(sender_uuid, signed_envelope.sender());
@@ -164,11 +126,7 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, validate_viewchange_checkpoints)
     {
-        this->build_pbft(true);
-
-        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
-
-
+        this->build_pbft();
 
         for(size_t i{0} ; i < 99 ; ++i)
         {

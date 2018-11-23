@@ -1213,11 +1213,28 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
+    // TODO missing sequence numbers
+    uint64_t minimum_sequence{UINT64_MAX};
+    uint64_t maximum_sequence{0};
+    for(int i{0}; i < msg.pre_prepare_messages_size(); ++i)
+    {
+        const bzn_envelope pre_prepare_envelope{msg.pre_prepare_messages(i)};
+        pbft_msg pre_prepare;
+        pre_prepare.ParseFromString(pre_prepare_envelope.pbft());
+
+        minimum_sequence = (pre_prepare.sequence() < minimum_sequence ? pre_prepare.sequence() : minimum_sequence);
+        maximum_sequence = (pre_prepare.sequence() > maximum_sequence ? pre_prepare.sequence() : maximum_sequence);
+    }
+    if( maximum_sequence-minimum_sequence != uint64_t(msg.pre_prepare_messages_size()))
+    {
+        LOG (error) << "is_valid_newview_message - NEWVIEW is missing pre prepare messages";
+        return false;
+    }
+
     pbft_msg viewchange_msg;
     std::set<std::string> viewchange_senders;
     for (int i{0} ; i < msg.viewchange_messages_size() ; ++i)
     {
-
         bzn_envelope original_msg;
         // - are each of those viewchange messages valid?
         if (!original_msg.ParseFromString(viewchange_msg.viewchange_messages(i))
@@ -1272,8 +1289,13 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
             LOG (error) << "is_valid_newview_message - unexpected sequence/request hash count";
             return false;
         }
-    }
 
+        if (sequence_request_pairs.size() != size_t(msg.pre_prepare_messages_size()))
+        {
+            LOG (error) << "is_valid_newview_message - pre prepare without matching hash";
+            return false;
+        }
+    }
 
     if (viewchange_senders.size() != size_t(msg.viewchange_messages_size()))
     {
@@ -1281,13 +1303,10 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
-    // TODO does every hash have a matching pre-prepare check the sizes
 
 
 
 
-
-    // TODO missing sequence numbers
 
 
 
