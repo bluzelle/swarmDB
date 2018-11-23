@@ -196,10 +196,17 @@ void
 pbft_operation::set_session(std::weak_ptr<bzn::session_base> session)
 {
     this->listener_session = std::move(session);
+    this->session_saved = true;
 }
 
 std::weak_ptr<bzn::session_base>
 pbft_operation::session() const
 {
     return this->listener_session;
+}
+
+bool
+pbft_operation::has_session() const
+{
+    return this->session_saved;
 }

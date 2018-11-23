@@ -56,3 +56,4 @@ namespace bzn::utils
 
 // This limits the number of characters that are displayed in "LOG(x) <<"  messages.
 const uint16_t MAX_MESSAGE_SIZE = 1024;
+const uint16_t MAX_SHORT_MESSAGE_SIZE = 32;
