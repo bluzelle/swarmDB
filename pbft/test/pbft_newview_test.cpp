@@ -147,9 +147,10 @@ namespace bzn
 
     TEST_F(pbft_newview_test, pbft_no_history_replica_sends_viewchange_message_after_receiving_enough_viewchange_messages)
     {
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-        this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
+        EXPECT_TRUE(false);
+//        this->uuid = SECOND_NODE_UUID;
+//        this->build_pbft();
+//        this->send_some_viewchange_messages(this->max_faulty_replicas_allowed() + 1, is_viewchange);
     }
 
     TEST_F(pbft_newview_test, pbft_replica_with_history_sends_viewchange_message)

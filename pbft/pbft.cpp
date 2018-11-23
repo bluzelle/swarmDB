@@ -1732,10 +1732,11 @@ pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* confi
     return true;
 }
 
-std::set<std::shared_ptr<bzn::pbft_operation>>
+std::unordered_set<std::shared_ptr<bzn::pbft_operation>>
 pbft::prepared_operations_since_last_checkpoint()
 {
-    std::set<std::shared_ptr<bzn::pbft_operation>> retval;
+    std::unordered_set<std::shared_ptr<bzn::pbft_operation>> retval;
+
     for (const auto& p : this->operations)
     {
         if (p.second->is_prepared())
@@ -1793,7 +1794,7 @@ pbft::make_viewchange(
         uint64_t new_view
         , uint64_t base_sequence_number
         , std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof
-        , std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations)
+        , std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations)
 {
     pbft_msg viewchange;
 

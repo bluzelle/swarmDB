@@ -174,11 +174,11 @@ namespace bzn
 
 
         // VIEWCHANGE/NEWVIEW Helper methods
-        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
+        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index, const std::vector<pbft_msg> &view_change_messages, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages);
         pbft_msg build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages);
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
-        std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
+        std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
         std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
