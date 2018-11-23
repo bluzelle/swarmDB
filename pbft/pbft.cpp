@@ -1203,6 +1203,29 @@ pbft::get_sequences_and_request_hashes_from_proofs(
     return true;
 }
 
+/**
+ * A valid newview message must contain a complete set of pre prepares, that is
+ * there must be one pre prepare for each sequence.
+ * TODO: this method needs a better name
+ * @param newview_msg
+ * @return true if there are no missing pre-prepares based on sequence numbers of each pre-prepare, false otherwise.
+ */
+bool
+pbft::pre_prepares_contiguous(const pbft_msg& newview_msg) const
+{
+    uint64_t minimum_sequence{UINT64_MAX};
+    uint64_t maximum_sequence{0};
+    for(int i{0}; i < newview_msg.pre_prepare_messages_size(); ++i)
+    {
+        const bzn_envelope pre_prepare_envelope{newview_msg.pre_prepare_messages(i)};
+        pbft_msg pre_prepare;
+        pre_prepare.ParseFromString(pre_prepare_envelope.pbft());
+
+        minimum_sequence = (pre_prepare.sequence() < minimum_sequence ? pre_prepare.sequence() : minimum_sequence);
+        maximum_sequence = (pre_prepare.sequence() > maximum_sequence ? pre_prepare.sequence() : maximum_sequence);
+    }
+    return (maximum_sequence-minimum_sequence) == uint64_t(newview_msg.pre_prepare_messages_size());
+}
 
 bool
 pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*original_msg*/) const
@@ -1213,19 +1236,7 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
-    // TODO missing sequence numbers
-    uint64_t minimum_sequence{UINT64_MAX};
-    uint64_t maximum_sequence{0};
-    for(int i{0}; i < msg.pre_prepare_messages_size(); ++i)
-    {
-        const bzn_envelope pre_prepare_envelope{msg.pre_prepare_messages(i)};
-        pbft_msg pre_prepare;
-        pre_prepare.ParseFromString(pre_prepare_envelope.pbft());
-
-        minimum_sequence = (pre_prepare.sequence() < minimum_sequence ? pre_prepare.sequence() : minimum_sequence);
-        maximum_sequence = (pre_prepare.sequence() > maximum_sequence ? pre_prepare.sequence() : maximum_sequence);
-    }
-    if( maximum_sequence-minimum_sequence != uint64_t(msg.pre_prepare_messages_size()))
+    if (!this->pre_prepares_contiguous(msg))
     {
         LOG (error) << "is_valid_newview_message - NEWVIEW is missing pre prepare messages";
         return false;

@@ -184,6 +184,7 @@ namespace bzn
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
         void replica_broadcasts_viewchange(const pbft_msg& msg);
+        bool pre_prepares_contiguous(const pbft_msg& newview_msg) const;
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
