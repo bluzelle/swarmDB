@@ -899,7 +899,6 @@ pbft::request_checkpoint_state(const checkpoint_t& cp)
     auto msg_ptr = std::make_shared<bzn_envelope>();
     msg_ptr->set_pbft_membership(msg.SerializeAsString());
 
-
     this->node->send_message(make_endpoint(selected), msg_ptr);
 }
 

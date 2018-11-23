@@ -67,8 +67,8 @@ namespace bzn
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
         // after preprepares is sent, SUT will send out prepares to all nodes
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true)))).Times(
-                Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size()));
 
         auto peer = *(TEST_PEER_LIST.begin());
         pbft_msg preprepare;
@@ -76,7 +76,7 @@ namespace bzn
         preprepare.set_view(this->view);
         preprepare.set_sequence(sequence);
         preprepare.set_type(PBFT_MSG_PREPREPARE);
-        preprepare.set_allocated_request((new bzn_envelope(request)));
+        preprepare.set_allocated_request(new bzn_envelope(request));
         preprepare.set_request_hash(this->pbft->crypto->hash(request));
         auto wmsg = wrap_pbft_msg(preprepare);
         wmsg.set_sender(peer.uuid);
@@ -88,8 +88,8 @@ namespace bzn
     pbft_proto_test::send_prepares(uint64_t sequence, const bzn::hash_t& request_hash)
     {
         // after prepares are sent, SUT will send out commits to all nodes
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_commit, Eq(true)))).Times(
-                Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_commit, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size()));
 
         for (const auto& peer : TEST_PEER_LIST)
         {
@@ -141,8 +141,8 @@ namespace bzn
             }));
 
         // after enough commits are sent, SUT will send out checkpoint message to all nodes
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_checkpoint, Eq(true)))).Times(
-            Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_checkpoint, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size()));
     }
 
     void

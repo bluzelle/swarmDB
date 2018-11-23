@@ -98,7 +98,6 @@ namespace bzn::test
             this->crypto = mock_crypto;
         }
 
-
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context

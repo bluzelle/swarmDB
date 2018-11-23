@@ -125,8 +125,6 @@ namespace bzn::test
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_request_hash("some other hash");
 
-
-
         this->pbft->handle_message(
         this->preprepare_msg, default_original_msg);
         this->pbft->handle_message(preprepare2, default_original_msg);
