@@ -670,14 +670,17 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_ha
 
         std::shared_ptr<pbft_operation> op = std::make_shared<pbft_operation>(view, sequence, req_hash,
                 this->current_peers_ptr());
-        auto emplace_result = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
-        assert(emplace_result.second);
+        bool added;
+        std::tie(std::ignore, added) = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
+        assert(added);
 
-        const auto session_pair = this->sessions_waiting_on_forwarded_requests.find(req_hash);
+        auto session_pair = this->sessions_waiting_on_forwarded_requests.find(req_hash);
         if (session_pair != this->sessions_waiting_on_forwarded_requests.end())
         {
             LOG(debug) << "Attaching pending session to new operation";
-            op->set_session(session_pair->second);
+            std::weak_ptr<bzn::session_base> session;
+            std::tie(std::ignore, session) = *session_pair;
+            op->set_session(session);
             this->sessions_waiting_on_forwarded_requests.erase(req_hash);
         }
 
