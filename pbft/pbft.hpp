@@ -267,6 +267,7 @@ namespace bzn
         // end of bad tests
 
         friend class pbft_proto_test;
+        friend class pbft_viewchange_test;
 
         std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
     };

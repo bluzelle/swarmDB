@@ -15,6 +15,7 @@
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <mocks/mock_crypto_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 
 namespace bzn
@@ -23,6 +24,9 @@ namespace bzn
     class pbft_viewchange_test : public pbft_proto_test
     {
     public:
+        std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+
+
 
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
@@ -93,22 +97,26 @@ namespace bzn
     /////////////////////////
     TEST_F(pbft_viewchange_test, test_make_signed_envelope)
     {
-        const std::string sender_uuid{"sender_uuid"};
-        const std::string signature{"signature"};
-        // This is not a test of crypto::sign, just that crypto::sign is being called.
+        const std::string mock_signature{"signature"};
+        std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+        this->crypto = mockcrypto;
         this->build_pbft();
-
         pbft_msg message;
-//        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
-//        {
-//            msg.set_sender(sender_uuid);
-//            msg.set_signature(signature);
-//            return true;
-//        }));
+        message.set_type(PBFT_MSG_VIEWCHANGE);
+        message.set_sequence(383439);
+        message.set_request_hash("request_hash");
+        message.set_view(484575);
 
-        auto signed_envelope = this->pbft->make_signed_envelope(message.SerializeAsString());
-        EXPECT_EQ(sender_uuid, signed_envelope.sender());
-        EXPECT_EQ(signature, signed_envelope.signature());
+        EXPECT_CALL(*mockcrypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
+        {
+            msg.set_sender(this->pbft->get_uuid());
+            msg.set_signature(mock_signature);
+            return true;
+        }));
+        bzn_envelope signed_envelope = this->pbft->make_signed_envelope(message.SerializeAsString());
+
+        EXPECT_EQ(TEST_NODE_UUID, signed_envelope.sender());
+        EXPECT_EQ(mock_signature, signed_envelope.signature());
     }
 
     TEST_F(pbft_viewchange_test, test_is_peer)
@@ -327,7 +335,7 @@ namespace bzn
     {
         // std::set<std::shared_ptr<bzn::pbft_operation>>
         // prepared_operations_since_last_checkpoint();
-        this->build_pbft(true);
+        this->build_pbft();
 
         EXPECT_EQ( (size_t)0, this->pbft->prepared_operations_since_last_checkpoint().size());
 

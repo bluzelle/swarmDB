@@ -21,7 +21,6 @@
 #include <pbft/pbft_failure_detector.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
-#include <mocks/mock_crypto_base.hpp>
 #include <proto/bluzelle.pb.h>
 #include <json/json.h>
 #include <boost/beast/core/detail/base64.hpp>
@@ -62,9 +61,6 @@ namespace bzn::test
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
-        std::shared_ptr<bzn::Mockcrypto_base> mock_crypto =
-                std::make_shared<NiceMock<bzn::Mockcrypto_base>>();
-
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
@@ -87,7 +83,7 @@ namespace bzn::test
 
         pbft_test();
 
-        void build_pbft(bool use_mock_crypto = false);
+        void build_pbft();
 
         void TearDown();
 

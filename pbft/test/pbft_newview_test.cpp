@@ -293,11 +293,9 @@ namespace bzn
 
     }
 
-
-
     TEST_F(pbft_newview_test, validate_and_extract_checkpoint_hashes)
     {
-        this->build_pbft(true);
+        this->build_pbft();
 
         pbft_msg viewchange_message;
 
