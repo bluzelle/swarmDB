@@ -12,13 +12,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include "pbft_operation.hpp"
+#include "pbft_memory_operation.hpp"
 #include <boost/format.hpp>
 #include <string>
 
 using namespace bzn;
 
-pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
+pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
         : view(view)
           , sequence(sequence)
           , request_hash(request_hash)
@@ -27,25 +27,25 @@ pbft_operation::pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash
 }
 
 bool
-pbft_operation::has_request() const
+pbft_memory_operation::has_request() const
 {
     return this->request_saved;
 }
 
 bool
-pbft_operation::has_db_request() const
+pbft_memory_operation::has_db_request() const
 {
     return this->has_request() && this->request.payload_case() == bzn_envelope::kDatabaseMsg;
 }
 
 bool
-pbft_operation::has_config_request() const
+pbft_memory_operation::has_config_request() const
 {
     return this->has_request() && this->request.payload_case() == bzn_envelope::kPbftInternalRequest;
 }
 
 const bzn_envelope&
-pbft_operation::get_request() const
+pbft_memory_operation::get_request() const
 {
     if (!this->request_saved)
     {
@@ -56,7 +56,7 @@ pbft_operation::get_request() const
 }
 
 const pbft_config_msg&
-pbft_operation::get_config_request() const
+pbft_memory_operation::get_config_request() const
 {
     if (!this->has_config_request())
     {
@@ -67,7 +67,7 @@ pbft_operation::get_config_request() const
 }
 
 const database_msg&
-pbft_operation::get_database_msg() const
+pbft_memory_operation::get_database_msg() const
 {
     if (!this->has_db_request())
     {
@@ -78,7 +78,7 @@ pbft_operation::get_database_msg() const
 }
 
 void
-pbft_operation::record_request(const bzn_envelope& wrapped_request)
+pbft_memory_operation::record_request(const bzn_envelope& wrapped_request)
 {
 
     if (wrapped_request.payload_case() == bzn_envelope::kDatabaseMsg)
@@ -109,104 +109,121 @@ pbft_operation::record_request(const bzn_envelope& wrapped_request)
 
 }
 
-void
-pbft_operation::record_preprepare(const bzn_envelope& /*encoded_preprepare*/)
+void pbft_memory_operation::record_pbft_msg(const pbft_msg& message, const bzn_envelope& original_message)
 {
-    this->preprepare_seen = true;
+    switch(message.type())
+    {
+        case pbft_msg_type::PBFT_MSG_PREPREPARE :
+            this->preprepare_seen = true;
+            break;
+        case pbft_msg_type::PBFT_MSG_PREPARE :
+            this->prepares_seen.emplace(original_message.sender());
+            break;
+        case pbft_msg_type::PBFT_MSG_COMMIT :
+            this->commits_seen.emplace(original_message.sender());
+            break;
+        default:
+            throw std::runtime_error("this is not an appropriate pbft_msg_type");
+    }
+
+    //TODO: save original message
 }
 
 bool
-pbft_operation::has_preprepare() const
+pbft_memory_operation::is_preprepared() const
 {
     return this->preprepare_seen;
 }
 
-void
-pbft_operation::record_prepare(const bzn_envelope& encoded_prepare)
-{
-    // TODO: Save message
-    this->prepares_seen.insert(encoded_prepare.sender());
-}
-
 size_t
-pbft_operation::faulty_nodes_bound() const
+pbft_memory_operation::faulty_nodes_bound() const
 {
     return (this->peers->size() - 1) / 3;
 }
 
 bool
-pbft_operation::is_prepared() const
+pbft_memory_operation::is_prepared() const
 {
-    return this->has_request() && this->has_preprepare() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
-}
-
-void
-pbft_operation::record_commit(const bzn_envelope& encoded_commit)
-{
-    this->commits_seen.insert(encoded_commit.sender());
+    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 bool
-pbft_operation::is_committed() const
+pbft_memory_operation::is_committed() const
 {
     return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 void
-pbft_operation::begin_commit_phase()
+pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_stage)
 {
-    if (!this->is_prepared() || this->state != pbft_operation_state::prepare)
+    switch(new_stage)
     {
-        throw std::runtime_error("Illegaly tried to move to commit phase");
+        case pbft_operation_stage::prepare :
+            throw std::runtime_error("cannot advance to initial stage");
+        case pbft_operation_stage::commit :
+            if (!this->is_preprepared() || this->stage != pbft_operation_stage::prepare)
+            {
+                throw std::runtime_error("illegal move to commit phase");
+            }
+            break;
+        case pbft_operation_stage::execute :
+            if (!this->is_committed() || this->stage != pbft_operation_stage::commit)
+            {
+                throw std::runtime_error("illegal move to execute phase");
+            }
+            break;
+        default:
+            throw std::runtime_error("unknown pbft_operation_stage");
     }
 
-    this->state = pbft_operation_state::commit;
-}
-
-void
-pbft_operation::end_commit_phase()
-{
-    if (!this->is_committed() || this->state != pbft_operation_state::commit)
-    {
-        throw std::runtime_error("Illegally tried to end the commit phase");
-    }
-
-    this->state = pbft_operation_state::committed;
+    this->stage = new_stage;
 }
 
 operation_key_t
-pbft_operation::get_operation_key() const
+pbft_memory_operation::get_operation_key() const
 {
     return {this->view, this->sequence, this->request_hash};
 }
 
-pbft_operation_state
-pbft_operation::get_state() const
+pbft_operation_stage
+pbft_memory_operation::get_stage() const
 {
-    return this->state;
-}
-
-std::string
-pbft_operation::debug_string() const
-{
-    return boost::str(boost::format("(v%1%, s%2%) - %3%") % this->view % this->sequence % this->request.ShortDebugString());
+    return this->stage;
 }
 
 void
-pbft_operation::set_session(std::shared_ptr<bzn::session_base> session)
+pbft_memory_operation::set_session(std::shared_ptr<bzn::session_base> session)
 {
     this->listener_session = std::move(session);
     this->session_saved = true;
 }
 
 std::shared_ptr<bzn::session_base>
-pbft_operation::session() const
+pbft_memory_operation::session() const
 {
     return this->listener_session;
 }
 
 bool
-pbft_operation::has_session() const
+pbft_memory_operation::has_session() const
 {
     return this->session_saved;
+}
+
+uint64_t
+pbft_memory_operation::get_sequence() const
+{
+    return this->sequence;
+}
+
+uint64_t
+pbft_memory_operation::get_view() const
+{
+    return this->view;
+}
+
+const hash_t&
+pbft_memory_operation::get_request_hash() const
+{
+    return this->request_hash;
 }

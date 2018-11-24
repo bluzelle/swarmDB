@@ -33,16 +33,74 @@ namespace bzn
     class pbft_operation
     {
     public:
+<<<<<<< HEAD
+
+        pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
+
+        void set_session(std::shared_ptr<bzn::session_base>);
+        std::shared_ptr<bzn::session_base> session() const;
+        bool has_session() const;
+
+        operation_key_t get_operation_key() const;
+        pbft_operation_state get_state() const;
+
+        void record_preprepare(const bzn_envelope& encoded_preprepare);
+        bool has_preprepare() const;
+
+        void record_prepare(const bzn_envelope& encoded_prepare);
+        bool is_prepared() const;
+
+        void record_commit(const bzn_envelope& encoded_commit);
+        bool is_committed() const;
+
+        void begin_commit_phase();
+        void end_commit_phase();
+
+        void record_request(const bzn_envelope& encoded_request);
+        bool has_request() const;
+        bool has_db_request() const;
+        bool has_config_request() const;
+
+        const bzn_envelope& get_request() const;
+        const pbft_config_msg& get_config_request() const;
+        const database_msg& get_database_msg() const;
+
+        const uint64_t view;
+        const uint64_t sequence;
+        const bzn::hash_t request_hash;
+
+        std::string debug_string() const;
+
+        size_t faulty_nodes_bound() const;
+
+    private:
+        const std::shared_ptr<const std::vector<peer_address_t>> peers;
+
+        pbft_operation_state state = pbft_operation_state::prepare;
+
+        bool preprepare_seen = false;
+        std::set<bzn::uuid_t> prepares_seen;
+        std::set<bzn::uuid_t> commits_seen;
+
+        std::shared_ptr<bzn::session_base> listener_session;
+
+        bzn_envelope request;
+        database_msg parsed_db;
+        pbft_config_msg parsed_config;
+
+        bool request_saved = false;
+        bool session_saved = false;
+=======
         /**
          * Store a session that waits on the result of the operation (will not persist across crashes)
-         * @param session shared_ptr to session
+         * @param session weak_ptr to session
          */
-        virtual void set_session(std::shared_ptr<bzn::session_base> session) = 0;
+        virtual void set_session(std::weak_ptr<bzn::session_base> session) = 0;
 
         /**
          * @return the saved session, if any
          */
-        virtual std::shared_ptr<bzn::session_base> session() const = 0;
+        virtual std::weak_ptr<bzn::session_base> session() const = 0;
 
         /**
          * @return do we have a session
@@ -132,5 +190,6 @@ namespace bzn
         virtual const database_msg& get_database_msg() const = 0;
 
         virtual ~pbft_operation() = default;
+>>>>>>> KEP-793: Refactor pbft_operation type to an abstract base, clean up its
     };
 }

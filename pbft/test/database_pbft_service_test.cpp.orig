@@ -148,8 +148,12 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_create()->set_value("value3");
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
+<<<<<<< HEAD
     EXPECT_CALL(*mock_session, is_open()).WillRepeatedly(Return(true));
+    auto operation3 = std::make_shared<bzn::pbft_operation>(0, 3, "somehashb", nullptr);
+=======
     auto operation3 = std::make_shared<bzn::pbft_memory_operation>(0, 3, "somehashb", nullptr);
+>>>>>>> KEP-793: Refactor pbft_operation type to an abstract base, clean up its
     env.set_database_msg(msg.SerializeAsString());
     operation3->record_request(env);
     operation3->set_session(mock_session);

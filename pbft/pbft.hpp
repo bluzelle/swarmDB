@@ -86,6 +86,23 @@ namespace bzn
 
         bzn::json_message get_status() override;
 
+        /*
+         * maximum number of tolerable faults (this can be a parameter, but for now we assume it has the worst-case value)
+         * f = floor( (n-1) / 3 )
+         */
+        static size_t faulty_nodes_bound(size_t swarm_size);
+
+        /*
+         * minimum quorum size such that the majority of the quorum is guaranteed to be honest
+         * 2f+1
+         */
+        static size_t honest_majority_size(size_t swarm_size);
+
+        /*
+         * minimum quorum size such that at least one member is guarenteed to be honest
+         */
+        static size_t honest_member_size(size_t swarm_size);
+
     private:
         std::shared_ptr<pbft_operation> find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
         std::shared_ptr<pbft_operation> find_operation(const pbft_msg& msg);
