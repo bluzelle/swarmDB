@@ -56,6 +56,8 @@ namespace bzn
         dmsg->set_allocated_create(create);
         request.set_database_msg(dmsg->SerializeAsString());
         request.set_timestamp(this->now());
+        request.set_sender(this->pbft->get_uuid());
+
 
         pbft->handle_request(request);
 

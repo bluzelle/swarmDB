@@ -26,7 +26,14 @@ namespace bzn
     public:
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
 
-
+        std::shared_ptr<Mockcrypto_base>
+        build_pft_with_mock_crypto()
+        {
+            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            this->crypto = mockcrypto;
+            this->build_pbft();
+            return mockcrypto;
+        }
 
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
@@ -95,12 +102,13 @@ namespace bzn
 
 
     /////////////////////////
+    // Good tests
     TEST_F(pbft_viewchange_test, test_make_signed_envelope)
     {
         const std::string mock_signature{"signature"};
-        std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
-        this->crypto = mockcrypto;
-        this->build_pbft();
+
+        auto mockcrypto = this->build_pft_with_mock_crypto();
+
         pbft_msg message;
         message.set_type(PBFT_MSG_VIEWCHANGE);
         message.set_sequence(383439);
@@ -121,10 +129,10 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, test_is_peer)
     {
-        const bzn::peer_address_t NOT_PEER{  "127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
+        const bzn::peer_address_t NOT_PEER{"127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
         this->build_pbft();
 
-        for(const auto& peer : TEST_PEER_LIST)
+        for (const auto& peer : TEST_PEER_LIST)
         {
             EXPECT_TRUE(this->pbft->is_peer(peer.uuid));
         }
@@ -132,21 +140,43 @@ namespace bzn
         EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
     }
 
+    TEST_F(pbft_viewchange_test, validate_and_extract_checkpoint_hashes)
+    {
+
+    }
+
     TEST_F(pbft_viewchange_test, validate_viewchange_checkpoints)
     {
-        this->build_pbft();
+        uint64_t current_sequence{0};
+        auto mockcrypto = this->build_pft_with_mock_crypto();
 
-        for(size_t i{0} ; i < 99 ; ++i)
+        EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
+                .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
+                {
+                    return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
+                }));
+
+
+        EXPECT_CALL(*mockcrypto, verify(_))
+                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                       {
+                                           return true;
+                                       }));
+
+
+        for(current_sequence=1 ; current_sequence < 100 ; ++current_sequence)
         {
             run_transaction_through_primary();
         }
-        prepare_for_checkpoint(100);
+        prepare_for_checkpoint(current_sequence);
 
-        // expect checkpoint message
+        // expect checkpoint message[
         run_transaction_through_primary();
-        this->stabilize_checkpoint(100);
+        this->stabilize_checkpoint(current_sequence);
 
+        current_sequence++;
         run_transaction_through_primary(false);
+        current_sequence++;
         run_transaction_through_primary(false);
 
         // ResultOf(test::is_viewchange, Eq(true))

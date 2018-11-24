@@ -1223,12 +1223,12 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
 
         // each *pair* must match a pre-prepare in the the newview message...
         std::vector<pbft_msg> matched_pre_prepares;
-        for(const auto sequence_requesthash : sequence_request_pairs)
+        for (const auto sequence_requesthash : sequence_request_pairs)
         {
             uint64_t sequence{sequence_requesthash.first};
             std::string request_hash{sequence_requesthash.second};
 
-            for(int j{0}; j <= msg.pre_prepare_messages_size(); ++j)
+            for (int j{0}; j <= msg.pre_prepare_messages_size(); ++j)
             {
                 const bzn_envelope& pre_prepare_envelope = msg.pre_prepare_messages(j);
                 // TODO: do we need to cryptographically validate pre_prepare_envelope?
@@ -1386,7 +1386,7 @@ pbft::make_signed_envelope(std::string serialized_pbft_message)
     bzn_envelope envelope;
     envelope.set_pbft(serialized_pbft_message);
     envelope.set_sender(this->get_uuid());
-    if(!this->crypto->sign(envelope))
+    if (!this->crypto->sign(envelope))
     {
         LOG (error) << "make_signed_envelope - failed to sign envelope";
     }
