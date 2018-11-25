@@ -246,6 +246,7 @@ namespace bzn
         // good tests
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
+        FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
 
         // bad tests

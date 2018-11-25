@@ -35,68 +35,31 @@ namespace bzn
             return mockcrypto;
         }
 
-        size_t
-        max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
         void
-        send_some_viewchange_messages(size_t n, bool(*f)(std::shared_ptr<std::string> wrapped_msg))
+        generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
         {
-            size_t count{0};
-            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(f, Eq(true))))
-                    .Times(Exactly(TEST_PEER_LIST.size()))
-                    .WillRepeatedly(Invoke([&](auto &, auto &) {
+            auto mockcrypto = this->build_pft_with_mock_crypto();
 
+            EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
+                                           {
+                                               return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
+                                           }));
 
-                        EXPECT_EQ( n, count);
+            EXPECT_CALL(*mockcrypto, verify(_))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                           {
+                                               return true;
+                                           }));
 
-
-
-
-                    }));
-
-            pbft_msg pbft_msg;
-            pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);
-            pbft_msg.set_view(this->pbft->get_view() + 1);
-
-            // let's pretend that the sytem under test is receiving view change messages
-            // from the other replicas
-            for (const auto &peer : TEST_PEER_LIST)
+            for(current_sequence=1 ; current_sequence < 100 ; ++current_sequence)
             {
-                if (peer.uuid == this->uuid)
-                {
-                    continue;
-                }
-
-
-                count++;
-
-                this->pbft->handle_message(pbft_msg, this->default_original_msg);
-                if (count == n)
-                    break;
+                run_transaction_through_primary();
             }
-        }
-
-
-        void
-        set_checkpoint(uint64_t sequence)
-        {
-            for (const auto &peer : TEST_PEER_LIST)
-            {
-                pbft_msg msg;
-                msg.set_type(PBFT_MSG_CHECKPOINT);
-                msg.set_view(this->pbft->get_view());
-                msg.set_sequence(sequence);
-                msg.set_state_hash(std::to_string(sequence));
-
-
-                wrapped_bzn_msg wmsg;
-                wmsg.set_type(BZN_MSG_PBFT);
-                wmsg.set_sender(peer.uuid);
-
-                wmsg.set_payload(msg.SerializeAsString());
-
-                this->pbft->handle_message(msg, this->default_original_msg);
-            }
+            prepare_for_checkpoint(current_sequence);
+            run_transaction_through_primary();
+            this->stabilize_checkpoint(current_sequence);
         }
     };
 
@@ -142,44 +105,57 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, validate_and_extract_checkpoint_hashes)
     {
+        uint64_t current_sequence{0};
+        generate_checkpoint_at_sequence_100(current_sequence);
 
+        current_sequence++;
+        run_transaction_through_primary(false);
+        current_sequence++;
+        run_transaction_through_primary(false);
+
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
+                .WillRepeatedly(Invoke(
+                        [&](const auto & /*endpoint*/, const auto& viewchange_env)
+                        {
+                            pbft_msg viewchange;
+                            viewchange.ParseFromString(viewchange_env->pbft());
+                            EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
+
+                            std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoints = this->pbft->validate_and_extract_checkpoint_hashes(viewchange);
+                            EXPECT_EQ(uint64_t(1), checkpoints.size());
+
+                            for(const auto& p : checkpoints)
+                            {
+                                auto checkpoint = p.first;
+                                auto uuids = p.second;
+
+                                // there will be a checkpoint 100, with a hashe value of "100"
+                                EXPECT_EQ( uint64_t(100), checkpoint.first );
+                                EXPECT_EQ( "100", checkpoint.second );
+
+                                EXPECT_EQ( uint64_t(3), uuids.size());
+                                for(const auto& uuid : uuids)
+                                {
+                                    EXPECT_FALSE(TEST_PEER_LIST.end() == std::find_if(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer)
+                                    {
+                                        return peer.uuid == uuid;
+                                    }));
+                                }
+                            }
+                        }));
+        this->pbft->handle_failure();
     }
 
     TEST_F(pbft_viewchange_test, validate_viewchange_checkpoints)
     {
         uint64_t current_sequence{0};
-        auto mockcrypto = this->build_pft_with_mock_crypto();
-
-        EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
-                .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
-                {
-                    return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
-                }));
-
-
-        EXPECT_CALL(*mockcrypto, verify(_))
-                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-                                       {
-                                           return true;
-                                       }));
-
-
-        for(current_sequence=1 ; current_sequence < 100 ; ++current_sequence)
-        {
-            run_transaction_through_primary();
-        }
-        prepare_for_checkpoint(current_sequence);
-
-        // expect checkpoint message[
-        run_transaction_through_primary();
-        this->stabilize_checkpoint(current_sequence);
+        generate_checkpoint_at_sequence_100(current_sequence);
 
         current_sequence++;
         run_transaction_through_primary(false);
         current_sequence++;
         run_transaction_through_primary(false);
 
-        // ResultOf(test::is_viewchange, Eq(true))
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
                 .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env) {
                     //bzn_envelope viewchange_env;
@@ -197,39 +173,6 @@ namespace bzn
                     LOG (debug) << hash;
                 }));
         this->pbft->handle_failure();
-
-
-
-//        this->build_pbft();
-//
-//        for(size_t i{0} ; i < 99 ; ++i)
-//        {
-//            run_transaction_through_primary();
-//        }
-//        prepare_for_checkpoint(100);
-//
-//        // expect checkpoint message
-//        run_transaction_through_primary();
-//        this->stabilize_checkpoint(100);
-//
-//        run_transaction_through_primary(false);
-//        run_transaction_through_primary(false);
-//
-//        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
-//        .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message)
-//            {
-//                bzn_envelope viewchange_env;
-//                EXPECT_TRUE(viewchange_env.ParseFromString(*encoded_message));
-//
-//                pbft_msg viewchange_message;
-//                EXPECT_TRUE(viewchange_message.ParseFromString(viewchange_env.pbft()));
-//
-//                auto checkpoint = this->pbft->validate_viewchange_checkpoints(viewchange_message);
-//
-//                EXPECT_EQ(uint64_t(100), checkpoint->first);
-//
-//            }));
-//        this->pbft->handle_failure();
     }
 
 
