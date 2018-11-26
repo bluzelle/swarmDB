@@ -1003,7 +1003,6 @@ pbft::is_view_valid() const
     return this->view_is_valid;
 }
 
-
 bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {
@@ -1012,7 +1011,6 @@ pbft::is_peer(const bzn::uuid_t& sender) const
         return sender== address.uuid;
     }) != this->current_peers().end();
 }
-
 
 std::map<bzn::checkpoint_t, std::set<bzn::uuid_t>>
 pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const
@@ -1032,7 +1030,6 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     }
     return checkpoint_hashes;
 }
-
 
 /**
  * Given a VIEWCHANGE message this method ensures that there are 2f+1 from each
@@ -1126,7 +1123,6 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
     }
     return valid_checkpoint != std::nullopt;
 }
-
 
 bool
 pbft::get_sequences_and_request_hashes_from_proofs(
@@ -1281,7 +1277,6 @@ pbft::fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepare
     }
 }
 
-
 /**
  * Create a <NEWVIEW, v+1, V, O> message
  * @param new_view_index v + 1
@@ -1315,7 +1310,6 @@ pbft::make_newview(
 
     return newview;
 }
-
 
 pbft_msg
 pbft::build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages)
@@ -1367,7 +1361,6 @@ pbft::build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_m
     return this->make_newview(new_view, viewchange_messages, pre_prepares);
 }
 
-
 bzn_envelope
 pbft::make_signed_envelope(std::string serialized_pbft_message)
 {
@@ -1381,7 +1374,6 @@ pbft::make_signed_envelope(std::string serialized_pbft_message)
 
     return envelope;
 }
-
 
 /**
  *
@@ -1405,7 +1397,6 @@ pbft::save_checkpoint(const pbft_msg& msg)
     }
 }
 
-
 void
 pbft::replica_broadcasts_viewchange(const pbft_msg& msg)
 {
@@ -1423,8 +1414,6 @@ pbft::replica_broadcasts_viewchange(const pbft_msg& msg)
     this->broadcast(this->wrap_message(viewchange_message));
 
 }
-
-
 
 void
 pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
@@ -1534,7 +1523,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         }
     }
 }
-
 
 std::string
 pbft::get_name()

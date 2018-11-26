@@ -58,7 +58,6 @@ namespace bzn
         request.set_timestamp(this->now());
         request.set_sender(this->pbft->get_uuid());
 
-
         pbft->handle_request(request);
 
         return operation;
