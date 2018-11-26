@@ -126,16 +126,6 @@ namespace bzn
 
     };
 
-    TEST_F(pbft_newview_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
-    {
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-        this->execute_handle_failure_expect_sut_to_send_viewchange();
-
-        // Now the replica's view should be invalid
-        EXPECT_FALSE(this->pbft->is_view_valid());
-    }
 
     TEST_F(pbft_newview_test, pbft_with_invalid_view_drops_messages)
     {

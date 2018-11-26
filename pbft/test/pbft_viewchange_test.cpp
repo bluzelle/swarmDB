@@ -157,12 +157,11 @@ namespace bzn
         run_transaction_through_primary(false);
 
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env) {
-                    //bzn_envelope viewchange_env;
-                    //EXPECT_TRUE(viewchange_env.ParseFromString(*encoded_message));
-                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
-
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
+                {
                     pbft_msg viewchange;
+
+                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
                     EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft()));
 
                     auto pair = this->pbft->validate_viewchange_checkpoints(viewchange);
@@ -174,6 +173,78 @@ namespace bzn
                 }));
         this->pbft->handle_failure();
     }
+
+
+    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
+    {
+        uint64_t current_sequence{0};
+        generate_checkpoint_at_sequence_100(current_sequence);
+
+        current_sequence++;
+        run_transaction_through_primary(false);
+        current_sequence++;
+        run_transaction_through_primary(false);
+
+
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
+                {
+                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
+                    pbft_msg viewchange;
+                    EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
+                    EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
+
+                }));
+
+        this->pbft->handle_failure();
+
+
+
+
+
+
+    }
+
+    // ...
+
+
+    // void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
+    TEST_F(pbft_viewchange_test, primary_handle_viewchange)
+    {
+        this->build_pbft();
+
+        pbft_msg msg;
+        bzn_envelope original_msg;
+        this->pbft->handle_viewchange(msg, original_msg);
+    }
+
+    TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
+    {
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+        EXPECT_CALL(*mock_node, send_message_str(_, _))
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message)
+                                       {
+                                           bzn_envelope envelope;
+                                           envelope.ParseFromString(*encoded_message);
+
+
+                                           pbft_msg view_change;
+                                           view_change.ParseFromString(envelope.pbft());
+                                           EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+                                           EXPECT_TRUE(2 == view_change.view());
+                                           EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+                                       }));
+
+        this->pbft->handle_failure();
+
+        // Now the replica's view should be invalid
+        EXPECT_FALSE(this->pbft->is_view_valid());
+    }
+
+
+
 
 
 
@@ -188,40 +259,8 @@ namespace bzn
     // bad tests
 
 
-    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
-    {
-        this->build_pbft();
-
-        bzn_envelope envelope;
-        pbft_msg viewchange;
-
-        // empty viewchange/envelope must be invalid.
-        EXPECT_FALSE(this->pbft->is_valid_viewchange_message(viewchange, envelope));
-
-        envelope.set_sender(TEST_PEER_LIST.begin()->uuid);
 
 
-        EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, envelope));
-
-
-
-
-
-
-
-
-
-    }
-
-    // void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
-    TEST_F(pbft_viewchange_test, primary_handle_viewchange)
-    {
-        this->build_pbft();
-
-        pbft_msg msg;
-        bzn_envelope original_msg;
-        this->pbft->handle_viewchange(msg, original_msg);
-    }
 
 
     TEST_F(pbft_viewchange_test, backup_handle_viewchange)
