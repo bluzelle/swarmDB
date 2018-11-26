@@ -50,6 +50,7 @@ namespace bzn
             virtual void start() = 0;
         };
 
+
     } // namespace deprecated
 
     class crud_base
@@ -60,6 +61,12 @@ namespace bzn
         virtual void handle_request(const database_msg& request, const std::shared_ptr<bzn::session_base>& session) = 0;
 
         virtual void start() = 0;
+
+        virtual bool save_state() = 0;
+
+        virtual std::shared_ptr<std::string> get_saved_state() = 0;
+
+        virtual bool load_state(const std::string& state) = 0;
     };
 
 } // namespace bzn

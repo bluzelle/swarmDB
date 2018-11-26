@@ -241,3 +241,21 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid)
 
     return (keys_removed) ? storage_base::result::ok : storage_base::result::not_found;
 }
+
+bool
+rocksdb_storage::create_snapshot()
+{
+    return false;
+}
+
+std::shared_ptr<std::string>
+rocksdb_storage::get_snapshot()
+{
+    return nullptr;
+}
+
+bool
+rocksdb_storage::load_snapshot(const std::string& /*data*/)
+{
+    return false;
+}

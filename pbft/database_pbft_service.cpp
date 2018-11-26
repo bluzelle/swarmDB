@@ -112,6 +112,14 @@ database_pbft_service::process_awaiting_operations()
             throw std::runtime_error("Failed to remove pbft_request from database! (" + std::to_string(uint8_t(result)) + ")");
         }
 
+        if (this->next_request_sequence == this->next_checkpoint)
+        {
+            if (this->crud->save_state())
+            {
+                this->last_checkpoint = this->next_request_sequence;
+            }
+        }
+
         ++this->next_request_sequence;
 
         this->save_next_request_sequence();
@@ -126,25 +134,26 @@ database_pbft_service::service_state_hash(uint64_t /*sequence_number*/) const
     return "";
 }
 
-bzn::service_state_t
+std::shared_ptr<bzn::service_state_t>
 database_pbft_service::get_service_state(uint64_t sequence_number) const
 {
-    // retrieve database state at this sequence/checkpoint
-    /*
-        return this->crud->get_state(sequence_number);
-    */
+    if (sequence_number == this->last_checkpoint)
+    {
+        return this->crud->get_saved_state();
+    }
 
-    return std::string("state_") + std::to_string(sequence_number);
+    return nullptr;
 }
 
 bool
-database_pbft_service::set_service_state(uint64_t sequence_number, const bzn::service_state_t& /*data*/)
+database_pbft_service::set_service_state(uint64_t sequence_number, const bzn::service_state_t& data)
 {
     // initialize database state from checkpoint data
-    /*
-        if (!this->crud->set_state(sequence_number, data))
-            return false;
-    */
+    if (!this->crud->load_state(data))
+    {
+        return false;
+    }
+    this->last_checkpoint = sequence_number;
 
     // remove all backlogged requests prior to checkpoint
     uint64_t seq = this->next_request_sequence;
@@ -161,16 +170,16 @@ database_pbft_service::set_service_state(uint64_t sequence_number, const bzn::se
 }
 
 void
+database_pbft_service::save_service_state_at(uint64_t sequence_number)
+{
+    this->next_checkpoint = sequence_number;
+}
+
+void
 database_pbft_service::consolidate_log(uint64_t sequence_number)
 {
     LOG(info) << "TODO: consolidating log at sequence number " << sequence_number;
-
-    // tell the database to set a checkpoint
-    /*
-        this->crud->remember_state(sequence_number);
-    */
 }
-
 
 void
 database_pbft_service::register_execute_handler(bzn::execute_handler_t handler)

@@ -13,6 +13,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <storage/mem_storage.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <sstream>
 
 using namespace bzn;
 
@@ -205,4 +209,53 @@ mem_storage::remove(const bzn::uuid_t& uuid)
     }
 
     return storage_base::result::not_found;
+}
+
+bool
+mem_storage::create_snapshot()
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    try
+    {
+        std::stringstream strm;
+        boost::archive::text_oarchive archive(strm);
+        archive << this->kv_store;
+        this->latest_snapshot = std::make_shared<std::string>(strm.str());
+
+        return true;
+    }
+    catch(std::exception &e)
+    {
+        LOG(error) << "Exception creating snapshot: " << e.what();
+    }
+    return false;
+}
+
+std::shared_ptr<std::string>
+mem_storage::get_snapshot()
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    return this->latest_snapshot;
+}
+
+bool
+mem_storage::load_snapshot(const std::string& data)
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for write access
+
+    try
+    {
+        std::stringstream strm(data);
+        boost::archive::text_iarchive archive(strm);
+        archive >> this->kv_store;
+        this->latest_snapshot = std::make_shared<std::string>(data);
+
+        return true;
+    }
+    catch(std::exception &e)
+    {
+        LOG(error) << "Exception loading snapshot: " << e.what();
+    }
+    return false;
 }

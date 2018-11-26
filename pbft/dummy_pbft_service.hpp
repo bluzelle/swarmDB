@@ -33,8 +33,9 @@ namespace bzn
         void consolidate_log(uint64_t sequence_number) override;
         void register_execute_handler(execute_handler_t handler) override;
         bzn::hash_t service_state_hash(uint64_t sequence_number) const override;
-        bzn::service_state_t get_service_state(uint64_t sequence_number) const override;
+        std::shared_ptr<bzn::service_state_t> get_service_state(uint64_t sequence_number) const override;
         bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) override;
+        void save_service_state_at(uint64_t sequence_number) override;
 
         uint64_t applied_requests_count();
 

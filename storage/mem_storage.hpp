@@ -42,10 +42,18 @@ namespace bzn
 
         storage_base::result remove(const bzn::uuid_t& uuid) override;
 
+        bool create_snapshot() override;
+
+        std::shared_ptr<std::string> get_snapshot() override;
+
+        bool load_snapshot(const std::string& data) override;
+
     private:
         std::unordered_map<bzn::uuid_t, std::unordered_map<bzn::key_t, bzn::value_t>> kv_store;
 
         std::shared_mutex lock; // for multi-reader and single writer access
+
+        std::shared_ptr<std::string> latest_snapshot;
     };
 
 } // bzn

@@ -56,66 +56,70 @@ pbft::pbft(
     // TODO: stable checkpoint should be read from disk first: KEP-494
     this->low_water_mark = this->stable_checkpoint.first;
     this->high_water_mark = this->stable_checkpoint.first + std::lround(CHECKPOINT_INTERVAL*HIGH_WATER_INTERVAL_IN_CHECKPOINTS);
+    this->service->save_service_state_at((this->next_issued_sequence_number % CHECKPOINT_INTERVAL) + CHECKPOINT_INTERVAL);
 }
 
 void
 pbft::start()
 {
     std::call_once(this->start_once,
-            [this]()
-            {
-                this->node->register_for_message(bzn_envelope::PayloadCase::kPbft,
-                        std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+        [this]()
+        {
+            this->node->register_for_message(bzn_envelope::PayloadCase::kPbft,
+                std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
-                    std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+            this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
+                std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->node->register_for_message(bzn_envelope::kDatabaseMsg,
-                        std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+            this->node->register_for_message(bzn_envelope::kDatabaseMsg,
+                std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-                this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
-                this->audit_heartbeat_timer->async_wait(
-                        std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
+            this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
+            this->audit_heartbeat_timer->async_wait(
+                std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 
-                this->service->register_execute_handler(
-                        [weak_this = this->weak_from_this(), fd = this->failure_detector]
-                                (std::shared_ptr<pbft_operation> op)
-                                        {
-                                            if (!op)
-                                            {
-                                                // TODO: Get real pbft_operation pointers from pbft_service
-                                                LOG(error) << "Ignoring null operation pointer recieved from pbft_service";
-                                                return;
-                                            }
-
-                                            fd->request_executed(op->request_hash);
-
-                                            if (op->sequence % CHECKPOINT_INTERVAL == 0)
-                                            {
-                                                auto strong_this = weak_this.lock();
-                                                if(strong_this)
-                                                {
-                                                    strong_this->checkpoint_reached_locally(op->sequence);
-                                                }
-                                                else
-                                                {
-                                                    throw std::runtime_error("pbft_service callback failed because pbft does not exist");
-                                                }
-                                            }
-                                        }
-                );
-
-                this->failure_detector->register_failure_handler(
-                        [weak_this = this->weak_from_this()]()
+            this->service->register_execute_handler(
+                [weak_this = this->weak_from_this(), fd = this->failure_detector]
+                    (std::shared_ptr<pbft_operation> op)
                         {
-                            auto strong_this = weak_this.lock();
-                            if (strong_this)
+                            if (!op)
                             {
-                                strong_this->handle_failure();
+                                // TODO: Get real pbft_operation pointers from pbft_service
+                                LOG(error) << "Ignoring null operation pointer recieved from pbft_service";
+                                return;
+                            }
+
+                            fd->request_executed(op->request_hash);
+
+                            if (op->sequence % CHECKPOINT_INTERVAL == 0)
+                            {
+                                auto strong_this = weak_this.lock();
+                                if(strong_this)
+                                {
+                                    // tell service to save the next checkpoint after this one
+                                    strong_this->service->save_service_state_at(op->sequence + CHECKPOINT_INTERVAL);
+
+                                    strong_this->checkpoint_reached_locally(op->sequence);
+                                }
+                                else
+                                {
+                                    throw std::runtime_error("pbft_service callback failed because pbft does not exist");
+                                }
                             }
                         }
-                        );
-            });
+            );
+
+            this->failure_detector->register_failure_handler(
+                [weak_this = this->weak_from_this()]()
+                {
+                    auto strong_this = weak_this.lock();
+                    if (strong_this)
+                    {
+                        strong_this->handle_failure();
+                    }
+                }
+                );
+        });
 }
 
 void
@@ -448,11 +452,20 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
 
     if (req_cp == this->latest_stable_checkpoint())
     {
+        auto state = this->get_checkpoint_state(req_cp);
+        if (!state)
+        {
+            LOG(debug) << boost::format("I'm missing data for checkpoint: seq: %1%, hash: %2%")
+                          % msg.sequence(), msg.state_hash();
+            // TODO: send error response
+            return;
+        }
+
         pbft_membership_msg reply;
         reply.set_type(PBFT_MMSG_SET_STATE);
         reply.set_sequence(req_cp.first);
         reply.set_state_hash(req_cp.second);
-        reply.set_state_data(this->get_checkpoint_state(req_cp));
+        reply.set_state_data(*state);
 
         auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
         session->send_datagram(msg_ptr);
@@ -461,6 +474,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
     {
         LOG(debug) << boost::format("Request for checkpoint that I don't have: seq: %1%, hash: %2%")
             % msg.sequence(), msg.state_hash();
+        // TODO: send error response
     }
 }
 
@@ -478,6 +492,7 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
         LOG(info) << boost::format("Adopting checkpoint %1% at seq %2%")
             % cp.second % cp.first;
 
+        // TODO: validate the state data
         this->set_checkpoint_state(cp, msg.state_data());
         this->stabilize_checkpoint(cp);
     }
@@ -623,7 +638,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
             , this->crypto->hash(request), nullptr);
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
-            request.SerializeAsString();
     }
 }
 
@@ -852,8 +866,6 @@ pbft::stabilize_checkpoint(const checkpoint_t& cp)
     this->high_water_mark = std::max(this->high_water_mark,
         cp.first + std::lround(HIGH_WATER_INTERVAL_IN_CHECKPOINTS * CHECKPOINT_INTERVAL));
 
-    this->service->consolidate_log(cp.first);
-
     // remove seen requests older than our time threshold
     this->recent_requests.erase(this->recent_requests.begin(),
         this->recent_requests.upper_bound(this->now() - MAX_REQUEST_AGE_MS));
@@ -893,7 +905,7 @@ pbft::select_peer_for_checkpoint(const checkpoint_t& cp)
     return this->get_peer_by_uuid(it->first);
 }
 
-std::string
+std::shared_ptr<std::string>
 pbft::get_checkpoint_state(const checkpoint_t& cp) const
 {
     // call service to retrieve state at this checkpoint

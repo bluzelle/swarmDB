@@ -124,6 +124,8 @@ namespace bzn
         run_transaction_through_primary();
         stabilize_checkpoint(100);
 
+        EXPECT_CALL(*this->mock_service, get_service_state(_)).Times(Exactly(1))
+            .WillOnce(Invoke([](auto &) {return std::make_shared<std::string>("dummy_state");}));
         EXPECT_CALL(*mock_session, send_datagram(ResultOf(is_set_state, Eq(true))))
             .Times((Exactly(1)));
         send_get_state_request(100);

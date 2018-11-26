@@ -352,3 +352,21 @@ crud::handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_ba
 
     LOG(warning) << "session no longer available. HAS DB not executed.";
 }
+
+bool
+crud::save_state()
+{
+    return this->storage->create_snapshot();
+}
+
+std::shared_ptr<std::string>
+crud::get_saved_state()
+{
+    return this->storage->get_snapshot();
+}
+
+bool
+crud::load_state(const std::string& state)
+{
+    return this->storage->load_snapshot(state);
+}
