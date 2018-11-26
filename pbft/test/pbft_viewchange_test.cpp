@@ -244,8 +244,6 @@ namespace bzn
         EXPECT_FALSE(this->pbft->is_view_valid());
     }
 
-
-
     TEST_F(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint)
     {
         uint64_t current_sequence{0};
