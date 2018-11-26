@@ -20,7 +20,6 @@
 
 namespace bzn
 {
-
     class pbft_viewchange_test : public pbft_proto_test
     {
     public:
@@ -53,7 +52,7 @@ namespace bzn
                                                return true;
                                            }));
 
-            for(current_sequence=1 ; current_sequence < 100 ; ++current_sequence)
+            for (current_sequence=1; current_sequence < 100; ++current_sequence)
             {
                 run_transaction_through_primary();
             }
@@ -62,7 +61,6 @@ namespace bzn
             this->stabilize_checkpoint(current_sequence);
         }
     };
-
 
     /////////////////////////
     // Good tests
@@ -124,7 +122,7 @@ namespace bzn
                             std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoints = this->pbft->validate_and_extract_checkpoint_hashes(viewchange);
                             EXPECT_EQ(uint64_t(1), checkpoints.size());
 
-                            for(const auto& p : checkpoints)
+                            for (const auto& p : checkpoints)
                             {
                                 auto checkpoint = p.first;
                                 auto uuids = p.second;
@@ -134,7 +132,7 @@ namespace bzn
                                 EXPECT_EQ( "100", checkpoint.second );
 
                                 EXPECT_EQ( uint64_t(3), uuids.size());
-                                for(const auto& uuid : uuids)
+                                for (const auto& uuid : uuids)
                                 {
                                     EXPECT_FALSE(TEST_PEER_LIST.end() == std::find_if(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(), [&](const auto& peer)
                                     {
@@ -174,7 +172,6 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-
     TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
     {
         uint64_t current_sequence{0};
@@ -205,8 +202,12 @@ namespace bzn
 
     }
 
-    // ...
+    TEST_F(pbft_viewchange_test, save_checkpoint)
+    {
 
+    }
+
+    // ...
 
     // void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
     TEST_F(pbft_viewchange_test, primary_handle_viewchange)
@@ -245,10 +246,29 @@ namespace bzn
 
 
 
+    TEST_F(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint)
+    {
+        uint64_t current_sequence{0};
+        generate_checkpoint_at_sequence_100(current_sequence);
 
+        EXPECT_EQ(size_t(0), this->pbft->prepared_operations_since_last_checkpoint().size());
 
+        run_transaction_through_primary(false);
+        current_sequence++;
+        EXPECT_EQ(size_t(1), this->pbft->prepared_operations_since_last_checkpoint().size());
 
+        run_transaction_through_primary(false);
+        current_sequence++;
+        EXPECT_EQ(size_t(2), this->pbft->prepared_operations_since_last_checkpoint().size());
 
+        auto operations = this->pbft->prepared_operations_since_last_checkpoint();
+        for(const auto& operation : operations)
+        {
+            // TODO: what other tests?
+            EXPECT_EQ(uint64_t(1), operation->view);
+            EXPECT_TRUE(operation->sequence > 100 && operation->sequence <= current_sequence);
+        }
+    }
 
 
 
@@ -257,12 +277,6 @@ namespace bzn
 
     ////////////////////////////////////////////////////////////////////////
     // bad tests
-
-
-
-
-
-
     TEST_F(pbft_viewchange_test, backup_handle_viewchange)
     {
         this->uuid = SECOND_NODE_UUID;
@@ -273,7 +287,6 @@ namespace bzn
 
         this->pbft->handle_viewchange(msg, original_msg);
     }
-
 
     TEST_F(pbft_viewchange_test, make_viewchange_makes_valid_message)
     {
@@ -291,18 +304,13 @@ namespace bzn
         std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations;
         uuid_t sender{"uuid_0"};
 
-        pbft_msg sut{pbft::make_viewchange(
-                new_view
-                , n
-                , stable_checkpoint_proof
-                , prepared_operations
-        )};
+        pbft_msg sut{pbft::make_viewchange(new_view, n, stable_checkpoint_proof, prepared_operations)};
 
         EXPECT_EQ(sut.type(), PBFT_MSG_VIEWCHANGE);
         EXPECT_EQ(sut.view(), new_view);
 
         std::unordered_map<bzn::uuid_t, std::string> sut_proofs;
-        for ( uint8_t i = 0 ; i < sut.checkpoint_messages_size() ; ++i )
+        for (uint8_t i = 0; i < sut.checkpoint_messages_size(); ++i )
         {
             const auto c = sut.checkpoint_messages(i);
             LOG(debug) << c.length();
@@ -310,7 +318,7 @@ namespace bzn
         }
 
         std::set<std::shared_ptr<bzn::pbft_operation>> sut_prepared_operations;
-        for (uint8_t i = 0 ; i < sut.prepared_proofs_size() ; ++i )
+        for (uint8_t i = 0; i < sut.prepared_proofs_size(); ++i)
         {
             LOG(debug) << sut.prepared_proofs(i).prepare_size();
         }
@@ -328,12 +336,7 @@ namespace bzn
 
         this->build_pbft();
 
-        pbft_msg viewchange = this->pbft->make_viewchange(
-                new_view_index
-                , base_sequence_number
-                , stable_checkpoint_proof
-                , prepared_operations
-        );
+        pbft_msg viewchange = this->pbft->make_viewchange(new_view_index, base_sequence_number, stable_checkpoint_proof, prepared_operations);
 
         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
         EXPECT_EQ(new_view_index, viewchange.view());
@@ -343,25 +346,6 @@ namespace bzn
 
     }
 
-    TEST_F(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint)
-    {
-        // std::set<std::shared_ptr<bzn::pbft_operation>>
-        // prepared_operations_since_last_checkpoint();
-        this->build_pbft();
-
-        EXPECT_EQ( (size_t)0, this->pbft->prepared_operations_since_last_checkpoint().size());
-
-
-
-
-
-
-
-
-
-
-
-    }
 
     TEST_F(pbft_viewchange_test, test_make_viewchange_output)
     {
@@ -369,7 +353,7 @@ namespace bzn
 
         size_t const oldview = this->pbft->get_view();
 
-        for(size_t i{0} ; i < 99 ; ++i)
+        for (size_t i{0}; i < 99; ++i)
         {
             run_transaction_through_primary();
         }
