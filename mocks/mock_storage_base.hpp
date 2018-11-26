@@ -45,6 +45,12 @@ namespace bzn {
                      std::pair<std::size_t, std::size_t>(const bzn::uuid_t& uuid));
         MOCK_METHOD1(remove,
                      storage_base::result(const bzn::uuid_t& uuid));
-    };
+        MOCK_METHOD0(create_snapshot,
+                     bool());
+        MOCK_METHOD0(get_snapshot,
+                     std::shared_ptr<std::string>());
+        MOCK_METHOD1(load_snapshot,
+                     bool(const std::string&));
+   };
 
 }  // namespace bzn

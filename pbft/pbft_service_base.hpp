@@ -79,12 +79,17 @@ namespace bzn
         /*
          * Get the full database state at the given sequence number, if available
          */
-        virtual bzn::service_state_t get_service_state(uint64_t sequence_number) const = 0;
+        virtual std::shared_ptr<bzn::service_state_t> get_service_state(uint64_t sequence_number) const = 0;
 
         /*
          * Set the full database state at the given sequence number
          */
         virtual bool set_service_state(uint64_t sequence_number, const bzn::service_state_t& data) = 0;
+
+        /*
+         * Tell the service to checkpoint its state when it reaches this sequence number
+         */
+        virtual void save_service_state_at(uint64_t sequence_number) = 0;
 
         /*
          * A checkpoint has been stabilized, so we no longer need any history from before then.

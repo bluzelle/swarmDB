@@ -56,6 +56,12 @@ namespace bzn
         virtual std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) = 0;
 
         virtual storage_base::result remove(const bzn::uuid_t& uuid) = 0;
+
+        virtual bool create_snapshot() = 0;
+
+        virtual std::shared_ptr<std::string> get_snapshot() = 0;
+
+        virtual bool load_snapshot(const std::string& data) = 0;
     };
 
 } // bzn

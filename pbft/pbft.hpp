@@ -132,7 +132,7 @@ namespace bzn
         void stabilize_checkpoint(const checkpoint_t& cp);
         const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
         void request_checkpoint_state(const checkpoint_t& cp);
-        std::string get_checkpoint_state(const checkpoint_t& cp) const;
+        std::shared_ptr<std::string> get_checkpoint_state(const checkpoint_t& cp) const;
         void set_checkpoint_state(const checkpoint_t& cp, const std::string& data);
 
         inline size_t quorum_size() const;

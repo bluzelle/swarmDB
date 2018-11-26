@@ -32,6 +32,12 @@ namespace bzn
 
         void start() override;
 
+        bool save_state() override;
+
+        std::shared_ptr<std::string> get_saved_state() override;
+
+        bool load_state(const std::string& state) override;
+
     private:
 
         void handle_create_db(const database_msg& request, std::shared_ptr<bzn::session_base> session);
