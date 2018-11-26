@@ -62,8 +62,6 @@ namespace bzn
         }
     };
 
-    /////////////////////////
-    // Good tests
     TEST_F(pbft_viewchange_test, test_make_signed_envelope)
     {
         const std::string mock_signature{"signature"};
@@ -172,7 +170,7 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
+    TEST_F(pbft_viewchange_test, DISABLED_is_valid_viewchange_message)
     {
         uint64_t current_sequence{0};
         generate_checkpoint_at_sequence_100(current_sequence);
@@ -196,7 +194,6 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-
     TEST_F(pbft_viewchange_test, make_viewchange_makes_valid_message)
     {
         uint64_t current_sequence{0};
@@ -212,18 +209,6 @@ namespace bzn
         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
         EXPECT_EQ(current_sequence, viewchange.sequence());
         EXPECT_EQ(3, viewchange.checkpoint_messages_size());
-    }
-
-    // ...
-
-    // void handle_viewchange      (const pbft_msg& msg, const bzn_envelope& original_msg);
-    TEST_F(pbft_viewchange_test, primary_handle_viewchange)
-    {
-        this->build_pbft();
-
-        pbft_msg msg;
-        bzn_envelope original_msg;
-        this->pbft->handle_viewchange(msg, original_msg);
     }
 
     TEST_F(pbft_viewchange_test, pbft_handle_failure_causes_invalid_view_state_and_starts_viewchange)
@@ -274,20 +259,4 @@ namespace bzn
             EXPECT_TRUE(operation->sequence > 100 && operation->sequence <= current_sequence);
         }
     }
-
-
-
-    ////////////////////////////////////////////////////////////////////////
-    // bad tests
-    TEST_F(pbft_viewchange_test, backup_handle_viewchange)
-    {
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-        pbft_msg msg;
-        bzn_envelope original_msg;
-
-        this->pbft->handle_viewchange(msg, original_msg);
-    }
-
 }

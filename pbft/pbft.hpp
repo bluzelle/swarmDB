@@ -243,30 +243,19 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_move_to_new_config);
         FRIEND_TEST(pbft_test, full_test);
 
-        // good tests
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
         FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
-
-        // bad tests
-        FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
-        FRIEND_TEST(pbft_viewchange_test, primary_handle_viewchange);
-        FRIEND_TEST(pbft_viewchange_test, backup_handle_viewchange);
-        FRIEND_TEST(pbft_viewchange_test, make_viewchange_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
 
-        FRIEND_TEST(pbft_newview_test, make_signed_envelope);
-        FRIEND_TEST(pbft_newview_test, make_newview_makes_valid_message);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);
         FRIEND_TEST(pbft_newview_test, backup_handle_newview);
         FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
-        FRIEND_TEST(pbft_newview_test, test_validate_preprepare_sequences);
         FRIEND_TEST(pbft_newview_test, test_get_primary);
-        // end of bad tests
 
         friend class pbft_proto_test;
         friend class pbft_viewchange_test;
