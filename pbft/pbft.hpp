@@ -249,7 +249,8 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
-
+        
+        FRIEND_TEST(pbft_newview_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);

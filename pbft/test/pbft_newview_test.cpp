@@ -36,8 +36,6 @@ namespace bzn
                         bzn_envelope envelope;
                         envelope.ParseFromString(*encoded_message);
 
-
-
                         pbft_msg view_change;
                         view_change.ParseFromString(envelope.pbft());
                         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
@@ -45,18 +43,6 @@ namespace bzn
                         EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
                     }));
             this->pbft->handle_failure();
-        }
-
-        void
-        check_that_pbft_drops_messages()
-        {
-//            // We do not expect the pre-prepares due to the handled message at
-//            // the end of the test.
-//            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(is_preprepare, Eq(true))))
-//                .Times(Exactly(0));
-//
-//            // nothing will happen with this request, that is there will be no new messages
-//            pbft->handle_message(this->preprepare_msg, default_original_msg);
         }
 
         void
@@ -117,15 +103,42 @@ namespace bzn
                 this->pbft->handle_message(msg, this->default_original_msg);
             }
         }
-
     };
 
     TEST_F(pbft_newview_test, pbft_with_invalid_view_drops_messages)
     {
         this->uuid = SECOND_NODE_UUID;
         this->build_pbft();
-        this->execute_handle_failure_expect_sut_to_send_viewchange();
-        this->check_that_pbft_drops_messages();
+
+        this->pbft->handle_failure();
+
+        // after handling the failure, the pbft must ignore all messages save for
+        // checkpoint, view change and new view messages
+        pbft_msg message;
+
+        message.set_type(PBFT_MSG_PREPREPARE);
+        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_PREPARE);
+        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_COMMIT);
+        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_CHECKPOINT);
+        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_JOIN);
+        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_LEAVE);
+        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_VIEWCHANGE);
+        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
+
+        message.set_type(PBFT_MSG_NEWVIEW);
+        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
     }
 
     TEST_F(pbft_newview_test, make_newview)
@@ -198,46 +211,40 @@ namespace bzn
         bzn_envelope original_msg;
 
         this->pbft->handle_newview(msg, original_msg);
-
     }
 
-    TEST_F(pbft_newview_test, validate_and_extract_checkpoint_hashes)
-    {
-        this->build_pbft();
-
-        pbft_msg viewchange_message;
-
-        // there should be no checkpoints
-        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
-
+//    TEST_F(pbft_newview_test, validate_and_extract_checkpoint_hashes)
+//    {
+//        this->build_pbft();
+//
+//        pbft_msg viewchange_message;
+//
+//        // there should be no checkpoints
+//        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
+//
 //        // add an empty envelope
-        bzn_envelope envelope;
-//        viewchange_message.add_checkpoint_messages(envelope.SerializeAsString());
-
-        // there should be no checkpoints
-        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
-
-        viewchange_message.clear_checkpoint_messages();
-
-
-        // generate checkpoint messages and add them to the envelope
-        //const uint64_t new_view_index = 48593;
-
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            envelope.set_sender(peer.uuid);
-            envelope.set_signature("valid_signature");
-
-            pbft_msg checkpoint_message;
-            checkpoint_message.set_type(PBFT_MSG_CHECKPOINT);
-
-
-
-            envelope.set_pbft(checkpoint_message.SerializeAsString());
-
-
-        }
-    }
+//        bzn_envelope envelope;
+//
+//
+//        // there should be no checkpoints
+//        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
+//
+//        viewchange_message.clear_checkpoint_messages();
+//
+//
+//        // generate checkpoint messages and add them to the envelope
+//        //const uint64_t new_view_index = 48593;
+//
+//        for (const auto& peer : TEST_PEER_LIST)
+//        {
+//            envelope.set_sender(peer.uuid);
+//            envelope.set_signature("valid_signature");
+//
+//            pbft_msg checkpoint_message;
+//            checkpoint_message.set_type(PBFT_MSG_CHECKPOINT);
+//            envelope.set_pbft(checkpoint_message.SerializeAsString());
+//        }
+//    }
 
     TEST_F(pbft_newview_test, test_get_primary)
     {
