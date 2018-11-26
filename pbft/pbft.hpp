@@ -248,6 +248,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
         FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
+        FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
 
         // bad tests
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
