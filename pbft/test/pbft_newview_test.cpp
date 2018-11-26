@@ -249,18 +249,14 @@ namespace bzn
         this->pbft->view++;
         EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
 
-        // given a view, get_primary must provide the address of a primare
-        for (size_t view{0} ; view<100 ; ++ view)
+        // given a view, get_primary must provide the address of a primary
+
+        // TODO: this is a pretty sketchy test.
+        for (size_t view{0}; view < 100; ++view)
         {
             const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
-
-            const auto primary = std::find_if(TEST_PEER_LIST.begin()
-                    , TEST_PEER_LIST.end()
-                    , [&](const auto& peer)
-                    {
-                        return uuid==peer.uuid;
-                    });
-            EXPECT_TRUE(primary != TEST_PEER_LIST.end());
+            const bzn::uuid_t accepted_uuid = this->pbft->current_peers()[view % this->pbft->current_peers().size()].uuid;
+            EXPECT_EQ(uuid, accepted_uuid);
         }
     }
 
