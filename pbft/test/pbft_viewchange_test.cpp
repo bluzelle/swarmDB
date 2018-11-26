@@ -18,6 +18,9 @@
 #include <mocks/mock_crypto_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 
+// https://coveralls.io/builds/20296851/source?filename=pbft/pbft.cpp
+
+
 namespace bzn
 {
     class pbft_viewchange_test : public pbft_proto_test
@@ -170,7 +173,7 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-    TEST_F(pbft_viewchange_test, DISABLED_is_valid_viewchange_message)
+    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
     {
         uint64_t current_sequence{0};
         generate_checkpoint_at_sequence_100(current_sequence);

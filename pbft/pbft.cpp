@@ -1135,10 +1135,7 @@ pbft::get_sequences_and_request_hashes_from_proofs(
         auto prepared_proof = viewchange_msg.prepared_proofs(j);
 
         pbft_msg msg;
-        if (bzn_envelope envelope;
-            !envelope.ParseFromString(prepared_proof.pre_prepare())
-            || !this->is_peer(envelope.sender())
-            || !msg.ParseFromString(envelope.pbft()))
+        if (bzn_envelope envelope; !envelope.ParseFromString(prepared_proof.pre_prepare()) || !this->is_peer(envelope.sender()) || !msg.ParseFromString(envelope.pbft()))
         {
             return false;
         }
@@ -1762,6 +1759,18 @@ pbft::make_viewchange(
     for (const auto& operation : prepared_operations)
     {
         auto prepared_proofs = viewchange.add_prepared_proofs();
+
+        bzn_envelope env;
+        bool is_ok = env.ParseFromString(operation->get_preprepare());
+
+        LOG(info) << is_ok;
+
+
+
+
+
+
+
         prepared_proofs->set_pre_prepare(operation->get_preprepare());
         for (const auto &prepared : operation->get_prepares())
         {

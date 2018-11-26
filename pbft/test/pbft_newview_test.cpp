@@ -15,6 +15,7 @@
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <mocks/mock_crypto_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 
 namespace bzn
@@ -22,6 +23,44 @@ namespace bzn
     class pbft_newview_test : public pbft_proto_test
     {
     public:
+
+        std::shared_ptr<Mockcrypto_base>
+        build_pft_with_mock_crypto()
+        {
+            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            this->crypto = mockcrypto;
+            this->build_pbft();
+            return mockcrypto;
+        }
+
+
+        void
+        generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
+        {
+            auto mockcrypto = this->build_pft_with_mock_crypto();
+
+            EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
+                                           {
+                                               return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
+                                           }));
+
+            EXPECT_CALL(*mockcrypto, verify(_))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                           {
+                                               return true;
+                                           }));
+
+            for (current_sequence=1; current_sequence < 100; ++current_sequence)
+            {
+                run_transaction_through_primary();
+            }
+            prepare_for_checkpoint(current_sequence);
+            run_transaction_through_primary();
+            this->stabilize_checkpoint(current_sequence);
+        }
+
+
 
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
@@ -277,4 +316,41 @@ namespace bzn
         this->pbft->handle_failure();
         EXPECT_FALSE(this->pbft->is_view_valid());
     }
+
+
+    TEST_F(pbft_newview_test, get_sequences_and_request_hashes_from_proofs)
+    {
+        uint64_t current_sequence{0};
+        generate_checkpoint_at_sequence_100(current_sequence);
+
+        current_sequence++;
+        run_transaction_through_primary(false);
+        current_sequence++;
+        run_transaction_through_primary(false);
+
+        // let pbft generate a view change message for us
+
+        bzn_envelope viewchange_envelope;
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
+                .WillRepeatedly(Invoke(
+                        [&](const auto & /*endpoint*/, const auto& viewchange_env)
+                        {
+                            viewchange_envelope = *viewchange_env;
+                        }));
+
+        this->pbft->handle_failure();
+
+        pbft_msg viewchange;
+        EXPECT_TRUE(viewchange.ParseFromString(viewchange_envelope.pbft()));
+
+        std::set<std::pair<uint64_t, std::string>> sequence_request_pairs;
+        EXPECT_TRUE(this->pbft->get_sequences_and_request_hashes_from_proofs(viewchange, sequence_request_pairs));
+
+
+        LOG(info) << sequence_request_pairs.size();
+
+
+    }
+
+
 }

@@ -273,6 +273,7 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, backup_handle_newview);
         FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_newview_test, test_get_primary);
+        FRIEND_TEST(pbft_newview_test, get_sequences_and_request_hashes_from_proofs);
 
         friend class pbft_proto_test;
         friend class pbft_viewchange_test;
