@@ -26,13 +26,13 @@ namespace bzn
     {
     public:
 
-        storage_base::result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
         std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const std::string& key) override;
 
-        storage_base::result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
-        storage_base::result remove(const bzn::uuid_t& uuid, const std::string& key) override;
+        bzn::storage_result remove(const bzn::uuid_t& uuid, const std::string& key) override;
 
         std::vector<std::string> get_keys(const bzn::uuid_t& uuid) override;
 
@@ -40,7 +40,7 @@ namespace bzn
 
         std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) override;
 
-        storage_base::result remove(const bzn::uuid_t& uuid) override;
+        bzn::storage_result remove(const bzn::uuid_t& uuid) override;
 
         bool create_snapshot() override;
 

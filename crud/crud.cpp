@@ -15,28 +15,32 @@
 #include <crud/crud.hpp>
 
 using namespace bzn;
+using namespace std::placeholders;
 
 namespace
 {
     const std::string PERMISSION_UUID{"PERMS"};
+    const std::string OWNER_KEY{"OWNER"};
+    const std::string WRITERS_KEY{"WRITERS"};
 }
 
 
 crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager)
            : storage(std::move(storage))
            , subscription_manager(std::move(subscription_manager))
-           , message_handlers{{database_msg::kCreate, std::bind(&crud::handle_create, this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kRead,   std::bind(&crud::handle_read,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kUpdate, std::bind(&crud::handle_update, this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kDelete, std::bind(&crud::handle_delete, this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kHas,    std::bind(&crud::handle_has,    this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kKeys,   std::bind(&crud::handle_keys,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kSize,   std::bind(&crud::handle_size,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kSubscribe,   std::bind(&crud::handle_subscribe,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kCreateDb,    std::bind(&crud::handle_create_db,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kDeleteDb,    std::bind(&crud::handle_delete_db,   this, std::placeholders::_1, std::placeholders::_2)},
-                              {database_msg::kHasDb,       std::bind(&crud::handle_has_db,      this, std::placeholders::_1, std::placeholders::_2)}}
+           , message_handlers{
+                 {database_msg::kCreate,      std::bind(&crud::handle_create,      this, _1, _2, _3)},
+                 {database_msg::kRead,        std::bind(&crud::handle_read,        this, _1, _2, _3)},
+                 {database_msg::kUpdate,      std::bind(&crud::handle_update,      this, _1, _2, _3)},
+                 {database_msg::kDelete,      std::bind(&crud::handle_delete,      this, _1, _2, _3)},
+                 {database_msg::kHas,         std::bind(&crud::handle_has,         this, _1, _2, _3)},
+                 {database_msg::kKeys,        std::bind(&crud::handle_keys,        this, _1, _2, _3)},
+                 {database_msg::kSize,        std::bind(&crud::handle_size,        this, _1, _2, _3)},
+                 {database_msg::kSubscribe,   std::bind(&crud::handle_subscribe,   this, _1, _2, _3)},
+                 {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, _1, _2, _3)},
+                 {database_msg::kCreateDb,    std::bind(&crud::handle_create_db,   this, _1, _2, _3)},
+                 {database_msg::kDeleteDb,    std::bind(&crud::handle_delete_db,   this, _1, _2, _3)},
+                 {database_msg::kHasDb,       std::bind(&crud::handle_has_db,      this, _1, _2, _3)}}
 {
 }
 
@@ -53,13 +57,13 @@ crud::start()
 
 
 void
-crud::handle_request(const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+crud::handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
 {
     if (auto it = this->message_handlers.find(request.msg_case()); it != this->message_handlers.end())
     {
         LOG(debug) << "processing message: " << uint32_t(request.msg_case());
 
-        it->second(request, session);
+        it->second(caller_id, request, session);
 
         return;
     }
@@ -69,32 +73,16 @@ crud::handle_request(const database_msg& request, const std::shared_ptr<bzn::ses
 
 
 void
-crud::send_response(const database_msg& request, const bzn::storage_base::result result,
+crud::send_response(const database_msg& request, const bzn::storage_result result,
     database_response&& response, std::shared_ptr<bzn::session_base>& session)
 {
     *response.mutable_header() = request.header();
 
-    if (result != storage_base::result::ok)
+    if (result != bzn::storage_result::ok)
     {
-        if (result == storage_base::result::value_too_large)
+        if (bzn::storage_result_msg.count(result))
         {
-            response.mutable_error()->set_message(bzn::MSG_VALUE_SIZE_TOO_LARGE);
-        }
-        else if (result == storage_base::result::key_too_large)
-        {
-            response.mutable_error()->set_message(bzn::MSG_KEY_SIZE_TOO_LARGE);
-        }
-        else if (result == storage_base::result::exists)
-        {
-            response.mutable_error()->set_message(bzn::MSG_RECORD_EXISTS);
-        }
-        else if (result == storage_base::result::not_found)
-        {
-            response.mutable_error()->set_message(bzn::MSG_RECORD_NOT_FOUND);
-        }
-        else if (result == storage_base::result::db_not_found)
-        {
-            response.mutable_error()->set_message(bzn::MSG_DATABASE_NOT_FOUND);
+            response.mutable_error()->set_message(bzn::storage_result_msg.at(result));
         }
         else
         {
@@ -107,13 +95,24 @@ crud::send_response(const database_msg& request, const bzn::storage_base::result
 
 
 void
-crud::handle_create(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    storage_base::result result{storage_base::result::db_not_found};
+    bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
     {
-        result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+        }
     }
 
     if (session)
@@ -128,11 +127,13 @@ crud::handle_create(const database_msg& request, std::shared_ptr<bzn::session_ba
 
 
 void
-crud::handle_read(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
-        auto result = this->storage->read(request.header().db_uuid(), request.read().key());
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+        const auto result = this->storage->read(request.header().db_uuid(), request.read().key());
 
         database_response response;
 
@@ -142,7 +143,7 @@ crud::handle_read(const database_msg& request, std::shared_ptr<bzn::session_base
             response.mutable_read()->set_value(*result);
         }
 
-        this->send_response(request, (result) ? bzn::storage_base::result::ok : bzn::storage_base::result::not_found,
+        this->send_response(request, (result) ? bzn::storage_result::ok : bzn::storage_result::not_found,
             std::move(response), session);
 
         return;
@@ -153,9 +154,25 @@ crud::handle_read(const database_msg& request, std::shared_ptr<bzn::session_base
 
 
 void
-crud::handle_update(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    auto result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
+        }
+    }
 
     if (session)
     {
@@ -169,9 +186,25 @@ crud::handle_update(const database_msg& request, std::shared_ptr<bzn::session_ba
 
 
 void
-crud::handle_delete(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    auto result = this->storage->remove(request.header().db_uuid(), request.delete_().key());
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            result = this->storage->remove(request.header().db_uuid(), request.delete_().key());
+        }
+    }
 
     if (session)
     {
@@ -185,13 +218,15 @@ crud::handle_delete(const database_msg& request, std::shared_ptr<bzn::session_ba
 
 
 void
-crud::handle_has(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
         const bool has = this->storage->has(request.header().db_uuid(), request.has().key());
 
-        this->send_response(request, (has) ? storage_base::result::ok : storage_base::result::not_found,
+        this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::not_found,
             database_response(), session);
 
         return;
@@ -202,10 +237,12 @@ crud::handle_has(const database_msg& request, std::shared_ptr<bzn::session_base>
 
 
 void
-crud::handle_keys(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
         const auto keys = this->storage->get_keys(request.header().db_uuid());
 
         database_response response;
@@ -216,7 +253,7 @@ crud::handle_keys(const database_msg& request, std::shared_ptr<bzn::session_base
             response.mutable_keys()->add_keys(key);
         }
 
-        this->send_response(request, storage_base::result::ok, std::move(response), session);
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
@@ -226,10 +263,12 @@ crud::handle_keys(const database_msg& request, std::shared_ptr<bzn::session_base
 
 
 void
-crud::handle_size(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
         const auto [keys, size] = this->storage->get_size(request.header().db_uuid());
 
         database_response response;
@@ -237,7 +276,7 @@ crud::handle_size(const database_msg& request, std::shared_ptr<bzn::session_base
         response.mutable_size()->set_keys(keys);
         response.mutable_size()->set_bytes(size);
 
-        this->send_response(request, storage_base::result::ok, std::move(response), session);
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
@@ -247,7 +286,7 @@ crud::handle_size(const database_msg& request, std::shared_ptr<bzn::session_base
 
 
 void
-crud::handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_subscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
@@ -256,7 +295,7 @@ crud::handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session
         this->subscription_manager->subscribe(request.header().db_uuid(), request.subscribe().key(),
             request.header().transaction_id(), response, session);
 
-        this->send_response(request, storage_base::result::ok, std::move(response), session);
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
@@ -266,7 +305,7 @@ crud::handle_subscribe(const database_msg& request, std::shared_ptr<bzn::session
 
 
 void
-crud::handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_unsubscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
@@ -275,7 +314,7 @@ crud::handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::sessi
         this->subscription_manager->unsubscribe(request.header().db_uuid(), request.unsubscribe().key(),
             request.unsubscribe().transaction_id(), response, session);
 
-        this->send_response(request, storage_base::result::ok, std::move(response), session);
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
@@ -286,17 +325,19 @@ crud::handle_unsubscribe(const database_msg& request, std::shared_ptr<bzn::sessi
 
 
 void
-crud::handle_create_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    storage_base::result result;
+    bzn::storage_result result;
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
     {
-        result = storage_base::result::exists;
+        result = bzn::storage_result::exists;
     }
     else
     {
-        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), "<todo>");
+        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id));
     }
 
     if (session)
@@ -311,19 +352,26 @@ crud::handle_create_db(const database_msg& request, std::shared_ptr<bzn::session
 
 
 void
-crud::handle_delete_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    storage_base::result result;
+    bzn::storage_result result{bzn::storage_result::not_found};
 
-    if (!this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
-    {
-        result = storage_base::result::not_found;
-    }
-    else
-    {
-        result = this->storage->remove(PERMISSION_UUID, request.header().db_uuid());
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-        this->storage->remove(request.header().db_uuid());
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!is_caller_owner(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            result = this->storage->remove(PERMISSION_UUID, request.header().db_uuid());
+
+            this->storage->remove(request.header().db_uuid());
+        }
     }
 
     if (session)
@@ -338,13 +386,15 @@ crud::handle_delete_db(const database_msg& request, std::shared_ptr<bzn::session
 
 
 void
-crud::handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
     {
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
         const bool has_db = this->storage->has(PERMISSION_UUID, request.header().db_uuid());
 
-        this->send_response(request, (has_db) ? storage_base::result::ok : storage_base::result::not_found,
+        this->send_response(request, (has_db) ? bzn::storage_result::ok : bzn::storage_result::not_found,
             database_response(), session);
 
         return;
@@ -353,11 +403,79 @@ crud::handle_has_db(const database_msg& request, std::shared_ptr<bzn::session_ba
     LOG(warning) << "session no longer available. HAS DB not executed.";
 }
 
+
+std::pair<bool, Json::Value>
+crud::get_database_permissions(const bzn::uuid_t& uuid) const
+{
+    // does the db exist?
+    if (this->storage->has(PERMISSION_UUID, uuid))
+    {
+        auto perms_data = this->storage->read(PERMISSION_UUID, uuid);
+
+        if (!perms_data)
+        {
+            throw std::runtime_error("Failed to read database permission data!");
+        }
+
+        Json::Reader reader;
+        Json::Value json;
+
+        if (!reader.parse(*perms_data, json))
+        {
+            throw std::runtime_error("Failed to parse database json permission data: " + reader.getFormattedErrorMessages());
+        }
+
+        return {true, json};
+    }
+
+    return {false, Json::Value()};
+}
+
+
+bzn::value_t
+crud::create_permission_data(const bzn::caller_id_t& caller_id) const
+{
+    Json::Value json;
+
+    json[OWNER_KEY] = caller_id;
+    json[WRITERS_KEY] = Json::Value();
+
+    LOG(debug) << "created db perms: " << json.toStyledString();
+
+    return json.toStyledString();
+}
+
+
+bool
+crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& json) const
+{
+    return json[OWNER_KEY] == caller_id;
+}
+
+
+bool
+crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& json) const
+{
+    for(const auto& writer_id : json[WRITERS_KEY])
+    {
+        if (writer_id == caller_id)
+        {
+            return true;
+        }
+    }
+
+    return this->is_caller_owner(caller_id, json);
+}
+
+
 bool
 crud::save_state()
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     return this->storage->create_snapshot();
 }
+
 
 std::shared_ptr<std::string>
 crud::get_saved_state()
@@ -365,8 +483,11 @@ crud::get_saved_state()
     return this->storage->get_snapshot();
 }
 
+
 bool
 crud::load_state(const std::string& state)
 {
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
     return this->storage->load_snapshot(state);
 }

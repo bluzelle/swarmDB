@@ -47,40 +47,40 @@ rocksdb_storage::rocksdb_storage(const std::string& state_dir, const bzn::uuid_t
 }
 
 
-storage_base::result
+bzn::storage_result
 rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
-        return storage_base::result::value_too_large;
+        return bzn::storage_result::value_too_large;
     }
 
     if (key.size() > bzn::MAX_KEY_SIZE)
     {
-        return storage_base::result::key_too_large;
+        return bzn::storage_result::key_too_large;
     }
 
     rocksdb::WriteOptions write_options;
     write_options.sync = true;
 
-    if (!this->has(uuid, key))
-    {
-        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-        auto s = this->db->Put(write_options, generate_key(uuid,key), value);
+    if (!this->has_priv(uuid, key))
+    {
+        auto s = this->db->Put(write_options, generate_key(uuid, key), value);
 
         if (!s.ok())
         {
             LOG(error) << "save failed: " << uuid << ":" << key << ":" <<
                 value.substr(0,MAX_MESSAGE_SIZE) << "... - " << s.ToString();
 
-            return storage_base::result::not_saved;
+            return bzn::storage_result::not_saved;
         }
 
-        return storage_base::result::ok;
+        return bzn::storage_result::ok;
     }
 
-    return storage_base::result::exists;
+    return bzn::storage_result::exists;
 }
 
 
@@ -101,18 +101,18 @@ rocksdb_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 }
 
 
-storage_base::result
+bzn::storage_result
 rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
 {
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
-        return storage_base::result::value_too_large;
+        return bzn::storage_result::value_too_large;
     }
 
-    if (this->has(uuid,key))
-    {
-        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
+    if (this->has_priv(uuid, key))
+    {
         rocksdb::WriteOptions write_options;
         write_options.sync = true;
 
@@ -123,37 +123,37 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
             LOG(error) << "update failed: " << uuid << ":" << key << ":" <<
                 value.substr(0,MAX_MESSAGE_SIZE) << "... - " << s.ToString();
 
-            return storage_base::result::not_saved;
+            return bzn::storage_result::not_saved;
         }
 
-        return storage_base::result::ok;
+        return bzn::storage_result::ok;
     }
 
-    return storage_base::result::not_found;
+    return bzn::storage_result::not_found;
 }
 
 
-storage_base::result
+bzn::storage_result
 rocksdb_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 {
     rocksdb::WriteOptions write_options;
     write_options.sync = true;
 
-    if (this->has(uuid, key))
-    {
-        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
+    if (this->has_priv(uuid, key))
+    {
         auto s = this->db->Delete(write_options, generate_key(uuid, key));
 
         if (!s.ok())
         {
-            return storage_base::result::not_found;
+            return bzn::storage_result::not_found;
         }
 
-        return storage_base::result::ok;
+        return bzn::storage_result::ok;
     }
 
-    return storage_base::result::not_found;
+    return bzn::storage_result::not_found;
 }
 
 
@@ -177,21 +177,9 @@ rocksdb_storage::get_keys(const bzn::uuid_t& uuid)
 bool
 rocksdb_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 {
-    const bzn::key_t has_key = generate_key(uuid, key);
-
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-    std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
-
-    for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
-    {
-        if (iter->key() == has_key)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return this->has_priv(uuid, key);
 }
 
 
@@ -215,7 +203,7 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
 }
 
 
-storage_base::result
+bzn::storage_result
 rocksdb_storage::remove(const bzn::uuid_t& uuid)
 {
     rocksdb::WriteOptions write_options;
@@ -239,7 +227,26 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid)
         ++keys_removed;
     }
 
-    return (keys_removed) ? storage_base::result::ok : storage_base::result::not_found;
+    return (keys_removed) ? bzn::storage_result::ok : bzn::storage_result::not_found;
+}
+
+
+bool
+rocksdb_storage::has_priv(const bzn::uuid_t& uuid, const  std::string& key)
+{
+    const bzn::key_t has_key = generate_key(uuid, key);
+
+    std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
+
+    for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
+    {
+        if (iter->key() == has_key)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool

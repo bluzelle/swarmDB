@@ -88,7 +88,7 @@ message database_has
     string key = 1;
 }
 
-message database_has_db{}
+message database_has_db {}
 
 message database_subscription_update
 {

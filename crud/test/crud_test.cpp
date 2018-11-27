@@ -45,7 +45,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_DATABASE_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // now create the db...
     msg.release_create();
@@ -61,7 +61,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // now test creates...
     msg.release_create_db();
@@ -78,7 +78,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // fail to create same key...
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
@@ -92,7 +92,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // fail because key is too big...
     msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
@@ -107,7 +107,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // fail because value is too big...
     msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
@@ -122,7 +122,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 }
 
 
@@ -136,7 +136,7 @@ TEST(crud, test_that_read_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test reads...
     msg.release_create_db();
@@ -147,7 +147,7 @@ TEST(crud, test_that_read_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -167,7 +167,7 @@ TEST(crud, test_that_read_sends_proper_response)
             ASSERT_EQ(resp.read().value(), "value");
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // read invalid key...
     msg.mutable_read()->set_key("invalid-key");
@@ -182,10 +182,10 @@ TEST(crud, test_that_read_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // null session nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 }
 
 
@@ -199,7 +199,7 @@ TEST(crud, test_that_update_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test updates...
     msg.release_create_db();
@@ -210,7 +210,7 @@ TEST(crud, test_that_update_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -229,7 +229,7 @@ TEST(crud, test_that_update_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_update()->release_key();
@@ -249,7 +249,7 @@ TEST(crud, test_that_update_sends_proper_response)
             ASSERT_EQ(resp.read().value(), "updated");
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 }
 
 
@@ -263,7 +263,7 @@ TEST(crud, test_that_delete_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test deletes...
     msg.release_create_db();
@@ -274,7 +274,7 @@ TEST(crud, test_that_delete_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -292,7 +292,7 @@ TEST(crud, test_that_delete_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // delete invalid key...
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
@@ -306,7 +306,7 @@ TEST(crud, test_that_delete_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 }
 
 
@@ -320,7 +320,7 @@ TEST(crud, test_that_has_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test has...
     msg.release_create_db();
@@ -331,7 +331,7 @@ TEST(crud, test_that_has_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -349,7 +349,7 @@ TEST(crud, test_that_has_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // invalid key...
     msg.mutable_has()->set_key("invalid-key");
@@ -364,10 +364,10 @@ TEST(crud, test_that_has_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // null session nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 }
 
 
@@ -381,7 +381,7 @@ TEST(crud, test_that_keys_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test keys...
     msg.release_create_db();
@@ -392,11 +392,11 @@ TEST(crud, test_that_keys_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).Times(2);
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // add another...
     msg.mutable_create()->set_key("key2");
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -420,7 +420,7 @@ TEST(crud, test_that_keys_sends_proper_response)
             ASSERT_EQ(keys[1], "key2");
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // invalid uuid returns empty message...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
@@ -435,10 +435,10 @@ TEST(crud, test_that_keys_sends_proper_response)
             ASSERT_EQ(resp.keys().keys().size(), int(0));
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // null session nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 }
 
 
@@ -452,7 +452,7 @@ TEST(crud, test_that_size_sends_proper_response)
     msg.mutable_header()->set_transaction_id(uint64_t(123));
     msg.mutable_create_db();
 
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // test size...
     msg.release_create_db();
@@ -463,7 +463,7 @@ TEST(crud, test_that_size_sends_proper_response)
     auto session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // clear msg...
     msg.mutable_create()->release_key();
@@ -483,7 +483,7 @@ TEST(crud, test_that_size_sends_proper_response)
             ASSERT_EQ(resp.size().keys(), int32_t(1));
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // invalid uuid returns zero...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
@@ -499,10 +499,10 @@ TEST(crud, test_that_size_sends_proper_response)
             ASSERT_EQ(resp.size().keys(), int32_t(0));
         }));
 
-    crud.handle_request(msg, session);
+    crud.handle_request("caller_id", msg, session);
 
     // null session nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 }
 
 
@@ -524,7 +524,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     msg.mutable_subscribe()->set_key("key");
 
     // nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     // try again with a valid session...
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
@@ -534,7 +534,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 }
 
 
@@ -557,7 +557,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     msg.mutable_unsubscribe()->set_transaction_id(321);
 
     // nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
     
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
@@ -566,7 +566,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 }
 
 
@@ -584,7 +584,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
     msg.mutable_has_db();
 
     // nothing should happen...
-    crud.handle_request(msg, nullptr);
+    crud.handle_request("caller_id", msg, nullptr);
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
@@ -597,7 +597,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 }
 
 
@@ -625,7 +625,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
         [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
@@ -638,7 +638,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
         }));
 
     // try to create it again...
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 }
 
 
@@ -666,7 +666,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 
     // create a database...
     msg.release_delete_db();
@@ -674,7 +674,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
 
     // delete database...
     msg.release_create_db();
@@ -687,8 +687,35 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+        }));
+
+    // non-owner caller...
+    crud.handle_request("bad_caller_id", msg, mock_session);
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
-    crud.handle_request(msg, mock_session);
+    crud.handle_request("caller_id", msg, mock_session);
+}
+
+
+TEST(crud, test_that_state_can_be_saved_and_retrieved)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    ASSERT_TRUE(crud.save_state());
+
+    auto state = crud.get_saved_state();
+
+    ASSERT_TRUE(state);
+
+    ASSERT_TRUE(crud.load_state(*state));
 }

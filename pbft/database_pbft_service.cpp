@@ -51,7 +51,7 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
 
     // store op...
     if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->sequence), op->get_database_msg().SerializeAsString());
-        result != bzn::storage_base::result::ok)
+        result != bzn::storage_result::ok)
     {
         LOG(fatal) << "failed to store pbft request: " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
 
@@ -96,17 +96,17 @@ database_pbft_service::process_awaiting_operations()
             // session found, but is the connection still around?
             auto session = session_it->second.lock();
 
-            this->crud->handle_request(request, (session) ? session : nullptr);
+            this->crud->handle_request("caller_id", request, (session) ? session : nullptr);
         }
         else
         {
             // session not found then this was probably loaded from the database...
-            this->crud->handle_request(request, nullptr);
+            this->crud->handle_request("caller_id", request, nullptr);
         }
 
         this->io_context->post(std::bind(this->execute_handler, nullptr)); // TODO: need to find the pbft_operation here; requires pbft_operation not being an in-memory construct
 
-        if (auto result = this->unstable_storage->remove(this->uuid, key); result != bzn::storage_base::result::ok)
+        if (auto result = this->unstable_storage->remove(this->uuid, key); result != bzn::storage_result::ok)
         {
             // these are fatal... something bad is going on.
             throw std::runtime_error("Failed to remove pbft_request from database! (" + std::to_string(uint8_t(result)) + ")");
@@ -207,7 +207,7 @@ database_pbft_service::load_next_request_sequence()
     }
 
     if (auto result = this->unstable_storage->create(this->uuid, NEXT_REQUEST_SEQUENCE_KEY,
-        std::to_string(this->next_request_sequence)); result != bzn::storage_base::result::ok)
+        std::to_string(this->next_request_sequence)); result != bzn::storage_result::ok)
     {
         LOG(fatal) << "failed to create \"" << NEXT_REQUEST_SEQUENCE_KEY << "\": " << uint32_t(result);
 
@@ -222,7 +222,7 @@ void
 database_pbft_service::save_next_request_sequence()
 {
     if (auto result = this->unstable_storage->update(this->uuid, NEXT_REQUEST_SEQUENCE_KEY,
-        std::to_string(this->next_request_sequence)); result != bzn::storage_base::result::ok)
+        std::to_string(this->next_request_sequence)); result != bzn::storage_result::ok)
     {
         LOG(error) << "failed to save next_request_sequence: " << uint32_t(result);
         return;

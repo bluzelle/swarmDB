@@ -28,13 +28,13 @@ namespace bzn
     public:
         rocksdb_storage(const std::string& state_dir, const bzn::uuid_t& uuid);
 
-        storage_base::result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
         std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const std::string& key) override;
 
-        storage_base::result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
-        storage_base::result remove(const bzn::uuid_t& uuid, const std::string& key) override;
+        bzn::storage_result remove(const bzn::uuid_t& uuid, const std::string& key) override;
 
         std::vector<bzn::key_t> get_keys(const bzn::uuid_t& uuid) override;
 
@@ -42,7 +42,7 @@ namespace bzn
 
         std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) override;
 
-        storage_base::result remove(const bzn::uuid_t& uuid) override;
+        bzn::storage_result remove(const bzn::uuid_t& uuid) override;
 
         bool create_snapshot() override;
 
@@ -52,6 +52,8 @@ namespace bzn
 
     private:
         std::unique_ptr<rocksdb::DB> db;
+
+        bool has_priv(const bzn::uuid_t& uuid, const  std::string& key);
 
         std::shared_mutex lock; // for multi-reader and single writer access
     };
