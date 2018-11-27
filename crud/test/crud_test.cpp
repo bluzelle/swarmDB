@@ -705,3 +705,17 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
     crud.handle_request("caller_id", msg, mock_session);
 }
+
+
+TEST(crud, test_that_state_can_be_saved_and_retrieved)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    ASSERT_TRUE(crud.save_state());
+
+    auto state = crud.get_saved_state();
+
+    ASSERT_TRUE(state);
+
+    ASSERT_TRUE(crud.load_state(*state));
+}
