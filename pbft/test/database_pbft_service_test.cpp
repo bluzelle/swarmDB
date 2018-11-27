@@ -82,6 +82,42 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     EXPECT_THROW(dps.apply_operation(operation), std::runtime_error);
 }
 
+TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_operation)
+{
+    auto mem_storage = std::make_shared<bzn::mem_storage>();
+    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+    auto mock_crud = std::make_shared<NiceMock<bzn::Mockcrud_base>>();
+
+    EXPECT_CALL(*mock_io_context, post(_)).WillOnce(InvokeArgument<0>());
+
+    bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
+
+    auto operation = std::make_shared<bzn::pbft_operation>(0, 1, "somehash", nullptr);
+    bool execute_handler_called_with_operation = false;
+
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid(TEST_UUID);
+    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_create()->set_key("key2");
+    msg.mutable_create()->set_value("value2");
+
+    bzn_envelope env;
+    env.set_database_msg(msg.SerializeAsString());
+
+    operation->record_request(env);
+
+    dps.register_execute_handler(
+            [&](const auto& operation_ptr)
+            {
+                execute_handler_called_with_operation = operation_ptr->request_hash == "somehash";
+            });
+
+    dps.apply_operation(operation);
+
+    EXPECT_TRUE(execute_handler_called_with_operation);
+
+}
+
 
 TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_registered_handler_is_scheduled)
 {
