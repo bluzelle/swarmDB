@@ -193,13 +193,13 @@ pbft_operation::debug_string() const
 }
 
 void
-pbft_operation::set_session(std::weak_ptr<bzn::session_base> session)
+pbft_operation::set_session(std::shared_ptr<bzn::session_base> session)
 {
     this->listener_session = std::move(session);
     this->session_saved = true;
 }
 
-std::weak_ptr<bzn::session_base>
+std::shared_ptr<bzn::session_base>
 pbft_operation::session() const
 {
     return this->listener_session;

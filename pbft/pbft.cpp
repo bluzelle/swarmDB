@@ -686,7 +686,7 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_ha
         if (session_pair != this->sessions_waiting_on_forwarded_requests.end())
         {
             LOG(debug) << "Attaching pending session to new operation";
-            std::weak_ptr<bzn::session_base> session;
+            std::shared_ptr<bzn::session_base> session;
             std::tie(std::ignore, session) = *session_pair;
             op->set_session(session);
             this->sessions_waiting_on_forwarded_requests.erase(req_hash);
@@ -984,8 +984,9 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
     this->handle_request(mutable_msg, session);
 
     database_response response;
+    response.mutable_header()->set_db_uuid("placeholder ack");
     LOG(debug) << "Sending request ack: " << response.ShortDebugString();
-    session->send_message(std::make_shared<bzn::encoded_message>(response.SerializeAsString()), false);
+    session->send_datagram(std::make_shared<bzn::encoded_message>(response.SerializeAsString()));
 }
 
 uint64_t
@@ -1061,6 +1062,7 @@ pbft::initialize_configuration(const bzn::peers_list_t& peers)
     if (!config_good)
     {
         LOG(warning) << "One or more peers could not be added to configuration";
+        LOG(warning) << config->get_peers()->size() << " peers were added";
     }
 
     this->configurations.add(config);

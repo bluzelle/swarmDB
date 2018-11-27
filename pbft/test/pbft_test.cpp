@@ -178,7 +178,7 @@ namespace bzn::test
         this->build_pbft();
         auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
-        EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>(), _)).Times(Exactly(1));
+        EXPECT_CALL(*mock_session, send_datagram(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
 
         this->database_handler(this->request_msg, mock_session);
     }

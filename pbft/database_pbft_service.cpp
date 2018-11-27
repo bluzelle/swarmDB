@@ -95,17 +95,12 @@ database_pbft_service::process_awaiting_operations()
 
         if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session())
         {
-
-            // session found, but is the connection still around?
-            auto session = op_it->second->session().lock();
-
-            LOG(info) << "We do not have a session for the result of this request";
-            this->crud->handle_request("caller id", request, (session) ? session : nullptr);
+            this->crud->handle_request("caller id", request, op_it->second->session());
         }
         else
         {
             // session not found then this was probably loaded from the database...
-            LOG(info) << "We do not have a session for the result of this request";
+            LOG(info) << "We do not have a pending operation for this request";
             this->crud->handle_request("caller_id", request, nullptr);
         }
 

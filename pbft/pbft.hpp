@@ -205,7 +205,7 @@ namespace bzn
 
         std::shared_ptr<crypto_base> crypto;
 
-        std::map<bzn::hash_t, std::weak_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
+        std::map<bzn::hash_t, std::shared_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
     };
 
 } // namespace bzn
