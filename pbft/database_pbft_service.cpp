@@ -60,7 +60,7 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
     }
 
     // store requester session for eventual response...
-    this->sessions_awaiting_response[op->sequence] = op->session();
+    this->operations_awaiting_result[op->sequence] = op;
 
     this->process_awaiting_operations();
 }
@@ -91,20 +91,28 @@ database_pbft_service::process_awaiting_operations()
 
         LOG(info) << "Executing request " << request.DebugString() << "..., sequence: " << key;
 
-        if (auto session_it = this->sessions_awaiting_response.find(this->next_request_sequence); session_it != this->sessions_awaiting_response.end())
-        {
-            // session found, but is the connection still around?
-            auto session = session_it->second.lock();
+        auto op_it = this->operations_awaiting_result.find(this->next_request_sequence);
 
-            this->crud->handle_request("caller_id", request, (session) ? session : nullptr);
+        if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session())
+        {
+
+            // session found, but is the connection still around?
+            auto session = op_it->second->session().lock();
+
+            LOG(info) << "We do not have a session for the result of this request";
+            this->crud->handle_request("caller id", request, (session) ? session : nullptr);
         }
         else
         {
             // session not found then this was probably loaded from the database...
+            LOG(info) << "We do not have a session for the result of this request";
             this->crud->handle_request("caller_id", request, nullptr);
         }
 
-        this->io_context->post(std::bind(this->execute_handler, nullptr)); // TODO: need to find the pbft_operation here; requires pbft_operation not being an in-memory construct
+        if (op_it != this->operations_awaiting_result.end())
+        {
+            this->io_context->post(std::bind(this->execute_handler, (*op_it).second));
+        }
 
         if (auto result = this->unstable_storage->remove(this->uuid, key); result != bzn::storage_result::ok)
         {

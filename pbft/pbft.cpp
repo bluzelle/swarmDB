@@ -82,12 +82,6 @@ pbft::start()
                 [weak_this = this->weak_from_this(), fd = this->failure_detector]
                     (std::shared_ptr<pbft_operation> op)
                         {
-                            if (!op)
-                            {
-                                // TODO: Get real pbft_operation pointers from pbft_service
-                                LOG(error) << "Ignoring null operation pointer recieved from pbft_service";
-                                return;
-                            }
 
                             fd->request_executed(op->request_hash);
 

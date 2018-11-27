@@ -62,7 +62,7 @@ namespace bzn
         uint64_t next_request_sequence = 1;
         const bzn::uuid_t uuid;
 
-        std::unordered_map<uint64_t, std::weak_ptr<bzn::session_base>> sessions_awaiting_response;
+        std::unordered_map<uint64_t, std::shared_ptr<bzn::pbft_operation>> operations_awaiting_result;
 
         bzn::execute_handler_t execute_handler;
 
