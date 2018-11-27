@@ -94,7 +94,7 @@ TYPED_TEST_CASE(storageTest, Implementations);
 
 TYPED_TEST(storageTest, test_that_storage_can_create_a_record_and_read_the_same_record)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));
 
     const auto returned_record = this->storage->read(USER_UUID, KEY);
 
@@ -102,7 +102,7 @@ TYPED_TEST(storageTest, test_that_storage_can_create_a_record_and_read_the_same_
     EXPECT_EQ(size_t(1), this->storage->get_size(USER_UUID).first);
 
     // add another one...
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "another_key", value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, "another_key", value));
     EXPECT_EQ(value.size()*2, this->storage->get_size(USER_UUID).second);
     EXPECT_EQ(size_t(2), this->storage->get_size(USER_UUID).first);
 
@@ -112,9 +112,9 @@ TYPED_TEST(storageTest, test_that_storage_can_create_a_record_and_read_the_same_
 
 TYPED_TEST(storageTest, test_that_storage_fails_to_create_a_record_that_already_exists)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    EXPECT_EQ(bzn::storage_base::result::exists, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::exists, this->storage->create(USER_UUID, KEY, value));
 }
 
 
@@ -129,11 +129,11 @@ TYPED_TEST(storageTest, test_that_storage_can_update_an_existing_record)
     const std::string updated_value = "I have changed the value of the text";
 
     // try updating a record that does not exist
-    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->update(USER_UUID, KEY, updated_value));
+    EXPECT_EQ(bzn::storage_result::not_found, this->storage->update(USER_UUID, KEY, updated_value));
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->update(USER_UUID, KEY, updated_value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->update(USER_UUID, KEY, updated_value));
 
     const auto returned_record = this->storage->read(USER_UUID, KEY);
 
@@ -143,17 +143,17 @@ TYPED_TEST(storageTest, test_that_storage_can_update_an_existing_record)
 
 TYPED_TEST(storageTest, test_that_storage_can_delete_a_record)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));
 
     const auto returned_record = this->storage->read(USER_UUID, KEY);
 
     EXPECT_EQ(*returned_record, value);
 
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->remove(USER_UUID, KEY));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->remove(USER_UUID, KEY));
 
     EXPECT_EQ(this->storage->read(USER_UUID, KEY), std::nullopt);
 
-    EXPECT_EQ(bzn::storage_base::result::not_found, this->storage->remove(USER_UUID, KEY));
+    EXPECT_EQ(bzn::storage_result::not_found, this->storage->remove(USER_UUID, KEY));
 }
 
 
@@ -237,7 +237,7 @@ TYPED_TEST(storageTest, test_that_storage_fails_to_create_a_value_that_exceeds_t
 {
     std::string value{""};
     value.resize(bzn::MAX_VALUE_SIZE+1, 'c');
-    EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->create(USER_UUID, KEY, value));
+    EXPECT_EQ(bzn::storage_result::value_too_large, this->storage->create(USER_UUID, KEY, value));
     EXPECT_EQ(std::nullopt, this->storage->read(USER_UUID, KEY));
 }
 
@@ -245,23 +245,23 @@ TYPED_TEST(storageTest, test_that_storage_fails_to_create_a_value_that_exceeds_t
 TYPED_TEST(storageTest, test_that_storage_fails_to_update_with_a_value_that_exceeds_the_size_limit)
 {
     std::string expected_value{"gooddata"};
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, KEY, expected_value));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, expected_value));
     auto actual_record = this->storage->read(USER_UUID, KEY);
     EXPECT_EQ(expected_value, actual_record);
 
     std::string bad_value{""};
     bad_value.resize(bzn::MAX_VALUE_SIZE+1, 'c');
-    EXPECT_EQ(bzn::storage_base::result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
+    EXPECT_EQ(bzn::storage_result::value_too_large, this->storage->update(USER_UUID, KEY, bad_value));
     EXPECT_EQ(expected_value, *this->storage->read(USER_UUID, KEY));
 }
 
 
 TYPED_TEST(storageTest, test_that_storage_can_remove_all_keys_values_associated_with_a_uuid)
 {
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key1", ""));
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key2", ""));
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->create(USER_UUID, "key3", ""));
-    EXPECT_EQ(bzn::storage_base::result::ok, this->storage->remove(USER_UUID));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, "key1", ""));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, "key2", ""));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, "key3", ""));
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->remove(USER_UUID));
     EXPECT_EQ(std::nullopt, this->storage->read(USER_UUID, KEY));
 }
 

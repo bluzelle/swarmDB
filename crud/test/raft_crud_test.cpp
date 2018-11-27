@@ -270,7 +270,7 @@ TEST_F(raft_crud_test, test_that_a_leader_can_create_a_new_record)
     EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", "skdif9ek34587fk30df6vm73==")).WillOnce(Invoke(
         [](const bzn::uuid_t& /*uuid*/, const std::string& /*key*/, const std::string& /*value*/)
         {
-            return bzn::storage_base::result::ok;
+            return bzn::storage_result::ok;
         }));
 
     EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
@@ -931,7 +931,7 @@ TEST_F(raft_crud_test, test_that_a_create_command_can_create_largest_value_recor
 
     this->mh(request, this->mock_session);
 
-    EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'))).WillOnce(Return(bzn::storage_base::result::ok));
+    EXPECT_CALL(*this->mock_storage, create(USER_UUID, "key0", std::string(bzn::MAX_VALUE_SIZE, 'c'))).WillOnce(Return(bzn::storage_result::ok));
 
     EXPECT_CALL(*this->mock_subscription_manager, inspect_commit(_));
 

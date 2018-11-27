@@ -22,21 +22,23 @@
 
 namespace bzn
 {
-    using json_message = Json::Value;
+    using caller_id_t = std::string;
 
     using encoded_message = std::string;
 
-    using uuid_t = std::string;
+    using hash_t = std::string;
+
+    using json_message = Json::Value;
 
     using key_t = std::string;
 
-    using value_t = std::string;
+    using service_state_t = std::string;
 
     using session_id = uint64_t;
 
-    using service_state_t = std::string;
+    using uuid_t = std::string;
 
-    using hash_t = std::string;
+    using value_t = std::string;
 
 } // bzn
 

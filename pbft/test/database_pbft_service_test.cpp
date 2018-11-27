@@ -32,8 +32,8 @@ TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_d
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
-    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_base::result::ok));
-    EXPECT_CALL(*mock_storage, update(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_base::result::ok));
+    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
+    EXPECT_CALL(*mock_storage, update(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
 
     bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
 }
@@ -44,7 +44,7 @@ TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_e
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>("123")));
-    EXPECT_CALL(*mock_storage, update(_, _, "123")).WillOnce(Return(bzn::storage_base::result::ok));
+    EXPECT_CALL(*mock_storage, update(_, _, "123")).WillOnce(Return(bzn::storage_result::ok));
 
     bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
 }
@@ -55,7 +55,7 @@ TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_d
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
-    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_base::result::value_too_large));
+    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::value_too_large));
 
     EXPECT_THROW(bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID), std::runtime_error);
 }
@@ -66,12 +66,12 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
-    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_base::result::ok));
+    EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
 
     bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
 
-    EXPECT_CALL(*mock_storage, create(_, _, _)).WillOnce(Return(bzn::storage_base::result::exists));
-    EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_base::result::ok));
+    EXPECT_CALL(*mock_storage, create(_, _, _)).WillOnce(Return(bzn::storage_result::exists));
+    EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_result::ok));
 
     auto operation = std::make_shared<bzn::pbft_operation>(0, 1, "somehash", nullptr);
     database_msg dmsg;
@@ -135,8 +135,8 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     {
         InSequence dummy;
 
-        EXPECT_CALL(*mock_crud, handle_request(_, _)).WillOnce(Invoke(
-            [](const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+        EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
             {
                EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                EXPECT_EQ(request.create().key(), "key1");
@@ -144,8 +144,8 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
                ASSERT_FALSE(session); // operation1 session is no longer around
             }));
 
-        EXPECT_CALL(*mock_crud, handle_request(_, _)).WillOnce(Invoke(
-            [](const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+        EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
             {
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key2");
@@ -153,8 +153,8 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
                 ASSERT_FALSE(session); // operation2 never had a session set
             }));
 
-        EXPECT_CALL(*mock_crud, handle_request(_, _)).WillOnce(Invoke(
-            [](const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+        EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
             {
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key3");
@@ -206,9 +206,9 @@ TEST(database_pbft_service, test_that_set_state_catches_up_backlogged_operations
     ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
 
     // only the last two operations should be applied after we set the state @ 100
-    EXPECT_CALL(*mock_crud, handle_request(ResultOf(test::database_msg_seq, 101), _))
+    EXPECT_CALL(*mock_crud, handle_request(_, ResultOf(test::database_msg_seq, 101), _))
         .Times(Exactly(1));
-    EXPECT_CALL(*mock_crud, handle_request(ResultOf(test::database_msg_seq, 102), _))
+    EXPECT_CALL(*mock_crud, handle_request(_, ResultOf(test::database_msg_seq, 102), _))
         .Times(Exactly(1));
     EXPECT_CALL(*mock_io_context, post(_))
         .Times(Exactly(2));
