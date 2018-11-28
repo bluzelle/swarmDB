@@ -115,8 +115,19 @@ def send_status_request(node):
     print("-" * 60 + '\n')
 
     ws.close()
-
     return resp
+
+
+def create_db_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.create_db.SetInParent()
+    return msg
+
+
+def delete_db_request():
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.delete_db.SetInParent()
+    return msg
 
 
 def create_request(key, value):
@@ -200,6 +211,11 @@ def status_handler(args):
 
     return resp
 
+def create_db_handler(args):
+    return send_request(args.node, args.uuid, create_db_request())
+
+def delete_db_handler(args):
+    return send_request(args.node, args.uuid, delete_db_request())
 
 def create_handler(args):
     return send_request(args.node, args.uuid, create_request(args.key, args.value))
@@ -250,6 +266,18 @@ if __name__ == "__main__":
     # Status
     status_parser = subparsers.add_parser('status', help="Status")
     status_parser.set_defaults(func=status_handler)
+
+    # Create db
+    create_db_parser = subparsers.add_parser('create-db', help="Create database")
+    create_db_group = create_db_parser.add_argument_group('required arguments')
+    create_db_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    create_db_parser.set_defaults(func=create_db_handler)
+
+    # Delete db
+    delete_db_parser = subparsers.add_parser('delete-db', help="Delete database")
+    delete_db_group = delete_db_parser.add_argument_group('required arguments')
+    delete_db_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    delete_db_parser.set_defaults(func=delete_db_handler)
 
     # Create
     create_parser = subparsers.add_parser('create', help="Create k/v")
