@@ -238,3 +238,9 @@ session::start_idle_timeout()
             }
         });
 }
+
+bool
+session::is_open() const
+{
+    return this->websocket->is_open();
+}

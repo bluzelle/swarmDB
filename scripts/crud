@@ -41,6 +41,21 @@ except ImportError as e:
 
 transaction_id = 0
 
+def handle_response(ws):
+
+    print("-" * 60 + '\n')
+
+    resp = database_pb2.database_response()
+    resp.ParseFromString(ws.recv())
+
+    if resp.WhichOneof('response') == 'redirect':
+        redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
+        print("redirecting to leader at {}...\n".format(redirect_node).expandtabs(4))
+        resp = send_request(redirect_node, uuid, msg)
+    else:
+        print("Response: \n{}".format(resp).expandtabs(4))
+        print("-" * 60 + '\n')
+
 def send_request(node, uuid, msg, loop=False, ws=None):
     global transaction_id
 
@@ -63,23 +78,14 @@ def send_request(node, uuid, msg, loop=False, ws=None):
         msg_outer.database_msg = msg.db.SerializeToString()
 
         ws.send_binary(msg_outer.SerializeToString())
-        return
+
+        handle_response(ws)
+        resp = handle_response(ws)
+
     else:
         print("Sending: \n{}".format(msg).expandtabs(4))
         ws.send(json.dumps(req))
-
-    print("-" * 60 + '\n')
-
-    resp = database_pb2.database_response()
-    resp.ParseFromString(ws.recv())
-
-    if resp.WhichOneof('response') == 'redirect':
-        redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)
-        print("redirecting to leader at {}...\n".format(redirect_node).expandtabs(4))
-        resp = send_request(redirect_node, uuid, msg)
-    else:
-        print("Response: \n{}".format(resp).expandtabs(4))
-        print("-" * 60 + '\n')
+        resp = handle_response(ws)
 
     if loop:
         while 1:
