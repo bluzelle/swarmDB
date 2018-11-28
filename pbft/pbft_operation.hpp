@@ -41,8 +41,8 @@ namespace bzn
 
         pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
 
-        void set_session(std::weak_ptr<bzn::session_base>);
-        std::weak_ptr<bzn::session_base> session() const;
+        void set_session(std::shared_ptr<bzn::session_base>);
+        std::shared_ptr<bzn::session_base> session() const;
         bool has_session() const;
 
         operation_key_t get_operation_key() const;
@@ -86,7 +86,7 @@ namespace bzn
         std::set<bzn::uuid_t> prepares_seen;
         std::set<bzn::uuid_t> commits_seen;
 
-        std::weak_ptr<bzn::session_base> listener_session;
+        std::shared_ptr<bzn::session_base> listener_session;
 
         bzn_envelope request;
         database_msg parsed_db;

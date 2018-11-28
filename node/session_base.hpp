@@ -66,6 +66,10 @@ namespace bzn
          */
         virtual void close() = 0;
 
+        /**
+         * Is the underlying socket open? (subject to race conditions)
+         */
+        virtual bool is_open() const = 0;
 
         /**
          * Get the id associated with this session

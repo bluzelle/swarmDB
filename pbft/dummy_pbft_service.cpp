@@ -95,14 +95,6 @@ dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>&
     database_response resp;
     resp.mutable_read()->set_value("dummy database execution of " + op->debug_string());
 
-    if (auto session = op->session().lock())
-    {
-        LOG(debug) << "Sending request result " << resp.ShortDebugString();
-
-        session->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
-    }
-    else
-    {
-        LOG(debug) << "Session no longer valid, not sending request result " << resp.ShortDebugString();
-    }
+    LOG(debug) << "Sending request result " << resp.ShortDebugString();
+    op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
 }

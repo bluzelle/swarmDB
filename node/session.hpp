@@ -45,6 +45,8 @@ namespace bzn
 
         bzn::session_id get_session_id() override { return this->session_id; }
 
+        bool is_open() const override;
+
     private:
         void do_read();
 
