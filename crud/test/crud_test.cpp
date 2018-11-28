@@ -20,10 +20,16 @@
 
 using namespace ::testing;
 
-bool parse_env_to_db_resp(database_response& target, const std::string& source){
-    bzn_envelope intermediate;
-    return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
+
+namespace
+{
+    bool parse_env_to_db_resp(database_response& target, const std::string& source)
+    {
+        bzn_envelope intermediate;
+        return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
+    }
 }
+
 
 TEST(crud, test_that_create_sends_proper_response)
 {
@@ -722,4 +728,177 @@ TEST(crud, test_that_state_can_be_saved_and_retrieved)
     ASSERT_TRUE(state);
 
     ASSERT_TRUE(crud.load_state(*state));
+}
+
+
+TEST(crud, test_that_writers_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // create database...
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+    msg.mutable_create_db();
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // request writers...
+    msg.release_create_db();
+    msg.mutable_writers();
+
+    // only the owner should be set at this stage...
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::kWriters);
+            ASSERT_EQ(resp.writers().owner(), "caller_id");
+            ASSERT_EQ(resp.writers().writers().size(), 0);
+        }));
+
+    crud.handle_request("caller_id", msg, mock_session);
+}
+
+
+TEST(crud, test_that_add_writers_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // create database...
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+    msg.mutable_create_db();
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // request writers...
+    msg.release_create_db();
+
+    // should not be added to writers as this is the owner
+    msg.mutable_add_writers()->add_writers("caller_id");
+
+    msg.mutable_add_writers()->add_writers("client_1_key");
+    msg.mutable_add_writers()->add_writers("client_2_key");
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // access test
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+        }));
+
+    crud.handle_request("other_caller_id", msg, mock_session);
+
+    // request writers...
+    msg.release_add_writers();
+    msg.mutable_writers();
+
+    // only the owner should be set at this stage...
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::kWriters);
+            ASSERT_EQ(resp.writers().owner(), "caller_id");
+            ASSERT_EQ(resp.writers().writers().size(), 2);
+            ASSERT_EQ(resp.writers().writers()[0], "client_1_key");
+            ASSERT_EQ(resp.writers().writers()[1], "client_2_key");
+        }));
+
+    crud.handle_request("caller_id", msg, mock_session);
+}
+
+
+TEST(crud, test_that_remove_writers_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    // create database...
+    database_msg msg;
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+    msg.mutable_create_db();
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // request writers...
+    msg.release_create_db();
+
+    msg.mutable_add_writers()->add_writers("client_1_key");
+    msg.mutable_add_writers()->add_writers("client_2_key");
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // remove writers...
+    msg.release_create_db();
+    msg.mutable_remove_writers()->add_writers("client_2_key");
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+        }));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // access test
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+        }));
+
+    crud.handle_request("other_caller_id", msg, mock_session);
 }

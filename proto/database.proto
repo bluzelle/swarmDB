@@ -41,6 +41,10 @@ message database_msg
         database_request        create_db = 12;
         database_request        delete_db = 13;
         database_has_db         has_db = 14;
+
+        database_request        writers = 16;
+        database_writers        add_writers = 17;
+        database_writers        remove_writers = 18;
     }
 }
 
@@ -89,6 +93,11 @@ message database_has
 }
 
 message database_has_db {}
+
+message database_writers
+{
+    repeated string writers = 1;
+}
 
 message database_subscription_update
 {
@@ -145,6 +154,12 @@ message database_size_response
 
 message database_request {}
 
+message database_writers_response
+{
+    string owner = 1;
+    repeated string writers = 2;
+}
+
 message database_error
 {
     string message = 1;
@@ -164,6 +179,7 @@ message database_response
         database_size_response          size = 7;
         database_error                  error = 8;
         database_has_db_response        has_db = 9;
+        database_writers_response       writers = 10;
     }
 }
 
