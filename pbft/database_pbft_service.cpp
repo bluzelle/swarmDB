@@ -93,7 +93,7 @@ database_pbft_service::process_awaiting_operations()
 
         auto op_it = this->operations_awaiting_result.find(this->next_request_sequence);
 
-        if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session())
+        if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session() && op_it->second->session()->is_open())
         {
             this->crud->handle_request("caller id", request, op_it->second->session());
         }

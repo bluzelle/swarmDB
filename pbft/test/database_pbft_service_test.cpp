@@ -147,6 +147,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_create()->set_value("value3");
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    EXPECT_CALL(*mock_session, is_open()).WillRepeatedly(Return(true));
     auto operation3 = std::make_shared<bzn::pbft_operation>(0, 3, "somehashb", nullptr);
     env.set_database_msg(msg.SerializeAsString());
     operation3->record_request(env);
@@ -163,7 +164,9 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     auto operation1 = std::make_shared<bzn::pbft_operation>(0, 1, "somehashc", nullptr);
     env.set_database_msg(msg.SerializeAsString());
     operation1->record_request(env);
-    operation1->set_session(std::make_shared<bzn::Mocksession_base>());
+    auto session2 = std::make_shared<bzn::Mocksession_base>();
+    EXPECT_CALL(*session2, is_open()).WillRepeatedly(Return(true));
+    operation1->set_session(std::move(session2));
 
     EXPECT_CALL(*mock_io_context, post(_)).Times(3);
 

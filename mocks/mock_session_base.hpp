@@ -35,5 +35,7 @@ namespace bzn {
             bzn::session_id());
         MOCK_METHOD0(close,
             void());
+        MOCK_CONST_METHOD0(is_open,
+            bool());
     };
 }  // namespace bzn
