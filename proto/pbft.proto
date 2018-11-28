@@ -71,15 +71,19 @@ message pbft_membership_msg
 
     // for set_state
     string state_data = 5;
+
+    // for join_response
+    bool result = 6;
 }
 
 enum pbft_membership_msg_type
 {
     PBFT_MMSG_UNDEFINED = 0;
     PBFT_MMSG_JOIN = 1;
-    PBFT_MMSG_LEAVE = 2;
-    PBFT_MMSG_GET_STATE = 3;
-    PBFT_MMSG_SET_STATE = 4;
+    PBFT_MMSG_JOIN_RESPONSE = 2;
+    PBFT_MMSG_LEAVE = 3;
+    PBFT_MMSG_GET_STATE = 4;
+    PBFT_MMSG_SET_STATE = 5;
 }
 
 message pbft_peer_info

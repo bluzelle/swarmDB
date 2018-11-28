@@ -34,13 +34,14 @@ pbft::pbft(
     std::shared_ptr<bzn::node_base> node
     , std::shared_ptr<bzn::asio::io_context_base> io_context
     , const bzn::peers_list_t& peers
-    , bzn::uuid_t uuid
+    , std::shared_ptr<bzn::options_base> options
     , std::shared_ptr<pbft_service_base> service
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
     , std::shared_ptr<bzn::crypto_base> crypto
     )
     : node(std::move(node))
-    , uuid(std::move(uuid))
+    , uuid(options->get_uuid())
+    , options(options)
     , service(std::move(service))
     , failure_detector(std::move(failure_detector))
     , io_context(io_context)
@@ -113,6 +114,8 @@ pbft::start()
                     }
                 }
                 );
+
+            this->join_swarm();
         });
 }
 
@@ -171,13 +174,16 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
     {
         case PBFT_MMSG_JOIN:
         case PBFT_MMSG_LEAVE:
-            this->handle_join_or_leave(inner_msg);
+            this->handle_join_or_leave(inner_msg, session);
             break;
         case PBFT_MMSG_GET_STATE:
             this->handle_get_state(inner_msg, std::move(session));
             break;
         case PBFT_MMSG_SET_STATE:
             this->handle_set_state(inner_msg);
+            break;
+        case PBFT_MMSG_JOIN_RESPONSE:
+            this->handle_join_response(inner_msg);
             break;
         default:
             LOG(error) << "Invalid membership message received "
@@ -392,7 +398,7 @@ pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 }
 
 void
-pbft::handle_join_or_leave(const pbft_membership_msg& msg)
+pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session)
 {
     if (!this->is_primary())
     {
@@ -414,8 +420,16 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg)
             // see if we can add this peer
             if (!config->add_peer(peer))
             {
-                // TODO - respond with negative result?
                 LOG(debug) << "Can't add new peer due to conflict";
+
+                if (session && session->is_open())
+                {
+                    pbft_membership_msg response;
+                    response.set_type(PBFT_MMSG_JOIN_RESPONSE);
+                    response.set_result(false);
+                    auto env = this->wrap_message(response);
+                    session->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+                }
                 return;
             }
         }
@@ -430,11 +444,33 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg)
         }
 
         this->configurations.add(config);
-        this->broadcast_new_configuration(config);
+        this->broadcast_new_configuration(config, session);
     }
     else
     {
         LOG(debug) << "Malformed join/leave message";
+    }
+}
+
+void
+pbft::handle_join_response(const pbft_membership_msg& msg)
+{
+    if (!this->in_swarm)
+    {
+        if (msg.result())
+        {
+            this->in_swarm = true;
+            LOG(debug) << "Successfully joined the swarm, waiting for NEW_VIEW message...";
+        }
+        else
+        {
+            LOG(error) << "Request to join swarm rejected. Aborting...";
+            throw (std::runtime_error("Request to join swarm rejected."));
+        }
+    }
+    else
+    {
+        LOG(error) << "Received JOIN response when not waiting to join swarm";
     }
 }
 
@@ -588,6 +624,24 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
             // get rid of all other previous configs, except for currently active one
             this->configurations.remove_prior_to(config.get_hash());
         }
+
+        // send response to new node
+        auto session = op->session();
+        if (session && session->is_open())
+        {
+            pbft_membership_msg response;
+            response.set_type(PBFT_MMSG_JOIN_RESPONSE);
+            response.set_result(true);
+            auto env = this->wrap_message(response);
+            session->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+
+            // TODO: start timer for sending viewchange KEP-825
+
+        }
+        else
+        {
+            LOG(debug) << "Unable to send join response, session is not valid";
+        }
     }
 
     LOG(debug) << "Operation " << op->get_sequence() << " is committed-local";
@@ -691,6 +745,8 @@ pbft::wrap_message(const pbft_msg& msg)
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
+    result.set_timestamp(this->now());
+//    this->crypto->sign(result);
 
     return result;
 }
@@ -701,7 +757,9 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
     bzn_envelope result;
     result.set_pbft_membership(msg.SerializeAsString());
     result.set_sender(this->uuid);
-
+    result.set_timestamp(this->now());
+//    this->crypto->sign(result);
+    
     return result;
 }
 
@@ -711,6 +769,8 @@ pbft::wrap_message(const audit_message& msg) const
     bzn_envelope result;
     result.set_audit(msg.SerializeAsString());
     result.set_sender(this->uuid);
+    result.set_timestamp(this->now());
+//    this->crypto->sign(result);
 
     return result;
 }
@@ -1088,14 +1148,14 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 }
 
 void
-pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
+pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, std::shared_ptr<bzn::session_base> session)
 {
     auto cfg_msg = new pbft_config_msg;
     cfg_msg->set_configuration(config->to_string());
     bzn_envelope req;
     req.set_pbft_internal_request(cfg_msg->SerializeAsString());
 
-    auto op = this->setup_request_operation(req, this->crypto->hash(req));
+    auto op = this->setup_request_operation(req, this->crypto->hash(req), session);
     this->do_preprepare(op);
 }
 
@@ -1184,4 +1244,32 @@ size_t
 pbft::honest_majority_size(size_t swarm_size)
 {
     return pbft::faulty_nodes_bound(swarm_size) * 2 + 1;
+}
+
+void
+pbft::join_swarm()
+{
+    // are we already in the peers list?
+    // TODO - replace this with call to is_peer()
+    for (auto const& peer : this->current_peers())
+    {
+        if (peer.uuid == this->uuid)
+        {
+            this->in_swarm = true;
+            return;
+        }
+    }
+
+    auto info = new pbft_peer_info;
+    info->set_host(this->options->get_listener().address().to_string());
+    info->set_port(this->options->get_listener().port());
+    info->set_http_port(options->get_http_port());
+    info->set_uuid(this->uuid);
+
+    pbft_membership_msg join_msg;
+    join_msg.set_type(PBFT_MMSG_JOIN);
+    join_msg.set_allocated_peer_info(info);
+
+    LOG(info) << "Sending request to join swarm";
+    this->broadcast(this->wrap_message(join_msg));
 }

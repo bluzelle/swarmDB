@@ -92,11 +92,16 @@ namespace bzn::test
     void
     pbft_test::build_pbft()
     {
+        auto options = std::make_shared<bzn::options>();
+        options->get_mutable_simple_options().set("uuid", this->uuid);
+        options->get_mutable_simple_options().set("listener_address", TEST_NODE_ADDR);
+        options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
+        options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context
                 , TEST_PEER_LIST
-                , this->uuid
+                , options
                 , this->mock_service
                 , this->mock_failure_detector
                 , this->crypto
@@ -187,6 +192,14 @@ namespace bzn::test
         return result;
     }
 
+    pbft_membership_msg
+    extract_pbft_membership_msg(bzn_envelope msg)
+    {
+        pbft_membership_msg result;
+        result.ParseFromString(msg.pbft_membership());
+        return result;
+    }
+
     std::string
     extract_sender(std::string msg)
     {
@@ -261,6 +274,19 @@ namespace bzn::test
         pbft_msg msg = extract_pbft_msg(*wrapped_msg);
 
         return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && wrapped_msg->sender() != "" && msg.state_hash() != "";
+    }
+
+    bool
+    is_join(std::shared_ptr<bzn_envelope> wrapped_msg)
+    {
+        if (wrapped_msg->payload_case() != bzn_envelope::kPbftMembership)
+        {
+            return false;
+        }
+
+        auto msg = extract_pbft_membership_msg(*wrapped_msg);
+
+        return msg.type() == PBFT_MMSG_JOIN && wrapped_msg->sender() != "";
     }
 
     bool
