@@ -21,51 +21,58 @@
 namespace bzn
 {
 
-//    class pbft_newview_test : public pbft_proto_test
-//    {
-//    public:
-//
-//        std::shared_ptr<Mockcrypto_base>
-//        build_pft_with_mock_crypto()
-//        {
-//            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
-//            this->crypto = mockcrypto;
-//            this->build_pbft();
-//            return mockcrypto;
-//        }
-//
-//
-//        void
-//        generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
-//        {
-//            auto mockcrypto = this->build_pft_with_mock_crypto();
-//
-//            EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
-//                    .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
-//                                           {
-//                                               return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
-//                                           }));
-//
-//            EXPECT_CALL(*mockcrypto, verify(_))
-//                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-//                                           {
-//                                               return true;
-//                                           }));
-//
-//            for (current_sequence=1; current_sequence < 100; ++current_sequence)
-//            {
-//                run_transaction_through_primary();
-//            }
-//            prepare_for_checkpoint(current_sequence);
-//            run_transaction_through_primary();
-//            this->stabilize_checkpoint(current_sequence);
-//        }
-//
-//
-//
-//        size_t
-//        max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
-//
+    class pbft_newview_test : public pbft_proto_test
+    {
+    public:
+
+        std::shared_ptr<Mockcrypto_base>
+        build_pft_with_mock_crypto()
+        {
+            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            this->crypto = mockcrypto;
+            this->build_pbft();
+            return mockcrypto;
+        }
+
+        void
+        generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
+        {
+            auto mockcrypto = this->build_pft_with_mock_crypto();
+
+            EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
+                                           {
+                                               return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
+                                           }));
+
+            EXPECT_CALL(*mockcrypto, verify(_))
+                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                           {
+                                               return true;
+                                           }));
+
+            for (current_sequence=1; current_sequence < 100; ++current_sequence)
+            {
+                run_transaction_through_primary();
+            }
+            prepare_for_checkpoint(current_sequence);
+            run_transaction_through_primary();
+            this->stabilize_checkpoint(current_sequence);
+        }
+
+        void
+        run_transaction_through_primary_times(const size_t repeat, uint64_t& current_sequence)
+        {
+            for (size_t i{0}; i<repeat; ++i)
+            {
+                current_sequence++;
+                run_transaction_through_primary(false);
+            }
+        }
+
+        size_t
+        max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
+
 //        void
 //        execute_handle_failure_expect_sut_to_send_viewchange()
 //        {
@@ -143,64 +150,44 @@ namespace bzn
 //                this->pbft->handle_message(msg, this->default_original_msg);
 //            }
 //        }
-//    };
-//
-//    TEST_F(pbft_newview_test, pbft_with_invalid_view_drops_messages)
-//    {
-//        this->uuid = SECOND_NODE_UUID;
-//        this->build_pbft();
-//
-//        this->pbft->handle_failure();
-//
-//        // after handling the failure, the pbft must ignore all messages save for
-//        // checkpoint, view change and new view messages
-//        pbft_msg message;
-//
-//        message.set_type(PBFT_MSG_PREPREPARE);
-//        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_PREPARE);
-//        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_COMMIT);
-//        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_CHECKPOINT);
-//        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_JOIN);
-//        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_LEAVE);
-//        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_VIEWCHANGE);
-//        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
-//
-//        message.set_type(PBFT_MSG_NEWVIEW);
-//        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
-//    }
-//
-//    TEST_F(pbft_newview_test, make_newview)
-//    {
-//        const uint64_t                   new_view_index = 13124;
-//        std::vector<uint64_t, bzn_envelope>            view_change_messages;
-//        std::map<uint64_t, bzn_envelope> pre_prepare_messages;
-//
-//        this->build_pbft();
-//        pbft_msg newview{this->pbft->make_newview(
-//                new_view_index
-//                , view_change_messages
-//                , pre_prepare_messages
-//                )};
-//
-//        EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
-//        EXPECT_EQ(new_view_index, newview.view());
-//
-//
-//        // TODO view_change_messages, pre_prepare_messages
-//        // ...
-//    }
+    };
+
+    TEST_F(pbft_newview_test, make_newview)
+    {
+        uint64_t current_sequence{0};
+        this->generate_checkpoint_at_sequence_100(current_sequence);
+
+        this->run_transaction_through_primary_times(2, current_sequence);
+
+        bzn_envelope viewchange_envelope;
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto& viewchange_env) {viewchange_envelope = *viewchange_env;}));
+        this->pbft->handle_failure();
+
+        pbft_msg viewchange;
+
+        viewchange.ParseFromString(viewchange_envelope.pbft());
+
+        uint64_t                            new_view_index{viewchange.view()};
+        std::map<uuid_t,bzn_envelope>       viewchange_envelopes_from_senders;
+        std::map<uint64_t, bzn_envelope>    pre_prepare_messages;
+
+
+        // we can generate valid newview now
+
+        pbft_msg newview{this->pbft->make_newview(new_view_index, viewchange_envelopes_from_senders, pre_prepare_messages)};
+
+        EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
+        EXPECT_EQ(new_view_index, newview.view());
+
+        EXPECT_TRUE(newview.viewchange_messages_size() + 1 <= newview.viewchange_messages_size());
+
+
+
+
+        // TODO view_change_messages, pre_prepare_messages
+        // ...
+    }
 //
 //    TEST_F(pbft_newview_test, build_newview)
 //    {
@@ -285,28 +272,28 @@ namespace bzn
 ////            envelope.set_pbft(checkpoint_message.SerializeAsString());
 ////        }
 ////    }
-//
-//    TEST_F(pbft_newview_test, test_get_primary)
-//    {
-//        build_pbft();
-//
-//        // the pbft sut must be the current view's primay
-//        EXPECT_EQ(this->uuid, this->pbft->get_primary().uuid);
-//
-//        this->pbft->view++;
-//        EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
-//
-//        // given a view, get_primary must provide the address of a primary
-//
-//        // TODO: this is a pretty sketchy test.
-//        for (size_t view{0}; view < 100; ++view)
-//        {
-//            const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
-//            const bzn::uuid_t accepted_uuid = this->pbft->current_peers()[view % this->pbft->current_peers().size()].uuid;
-//            EXPECT_EQ(uuid, accepted_uuid);
-//        }
-//    }
-//
+
+    TEST_F(pbft_newview_test, test_get_primary)
+    {
+        build_pbft();
+
+        // the pbft sut must be the current view's primay
+        EXPECT_EQ(this->uuid, this->pbft->get_primary().uuid);
+
+        this->pbft->view++;
+        EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
+
+        // given a view, get_primary must provide the address of a primary
+
+        // TODO: this is a pretty sketchy test.
+        for (size_t view{0}; view < 100; ++view)
+        {
+            const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
+            const bzn::uuid_t accepted_uuid = this->pbft->current_peers()[view % this->pbft->current_peers().size()].uuid;
+            EXPECT_EQ(uuid, accepted_uuid);
+        }
+    }
+
 //    TEST_F(pbft_newview_test, is_valid_view)
 //    {
 //        this->build_pbft();

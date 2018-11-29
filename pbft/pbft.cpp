@@ -1019,11 +1019,12 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> checkpoint_hashes;
     for (size_t i{0}; i < static_cast<uint64_t>(viewchange_message.checkpoint_messages_size()); ++i)
     {
-        bzn_envelope envelope;
+        bzn_envelope envelope{viewchange_message.checkpoint_messages(i)};
         pbft_msg checkpoint_message;
-        if (!envelope.ParseFromString(viewchange_message.checkpoint_messages(i)) || !this->crypto->verify(envelope) || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.pbft()))
+
+        if (!this->crypto->verify(envelope) || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.pbft()))
         {
-            LOG (error) << "Checkpoint validation failure - unable to parse envelope";
+            LOG (error) << "Checkpoint validation failure - unable to verify envelope";
             continue;
         }
 
@@ -1376,11 +1377,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
     pbft_msg message;
     for (int i{0}; i < msg.checkpoint_messages_size(); ++i)
     {
-        const auto checkpoint_msg = msg.checkpoint_messages(i);
-
-        bzn_envelope original_checkpoint;
-
-        original_checkpoint.ParseFromString(checkpoint_msg);
+        bzn_envelope original_checkpoint{msg.checkpoint_messages(i)};
 
         message.ParseFromString(original_checkpoint.pbft());
 
@@ -1753,7 +1750,9 @@ pbft::make_viewchange(
     // C = a set of local 2*f + 1 valid checkpoint messages
     for (const auto& msg : stable_checkpoint_proof)
     {
-        viewchange.add_checkpoint_messages(msg.second);  //C
+        bzn_envelope envelope;
+        envelope.ParseFromString(msg.second);
+        *(viewchange.add_checkpoint_messages()) = envelope;
     }
 
     // P = a set (of client requests) containing a set P_m  for each request m that prepared at i with a sequence # higher than n

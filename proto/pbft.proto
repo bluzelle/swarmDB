@@ -41,7 +41,7 @@ message pbft_msg
 
     // for viewchange
     // TODO replace string with wrapped_bzn_message
-    repeated string checkpoint_messages = 8;
+    repeated bzn_envelope checkpoint_messages = 8;
 
     // for viewchange, and newview (O)
     // P, p_m, O

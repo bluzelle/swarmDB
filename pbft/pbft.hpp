@@ -260,6 +260,7 @@ namespace bzn
         FRIEND_TEST(pbft_test, test_move_to_new_config);
         FRIEND_TEST(pbft_test, full_test);
 
+        FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
         FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
@@ -267,7 +268,6 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
 
-        FRIEND_TEST(pbft_newview_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);
