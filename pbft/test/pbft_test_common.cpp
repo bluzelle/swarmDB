@@ -196,18 +196,20 @@ namespace bzn::test
     }
 
     bzn_envelope
-    wrap_pbft_msg(const pbft_msg& msg)
+    wrap_pbft_msg(const pbft_msg& msg, const bzn::uuid_t sender)
     {
         bzn_envelope result;
         result.set_pbft(msg.SerializeAsString());
+        result.set_sender(sender);
         return result;
     }
 
     bzn_envelope
-    wrap_pbft_membership_msg(const pbft_membership_msg& msg)
+    wrap_pbft_membership_msg(const pbft_membership_msg& msg, const bzn::uuid_t sender)
     {
         bzn_envelope result;
         result.set_pbft_membership(msg.SerializeAsString());
+        result.set_sender(sender);
         return result;
     }
 

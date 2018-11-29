@@ -189,8 +189,8 @@ namespace bzn
         // VIEWCHANGE/NEWVIEW Helper methods
         static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
         //static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
-        pbft_msg make_newview(uint64_t new_view_index, const std::vector<pbft_msg> &view_change_messages, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages);
-        pbft_msg build_newview(uint64_t new_view, const std::vector<pbft_msg> &viewchange_messages);
+        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages);
+        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders);
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
         std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
         std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
@@ -248,7 +248,8 @@ namespace bzn
         // VIEWCHANGE/NEWVIEW members
         bool view_is_valid = true;
         uint64_t last_view_sent{0};
-        std::map<uint64_t, std::set<std::string>> valid_view_change_messages; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
+
+        std::map<uint64_t,std::map<bzn::uuid_t, bzn_envelope>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
 
         FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
         FRIEND_TEST(pbft_test, valid_leave_request_test);

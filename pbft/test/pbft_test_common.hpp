@@ -100,9 +100,9 @@ namespace bzn::test
     uuid_t extract_sender(std::string msg);
 
     bzn_envelope
-    wrap_pbft_msg(const pbft_msg& msg);
+    wrap_pbft_msg(const pbft_msg& msg, const bzn::uuid_t sender="");
 
-    bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg);
+    bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg, const bzn::uuid_t sender);
 
     bzn_envelope
     wrap_request(const database_msg& msg);

@@ -106,16 +106,11 @@ namespace bzn
          */
         virtual bool has_request() const = 0;
 
-        const std::string& get_preprepare() const { return this->preprepare_message; };
+        const bzn_envelope get_preprepare() const {return this->preprepare_message;};
 
-        const std::set<std::string> get_prepares() const
+        const std::map<uuid_t, bzn_envelope>& get_prepares() const
         {
-            std::set<std::string> prepares;
-            for (const auto& message : this->prepare_messages)
-            {
-                prepares.insert(message.second);
-            }
-            return prepares;
+            return this->prepare_messages;
         };
 
     private:
@@ -145,10 +140,8 @@ namespace bzn
          */
         virtual const database_msg& get_database_msg() const = 0;
 
-        std::string preprepare_message;
-        std::map<uuid_t, std::string> prepare_messages;  // uuid_t is the sender uuid, prepared messages
-        bzn::encoded_message encoded_request;
-        pbft_request parsed_request;
+        bzn_envelope preprepare_message;
+        std::map<uuid_t, bzn_envelope> prepare_messages;  // uuid_t is the sender uuid, prepared messages
 
         bool request_saved = false;
 
