@@ -157,7 +157,7 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update
                         database_response resp;
 
                         resp.mutable_header()->set_db_uuid(uuid);
-                        resp.mutable_header()->set_transaction_id(subscription.first);
+                        resp.mutable_header()->set_nonce(subscription.first);
                         resp.mutable_subscription_update()->set_key(key);
 
                         if (!value.empty())

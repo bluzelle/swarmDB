@@ -293,7 +293,7 @@ crud::handle_subscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg
         database_response response;
 
         this->subscription_manager->subscribe(request.header().db_uuid(), request.subscribe().key(),
-            request.header().transaction_id(), response, session);
+            request.header().nonce(), response, session);
 
         this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
@@ -312,7 +312,7 @@ crud::handle_unsubscribe(const bzn::caller_id_t& /*caller_id*/, const database_m
         database_response response;
 
         this->subscription_manager->unsubscribe(request.header().db_uuid(), request.unsubscribe().key(),
-            request.unsubscribe().transaction_id(), response, session);
+            request.unsubscribe().nonce(), response, session);
 
         this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 

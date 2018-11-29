@@ -97,7 +97,7 @@ TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_ope
 
     database_msg msg;
     msg.mutable_header()->set_db_uuid(TEST_UUID);
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create()->set_key("key2");
     msg.mutable_create()->set_value("value2");
 
@@ -129,7 +129,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     database_msg msg;
     msg.mutable_header()->set_db_uuid(TEST_UUID);
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create()->set_key("key2");
     msg.mutable_create()->set_value("value2");
 
@@ -142,7 +142,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
 
-    msg.mutable_header()->set_transaction_id(uint64_t(321));
+    msg.mutable_header()->set_nonce(uint64_t(321));
     msg.mutable_create()->set_key("key3");
     msg.mutable_create()->set_value("value3");
 
@@ -157,7 +157,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     ASSERT_EQ(uint64_t(0), dps.applied_requests_count());
 
-    msg.mutable_header()->set_transaction_id(uint64_t(321));
+    msg.mutable_header()->set_nonce(uint64_t(321));
     msg.mutable_create()->set_key("key1");
     msg.mutable_create()->set_value("value1");
 
@@ -213,7 +213,7 @@ namespace test
     {
         database_msg msg;
         msg.mutable_header()->set_db_uuid(TEST_UUID);
-        msg.mutable_header()->set_transaction_id(uint64_t(seq));
+        msg.mutable_header()->set_nonce(uint64_t(seq));
         msg.mutable_create()->set_key("key" + std::to_string(seq));
         msg.mutable_create()->set_value("value" + std::to_string(seq));
 
@@ -226,7 +226,7 @@ namespace test
 
     uint64_t database_msg_seq(const database_msg& msg)
     {
-        return msg.header().transaction_id();
+        return msg.header().nonce();
     }
 }
 

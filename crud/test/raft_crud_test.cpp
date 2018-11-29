@@ -38,7 +38,7 @@ namespace
     bzn::json_message generate_generic_request(const bzn::uuid_t& uid, bzn_msg& msg)
     {
         msg.mutable_db()->mutable_header()->set_db_uuid(uid);
-        msg.mutable_db()->mutable_header()->set_transaction_id(85746);
+        msg.mutable_db()->mutable_header()->set_nonce(85746);
 
         bzn::json_message request;
 
@@ -191,7 +191,7 @@ TEST_F(raft_crud_test, test_that_follower_not_knowing_leader_fails_to_create)
         {
            database_response resp;
            ASSERT_TRUE(resp.ParseFromString(*msg));
-           EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
+           EXPECT_EQ(resp.header().nonce(), uint64_t(85746));
            EXPECT_EQ(resp.header().db_uuid(), USER_UUID);
         }));
 
@@ -297,7 +297,7 @@ TEST_F(raft_crud_test, test_that_a_leader_fails_to_create_an_existing_record)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             EXPECT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
-            EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
+            EXPECT_EQ(resp.header().nonce(), uint64_t(85746));
         }));
 
     this->mh(request, this->mock_session);
@@ -489,7 +489,7 @@ TEST_F(raft_crud_test, test_that_a_leader_can_update)
         {
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
-            EXPECT_EQ(resp.header().transaction_id(), uint64_t(85746));
+            EXPECT_EQ(resp.header().nonce(), uint64_t(85746));
         }));
 
     this->mh(request, this->mock_session);

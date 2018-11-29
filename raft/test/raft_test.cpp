@@ -227,7 +227,7 @@ namespace
     {
         database_header* db_header = new database_header;
         db_header->set_db_uuid(uuid);
-        db_header->set_transaction_id(transaction_id);
+        db_header->set_nonce(transaction_id);
         return db_header;
     }
 
