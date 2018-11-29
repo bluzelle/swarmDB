@@ -264,17 +264,10 @@ namespace bzn::test
     }
 
     bool
-    is_audit(std::shared_ptr<std::string> msg)
+    is_audit(std::shared_ptr<bzn_envelope> msg)
     {
-        Json::Value json;
-        Json::Reader reader;
-
-        if (!reader.parse(*msg, json))
-        {
-            return false;
-        }
-
-        return json["bzn-api"] == "audit";
+        audit_message parsed;
+        return (msg->payload_case() == bzn_envelope::kAudit && parsed.ParseFromString(msg->audit()));
     }
 
     bzn_envelope

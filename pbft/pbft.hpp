@@ -128,17 +128,16 @@ namespace bzn
 
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
-        bzn_envelope wrap_message(const pbft_msg& message, const std::string& debug_info = "");
-        bzn_envelope wrap_message(const pbft_membership_msg& message, const std::string& debug_info = "") const;
-        bzn::encoded_message wrap_message(const audit_message& message, const std::string& debug_info = "");
-        
+        bzn_envelope wrap_message(const pbft_msg& message);
+        bzn_envelope wrap_message(const pbft_membership_msg&) const;
+        bzn_envelope wrap_message(const audit_message& message) const;
+
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn_envelope& msg
             , const bzn::hash_t& request_hash
             , const std::shared_ptr<session_base>& session = nullptr);
 
         void broadcast(const bzn_envelope& message);
-        void broadcast(const bzn::encoded_message& message);
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
 

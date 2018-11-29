@@ -25,13 +25,6 @@
 
 namespace bzn
 {
-    const std::string LEADER_CONFLICT_METRIC_NAME = "raft.safety.leader_conflict";
-    const std::string RAFT_COMMIT_CONFLICT_METRIC_NAME = "raft.safety.commit_conflict";
-    const std::string LEADER_STUCK_METRIC_NAME = "raft.liveness.leader_stuck";
-    const std::string NO_LEADER_METRIC_NAME = "raft.liveness.no_leader";
-    const std::string RAFT_COMMIT_METRIC_NAME = "raft.stats.commit_heard";
-    const std::string NEW_LEADER_METRIC_NAME = "raft.stats.new_leader_heard";
-
     const std::string PBFT_COMMIT_METRIC_NAME = "pbft.stats.commit_heard";
     const std::string PRIMARY_HEARD_METRIC_NAME = "pbft.stats.primary_heard";
     const std::string FAILURE_DETECTED_METRIC_NAME = "pbft.stats.failure_detected";
@@ -53,11 +46,7 @@ namespace bzn
 
         virtual const std::list<std::string> &error_strings() const = 0;
 
-        virtual void handle(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session) = 0;
-
-        virtual void handle_raft_commit(const raft_commit_notification&) = 0;
-
-        virtual void handle_leader_status(const leader_status&) = 0;
+        virtual void handle(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) = 0;
 
         virtual void handle_pbft_commit(const pbft_commit_notification&) = 0;
 
