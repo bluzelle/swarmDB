@@ -3,7 +3,8 @@ add_library(pbft STATIC
     pbft.hpp
     pbft.cpp
     pbft_operation.hpp
-    pbft_operation.cpp
+    pbft_memory_operation.hpp
+    pbft_memory_operation.cpp
     pbft_configuration.hpp
     pbft_configuration.cpp
     dummy_pbft_service.cpp

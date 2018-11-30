@@ -13,8 +13,9 @@
 
 #include <gtest/gtest.h>
 #include <include/bluzelle.hpp>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/pbft_memory_operation.hpp>
 #include <proto/bluzelle.pb.h>
+#include <bootstrap/peer_address.hpp>
 
 using namespace ::testing;
 
@@ -44,15 +45,23 @@ namespace
         uint64_t view = 6;
         uint64_t sequence = 19;
 
-        bzn::pbft_operation op;
+        bzn::pbft_memory_operation op;
 
         bzn_envelope empty_original_msg;
+
+        pbft_msg preprepare;
+        pbft_msg prepare;
+        pbft_msg commit;
 
         pbft_operation_test()
                 : op(view, sequence, request_hash, std::make_shared<std::vector<bzn::peer_address_t>>(TEST_PEER_LIST))
         {
             database_msg msg;
             request.set_database_msg(msg.SerializeAsString());
+
+            this->preprepare.set_type(pbft_msg_type::PBFT_MSG_PREPREPARE);
+            this->prepare.set_type(pbft_msg_type::PBFT_MSG_PREPARE);
+            this->commit.set_type(pbft_msg_type::PBFT_MSG_COMMIT);
         }
     };
 
@@ -65,15 +74,14 @@ namespace
 
     TEST_F(pbft_operation_test, prepared_after_all_msgs)
     {
-        bzn_envelope preprepare;
-        this->op.record_preprepare(preprepare);
+        this->op.record_pbft_msg(this->preprepare, this->empty_original_msg);
+        op.record_request(this->request);
 
         for (const auto& peer : TEST_PEER_LIST)
         {
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
-            op.record_prepare(msg);
-            op.record_request(this->request);
+            this->op.record_pbft_msg(this->prepare, msg);
         }
 
         EXPECT_TRUE(this->op.is_prepared());
@@ -81,14 +89,13 @@ namespace
 
     TEST_F(pbft_operation_test, not_prepared_without_request)
     {
-        bzn_envelope preprepare;
-        this->op.record_preprepare(preprepare);
+        this->op.record_pbft_msg(this->preprepare, this->empty_original_msg);
 
         for (const auto& peer : TEST_PEER_LIST)
         {
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
-            op.record_prepare(msg);
+            this->op.record_pbft_msg(this->prepare, msg);
         }
 
         EXPECT_FALSE(this->op.is_prepared());
@@ -101,7 +108,7 @@ namespace
         {
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
-            op.record_prepare(msg);
+            this->op.record_pbft_msg(this->prepare, msg);
         }
 
         EXPECT_FALSE(this->op.is_prepared());
@@ -110,14 +117,13 @@ namespace
 
     TEST_F(pbft_operation_test, not_prepared_with_2f)
     {
-        bzn_envelope preprepare;
-        this->op.record_preprepare(preprepare);
+        this->op.record_pbft_msg(this->preprepare, this->empty_original_msg);
 
         for (const auto& peer : TEST_2F_PEER_LIST)
         {
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
-            op.record_prepare(msg);
+            this->op.record_pbft_msg(this->prepare, msg);
         }
 
         EXPECT_FALSE(this->op.is_prepared());
@@ -126,15 +132,14 @@ namespace
 
     TEST_F(pbft_operation_test, prepared_with_2f_PLUS_1)
     {
-        bzn_envelope preprepare;
-        this->op.record_preprepare(preprepare);
+        this->op.record_pbft_msg(this->preprepare, this->empty_original_msg);
+        op.record_request(this->request);
 
         for (const auto& peer : TEST_2F_PLUS_1_PEER_LIST)
         {
             bzn_envelope msg;
             msg.set_sender(peer.uuid);
-            op.record_prepare(msg);
-            op.record_request(this->request);
+            this->op.record_pbft_msg(this->prepare, msg);
         }
 
         EXPECT_TRUE(this->op.is_prepared());

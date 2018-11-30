@@ -14,6 +14,7 @@
 #include <pbft/test/pbft_test_common.hpp>
 #include <utils/make_endpoint.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
+#include <utils/bytes_to_debug_string.hpp>
 
 using namespace ::testing;
 
@@ -109,10 +110,10 @@ namespace bzn
         send_new_config_prepare(std::shared_ptr<bzn::pbft> pbft, bzn::peer_address_t node, std::shared_ptr<pbft_operation> op)
         {
             pbft_msg prepare;
-            prepare.set_view(op->view);
-            prepare.set_sequence(op->sequence);
+            prepare.set_view(op->get_view());
+            prepare.set_sequence(op->get_sequence());
             prepare.set_type(PBFT_MSG_PREPARE);
-            prepare.set_request_hash(op->request_hash);
+            prepare.set_request_hash(op->get_request_hash());
 
             auto wmsg = wrap_pbft_msg(prepare);
             wmsg.set_sender(node.uuid);
@@ -123,10 +124,10 @@ namespace bzn
         send_new_config_commit(std::shared_ptr<bzn::pbft> pbft, bzn::peer_address_t node, std::shared_ptr<pbft_operation> op)
         {
             pbft_msg commit;
-            commit.set_view(op->view);
-            commit.set_sequence(op->sequence);
+            commit.set_view(op->get_view());
+            commit.set_sequence(op->get_sequence());
             commit.set_type(PBFT_MSG_COMMIT);
-            commit.set_request_hash(op->request_hash);
+            commit.set_request_hash(op->get_request_hash());
 
             auto wmsg = wrap_pbft_msg(commit);
             wmsg.set_sender(node.uuid);
@@ -239,13 +240,15 @@ namespace bzn
         config.add_peer(new_peer);
         auto msg = send_new_config_preprepare(pbft, this->mock_node, config);
 
+        LOG(info) << bytes_to_debug_string(msg.request_hash());
+
         auto op = this->pbft->find_operation(msg);
         ASSERT_NE(op, nullptr);
 
         // PREPARE step
         auto nodes = TEST_PEER_LIST.begin();
-        size_t req_nodes = 2 * op->faulty_nodes_bound();
-        for (size_t i = 0; i < req_nodes; i++)
+        size_t req_nodes = pbft::honest_majority_size(TEST_PEER_LIST.size());
+        for (size_t i = 0; i < req_nodes - 1; i++)
         {
             bzn::peer_address_t node(*nodes++);
             send_new_config_prepare(pbft, node, op);
@@ -305,8 +308,8 @@ namespace bzn
 
         // COMMIT step
         auto nodes = TEST_PEER_LIST.begin();
-        size_t req_nodes = 2 * op->faulty_nodes_bound();
-        for (size_t i = 0; i < req_nodes; i++)
+        size_t req_nodes = pbft::honest_majority_size(TEST_PEER_LIST.size());
+        for (size_t i = 0; i < req_nodes - 1; i++)
         {
             bzn::peer_address_t node(*nodes++);
             send_new_config_commit(pbft, node, op);
