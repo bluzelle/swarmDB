@@ -43,7 +43,7 @@ namespace bzn
                         operation = this->pbft->find_operation(this->view, msg.sequence(), msg.request_hash());
 
                         // the SUT needs the pre-prepare it sends to itself in order to execute state machine
-                        this->send_preprepare(operation->sequence, operation->get_request());
+                        this->send_preprepare(operation->get_sequence(), operation->get_request());
                     }
                 }
             }));
@@ -186,12 +186,12 @@ namespace bzn
         ASSERT_NE(op, nullptr);
 
         // send node prepares to SUT
-        send_prepares(op->sequence, op->request_hash);
+        send_prepares(op->get_sequence(), op->get_request_hash());
 
         // send node commits to SUT
         if (commit)
         {
-            send_commits(op->sequence, op->request_hash);
+            send_commits(op->get_sequence(), op->get_request_hash());
         }
     }
 

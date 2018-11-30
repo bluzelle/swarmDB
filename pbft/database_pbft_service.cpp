@@ -50,7 +50,7 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
     std::lock_guard<std::mutex> lock(this->lock);
 
     // store op...
-    if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->sequence), op->get_database_msg().SerializeAsString());
+    if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->get_sequence()), op->get_database_msg().SerializeAsString());
         result != bzn::storage_result::ok)
     {
         LOG(fatal) << "failed to store pbft request: " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
@@ -60,7 +60,7 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
     }
 
     // store requester session for eventual response...
-    this->operations_awaiting_result[op->sequence] = op;
+    this->operations_awaiting_result[op->get_sequence()] = op;
 
     this->process_awaiting_operations();
 }

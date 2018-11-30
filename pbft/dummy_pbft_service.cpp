@@ -28,13 +28,13 @@ dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
 {
     std::lock_guard<std::mutex> lock(this->lock);
 
-    this->waiting_operations[op->sequence] = std::move(op);
+    this->waiting_operations[op->get_sequence()] = std::move(op);
 
     while (this->waiting_operations.count(this->next_request_sequence) > 0)
     {
         auto op = waiting_operations[this->next_request_sequence];
 
-        LOG(info) << "Executing request " << op->debug_string() << ", sequence " << this->next_request_sequence
+        LOG(info) << "Executing request sequence " << this->next_request_sequence
                   << "\n";
 
         this->send_execute_response(op);
@@ -93,7 +93,7 @@ void
 dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>& op)
 {
     database_response resp;
-    resp.mutable_read()->set_value("dummy database execution of " + op->debug_string());
+    resp.mutable_read()->set_value("dummy database execution of sequence " + std::to_string(op->get_sequence()));
 
     LOG(debug) << "Sending request result " << resp.ShortDebugString();
     op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
