@@ -1,5 +1,3 @@
-// Copyright (C) 2018 Bluzelle
-//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
 // as published by the Free Software Foundation.
@@ -14,12 +12,10 @@
 
 #pragma once
 
-#include <include/bluzelle.hpp>
 #include <proto/pbft.pb.h>
-#include <bootstrap/bootstrap_peers_base.hpp>
-#include <cstdint>
-#include <string>
 #include <node/session_base.hpp>
+#include <include/bluzelle.hpp>
+#include <cstdint>
 
 namespace bzn
 {
@@ -29,70 +25,112 @@ namespace bzn
     // View, sequence
     using log_key_t = std::tuple<uint64_t, uint64_t>;
 
-    enum class pbft_operation_state
+    enum class pbft_operation_stage
     {
-        prepare, commit, committed
+        prepare, commit, execute
     };
-
 
     class pbft_operation
     {
     public:
+        /**
+         * Store a session that waits on the result of the operation (will not persist across crashes)
+         * @param session shared_ptr to session
+         */
+        virtual void set_session(std::shared_ptr<bzn::session_base> session) = 0;
 
-        pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
+        /**
+         * @return the saved session, if any
+         */
+        virtual std::shared_ptr<bzn::session_base> session() const = 0;
 
-        void set_session(std::shared_ptr<bzn::session_base>);
-        std::shared_ptr<bzn::session_base> session() const;
-        bool has_session() const;
+        /**
+         * @return do we have a session
+         */
+        virtual bool has_session() const = 0;
 
-        operation_key_t get_operation_key() const;
-        pbft_operation_state get_state() const;
+        /**
+         * @return the operation_key_t that uniquely identifies this operation
+         */
+        virtual operation_key_t get_operation_key() const = 0;
 
-        void record_preprepare(const bzn_envelope& encoded_preprepare);
-        bool has_preprepare() const;
+        virtual uint64_t get_sequence() const = 0;
+        virtual uint64_t get_view() const = 0;
+        virtual const hash_t& get_request_hash() const = 0;
 
-        void record_prepare(const bzn_envelope& encoded_prepare);
-        bool is_prepared() const;
+        /**
+         * @return the current stage of the operation, defined as
+         * pbft_operation_stage::prepare: waiting for preprepare and 2f+1 prepares
+         * pbft_operation_stage::commit: prepared, waiting for 2f+1 commits
+         * pbft_operation_stage::execute: committed-local, ready to be executed
+         */
+        virtual pbft_operation_stage get_stage() const = 0;
 
-        void record_commit(const bzn_envelope& encoded_commit);
-        bool is_committed() const;
+        /**
+         * Save a pbft_message about this operation
+         * @param msg preprepare/prepare/commit
+         * @param encoded_msg the original message containing this message, signature intact.
+         */
+        virtual void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) = 0;
 
-        void begin_commit_phase();
-        void end_commit_phase();
+        /**
+         * @return have we seen a preprepare for this operation
+         */
+        virtual bool is_preprepared() const = 0;
 
-        void record_request(const bzn_envelope& encoded_request);
-        bool has_request() const;
-        bool has_db_request() const;
-        bool has_config_request() const;
+        /**
+         * @return is this operation prepared (as defined in the pbft paper) at this node
+         */
+        virtual bool is_prepared() const = 0;
 
-        const bzn_envelope& get_request() const;
-        const pbft_config_msg& get_config_request() const;
-        const database_msg& get_database_msg() const;
+        /**
+         * @return is this operation committed-local (as defined in the pbft paper) at this node
+         */
+        virtual bool is_committed() const = 0;
 
-        const uint64_t view;
-        const uint64_t sequence;
-        const bzn::hash_t request_hash;
+        /**
+         * record the request that this operation is for. caller is responsible for checking that the request's hash
+         * actually matches this operation's hash.
+         * @param encoded_request original message containing the request, signature intact
+         */
+        virtual void record_request(const bzn_envelope& encoded_request) = 0;
 
-        std::string debug_string() const;
+        /**
+         * advance the operation to the next stage, checking that doing so is legal
+         * @param new_stage
+         */
+        virtual void advance_operation_stage(pbft_operation_stage new_stage) = 0;
 
-        size_t faulty_nodes_bound() const;
+        /**
+         * @return do we know the full request associated with this operation?
+         */
+        virtual bool has_request() const = 0;
 
-    private:
-        const std::shared_ptr<const std::vector<peer_address_t>> peers;
+        /**
+         * @return do we know the full request associated with this operation, and is it a database request?
+         */
+        virtual bool has_db_request() const = 0;
 
-        pbft_operation_state state = pbft_operation_state::prepare;
+        /**
+         * @return do we know the full request associated with this operation, and is it a new configuration?
+         */
+        virtual bool has_config_request() const = 0;
 
-        bool preprepare_seen = false;
-        std::set<bzn::uuid_t> prepares_seen;
-        std::set<bzn::uuid_t> commits_seen;
+        /**
+         * @return the signed envelope containing the request associated with this operation
+         */
+        virtual const bzn_envelope& get_request() const = 0;
 
-        std::shared_ptr<bzn::session_base> listener_session;
+        /**
+         * @return the parsed new configuration associated with this operation
+         */
+        virtual const pbft_config_msg& get_config_request() const = 0;
 
-        bzn_envelope request;
-        database_msg parsed_db;
-        pbft_config_msg parsed_config;
+        /**
+         * @return the parsed database_msg associated wtih this operation
+         */
+        virtual const database_msg& get_database_msg() const = 0;
 
-        bool request_saved = false;
-        bool session_saved = false;
+        virtual ~pbft_operation() = default;
     };
 }

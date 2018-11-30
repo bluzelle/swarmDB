@@ -17,6 +17,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <utils/make_endpoint.hpp>
 #include <gtest/gtest.h>
+#include <pbft/pbft_memory_operation.hpp>
 
 namespace bzn::test
 {
@@ -189,7 +190,7 @@ namespace bzn::test
         EXPECT_CALL(*mock_session, send_datagram(_)).Times(Exactly(1));
 
         auto peers = std::make_shared<const std::vector<bzn::peer_address_t>>();
-        auto op = std::make_shared<pbft_operation>(1, 1, "somehash", peers);
+        auto op = std::make_shared<pbft_memory_operation>(1, 1, "somehash", peers);
         op->set_session(mock_session);
 
         dummy_pbft_service service(this->mock_io_context);
