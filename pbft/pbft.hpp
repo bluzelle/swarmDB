@@ -99,7 +99,7 @@ namespace bzn
         static size_t honest_majority_size(size_t swarm_size);
 
         /*
-         * minimum quorum size such that at least one member is guarenteed to be honest
+         * minimum quorum size such that at least one member is guaranteed to be honest
          */
         static size_t honest_member_size(size_t swarm_size);
 

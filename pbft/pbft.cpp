@@ -88,7 +88,7 @@ pbft::start()
                     if (op->get_sequence() % CHECKPOINT_INTERVAL == 0)
                     {
                         auto strong_this = weak_this.lock();
-                        if(strong_this)
+                        if (strong_this)
                         {
                             // tell service to save the next checkpoint after this one
                             strong_this->service->save_service_state_at(op->get_sequence() + CHECKPOINT_INTERVAL);
@@ -1189,7 +1189,7 @@ pbft::already_seen_request(const bzn_envelope& req, const request_hash_t& hash) 
 size_t
 pbft::faulty_nodes_bound(size_t swarm_size)
 {
-    return (swarm_size-1)/3;
+    return (swarm_size - 1)/3;
 }
 
 size_t
