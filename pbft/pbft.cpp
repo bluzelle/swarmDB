@@ -1148,20 +1148,30 @@ pbft::get_sequences_and_request_hashes_from_proofs(
  * @return true if there are no missing pre-prepares based on sequence numbers of each pre-prepare, false otherwise.
  */
 bool
-pbft::pre_prepares_contiguous(const pbft_msg& newview_msg) const
+pbft::pre_prepares_contiguous(const pbft_msg& newview_msg)
 {
-    uint64_t minimum_sequence{UINT64_MAX};
-    uint64_t maximum_sequence{0};
-    for (int i{0}; i < newview_msg.pre_prepare_messages_size(); ++i)
+    if (0 == newview_msg.pre_prepare_messages_size())
     {
-        const bzn_envelope pre_prepare_envelope{newview_msg.pre_prepare_messages(i)};
-        pbft_msg pre_prepare;
-        pre_prepare.ParseFromString(pre_prepare_envelope.pbft());
-
-        minimum_sequence = pre_prepare.sequence() < minimum_sequence ? pre_prepare.sequence() : minimum_sequence;
-        maximum_sequence = pre_prepare.sequence() > maximum_sequence ? pre_prepare.sequence() : maximum_sequence;
+        return true;
     }
-    return (maximum_sequence-minimum_sequence) == uint64_t(newview_msg.pre_prepare_messages_size());
+
+    auto extract_sequence = [](const bzn_envelope pre_prepare_envelope)->uint64_t
+            {
+                pbft_msg pre_prepare_message;
+                pre_prepare_message.ParseFromString(pre_prepare_envelope.pbft());
+                return pre_prepare_message.sequence();
+            };
+    uint64_t last_sequence{extract_sequence(newview_msg.pre_prepare_messages(0))};
+    for (int i{1}; i < newview_msg.pre_prepare_messages_size(); ++i)
+    {
+        uint64_t current_sequence{extract_sequence(newview_msg.pre_prepare_messages(i))};
+        if(last_sequence + 1 != current_sequence)
+        {
+            return false;
+        }
+        last_sequence = current_sequence;
+    }
+    return true;
 }
 
 bool

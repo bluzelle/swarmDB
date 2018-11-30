@@ -200,7 +200,7 @@ namespace bzn
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
         void replica_broadcasts_viewchange(const pbft_msg& msg);
-        bool pre_prepares_contiguous(const pbft_msg& newview_msg) const;
+        static bool pre_prepares_contiguous(const pbft_msg& newview_msg);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
@@ -268,6 +268,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
 
+        FRIEND_TEST(pbft_newview_test, test_pre_prepares_contiguous);
         FRIEND_TEST(pbft_newview_test, make_newview);
         FRIEND_TEST(pbft_newview_test, build_newview);
         FRIEND_TEST(pbft_newview_test, primary_handle_newview);

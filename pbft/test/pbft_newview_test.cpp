@@ -152,6 +152,57 @@ namespace bzn
 //        }
     };
 
+    TEST_F(pbft_newview_test, test_pre_prepares_contiguous)
+    {
+        auto set_pre_prepare_sequence = [](pbft_msg& sut, const uint64_t sequence)
+        {
+            bzn_envelope envelope;
+            pbft_msg pre_prepare;
+            pre_prepare.set_sequence(sequence);
+            envelope.set_pbft(pre_prepare.SerializeAsString());
+            *(sut.add_pre_prepare_messages()) = envelope;
+        };
+
+        pbft_msg sut;
+
+        // empty pre_prepare list is contiguous
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+
+        // add two contiguous pre preps
+        set_pre_prepare_sequence(sut, 837465);
+        set_pre_prepare_sequence(sut, 837466);
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+
+        // missed pre preps must fail
+        set_pre_prepare_sequence(sut, 837468);
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+
+        sut.clear_pre_prepare_messages();
+
+        // out of order pre prepares must fail
+        set_pre_prepare_sequence(sut, 837466);
+        set_pre_prepare_sequence(sut, 837465);
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+
+        sut.clear_pre_prepare_messages();
+
+        // duplicate pre prepare sequences must fail
+        set_pre_prepare_sequence(sut, 837465);
+        set_pre_prepare_sequence(sut, 837466);
+        set_pre_prepare_sequence(sut, 837466);
+        set_pre_prepare_sequence(sut, 837467);
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+
+        sut.clear_pre_prepare_messages();
+
+        // lets make a big list
+        for(uint64_t i{450}; i<550; ++i)
+        {
+          set_pre_prepare_sequence(sut, i);
+        }
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+    }
+
     TEST_F(pbft_newview_test, make_newview)
     {
         uint64_t current_sequence{0};
@@ -180,7 +231,7 @@ namespace bzn
         EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
         EXPECT_EQ(new_view_index, newview.view());
 
-        EXPECT_TRUE(newview.viewchange_messages_size() + 1 <= newview.viewchange_messages_size());
+        //EXPECT_TRUE(newview.viewchange_messages_size() + 1 <= newview.viewchange_messages_size());
 
 
 
