@@ -28,7 +28,7 @@ TEST(crud, test_that_create_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -41,7 +41,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.error().message(), bzn::MSG_DATABASE_NOT_FOUND);
         }));
 
@@ -57,7 +57,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -74,7 +74,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -87,7 +87,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
         }));
@@ -102,7 +102,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
         }));
@@ -117,7 +117,7 @@ TEST(crud, test_that_create_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
         }));
@@ -133,7 +133,7 @@ TEST(crud, test_that_read_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -161,7 +161,7 @@ TEST(crud, test_that_read_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kRead);
             ASSERT_EQ(resp.read().key(), "key");
             ASSERT_EQ(resp.read().value(), "value");
@@ -177,7 +177,7 @@ TEST(crud, test_that_read_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
@@ -196,7 +196,7 @@ TEST(crud, test_that_update_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -225,7 +225,7 @@ TEST(crud, test_that_update_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -243,7 +243,7 @@ TEST(crud, test_that_update_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kRead);
             ASSERT_EQ(resp.read().key(), "key");
             ASSERT_EQ(resp.read().value(), "updated");
@@ -260,7 +260,7 @@ TEST(crud, test_that_delete_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -288,7 +288,7 @@ TEST(crud, test_that_delete_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -301,7 +301,7 @@ TEST(crud, test_that_delete_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
@@ -317,7 +317,7 @@ TEST(crud, test_that_has_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -345,7 +345,7 @@ TEST(crud, test_that_has_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
 
@@ -359,7 +359,7 @@ TEST(crud, test_that_has_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
@@ -378,7 +378,7 @@ TEST(crud, test_that_keys_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -410,7 +410,7 @@ TEST(crud, test_that_keys_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kKeys);
             ASSERT_EQ(resp.keys().keys().size(), int(2));
             // keys are not returned in order created...
@@ -430,7 +430,7 @@ TEST(crud, test_that_keys_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kKeys);
             ASSERT_EQ(resp.keys().keys().size(), int(0));
         }));
@@ -449,7 +449,7 @@ TEST(crud, test_that_size_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     crud.handle_request("caller_id", msg, nullptr);
@@ -477,7 +477,7 @@ TEST(crud, test_that_size_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kSize);
             ASSERT_EQ(resp.size().bytes(), int32_t(5));
             ASSERT_EQ(resp.size().keys(), int32_t(1));
@@ -493,7 +493,7 @@ TEST(crud, test_that_size_sends_proper_response)
             database_response resp;
             ASSERT_TRUE(resp.ParseFromString(*msg));
             ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(123));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kSize);
             ASSERT_EQ(resp.size().bytes(), int32_t(0));
             ASSERT_EQ(resp.size().keys(), int32_t(0));
@@ -520,7 +520,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_subscribe()->set_key("key");
 
     // nothing should happen...
@@ -530,7 +530,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*mock_subscription_manager, subscribe(msg.header().db_uuid(), msg.subscribe().key(),
-        msg.header().transaction_id(), _, _));
+        msg.header().nonce(), _, _));
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
 
@@ -552,9 +552,9 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_unsubscribe()->set_key("key");
-    msg.mutable_unsubscribe()->set_transaction_id(321);
+    msg.mutable_unsubscribe()->set_nonce(321);
 
     // nothing should happen...
     crud.handle_request("caller_id", msg, nullptr);
@@ -562,7 +562,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
     EXPECT_CALL(*mock_subscription_manager, unsubscribe(msg.header().db_uuid(), msg.unsubscribe().key(),
-        msg.unsubscribe().transaction_id(), _, _));
+        msg.unsubscribe().nonce(), _, _));
 
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false));
 
@@ -580,7 +580,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_has_db();
 
     // nothing should happen...
@@ -610,7 +610,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
     // create database...
     database_msg msg;
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
@@ -651,7 +651,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     // delete database...
     database_msg msg;
     msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_transaction_id(uint64_t(123));
+    msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_delete_db();
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();

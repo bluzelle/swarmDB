@@ -185,7 +185,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         database_msg msg;
 
         msg.mutable_header()->set_db_uuid(TEST_UUID);
-        msg.mutable_header()->set_transaction_id(123);
+        msg.mutable_header()->set_nonce(123);
         msg.mutable_create()->set_key("0");
         msg.mutable_create()->set_value("0");
 
@@ -195,7 +195,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(0));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
@@ -208,7 +208,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(1234));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(1234));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
@@ -223,7 +223,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         database_msg msg;
 
         msg.mutable_header()->set_db_uuid(TEST_UUID);
-        msg.mutable_header()->set_transaction_id(123);
+        msg.mutable_header()->set_nonce(123);
         msg.mutable_update()->set_key("1");
         msg.mutable_update()->set_value("1");
 
@@ -233,7 +233,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(4321));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(4321));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
@@ -246,7 +246,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(0));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
@@ -261,7 +261,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         database_msg msg;
 
         msg.mutable_header()->set_db_uuid(TEST_UUID);
-        msg.mutable_header()->set_transaction_id(123);
+        msg.mutable_header()->set_nonce(123);
         msg.mutable_delete_()->set_key("1");
 
         EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
@@ -270,7 +270,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(4321));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(4321));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
@@ -283,7 +283,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 database_response resp;
                 resp.ParseFromString(*msg);
                 ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-                ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
+                ASSERT_EQ(resp.header().nonce(), uint64_t(0));
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
@@ -329,7 +329,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
     database_msg msg;
 
     msg.mutable_header()->set_db_uuid(TEST_UUID);
-    msg.mutable_header()->set_transaction_id(0);
+    msg.mutable_header()->set_nonce(0);
     msg.mutable_update()->set_key("0");
     msg.mutable_update()->set_value("0");
 
@@ -344,7 +344,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             database_response resp;
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(0));
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
@@ -357,7 +357,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             database_response resp;
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(1));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(1));
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
@@ -379,7 +379,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             database_response resp;
             resp.ParseFromString(*msg);
             ASSERT_EQ(resp.header().db_uuid(), TEST_UUID);
-            ASSERT_EQ(resp.header().transaction_id(), uint64_t(0));
+            ASSERT_EQ(resp.header().nonce(), uint64_t(0));
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
