@@ -74,8 +74,8 @@ namespace bzn::test
         EXPECT_CALL(*mock_node, send_message(_, _)).WillRepeatedly(Invoke(save_sequences));
 
         database_msg req, req2;
-        req.mutable_header()->set_transaction_id(5);
-        req2.mutable_header()->set_transaction_id(1055);
+        req.mutable_header()->set_nonce(5);
+        req2.mutable_header()->set_nonce(1055);
 
         seen_sequences = std::set<uint64_t>();
         pbft->handle_database_message(wrap_request(req), this->mock_session);

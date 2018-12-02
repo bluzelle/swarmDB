@@ -47,7 +47,7 @@ message database_msg
 message database_header
 {
     string db_uuid = 1;
-    uint64 transaction_id = 2;
+    uint64 nonce = 2;
 }
 
 message database_create
@@ -80,7 +80,7 @@ message database_subscribe
 message database_unsubscribe
 {
     string key = 1;
-    uint64 transaction_id = 2;
+    uint64 nonce = 2;
 }
 
 message database_has

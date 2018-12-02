@@ -95,14 +95,14 @@ raft_crud::do_raft_task_routing(const bzn::json_message& msg, const database_msg
         case database_msg::kSubscribe:
         {
             this->subscription_manager->subscribe(request.header().db_uuid(), request.subscribe().key(),
-                request.header().transaction_id(), response, session);
+                request.header().nonce(), response, session);
         }
         break;
 
         case database_msg::kUnsubscribe:
         {
             this->subscription_manager->unsubscribe(request.header().db_uuid(), request.unsubscribe().key(),
-                request.unsubscribe().transaction_id(), response, session);
+                request.unsubscribe().nonce(), response, session);
         }
         break;
 
@@ -260,7 +260,7 @@ raft_crud::commit_create(const database_msg& msg)
 {
     if (this->storage->create(msg.header().db_uuid(), msg.create().key(), msg.create().value()) != bzn::storage_result::ok)
     {
-        LOG(error) << "Request:" <<msg.header().transaction_id() << " Create failed";
+        LOG(error) << "Request:" <<msg.header().nonce() << " Create failed";
         return false;
     }
 
@@ -273,7 +273,7 @@ raft_crud::commit_update(const database_msg& msg)
 {
     if (this->storage->update(msg.header().db_uuid(), msg.update().key(), msg.update().value()) != bzn::storage_result::ok)
     {
-        LOG(error) << "Request:" << msg.header().transaction_id() << " Update failed";
+        LOG(error) << "Request:" << msg.header().nonce() << " Update failed";
         return false;
     }
 
@@ -286,7 +286,7 @@ raft_crud::commit_delete(const database_msg& msg)
 {
     if (this->storage->remove(msg.header().db_uuid(), msg.delete_().key()) != bzn::storage_result::ok)
     {
-        LOG(error) << "Request:" << msg.header().transaction_id() << " Delete failed";
+        LOG(error) << "Request:" << msg.header().nonce() << " Delete failed";
         return false;
     }
 
