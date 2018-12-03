@@ -40,7 +40,6 @@ message pbft_msg
     pbft_peer_info peer_info = 7;
 
     // for viewchange
-    // TODO replace string with wrapped_bzn_message
     repeated bzn_envelope checkpoint_messages = 8;
 
     // for viewchange, and newview (O)

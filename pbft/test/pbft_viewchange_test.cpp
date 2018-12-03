@@ -74,6 +74,51 @@ namespace bzn
         }
     };
 
+    TEST_F(pbft_viewchange_test, test_fill_in_missing_pre_prepares)
+    {
+        std::map<uint64_t, bzn_envelope> pre_prepares;
+
+        auto mock_crypto = build_pft_with_mock_crypto();
+
+        //std::pair<uint64_t, bzn::hash_t>;
+        this->pbft->stable_checkpoint = std::make_pair(uint64_t(100), "<checkpoint hash value>");
+
+        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
+                                                          {
+                                                              msg.set_sender(this->pbft->get_uuid());
+                                                              msg.set_signature("mock_signature");
+                                                              return true;
+                                                          }));
+        bzn_envelope envelope;
+
+        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first+3), envelope));
+        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first+1), envelope));
+        this->pbft->fill_in_missing_pre_prepares(4, pre_prepares);
+
+        EXPECT_TRUE(0 < pre_prepares.count(this->pbft->stable_checkpoint.first+2));
+
+
+        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Invoke([&](bzn_envelope& msg)
+                                                           {
+                                                               msg.set_sender(this->pbft->get_uuid());
+                                                               msg.set_signature("mock_signature");
+                                                               return true;
+                                                           }));
+
+        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first+7), envelope));
+
+        this->pbft->fill_in_missing_pre_prepares(4, pre_prepares);
+
+        uint64_t sequence = this->pbft->stable_checkpoint.first+1;
+        for(const auto pre_prepare : pre_prepares)
+        {
+            EXPECT_TRUE(0 < pre_prepares.count(sequence));
+            ++sequence;
+        }
+
+        EXPECT_TRUE(0 == pre_prepares.count(sequence));
+    }
+
     TEST_F(pbft_viewchange_test, pbft_with_invalid_view_drops_messages)
     {
         this->uuid = SECOND_NODE_UUID;
@@ -214,7 +259,7 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-    TEST_F(pbft_viewchange_test, is_valid_viewchange_message)
+    TEST_F(pbft_viewchange_test, DISABLED_is_valid_viewchange_message)
     {
         uint64_t current_sequence{0};
 
@@ -229,8 +274,7 @@ namespace bzn
                     EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
                     pbft_msg viewchange;
                     EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
-//                    EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
-
+                    EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
                 }));
 
         this->pbft->handle_failure();

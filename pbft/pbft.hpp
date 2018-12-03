@@ -36,6 +36,7 @@ namespace
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
+    const std::string NOOP_REQUEST_HASH = "<no op request hash>";
 }
 
 namespace bzn
@@ -196,7 +197,7 @@ namespace bzn
         std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
-        void fill_in_missing_pre_prepares(std::map<uint64_t, bzn_envelope> &pre_prepares);
+        void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares);
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
         void replica_broadcasts_viewchange(const pbft_msg& msg);
@@ -267,6 +268,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
+        FRIEND_TEST(pbft_viewchange_test, test_fill_in_missing_pre_prepares);
 
         FRIEND_TEST(pbft_newview_test, test_pre_prepares_contiguous);
         FRIEND_TEST(pbft_newview_test, make_newview);
