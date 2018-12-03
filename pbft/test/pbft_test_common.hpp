@@ -111,7 +111,7 @@ namespace bzn::test
     bool is_prepare(std::shared_ptr<bzn_envelope> msg);
     bool is_commit(std::shared_ptr<bzn_envelope> msg);
     bool is_checkpoint(std::shared_ptr<bzn_envelope> msg);
-    bool is_audit(std::shared_ptr<std::string> msg);
+    bool is_audit(std::shared_ptr<bzn_envelope> msg);
 
     bzn_envelope from(uuid_t uuid);
 }

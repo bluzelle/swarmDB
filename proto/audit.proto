@@ -47,7 +47,7 @@ message primary_status {
 message pbft_commit_notification {
     string sender_uuid = 1;
     uint64 sequence_number = 2;
-    string operation = 3;
+    bytes operation = 3;
 }
 
 message failure_detected {

@@ -112,7 +112,7 @@ simple_options::build_options()
     po::options_description audit("Audit");
     audit.add_options()
                 (AUDIT_ENABLED.c_str(),
-                        po::value<bool>()->default_value(false),
+                        po::value<bool>()->default_value(true),
                         "enable audit module")
                 (AUDIT_MEM_SIZE.c_str(),
                         po::value<size_t>()->default_value(10000),
@@ -127,9 +127,6 @@ simple_options::build_options()
 
     po::options_description experimental("Experimental");
     experimental.add_options()
-                (AUDIT_MEM_SIZE.c_str(),
-                        po::value<size_t>()->default_value(10000),
-                        "max size of audit datastructures")
                 (PBFT_ENABLED.c_str(),
                         po::value<bool>()->default_value(false),
                         "use pbft consensus instead of raft (experimental)")

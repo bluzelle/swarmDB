@@ -78,7 +78,7 @@ session::do_read()
             if (ec)
             {
                 // don't log close of websocket...
-                if (ec != boost::beast::websocket::error::closed)
+                if (ec != boost::beast::websocket::error::closed && ec != boost::asio::error::eof)
                 {
                     LOG(error) << "websocket read failed: " << ec.message();
                 }
@@ -211,7 +211,7 @@ session::start_idle_timeout()
 {
     this->idle_timer->cancel();
 
-    LOG(debug) << "resetting " << this->ws_idle_timeout.count() << "ms idle timer";
+    LOG(trace) << "resetting " << this->ws_idle_timeout.count() << "ms idle timer";
 
     this->idle_timer->expires_from_now(this->ws_idle_timeout);
 

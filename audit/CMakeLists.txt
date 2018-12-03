@@ -4,7 +4,7 @@ add_library(audit
         audit.cpp
         )
 
-target_link_libraries(audit proto)
+target_link_libraries(audit utils proto)
 add_dependencies(audit jsoncpp)
 target_include_directories(audit PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 add_subdirectory(test)
