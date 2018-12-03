@@ -340,8 +340,8 @@ namespace bzn
         for(const auto& operation : operations)
         {
             // TODO: what other tests?
-            EXPECT_EQ(uint64_t(1), operation->view);
-            EXPECT_TRUE(operation->sequence > 100 && operation->sequence <= current_sequence);
+            EXPECT_EQ(uint64_t(1), operation->get_view());
+            EXPECT_TRUE(operation->get_sequence() > 100 && operation->get_sequence() <= current_sequence);
         }
     }
 }

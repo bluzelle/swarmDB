@@ -106,15 +106,6 @@ namespace bzn
          */
         virtual bool has_request() const = 0;
 
-        const bzn_envelope get_preprepare() const {return this->preprepare_message;};
-
-        const std::map<uuid_t, bzn_envelope>& get_prepares() const
-        {
-            return this->prepare_messages;
-        };
-
-    private:
-        const std::shared_ptr<const std::vector<peer_address_t>> peers;
         /**
          * @return do we know the full request associated with this operation, and is it a database request?
          */
@@ -140,12 +131,9 @@ namespace bzn
          */
         virtual const database_msg& get_database_msg() const = 0;
 
-        bzn_envelope preprepare_message;
-        std::map<uuid_t, bzn_envelope> prepare_messages;  // uuid_t is the sender uuid, prepared messages
+        virtual const bzn_envelope get_preprepare() const = 0;
 
-        bool request_saved = false;
-
-        bool session_saved = false;
+        virtual const std::map<uuid_t, bzn_envelope>& get_prepares() const = 0;
 
         virtual ~pbft_operation() = default;
     };

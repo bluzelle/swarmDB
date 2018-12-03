@@ -1722,7 +1722,7 @@ pbft::prepared_operations_since_last_checkpoint()
     {
         if (p.second->is_prepared())
         {
-            if (p.second->sequence > this->latest_stable_checkpoint().first)
+            if (p.second->get_sequence() > this->latest_stable_checkpoint().first)
             {
                 retval.emplace(p.second);
             }
