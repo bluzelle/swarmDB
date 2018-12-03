@@ -509,19 +509,6 @@ pbft::broadcast(const bzn_envelope& msg)
 }
 
 void
-pbft::broadcast(const bzn::encoded_message& msg)
-{
-    // broadcast(bzn_envelope) is preferred, this is kept for now because audit still uses json wrapping
-
-    auto msg_ptr = std::make_shared<bzn::encoded_message>(msg);
-
-    for (const auto& peer : this->current_peers())
-    {
-        this->node->send_message_str(make_endpoint(peer), msg_ptr);
-    }
-}
-
-void
 pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
     if (op->get_stage() == pbft_operation_stage::prepare && op->is_prepared())
@@ -555,7 +542,7 @@ pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
     msg.set_allocated_request(new bzn_envelope(op->get_request()));
 
-    this->broadcast(this->wrap_message(msg, "preprepare"));
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -565,7 +552,7 @@ pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
-    this->broadcast(this->wrap_message(msg, "prepare"));
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -586,7 +573,7 @@ pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
-    this->broadcast(this->wrap_message(msg, "commit"));
+    this->broadcast(this->wrap_message(msg));
 }
 
 void
@@ -699,7 +686,7 @@ pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_ha
 }
 
 bzn_envelope
-pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
+pbft::wrap_message(const pbft_msg& msg)
 {
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
@@ -709,7 +696,7 @@ pbft::wrap_message(const pbft_msg& msg, const std::string& /*debug_info*/)
 }
 
 bzn_envelope
-pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_info*/) const
+pbft::wrap_message(const pbft_membership_msg& msg) const
 {
     bzn_envelope result;
     result.set_pbft_membership(msg.SerializeAsString());
@@ -718,19 +705,14 @@ pbft::wrap_message(const pbft_membership_msg& msg, const std::string& /*debug_in
     return result;
 }
 
-bzn::encoded_message
-pbft::wrap_message(const audit_message& msg, const std::string& debug_info)
+bzn_envelope
+pbft::wrap_message(const audit_message& msg) const
 {
-    bzn::json_message json;
+    bzn_envelope result;
+    result.set_audit(msg.SerializeAsString());
+    result.set_sender(this->uuid);
 
-    json["bzn-api"] = "audit";
-    json["audit-data"] = boost::beast::detail::base64_encode(msg.SerializeAsString());
-    if (debug_info.length() > 0)
-    {
-        json["debug-info"] = debug_info;
-    }
-
-    return json.toStyledString();
+    return result;
 }
 
 const bzn::uuid_t&

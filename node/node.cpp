@@ -108,7 +108,7 @@ node::do_accept()
             {
                 auto ep = self->acceptor_socket->remote_endpoint();
 
-                LOG(debug) << "connection from: " << ep.address() << ":" << ep.port();
+                LOG(trace) << "connection from: " << ep.address() << ":" << ep.port();
 
                 auto ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
