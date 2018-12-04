@@ -166,23 +166,23 @@ namespace bzn
         pbft_msg sut;
 
         // empty pre_prepare list is contiguous
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(0, sut));
 
         // add two contiguous pre preps
         set_pre_prepare_sequence(sut, 837465);
         set_pre_prepare_sequence(sut, 837466);
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(837465, sut));
 
         // missed pre preps must fail
         set_pre_prepare_sequence(sut, 837468);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
 
         sut.clear_pre_prepare_messages();
 
         // out of order pre prepares must fail
         set_pre_prepare_sequence(sut, 837466);
         set_pre_prepare_sequence(sut, 837465);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
 
         sut.clear_pre_prepare_messages();
 
@@ -191,7 +191,7 @@ namespace bzn
         set_pre_prepare_sequence(sut, 837466);
         set_pre_prepare_sequence(sut, 837466);
         set_pre_prepare_sequence(sut, 837467);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
 
         sut.clear_pre_prepare_messages();
 
@@ -200,7 +200,7 @@ namespace bzn
         {
           set_pre_prepare_sequence(sut, i);
         }
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(sut));
+        EXPECT_TRUE(pbft::pre_prepares_contiguous(450, sut));
     }
 
     TEST_F(pbft_newview_test, make_newview)
@@ -239,90 +239,6 @@ namespace bzn
         // TODO view_change_messages, pre_prepare_messages
         // ...
     }
-//
-//    TEST_F(pbft_newview_test, build_newview)
-//    {
-//        const uint64_t          new_view_index = 34867;
-//        std::vector<pbft_msg>   viewchange_messages;
-//
-//        this->build_pbft();
-//
-//        pbft_msg newview{this->pbft->build_newview(
-//                new_view_index
-//                , viewchange_messages)};
-//
-//        EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
-//        EXPECT_EQ(new_view_index, newview.view());
-//
-//        // TODO viewchange_messages
-//    }
-//
-//    // bool is_valid_newview_message(const pbft_msg& msg) const;
-//    TEST_F(pbft_newview_test, is_valid_newview_message)
-//    {
-//        this->build_pbft();
-//        pbft_msg newview;
-//        bzn_envelope original_msg;
-//
-//        EXPECT_FALSE(this->pbft->is_valid_newview_message(newview, original_msg));
-//    }
-//
-//    // void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
-//    TEST_F(pbft_newview_test, primary_handle_newview)
-//    {
-//        this->build_pbft();
-//
-//        pbft_msg msg;
-//        bzn_envelope original_msg;
-//
-//        this->pbft->handle_newview(msg, original_msg);
-//
-//    }
-//
-//    // void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
-//    TEST_F(pbft_newview_test, backup_handle_newview)
-//    {
-//        this->uuid = SECOND_NODE_UUID;
-//        this->build_pbft();
-//
-//        pbft_msg msg;
-//        bzn_envelope original_msg;
-//
-//        this->pbft->handle_newview(msg, original_msg);
-//    }
-//
-////    TEST_F(pbft_newview_test, validate_and_extract_checkpoint_hashes)
-////    {
-////        this->build_pbft();
-////
-////        pbft_msg viewchange_message;
-////
-////        // there should be no checkpoints
-////        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
-////
-////        // add an empty envelope
-////        bzn_envelope envelope;
-////
-////
-////        // there should be no checkpoints
-////        EXPECT_EQ( (size_t)0 , this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message).size());
-////
-////        viewchange_message.clear_checkpoint_messages();
-////
-////
-////        // generate checkpoint messages and add them to the envelope
-////        //const uint64_t new_view_index = 48593;
-////
-////        for (const auto& peer : TEST_PEER_LIST)
-////        {
-////            envelope.set_sender(peer.uuid);
-////            envelope.set_signature("valid_signature");
-////
-////            pbft_msg checkpoint_message;
-////            checkpoint_message.set_type(PBFT_MSG_CHECKPOINT);
-////            envelope.set_pbft(checkpoint_message.SerializeAsString());
-////        }
-////    }
 
     TEST_F(pbft_newview_test, test_get_primary)
     {
@@ -345,49 +261,36 @@ namespace bzn
         }
     }
 
-//    TEST_F(pbft_newview_test, is_valid_view)
-//    {
-//        this->build_pbft();
-//        // initially the view should be valid
-//        EXPECT_TRUE(this->pbft->is_view_valid());
-//
-//        // after a failure the view should be invalid
-//        this->pbft->handle_failure();
-//        EXPECT_FALSE(this->pbft->is_view_valid());
-//    }
-//
-//
-////    TEST_F(pbft_newview_test, get_sequences_and_request_hashes_from_proofs)
-////    {
-////        uint64_t current_sequence{0};
-////        generate_checkpoint_at_sequence_100(current_sequence);
-////
-////        current_sequence++;
-////        run_transaction_through_primary(false);
-////        current_sequence++;
-////        run_transaction_through_primary(false);
-////
-////        // let pbft generate a view change message for us
-////
-////        bzn_envelope viewchange_envelope;
-////        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
-////                .WillRepeatedly(Invoke(
-////                        [&](const auto & /*endpoint*/, const auto& viewchange_env)
-////                        {
-////                            viewchange_envelope = *viewchange_env;
-////                        }));
-////
-////        this->pbft->handle_failure();
-////
-////        pbft_msg viewchange;
-////        EXPECT_TRUE(viewchange.ParseFromString(viewchange_envelope.pbft()));
-////
-////        std::set<std::pair<uint64_t, std::string>> sequence_request_pairs;
-////        EXPECT_TRUE(this->pbft->get_sequences_and_request_hashes_from_proofs(viewchange, sequence_request_pairs));
-////
-////
-////        LOG(info) << sequence_request_pairs.size();
-////    }
+
+    TEST_F(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs)
+    {
+        auto make_prepared_proof = [&](uint64_t lower, uint64_t upper)->prepared_proof
+                {
+                    prepared_proof proof;
+                    for(uint64_t i{lower}; i <= upper; ++i)
+                    {
+                        pbft_msg msg;
+                        msg.set_sequence(i);
+                        bzn_envelope env;
+                        env.set_pbft(msg.SerializeAsString());
+                        *(proof.add_prepare()) = env;
+                    }
+                    return proof;
+                };
+
+        pbft_msg newview;
+        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_prepared_proofs(newview));
+
+        uint64_t expected_last_sequence{1234};
+        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-5, expected_last_sequence);
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
+
+        expected_last_sequence = 1236;
+        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence);
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
 
 
+        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence-15);
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
+    }
 }

@@ -200,8 +200,9 @@ namespace bzn
         void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares);
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
-        void replica_broadcasts_viewchange(const pbft_msg& msg);
-        static bool pre_prepares_contiguous(const pbft_msg& newview_msg);
+        void broadcast_viewchange(const pbft_msg &msg);
+        static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
+        static uint64_t last_sequence_in_newview_prepared_proofs(const pbft_msg& msg);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
@@ -266,6 +267,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, test_is_peer);
         FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
+        FRIEND_TEST(pbft_viewchange_test, test_is_valid_viewchange_message);
         FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
         FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
         FRIEND_TEST(pbft_viewchange_test, test_fill_in_missing_pre_prepares);
@@ -278,6 +280,7 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
         FRIEND_TEST(pbft_newview_test, test_get_primary);
         FRIEND_TEST(pbft_newview_test, get_sequences_and_request_hashes_from_proofs);
+        FRIEND_TEST(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs);
 
         friend class pbft_proto_test;
         friend class pbft_viewchange_test;

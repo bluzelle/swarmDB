@@ -1147,7 +1147,7 @@ pbft::get_sequences_and_request_hashes_from_proofs(
  * @return true if there are no missing pre-prepares based on sequence numbers of each pre-prepare, false otherwise.
  */
 bool
-pbft::pre_prepares_contiguous(const pbft_msg& newview_msg)
+pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg)
 {
     if (0 == newview_msg.pre_prepare_messages_size())
     {
@@ -1160,7 +1160,9 @@ pbft::pre_prepares_contiguous(const pbft_msg& newview_msg)
                 pre_prepare_message.ParseFromString(pre_prepare_envelope.pbft());
                 return pre_prepare_message.sequence();
             };
-    uint64_t last_sequence{extract_sequence(newview_msg.pre_prepare_messages(0))};
+
+    // We are assuming that the pre prepare messages are stored sequentially by sequence number in newview_msg.pre_prepare_messages
+    uint64_t last_sequence{latest_sequence};
     for (int i{1}; i < newview_msg.pre_prepare_messages_size(); ++i)
     {
         uint64_t current_sequence{extract_sequence(newview_msg.pre_prepare_messages(i))};
@@ -1173,6 +1175,23 @@ pbft::pre_prepares_contiguous(const pbft_msg& newview_msg)
     return true;
 }
 
+uint64_t
+pbft::last_sequence_in_newview_prepared_proofs(const pbft_msg& newview)
+{
+    uint64_t last_sequence{0};
+    for(int i{0}; i<newview.prepared_proofs_size(); ++i)
+    {
+        const prepared_proof prep_proof = newview.prepared_proofs(i);
+        for(int j{0}; j<prep_proof.prepare_size(); ++j)
+        {
+            pbft_msg msg;
+            msg.ParseFromString(prep_proof.prepare(j).pbft());
+            last_sequence = std::max(last_sequence, msg.sequence());
+        }
+    }
+    return last_sequence;
+}
+
 bool
 pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*original_msg*/) const
 {
@@ -1182,7 +1201,9 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
-    if (!this->pre_prepares_contiguous(msg))
+    uint64_t last_sequence{this->last_sequence_in_newview_prepared_proofs(msg)};
+
+    if (!this->pre_prepares_contiguous(last_sequence, msg))
     {
         LOG (error) << "is_valid_newview_message - NEWVIEW is missing pre prepare messages";
         return false;
@@ -1296,8 +1317,7 @@ pbft::fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_env
             msg2.set_sequence(i);
             msg2.set_type(PBFT_MSG_PREPREPARE);
             msg2.set_allocated_request(request);
-
-            // msg2.set_request_hash(NOOP_REQUEST_HASH);
+            msg2.set_request_hash(this->crypto->hash(*request));
 
             pre_prepares[i] = this->wrap_message(msg2);
         }
@@ -1427,8 +1447,9 @@ pbft::save_checkpoint(const pbft_msg& msg)
 }
 
 void
-pbft::replica_broadcasts_viewchange(const pbft_msg& msg)
+pbft::broadcast_viewchange(const pbft_msg &msg)
 {
+    // TODO remove replica_
     // replica sends VIEWCHANGE message
     pbft_msg viewchange_message{
             make_viewchange(
@@ -1459,7 +1480,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     if (this->view_is_valid && this->valid_viewchange_messages_for_view[msg.view()].size() == this->max_faulty_nodes() + 1 && msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
-        this->replica_broadcasts_viewchange(msg);
+        this->broadcast_viewchange(msg);
 
     // TODO move this to the end...
     // we want to filter std::map<uint64_t, std::set<bzn_envelope>> valid_view_change_messages for
