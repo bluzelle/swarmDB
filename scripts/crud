@@ -76,6 +76,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     if use_pbft:
         msg_outer = bluzelle_pb2.bzn_envelope()
         msg_outer.database_msg = msg.db.SerializeToString()
+        msg_outer.sender = "crud script"
 
         ws.send_binary(msg_outer.SerializeToString())
 
