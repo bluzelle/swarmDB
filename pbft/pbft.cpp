@@ -1522,8 +1522,7 @@ pbft::broadcast_viewchange(const pbft_msg &msg)
 }
 
 void
-pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
-{
+pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
     if (!this->is_valid_viewchange_message(msg, original_msg))
     {
         LOG(error) << "handle_viewchange - invalid viewchange message, ignoring";
@@ -1531,24 +1530,47 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
 
     // TODO: valid_view_change_messages_for_view can be cleared of viewchange messages for less than the current view.
-    this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] = original_msg;
+    //this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] = original_msg;
+
+
+
+
+    auto& inner_map = this->valid_viewchange_messages_for_view[msg.view()];
+
+    LOG(debug) << this->valid_viewchange_messages_for_view.size();
+
+
+    inner_map[original_msg.sender()] = original_msg;
+
+    LOG(debug) << " *** " << inner_map.size();
+
+
 
     this->save_checkpoint(msg);
 
-    if (this->view_is_valid && this->valid_viewchange_messages_for_view[msg.view()].size() == this->max_faulty_nodes() + 1 && msg.view() > this->last_view_sent)
+    if (this->view_is_valid &&
+        this->valid_viewchange_messages_for_view[msg.view()].size() == this->max_faulty_nodes() + 1 &&
+        msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
         this->broadcast_viewchange(msg);
+    }
 
     // TODO move this to the end...
     // we want to filter std::map<uint64_t, std::set<bzn_envelope>> valid_view_change_messages for
     // 1) we would be the primary for that view
     // 2) that view is greater than the current view
     // 3) we have 2 f + 1 viewchange messages for it
-    const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin(), this->valid_viewchange_messages_for_view.end(), [&](const auto& p)
-            {
-                return ((this->get_primary(p.first).uuid == this->get_uuid()) &&  (p.first > this->view) && (p.second.size() >= 2 * this->max_faulty_nodes() + 1));
-            });
+    const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin(),
+                                         this->valid_viewchange_messages_for_view.end(), [&](const auto &p)
+                                         {
+        LOG(debug) << "this->get_primary:" << this->get_primary(2).uuid;
+
+
+                                             return ((this->get_primary(p.first).uuid == this->get_uuid()) &&
+                                                     (p.first > this->view) &&
+                                                     (p.second.size() >= 2 * this->max_faulty_nodes() + 1));
+                                         });
 
     if (viewchange == this->valid_viewchange_messages_for_view.end())
     {
@@ -1560,55 +1582,30 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     // TODO Refactor into method
 
-        // create the newview and and broadcast it
+    // create the newview and and broadcast it
 
-        // viewchange->second is a set of bzn_envelope strings
-        // -- we want a of set<pbft_msg>
+    // viewchange->second is a set of bzn_envelope strings
+    // -- we want a of set<pbft_msg>
 
-        std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders;
-        for (const auto& sender_envelope : this->valid_viewchange_messages_for_view[msg.view()])
-        {
-            const auto& sender{sender_envelope.first};
-            const auto& viewchange_envelope{sender_envelope.second};
-            viewchange_envelopes_from_senders[sender] = viewchange_envelope;
-        }
-
-
-
-//
-//
-//        for (const auto& view_change_msg : viewchange->second)
-//        {
-//            pbft_msg pbft_viewchange;
-//            if (!pbft_viewchange.ParseFromString(view_change_msg))
-//            {
-//                LOG (error) << "handle_viewchange - unable to parse viewchange message";
-//                continue;
-//            }
-//
-//            // Since sets require hashable objects we needed to use vectors and do our own uniqueness testing.
-//            auto found_iter = std::find_if(viewchange_envelopes.begin(), viewchange_envelopes.end(), [&](const auto& viewchange_envelope)
-//            {
-//                return !google::protobuf::util::MessageDifferencer::Equals(viewchange_envelope, pbft_viewchange);
-//            });
-//
-//            if (found_iter == viewchange_messages.end())
-//            {
-//                viewchange_messages.emplace_back(pbft_viewchange);
-//            }
-
-
-        this->broadcast(
-                this->wrap_message(
-                        this->build_newview(
-                                viewchange->first
-                                , viewchange_envelopes_from_senders)));
-
-        // primary of the new view moves to new view
-        this->view = msg.view();
-        this->view_is_valid = true;
+    std::map<uuid_t, bzn_envelope> viewchange_envelopes_from_senders;
+    for (const auto &sender_envelope : this->valid_viewchange_messages_for_view[msg.view()])
+    {
+        const auto &sender{sender_envelope.first};
+        const auto &viewchange_envelope{sender_envelope.second};
+        viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
+
+
+    this->broadcast(
+            this->wrap_message(
+                    this->build_newview(
+                            viewchange->first, viewchange_envelopes_from_senders)));
+
+    // primary of the new view moves to new view
+    this->view = msg.view();
+    this->view_is_valid = true;
 }
+
 
 void
 pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)

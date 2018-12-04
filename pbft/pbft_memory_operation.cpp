@@ -115,9 +115,11 @@ void pbft_memory_operation::record_pbft_msg(const pbft_msg& message, const bzn_e
     {
         case pbft_msg_type::PBFT_MSG_PREPREPARE :
             this->preprepare_seen = true;
+            this->preprepare_message = original_message;
             break;
         case pbft_msg_type::PBFT_MSG_PREPARE :
             this->prepares_seen.emplace(original_message.sender());
+            this->prepare_messages[original_message.sender()] = original_message;
             break;
         case pbft_msg_type::PBFT_MSG_COMMIT :
             this->commits_seen.emplace(original_message.sender());

@@ -118,7 +118,7 @@ namespace bzn::test
     bool is_join(std::shared_ptr<bzn_envelope> msg);
     bool is_audit(std::shared_ptr<bzn_envelope> msg);
     bool is_viewchange(std::shared_ptr<bzn_envelope> wrapped_msg);
-    bool is_newview(std::shared_ptr<std::string> wrapped_msg);
+    bool is_newview(std::shared_ptr<bzn_envelope> wrapped_msg);
 
     bzn_envelope from(uuid_t uuid);
 }

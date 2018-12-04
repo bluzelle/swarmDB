@@ -307,10 +307,10 @@ namespace bzn::test
     }
 
     bool
-    is_newview(std::shared_ptr<std::string> wrapped_msg)
+    is_newview(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
         pbft_msg msg;
-        msg.ParseFromString(*wrapped_msg);
+        msg.ParseFromString(wrapped_msg->pbft());
         return msg.type() == PBFT_MSG_NEWVIEW;
     }
 

@@ -17,6 +17,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_crypto_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
+#include <utils/make_endpoint.hpp>
 
 // https://coveralls.io/builds/20296851/source?filename=pbft/pbft.cpp
 
@@ -266,7 +267,7 @@ namespace bzn
         this->pbft->handle_failure();
     }
 
-    TEST_F(pbft_viewchange_test, DISABLED_test_is_valid_viewchange_message)
+    TEST_F(pbft_viewchange_test, test_is_valid_viewchange_message)
     {
         uint64_t current_sequence{0};
 
@@ -379,4 +380,115 @@ namespace bzn
         //  expect that there should be 3 unstable checkpoint proofs after calling save_checkpoint.
         EXPECT_EQ(uint64_t(3), this->pbft->unstable_checkpoint_proofs.size());
     }
+
+    TEST_F(pbft_viewchange_test, test_handle_viewchange)
+    {
+        // get sut1 to generate viewchange message
+        // catch message
+        // send to sut2 handle_viewchange
+        // sut2 should store viewchange
+        // re-send from other nodes to handle_viewchange
+        // sut2 should eventually send its own viewchange
+        // once enough viewchange messages are sent, sut2 should send newview
+        // capture newview and send to sut1 handle_newview
+
+        // sut1 (this->pbft) is initial primary
+        auto mock_crypto = this->build_pft_with_mock_crypto();
+
+        // sut2 is new primary after view change
+        std::shared_ptr<bzn::Mocknode_base> mock_node2 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context2 =
+                std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
+        std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer2 =
+                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::shared_ptr<bzn::mock_pbft_service_base> mock_service2 =
+                std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
+
+        EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
+                .Times(AtMost(1))
+                .WillOnce(
+                        Invoke(
+                                [&]()
+                                { return std::move(audit_heartbeat_timer2); }
+                        ));
+
+        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST
+                , "uuid2", mock_service2, this->mock_failure_detector, this->crypto);
+        pbft2->set_audit_enabled(false);
+
+        pbft2->start();
+
+        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
+                .WillRepeatedly(Invoke([&](auto env)
+                                       {
+                                           return env.SerializeAsString();
+                                       }));
+
+        EXPECT_CALL(*mock_crypto, verify(_))
+                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                       {
+                                           return true;
+                                       }));
+
+
+        EXPECT_CALL(*mock_crypto, sign(_))
+                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+                                       {
+                                           return true;
+                                       }));
+
+
+        // set up a stable checkpoint plus a couple of uncommitted transactions on sut1
+        for (size_t i = 0; i < 99; i++)
+        {
+            run_transaction_through_primary();
+        }
+        prepare_for_checkpoint(100);
+        run_transaction_through_primary();
+        this->stabilize_checkpoint(100);
+        run_transaction_through_primary(false);
+        run_transaction_through_primary(false);
+
+        for (auto const &p : TEST_PEER_LIST)
+        {
+            EXPECT_CALL(*(this->mock_node),
+                        send_message(bzn::make_endpoint(p), ResultOf(test::is_viewchange, Eq(true))))
+                    .Times(Exactly(1))
+                    .WillRepeatedly(Invoke([&](auto, auto wmsg)
+                                           {
+                                               pbft_msg msg;
+                                               ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                                               wmsg->set_sender(p.uuid);
+                                               pbft2->stable_checkpoint = this->pbft->stable_checkpoint;
+                                               pbft2->handle_viewchange(msg, *wmsg);
+                                           }));
+        }
+
+        for (auto const &p : TEST_PEER_LIST)
+        {
+            EXPECT_CALL(*mock_node2, send_message(bzn::make_endpoint(p), ResultOf(test::is_newview, Eq(true))))
+                    .Times(Exactly(1))
+                    .WillRepeatedly(Invoke([&](auto, auto wmsg)
+                                           {
+                                               if (p.uuid == TEST_NODE_UUID)
+                                               {
+                                                   pbft_msg msg;
+                                                   ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                                                   this->pbft->handle_newview(msg, *wmsg);
+                                               }
+                                           }));
+        }
+
+        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
+                .Times(Exactly(TEST_PEER_LIST.size()));
+
+        // get sut1 to generate viewchange message
+        this->pbft->handle_failure();
+
+        EXPECT_EQ(this->pbft->view, 2U);
+    }
 }
+
+
+
+
