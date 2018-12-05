@@ -262,35 +262,29 @@ namespace bzn
     }
 
 
-//    TEST_F(pbft_newview_test, DISABLED_test_last_sequence_in_newview_prepared_proofs)
-//    {
-//        auto make_prepared_proof = [&](uint64_t lower, uint64_t upper)->prepared_proof
-//                {
-//                    prepared_proof proof;
-//                    for(uint64_t i{lower}; i <= upper; ++i)
-//                    {
-//                        pbft_msg msg;
-//                        msg.set_sequence(i);
-//                        bzn_envelope env;
-//                        env.set_pbft(msg.SerializeAsString());
-//                        *(proof.add_prepare()) = env;
-//                    }
-//                    return proof;
-//                };
-//
-//        pbft_msg newview;
-//        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_preprepare_messages(newview));
-//
-//        uint64_t expected_last_sequence{1234};
-//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-5, expected_last_sequence);
-//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-//
-//        expected_last_sequence = 1236;
-//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence);
-//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-//
-//
-//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence-15);
-//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-//    }
+    TEST_F(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs)
+    {
+        pbft_msg newview;
+
+        EXPECT_EQ(uint64_t(0U), pbft::last_sequence_in_newview_preprepare_messages(newview));
+
+        pbft_msg prepare;
+        prepare.set_sequence(100U);
+
+        bzn_envelope prepare_env;
+        prepare_env.set_pbft(prepare.SerializeAsString());
+
+        prepared_proof proof;
+        *(proof.add_prepare()) =  prepare_env;
+
+        pbft_msg viewchange_message;
+        *(viewchange_message.add_prepared_proofs()) = proof;
+
+        bzn_envelope viewchange_env;
+        viewchange_env.set_pbft(viewchange_message.SerializeAsString());
+
+        *(newview.add_viewchange_messages()) = viewchange_env;
+
+        EXPECT_EQ(100U, pbft::last_sequence_in_newview_preprepare_messages(newview));
+    }
 }

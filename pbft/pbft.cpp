@@ -1233,7 +1233,6 @@ pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_
     return last_sequence==latest_sequence;
 }
 
-
 // prepared_proofs is not a member of a new_view message. You need to
 // iterate over all the prepared_proofs in all the viewchange messages
 // in the new_view.
@@ -1241,37 +1240,32 @@ uint64_t
 pbft::last_sequence_in_newview_preprepare_messages(const pbft_msg &newview)
 {
     uint64_t last_sequence{0};
-//    for(int i{0}; i < newview.viewchange_messages_size(); ++i)
-//    {
-//        bzn_envelope viewchange_envelope = newview.viewchange_messages(i);
-//        pbft_msg viewchange;
-//        viewchange.ParseFromString(viewchange_envelope.pbft());
-//
-//        for(int j{0}; j < viewchange.prepared_proofs_size(); ++j)
-//        {
-//            prepared_proof proof = viewchange.prepared_proofs(j);
-//            proof.
-//        }
-//
-//    }
-
-
-
-
-
-
-
-
-
-
-
-    for(int i{0}; i<newview.pre_prepare_messages_size(); ++i)
+    for(int i{0}; i < newview.viewchange_messages_size(); ++i)
     {
-        bzn_envelope pre_prepare_messsage_envelope = newview.pre_prepare_messages(i);
-        pbft_msg pre_prepare_messsage;
-        pre_prepare_messsage.ParseFromString(pre_prepare_messsage_envelope.pbft());
-        last_sequence = std::max(last_sequence, pre_prepare_messsage.sequence());
+        bzn_envelope viewchange_envelope = newview.viewchange_messages(i);
+        pbft_msg viewchange;
+        viewchange.ParseFromString(viewchange_envelope.pbft());
+
+        for(int j{0}; j < viewchange.prepared_proofs_size(); ++j)
+        {
+            prepared_proof proof = viewchange.prepared_proofs(j);
+            for(int k{0}; k < proof.prepare_size(); ++k)
+            {
+                bzn_envelope prepare = proof.prepare(k);
+                pbft_msg idfk;
+                idfk.ParseFromString(prepare.pbft());
+                last_sequence = std::max(last_sequence, idfk.sequence());
+            }
+        }
     }
+
+//    for(int i{0}; i<newview.pre_prepare_messages_size(); ++i)
+//    {
+//        bzn_envelope pre_prepare_messsage_envelope = newview.pre_prepare_messages(i);
+//        pbft_msg pre_prepare_messsage;
+//        pre_prepare_messsage.ParseFromString(pre_prepare_messsage_envelope.pbft());
+//        last_sequence = std::max(last_sequence, pre_prepare_messsage.sequence());
+//    }
     return last_sequence;
 }
 
