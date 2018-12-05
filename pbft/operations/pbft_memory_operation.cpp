@@ -12,17 +12,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include "pbft_memory_operation.hpp"
+#include <pbft/operations/pbft_memory_operation.hpp>
 #include <boost/format.hpp>
 #include <string>
 
 using namespace bzn;
 
 pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
-        : view(view)
-          , sequence(sequence)
-          , request_hash(request_hash)
-          , peers(std::move(peers))
+        : pbft_operation(view, sequence, request_hash)
+        , peers(std::move(peers))
 {
 }
 
@@ -181,62 +179,19 @@ pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_sta
     this->stage = new_stage;
 }
 
-operation_key_t
-pbft_memory_operation::get_operation_key() const
-{
-    return {this->view, this->sequence, this->request_hash};
-}
-
 pbft_operation_stage
 pbft_memory_operation::get_stage() const
 {
     return this->stage;
 }
 
-void
-pbft_memory_operation::set_session(std::shared_ptr<bzn::session_base> session)
-{
-    this->listener_session = std::move(session);
-    this->session_saved = true;
-}
-
-std::shared_ptr<bzn::session_base>
-pbft_memory_operation::session() const
-{
-    return this->listener_session;
-}
-
-bool
-pbft_memory_operation::has_session() const
-{
-    return this->session_saved;
-}
-
-uint64_t
-pbft_memory_operation::get_sequence() const
-{
-    return this->sequence;
-}
-
-uint64_t
-pbft_memory_operation::get_view() const
-{
-    return this->view;
-}
-
-const hash_t&
-pbft_memory_operation::get_request_hash() const
-{
-    return this->request_hash;
-}
-
-const bzn_envelope
+bzn_envelope
 pbft_memory_operation::get_preprepare() const
 {
     return this->preprepare_message;
 }
 
-const std::map<bzn::uuid_t, bzn_envelope>&
+std::map<bzn::uuid_t, bzn_envelope>
 pbft_memory_operation::get_prepares() const
 {
     return this->prepare_messages;

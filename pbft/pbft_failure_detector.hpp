@@ -16,7 +16,7 @@
 
 #include <pbft/pbft_failure_detector_base.hpp>
 #include <include/boost_asio_beast.hpp>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/operations/pbft_operation.hpp>
 
 namespace bzn
 {

@@ -20,7 +20,7 @@
 #include <node/node_base.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <bootstrap/peer_address.hpp>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/operations/pbft_operation.hpp>
 
 #include <proto/pbft.pb.h>
 

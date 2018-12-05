@@ -13,7 +13,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <pbft/pbft.hpp>
-#include <pbft/pbft_memory_operation.hpp>
+#include <pbft/operations/pbft_memory_operation.hpp>
+#include <pbft/operations/pbft_operation_manager.hpp>
 #include <utils/make_endpoint.hpp>
 #include <utils/bytes_to_debug_string.hpp>
 #include <google/protobuf/text_format.h>
@@ -39,6 +40,7 @@ pbft::pbft(
     , std::shared_ptr<pbft_service_base> service
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
     , std::shared_ptr<bzn::crypto_base> crypto
+    , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
     )
     : node(std::move(node))
     , uuid(options->get_uuid())
@@ -48,6 +50,7 @@ pbft::pbft(
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
+    , operation_manager(std::move(operation_manager))
 {
     if (peers.empty())
     {
@@ -173,13 +176,16 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
+    const auto hash = this->crypto->hash(msg);
+
     switch (inner_msg.type())
     {
         case PBFT_MMSG_JOIN:
         case PBFT_MMSG_LEAVE:
+            this->sessions_waiting_on_forwarded_requests[hash] = session;
             if (!this->is_primary())
             {
-                this->forward_request_to_primary(msg, session);
+                this->forward_request_to_primary(msg);
                 return;
             }
             this->handle_join_or_leave(inner_msg, session);
@@ -272,16 +278,11 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 }
 
 std::shared_ptr<pbft_operation>
-pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t& request_hash, const std::shared_ptr<session_base>& session)
+pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t& request_hash)
 {
     const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->find_operation(this->view, request_seq, request_hash);
+    auto op = this->operation_manager->find_or_construct(this->view, request_seq, request_hash, this->current_peers_ptr());
     op->record_request(request_env);
-
-    if (session)
-    {
-        op->set_session(session);
-    }
 
     return op;
 }
@@ -289,9 +290,20 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    const auto hash = this->crypto->hash(request_env);
+
+    if (session)
+    {
+        const auto hash = this->crypto->hash(request_env);
+        if (this->sessions_waiting_on_forwarded_requests.find(hash) == this->sessions_waiting_on_forwarded_requests.end())
+        {
+            this->sessions_waiting_on_forwarded_requests[hash] = session;
+        }
+    }
+
     if (!this->is_primary())
     {
-        this->forward_request_to_primary(request_env, session);
+        this->forward_request_to_primary(request_env);
         return;
     }
 
@@ -302,8 +314,6 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
-    auto hash = this->crypto->hash(request_env);
-
     // keep track of what requests we've seen based on timestamp and only send preprepares once
     if (this->already_seen_request(request_env, hash))
     {
@@ -312,41 +322,17 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
     this->saw_request(request_env, hash);
-    auto op = setup_request_operation(request_env, hash, session);
+    auto op = setup_request_operation(request_env, hash);
     this->do_preprepare(op);
 }
 
 void
-pbft::forward_request_to_primary(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
+pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
     LOG(info) << "Forwarding request to primary";
     this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
-
-    const auto existing_operation = std::find_if(this->operations.begin(), this->operations.end(),
-        // This search is inefficient for in-memory operations, but the db lookup that will replace it is not
-        [&](const auto& pair)
-        {
-            return std::get<2>(pair.first) == req_hash;
-        });
-
-    // If we already have an operation for this request_hash, attach the session to it
-    if (existing_operation != this->operations.end())
-    {
-        const std::shared_ptr<bzn::pbft_operation>& op = existing_operation->second;
-        LOG(debug) << "We already had an operation for that request hash; attaching session to it";
-
-        if (!op->has_session())
-        {
-            op->set_session(session);
-        }
-    }
-    else
-    {
-        LOG(debug) << "Saving session because we don't have an operation for this hash: " << bzn::bytes_to_debug_string(req_hash);
-        this->sessions_waiting_on_forwarded_requests[req_hash] = session;
-    }
 
     this->failure_detector->request_seen(req_hash);
 }
@@ -383,7 +369,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
     else
     {
-        auto op = this->find_operation(msg);
+        auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
         op->record_pbft_msg(msg, original_msg);
         this->maybe_record_request(msg, op);
 
@@ -404,7 +390,7 @@ void
 pbft::handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Prepare messages are never rejected, assuming the sanity checks passed
-    auto op = this->find_operation(msg);
+    auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
 
     op->record_pbft_msg(msg, original_msg);
     this->maybe_record_request(msg, op);
@@ -415,7 +401,7 @@ void
 pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Commit messages are never rejected, assuming  the sanity checks passed
-    auto op = this->find_operation(msg);
+    auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
 
     op->record_pbft_msg(msg, original_msg);
     this->maybe_record_request(msg, op);
@@ -462,7 +448,7 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::
         }
 
         this->configurations.add(config);
-        this->broadcast_new_configuration(config, session);
+        this->broadcast_new_configuration(config);
     }
     else
     {
@@ -639,6 +625,19 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     LOG(debug) << "Operation " << op->get_sequence() << " is committed-local";
     op->advance_operation_stage(pbft_operation_stage::execute);
 
+    // If we have a pending session for this request, attach to the operation just before we pass off to the service.
+    // If we were to do that before this moment, then maybe the pbft_operation we attached it to never gets executed and
+    // it gets executed in a different view (earlier or later), so the client never gets a response. If we do it here,
+    // then the only reason this pbft_operation instance wouldn't be executed eventually is if the service already has
+    // a pbft_operation for this sequence, meaning we committed this before we got the request, or if we crash, which
+    // kills the session anyway.
+
+    const auto session = this->sessions_waiting_on_forwarded_requests.find(op->get_request_hash());
+    if (session != this->sessions_waiting_on_forwarded_requests.end() && !op->has_session())
+    {
+        op->set_session(session->second);
+    }
+
     // commit new configuration if applicable
     if (op->has_config_request())
     {
@@ -697,12 +696,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     }
 }
 
-size_t
-pbft::outstanding_operations_count() const
-{
-    return operations.size();
-}
-
 bool
 pbft::is_primary() const
 {
@@ -713,51 +706,6 @@ const peer_address_t&
 pbft::get_primary(std::optional<uint64_t> view) const
 {
     return this->current_peers()[view.value_or(this->view) % this->current_peers().size()];
-}
-
-// Find this node's record of an operation (creating a new record for it if this is the first time we've heard of it)
-std::shared_ptr<pbft_operation>
-pbft::find_operation(const pbft_msg& msg)
-{
-    return this->find_operation(msg.view(), msg.sequence(), msg.request_hash());
-}
-
-std::shared_ptr<pbft_operation>
-pbft::find_operation(const std::shared_ptr<pbft_operation>& op)
-{
-    return this->find_operation(op->get_view(), op->get_sequence(), op->get_request_hash());
-}
-
-std::shared_ptr<pbft_operation>
-pbft::find_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& req_hash)
-{
-    auto key = bzn::operation_key_t(view, sequence, req_hash);
-
-    auto lookup = operations.find(key);
-    if (lookup == operations.end())
-    {
-        LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req " << bytes_to_debug_string(req_hash);
-
-        std::shared_ptr<pbft_operation> op = std::make_shared<pbft_memory_operation>(view, sequence, req_hash,
-                this->current_peers_ptr());
-        bool added;
-        std::tie(std::ignore, added) = operations.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(key)), std::forward_as_tuple(op));
-        assert(added);
-
-        auto session_pair = this->sessions_waiting_on_forwarded_requests.find(req_hash);
-        if (session_pair != this->sessions_waiting_on_forwarded_requests.end())
-        {
-            LOG(debug) << "Attaching pending session to new operation";
-            std::shared_ptr<bzn::session_base> session;
-            std::tie(std::ignore, session) = *session_pair;
-            op->set_session(session);
-            this->sessions_waiting_on_forwarded_requests.erase(req_hash);
-        }
-
-        return op;
-    }
-
-    return lookup->second;
 }
 
 bzn_envelope
@@ -826,7 +774,8 @@ pbft::handle_failure()
     LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: " << this->view + 1;
     this->notify_audit_failure_detected();
     this->view_is_valid = false;
-    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, this->prepared_operations_since_last_checkpoint())};
+    auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
+    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -919,7 +868,7 @@ pbft::stabilize_checkpoint(const checkpoint_t& cp)
 
     this->clear_local_checkpoints_until(cp);
     this->clear_checkpoint_messages_until(cp);
-    this->clear_operations_until(cp);
+    this->operation_manager->delete_operations_until(cp.first);
 
     this->low_water_mark = std::max(this->low_water_mark, cp.first);
     this->high_water_mark = std::max(this->high_water_mark,
@@ -1000,27 +949,6 @@ pbft::clear_checkpoint_messages_until(const checkpoint_t& cp)
     const size_t to_remove = std::distance(start, end);
     this->unstable_checkpoint_proofs.erase(start, end);
     LOG(debug) << boost::format("Cleared %1% unstable checkpoint proof sets") % to_remove;
-}
-
-void
-pbft::clear_operations_until(const checkpoint_t& cp)
-{
-    size_t ops_removed = 0;
-    auto it = this->operations.begin();
-    while (it != this->operations.end())
-    {
-        if (it->second->get_sequence() <= cp.first)
-        {
-            it = this->operations.erase(it);
-            ops_removed++;
-        }
-        else
-        {
-            it++;
-        }
-    }
-
-    LOG(debug) << boost::format("Cleared %1% old operation records") % ops_removed;
 }
 
 size_t
@@ -1442,7 +1370,8 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
-        pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, this->prepared_operations_since_last_checkpoint())};
+        auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
+        pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
         this->broadcast(this->wrap_message(viewchange_message));
         this->view_is_valid = false;
     }
@@ -1512,7 +1441,7 @@ pbft::get_status()
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
-    status["outstanding_operations_count"] = uint64_t(this->outstanding_operations_count());
+    status["outstanding_operations_count"] = uint64_t(this->operation_manager->held_operations_count());
     status["is_primary"] = this->is_primary();
 
     auto primary = this->get_primary();
@@ -1603,14 +1532,14 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 }
 
 void
-pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, std::shared_ptr<bzn::session_base> session)
+pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
 {
     auto cfg_msg = new pbft_config_msg;
     cfg_msg->set_configuration(config->to_string());
     bzn_envelope req;
     req.set_pbft_internal_request(cfg_msg->SerializeAsString());
 
-    auto op = this->setup_request_operation(req, this->crypto->hash(req), session);
+    auto op = this->setup_request_operation(req, this->crypto->hash(req));
     this->do_preprepare(op);
 }
 
@@ -1654,24 +1583,6 @@ pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* confi
     return true;
 }
 
-std::unordered_set<std::shared_ptr<bzn::pbft_operation>>
-pbft::prepared_operations_since_last_checkpoint()
-{
-    std::unordered_set<std::shared_ptr<bzn::pbft_operation>> retval;
-
-    for (const auto& p : this->operations)
-    {
-        if (p.second->is_prepared())
-        {
-            if (p.second->get_sequence() > this->latest_stable_checkpoint().first)
-            {
-                retval.emplace(p.second);
-            }
-        }
-    }
-    return retval;
-}
-
 timestamp_t
 pbft::now() const
 {
@@ -1706,7 +1617,7 @@ pbft::make_viewchange(
         uint64_t new_view
         , uint64_t base_sequence_number
         , const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof
-        , const std::unordered_set<std::shared_ptr<bzn::pbft_operation>>& prepared_operations)
+        , const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations)
 {
     pbft_msg viewchange;
 
@@ -1728,8 +1639,8 @@ pbft::make_viewchange(
     for (const auto& operation : prepared_operations)
     {
         prepared_proof* prepared_proof = viewchange.add_prepared_proofs();
-        prepared_proof->set_allocated_pre_prepare(new bzn_envelope(operation->get_preprepare()));
-        for(const auto& sender_envelope : operation->get_prepares())
+        prepared_proof->set_allocated_pre_prepare(new bzn_envelope(operation.second->get_preprepare()));
+        for(const auto& sender_envelope : operation.second->get_prepares())
         {
             *(prepared_proof->add_prepare()) = sender_envelope.second;
         }
