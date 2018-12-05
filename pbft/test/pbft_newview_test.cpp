@@ -152,56 +152,56 @@ namespace bzn
 //        }
     };
 
-    TEST_F(pbft_newview_test, test_pre_prepares_contiguous)
-    {
-        auto set_pre_prepare_sequence = [](pbft_msg& sut, const uint64_t sequence)
-        {
-            bzn_envelope envelope;
-            pbft_msg pre_prepare;
-            pre_prepare.set_sequence(sequence);
-            envelope.set_pbft(pre_prepare.SerializeAsString());
-            *(sut.add_pre_prepare_messages()) = envelope;
-        };
-
-        pbft_msg sut;
-
-        // empty pre_prepare list is contiguous
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(0, sut));
-
-        // add two contiguous pre preps
-        set_pre_prepare_sequence(sut, 837465);
-        set_pre_prepare_sequence(sut, 837466);
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(837465, sut));
-
-        // missed pre preps must fail
-        set_pre_prepare_sequence(sut, 837468);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-
-        sut.clear_pre_prepare_messages();
-
-        // out of order pre prepares must fail
-        set_pre_prepare_sequence(sut, 837466);
-        set_pre_prepare_sequence(sut, 837465);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-
-        sut.clear_pre_prepare_messages();
-
-        // duplicate pre prepare sequences must fail
-        set_pre_prepare_sequence(sut, 837465);
-        set_pre_prepare_sequence(sut, 837466);
-        set_pre_prepare_sequence(sut, 837466);
-        set_pre_prepare_sequence(sut, 837467);
-        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-
-        sut.clear_pre_prepare_messages();
-
-        // lets make a big list
-        for(uint64_t i{450}; i<550; ++i)
-        {
-          set_pre_prepare_sequence(sut, i);
-        }
-        EXPECT_TRUE(pbft::pre_prepares_contiguous(450, sut));
-    }
+//    TEST_F(pbft_newview_test, test_pre_prepares_contiguous)
+//    {
+//        auto set_pre_prepare_sequence = [](pbft_msg& sut, const uint64_t sequence)
+//        {
+//            bzn_envelope envelope;
+//            pbft_msg pre_prepare;
+//            pre_prepare.set_sequence(sequence);
+//            envelope.set_pbft(pre_prepare.SerializeAsString());
+//            *(sut.add_pre_prepare_messages()) = envelope;
+//        };
+//
+//        pbft_msg sut;
+//
+//        // empty pre_prepare list is contiguous
+//        EXPECT_TRUE(pbft::pre_prepares_contiguous(0, sut));
+//
+//        // add two contiguous pre preps
+//        set_pre_prepare_sequence(sut, 837465);
+//        set_pre_prepare_sequence(sut, 837466);
+//        EXPECT_TRUE(pbft::pre_prepares_contiguous(837465, sut));
+//
+//        // missed pre preps must fail
+//        set_pre_prepare_sequence(sut, 837468);
+//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
+//
+//        sut.clear_pre_prepare_messages();
+//
+//        // out of order pre prepares must fail
+//        set_pre_prepare_sequence(sut, 837466);
+//        set_pre_prepare_sequence(sut, 837465);
+//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
+//
+//        sut.clear_pre_prepare_messages();
+//
+//        // duplicate pre prepare sequences must fail
+//        set_pre_prepare_sequence(sut, 837465);
+//        set_pre_prepare_sequence(sut, 837466);
+//        set_pre_prepare_sequence(sut, 837466);
+//        set_pre_prepare_sequence(sut, 837467);
+//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
+//
+//        sut.clear_pre_prepare_messages();
+//
+//        // lets make a big list
+//        for(uint64_t i{450}; i<550; ++i)
+//        {
+//          set_pre_prepare_sequence(sut, i);
+//        }
+//        EXPECT_TRUE(pbft::pre_prepares_contiguous(450, sut));
+//    }
 
     TEST_F(pbft_newview_test, make_newview)
     {
@@ -262,35 +262,35 @@ namespace bzn
     }
 
 
-    TEST_F(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs)
-    {
-        auto make_prepared_proof = [&](uint64_t lower, uint64_t upper)->prepared_proof
-                {
-                    prepared_proof proof;
-                    for(uint64_t i{lower}; i <= upper; ++i)
-                    {
-                        pbft_msg msg;
-                        msg.set_sequence(i);
-                        bzn_envelope env;
-                        env.set_pbft(msg.SerializeAsString());
-                        *(proof.add_prepare()) = env;
-                    }
-                    return proof;
-                };
-
-        pbft_msg newview;
-        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_preprepare_messages(newview));
-
-        uint64_t expected_last_sequence{1234};
-        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-5, expected_last_sequence);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-
-        expected_last_sequence = 1236;
-        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-
-
-        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence-15);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
-    }
+//    TEST_F(pbft_newview_test, DISABLED_test_last_sequence_in_newview_prepared_proofs)
+//    {
+//        auto make_prepared_proof = [&](uint64_t lower, uint64_t upper)->prepared_proof
+//                {
+//                    prepared_proof proof;
+//                    for(uint64_t i{lower}; i <= upper; ++i)
+//                    {
+//                        pbft_msg msg;
+//                        msg.set_sequence(i);
+//                        bzn_envelope env;
+//                        env.set_pbft(msg.SerializeAsString());
+//                        *(proof.add_prepare()) = env;
+//                    }
+//                    return proof;
+//                };
+//
+//        pbft_msg newview;
+//        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_preprepare_messages(newview));
+//
+//        uint64_t expected_last_sequence{1234};
+//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-5, expected_last_sequence);
+//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
+//
+//        expected_last_sequence = 1236;
+//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence);
+//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
+//
+//
+//        *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence-15);
+//        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
+//    }
 }

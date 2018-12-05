@@ -471,8 +471,10 @@ namespace bzn
                     .Times(Exactly(1))
                     .WillRepeatedly(Invoke([&](auto, auto wmsg)
                                            {
-                                               if (p.uuid == TEST_NODE_UUID)
+                                                if (p.uuid == TEST_NODE_UUID)
                                                {
+                                                   EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
+                                                           .Times(Exactly(2 * TEST_PEER_LIST.size()));
                                                    pbft_msg msg;
                                                    ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
                                                    this->pbft->handle_newview(msg, *wmsg);

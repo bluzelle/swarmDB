@@ -1264,11 +1264,12 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
-    pbft_msg viewchange_msg;
+
     std::set<std::string> viewchange_senders;
+    pbft_msg viewchange_msg;
     for (int i{0};i < msg.viewchange_messages_size();++i)
     {
-        bzn_envelope original_msg{viewchange_msg.viewchange_messages(i)};
+        bzn_envelope original_msg{msg.viewchange_messages(i)};
         // - are each of those viewchange messages valid?
         if (!viewchange_msg.ParseFromString(original_msg.pbft()) || !this->is_valid_viewchange_message(viewchange_msg, original_msg))
         {
@@ -1294,9 +1295,10 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
             {
                 const bzn_envelope& pre_prepare_envelope = msg.pre_prepare_messages(j);
 
-                if ((pre_prepare_envelope.sender() != original_msg.sender()) || !this->crypto->verify(pre_prepare_envelope))
+                if ( /*(pre_prepare_envelope.sender() != original_msg.sender()) ||*/ !this->crypto->verify(pre_prepare_envelope))
                 {
                     LOG (error) << "is_valid_newview_message - pre_prepare_envelope not valid";
+                    return false;
                 }
 
                 pbft_msg pre_prepare;
