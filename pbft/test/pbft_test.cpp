@@ -174,12 +174,12 @@ namespace bzn::test
         mock_service->consolidate_log(2);
     }
 
-    TEST_F(pbft_test, client_request_results_in_message_ack)
+    TEST_F(pbft_test, client_request_does_not_result_in_message_ack)
     {
         this->build_pbft();
         auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
 
-        EXPECT_CALL(*mock_session, send_datagram(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
+        EXPECT_CALL(*mock_session, send_datagram(A<std::shared_ptr<std::string>>())).Times(Exactly(0));
 
         this->database_handler(this->request_msg, mock_session);
     }
