@@ -90,7 +90,12 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
         }
     }
 
-    session->send_message(std::make_shared<std::string>(response.SerializeAsString()), false);
+    bzn_envelope env;
+    env.set_database_response(response.SerializeAsString());
+    env.set_sender("placeholder for daemon's uuid"); // TODO
+    // TODO: crypto
+
+    session->send_message(std::make_shared<std::string>(env.SerializeAsString()), false);
 }
 
 
