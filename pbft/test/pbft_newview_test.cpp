@@ -279,18 +279,18 @@ namespace bzn
                 };
 
         pbft_msg newview;
-        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_prepared_proofs(newview));
+        EXPECT_EQ(uint64_t(0), pbft::last_sequence_in_newview_preprepare_messages(newview));
 
         uint64_t expected_last_sequence{1234};
         *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-5, expected_last_sequence);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
 
         expected_last_sequence = 1236;
         *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
 
 
         *(newview.add_prepared_proofs()) = make_prepared_proof(expected_last_sequence-35, expected_last_sequence-15);
-        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_prepared_proofs(newview));
+        EXPECT_EQ(expected_last_sequence, pbft::last_sequence_in_newview_preprepare_messages(newview));
     }
 }

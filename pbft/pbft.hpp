@@ -206,7 +206,7 @@ namespace bzn
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
         void broadcast_viewchange(const pbft_msg &msg);
         static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
-        static uint64_t last_sequence_in_newview_prepared_proofs(const pbft_msg& msg);
+        static uint64_t last_sequence_in_newview_preprepare_messages(const pbft_msg &newview);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;

@@ -1220,7 +1220,7 @@ pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_
             };
 
     // We are assuming that the pre prepare messages are stored sequentially by sequence number in newview_msg.pre_prepare_messages
-    uint64_t last_sequence{latest_sequence};
+    uint64_t last_sequence{extract_sequence(newview_msg.pre_prepare_messages(0))};
     for (int i{1}; i < newview_msg.pre_prepare_messages_size(); ++i)
     {
         uint64_t current_sequence{extract_sequence(newview_msg.pre_prepare_messages(i))};
@@ -1230,22 +1230,19 @@ pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_
         }
         last_sequence = current_sequence;
     }
-    return true;
+    return last_sequence==latest_sequence;
 }
 
 uint64_t
-pbft::last_sequence_in_newview_prepared_proofs(const pbft_msg& newview)
+pbft::last_sequence_in_newview_preprepare_messages(const pbft_msg &newview)
 {
     uint64_t last_sequence{0};
-    for(int i{0}; i<newview.prepared_proofs_size(); ++i)
+    for(int i{0}; i<newview.pre_prepare_messages_size(); ++i)
     {
-        const prepared_proof prep_proof = newview.prepared_proofs(i);
-        for(int j{0}; j<prep_proof.prepare_size(); ++j)
-        {
-            pbft_msg msg;
-            msg.ParseFromString(prep_proof.prepare(j).pbft());
-            last_sequence = std::max(last_sequence, msg.sequence());
-        }
+        bzn_envelope pre_prepare_messsage_envelope = newview.pre_prepare_messages(i);
+        pbft_msg pre_prepare_messsage;
+        pre_prepare_messsage.ParseFromString(pre_prepare_messsage_envelope.pbft());
+        last_sequence = std::max(last_sequence, pre_prepare_messsage.sequence());
     }
     return last_sequence;
 }
@@ -1259,7 +1256,7 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         return false;
     }
 
-    uint64_t last_sequence{this->last_sequence_in_newview_prepared_proofs(msg)};
+    uint64_t last_sequence{this->last_sequence_in_newview_preprepare_messages(msg)};
 
     if (!this->pre_prepares_contiguous(last_sequence, msg))
     {
@@ -1411,7 +1408,6 @@ pbft::make_newview(
     {
         *(newview.add_pre_prepare_messages()) = preprepare_message.second;
     }
-
     return newview;
 }
 

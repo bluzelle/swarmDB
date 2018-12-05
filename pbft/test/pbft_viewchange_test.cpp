@@ -283,6 +283,7 @@ namespace bzn
                     pbft_msg viewchange;
                     EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
                     EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
+
                 }));
 
         this->pbft->handle_failure();
