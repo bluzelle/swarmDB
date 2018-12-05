@@ -1027,11 +1027,6 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
 
     LOG(debug) << "got database message";
     this->handle_request(mutable_msg, session);
-
-    database_response response;
-    response.mutable_header()->set_db_uuid("placeholder ack");
-    LOG(debug) << "Sending request ack: " << response.ShortDebugString();
-    session->send_datagram(std::make_shared<bzn::encoded_message>(response.SerializeAsString()));
 }
 
 uint64_t
