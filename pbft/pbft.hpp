@@ -204,7 +204,6 @@ namespace bzn
         void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares);
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
-        void broadcast_viewchange(const pbft_msg &msg);
         static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
         static uint64_t last_sequence_in_newview_preprepare_messages(const pbft_msg &newview);
 

@@ -1233,10 +1233,38 @@ pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_
     return last_sequence==latest_sequence;
 }
 
+
+// prepared_proofs is not a member of a new_view message. You need to
+// iterate over all the prepared_proofs in all the viewchange messages
+// in the new_view.
 uint64_t
 pbft::last_sequence_in_newview_preprepare_messages(const pbft_msg &newview)
 {
     uint64_t last_sequence{0};
+//    for(int i{0}; i < newview.viewchange_messages_size(); ++i)
+//    {
+//        bzn_envelope viewchange_envelope = newview.viewchange_messages(i);
+//        pbft_msg viewchange;
+//        viewchange.ParseFromString(viewchange_envelope.pbft());
+//
+//        for(int j{0}; j < viewchange.prepared_proofs_size(); ++j)
+//        {
+//            prepared_proof proof = viewchange.prepared_proofs(j);
+//            proof.
+//        }
+//
+//    }
+
+
+
+
+
+
+
+
+
+
+
     for(int i{0}; i<newview.pre_prepare_messages_size(); ++i)
     {
         bzn_envelope pre_prepare_messsage_envelope = newview.pre_prepare_messages(i);
@@ -1273,6 +1301,7 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
         // - are each of those viewchange messages valid?
         if (!viewchange_msg.ParseFromString(original_msg.pbft()) || !this->is_valid_viewchange_message(viewchange_msg, original_msg))
         {
+            LOG(error) <<  "is_valid_newview_message - new view message contains invalid viewchange message";
             return false;
         }
 
@@ -1281,6 +1310,7 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
 
         if (!this->get_sequences_and_request_hashes_from_proofs(viewchange_msg, sequence_request_pairs))
         {
+            LOG(error) <<  "is_valid_newview_message - missing sequence and request hashes";
             return false;
         }
 
@@ -1334,12 +1364,6 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
             LOG (error) << "is_valid_newview_message - unexpected sequence/request hash count";
             return false;
         }
-
-        if (sequence_request_pairs.size() != size_t(msg.pre_prepare_messages_size()))
-        {
-            LOG (error) << "is_valid_newview_message - pre prepare without matching hash";
-            return false;
-        }
     }
 
     if (viewchange_senders.size() != size_t(msg.viewchange_messages_size()))
@@ -1354,7 +1378,11 @@ pbft::is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& /*origin
 void
 pbft::fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares)
 {
-    uint64_t last_sequence_number = pre_prepares.empty() ? 0 : pre_prepares.rbegin()->first;
+    uint64_t last_sequence_number{0};
+    for(const auto& pre_prepare : pre_prepares)
+    {
+        last_sequence_number = std::max(last_sequence_number, pre_prepare.first);
+    }
 
     for (uint64_t i = this->latest_stable_checkpoint().first + 1; i < last_sequence_number; ++i)
     {
@@ -1503,23 +1531,6 @@ pbft::save_checkpoint(const pbft_msg& msg)
 }
 
 void
-pbft::broadcast_viewchange(const pbft_msg &msg)
-{
-    // TODO remove replica_
-    // replica sends VIEWCHANGE message
-    pbft_msg viewchange_message{
-            make_viewchange(
-                    msg.view()
-                    , this->latest_stable_checkpoint().first
-                    , this->stable_checkpoint_proof
-                    , this->prepared_operations_since_last_checkpoint())
-    };
-
-    this->broadcast(this->wrap_message(viewchange_message));
-
-}
-
-void
 pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
     if (!this->is_valid_viewchange_message(msg, original_msg))
     {
@@ -1527,22 +1538,8 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
         return;
     }
 
-    // TODO: valid_view_change_messages_for_view can be cleared of viewchange messages for less than the current view.
-    //this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] = original_msg;
-
-
-
-
     auto& inner_map = this->valid_viewchange_messages_for_view[msg.view()];
-
-    LOG(debug) << this->valid_viewchange_messages_for_view.size();
-
-
     inner_map[original_msg.sender()] = original_msg;
-
-    LOG(debug) << " *** " << inner_map.size();
-
-
 
     this->save_checkpoint(msg);
 
@@ -1551,7 +1548,8 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
         msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
-        this->broadcast_viewchange(msg);
+        pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, this->prepared_operations_since_last_checkpoint())};
+        this->broadcast(this->wrap_message(viewchange_message));
     }
 
     // TODO move this to the end...
