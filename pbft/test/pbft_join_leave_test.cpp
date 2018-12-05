@@ -401,15 +401,14 @@ namespace bzn
     {
         this->uuid = "somenode";
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true))))
-            .Times(Exactly(TEST_PEER_LIST.size()))
+            .Times(Exactly(1))
             .WillOnce(Invoke([&](auto, auto)
             {
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 response.set_result(true);
                 this->handle_membership_message(test::wrap_pbft_membership_msg(response));
-            }))
-            .WillRepeatedly(Return());
+            }));
 
         this->build_pbft();
     }

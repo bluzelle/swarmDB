@@ -138,6 +138,7 @@ namespace bzn
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn_envelope& msg
             , const bzn::hash_t& request_hash
             , const std::shared_ptr<session_base>& session = nullptr);
+        void forward_request_to_primary(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session);
 
         void broadcast(const bzn_envelope& message);
 
