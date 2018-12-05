@@ -45,8 +45,11 @@ def handle_response(ws):
 
     print("-" * 60 + '\n')
 
+    env = bluzelle_pb2.bzn_envelope()
+    env.ParseFromString(ws.recv())
+
     resp = database_pb2.database_response()
-    resp.ParseFromString(ws.recv())
+    resp.ParseFromString(env.database_response)
 
     if resp.WhichOneof('response') == 'redirect':
         redirect_node = "{}:{}".format(resp.redirect.leader_host, resp.redirect.leader_port)

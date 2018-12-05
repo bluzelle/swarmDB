@@ -20,6 +20,10 @@
 
 using namespace ::testing;
 
+bool parse_env_to_db_resp(database_response& target, const std::string& source){
+    bzn_envelope intermediate;
+    return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
+}
 
 TEST(crud, test_that_create_sends_proper_response)
 {
@@ -39,7 +43,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.error().message(), bzn::MSG_DATABASE_NOT_FOUND);
@@ -55,7 +59,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
@@ -72,7 +76,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
@@ -85,7 +89,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -100,7 +104,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -115,7 +119,7 @@ TEST(crud, test_that_create_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -159,7 +163,7 @@ TEST(crud, test_that_read_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kRead);
@@ -175,7 +179,7 @@ TEST(crud, test_that_read_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -223,7 +227,7 @@ TEST(crud, test_that_update_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
@@ -241,7 +245,7 @@ TEST(crud, test_that_update_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kRead);
@@ -286,7 +290,7 @@ TEST(crud, test_that_delete_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
@@ -299,7 +303,7 @@ TEST(crud, test_that_delete_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -343,7 +347,7 @@ TEST(crud, test_that_has_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
@@ -357,7 +361,7 @@ TEST(crud, test_that_has_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
@@ -408,7 +412,7 @@ TEST(crud, test_that_keys_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kKeys);
@@ -428,7 +432,7 @@ TEST(crud, test_that_keys_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kKeys);
@@ -475,7 +479,7 @@ TEST(crud, test_that_size_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kSize);
@@ -491,7 +495,7 @@ TEST(crud, test_that_size_sends_proper_response)
         [&](auto msg, auto)
         {
             database_response resp;
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kSize);
@@ -593,7 +597,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
         {
             database_response resp;
 
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
 
@@ -620,7 +624,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
         {
             database_response resp;
 
-            EXPECT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
@@ -632,7 +636,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
         {
             database_response resp;
 
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
         }));
@@ -661,7 +665,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
         {
             database_response resp;
 
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
         }));
@@ -685,7 +689,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
         {
             database_response resp;
 
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
         }));
@@ -698,7 +702,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
         {
             database_response resp;
 
-            ASSERT_TRUE(resp.ParseFromString(*msg));
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
