@@ -356,7 +356,9 @@ TEST(crud, test_that_has_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
+            ASSERT_EQ(resp.response_case(), database_response::kHas);
+            ASSERT_EQ(resp.has().key(), "key");
+            ASSERT_TRUE(resp.has().has());
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -370,8 +372,9 @@ TEST(crud, test_that_has_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+            ASSERT_EQ(resp.response_case(), database_response::kHas);
+            ASSERT_EQ(resp.has().key(), "invalid-key");
+            ASSERT_FALSE(resp.has().has());
         }));
 
     crud.handle_request("caller_id", msg, session);
