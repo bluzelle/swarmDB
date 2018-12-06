@@ -1343,7 +1343,6 @@ pbft::fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t ne
         //  -- create a new preprepare for a no-op operation using this sequence number
         if (pre_prepares.find(i) == pre_prepares.end())
         {
-            // TODO: Isabel - please review this block
             database_msg msg;
             msg.set_allocated_nullmsg(new database_nullmsg);
 
@@ -1485,7 +1484,8 @@ pbft::save_checkpoint(const pbft_msg& msg)
 }
 
 void
-pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
+pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
+{
     if (!this->is_valid_viewchange_message(msg, original_msg))
     {
         LOG(error) << "handle_viewchange - invalid viewchange message, ignoring";
@@ -1505,7 +1505,6 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
         this->broadcast(this->wrap_message(viewchange_message));
     }
 
-    // TODO move this to the end...
     // we want to filter std::map<uint64_t, std::set<bzn_envelope>> valid_view_change_messages for
     // 1) we would be the primary for that view
     // 2) that view is greater than the current view
@@ -1529,8 +1528,6 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
     // When the primary of the new view recieves 2f valid view change messages for the new view
     // the primary of new view broadcasts NEWVIEW
 
-    // TODO Refactor into method
-
     // create the newview and and broadcast it
 
     // viewchange->second is a set of bzn_envelope strings
@@ -1544,7 +1541,6 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-
     this->broadcast(
             this->wrap_message(
                     this->build_newview(
@@ -1554,7 +1550,6 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg) {
     this->view = msg.view();
     this->view_is_valid = true;
 }
-
 
 void
 pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
@@ -1587,7 +1582,6 @@ pbft::get_name()
 {
     return "pbft";
 }
-
 
 bzn::json_message
 pbft::get_status()
