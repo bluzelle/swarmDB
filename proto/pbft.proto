@@ -14,7 +14,6 @@
 
 syntax = "proto3";
 
-import "database.proto";
 import "bluzelle.proto";
 
 message pbft_msg

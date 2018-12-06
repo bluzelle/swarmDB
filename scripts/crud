@@ -39,7 +39,7 @@ except ImportError as e:
                       "$ cd proto\n"
                       "$ protoc --python_out=../scripts ./*.proto\n".format(e.message))
 
-transaction_id = 0
+nonce = 0
 
 def handle_response(ws):
 
@@ -60,17 +60,17 @@ def handle_response(ws):
         print("-" * 60 + '\n')
 
 def send_request(node, uuid, msg, loop=False, ws=None):
-    global transaction_id
+    global nonce
 
     if not ws:
         ws = websocket.create_connection("ws://" + node)
     msg.db.header.db_uuid = uuid
 
     # hack!
-    if transaction_id != 0:
-        msg.db.header.transaction_id = transaction_id
+    if nonce != 0:
+        msg.db.header.nonce = nonce
     else:
-        msg.db.header.transaction_id = random.randint(1,sys.maxint)
+        msg.db.header.nonce = random.randint(1,sys.maxint)
 
     req = {}
     req["bzn-api"] = "database";
@@ -79,6 +79,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     if use_pbft:
         msg_outer = bluzelle_pb2.bzn_envelope()
         msg_outer.database_msg = msg.db.SerializeToString()
+        msg_outer.sender = "crud script"
 
         ws.send_binary(msg_outer.SerializeToString())
 
@@ -190,10 +191,10 @@ def subscribe_request(key):
 
 
 def unsubscribe_request(key):
-    global transaction_id
+    global nonce
     msg = bluzelle_pb2.bzn_msg()
     msg.db.unsubscribe.key = key
-    msg.db.unsubscribe.transaction_id = transaction_id
+    msg.db.unsubscribe.nonce = nonce
     return msg
 
 
@@ -255,8 +256,8 @@ def size_handler(args):
 
 
 def subscribe_handler(args):
-    global transaction_id
-    transaction_id = random.randint(1,sys.maxint)
+    global nonce
+    nonce = random.randint(1,sys.maxint)
     return send_request(args.node, args.uuid, unsubscribe_request(args.key),
                         ws=send_request(args.node, args.uuid, subscribe_request(args.key), True))
 

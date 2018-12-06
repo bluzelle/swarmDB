@@ -65,6 +65,12 @@ namespace bzn
 
         void handle_unsubscribe(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
+        void handle_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
+        void handle_add_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
+        void handle_remove_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
+
         void send_response(const database_msg& request, bzn::storage_result result, database_response&& response,
                            std::shared_ptr<bzn::session_base>& session);
 
@@ -73,9 +79,13 @@ namespace bzn
 
         bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id) const;
 
-        bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& json) const;
+        bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
 
-        bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& json) const;
+        bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
+
+        void add_writers(const database_msg& request, Json::Value& perms);
+
+        void remove_writers(const database_msg& request, Json::Value& perms);
 
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
