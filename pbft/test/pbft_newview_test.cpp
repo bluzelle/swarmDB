@@ -125,31 +125,4 @@ namespace bzn
             EXPECT_EQ(uuid, accepted_uuid);
         }
     }
-
-
-    TEST_F(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs)
-    {
-        pbft_msg newview;
-
-        EXPECT_EQ(uint64_t(0U), pbft::last_sequence_in_newview_preprepare_messages(newview));
-
-        pbft_msg prepare;
-        prepare.set_sequence(100U);
-
-        bzn_envelope prepare_env;
-        prepare_env.set_pbft(prepare.SerializeAsString());
-
-        prepared_proof proof;
-        *(proof.add_prepare()) =  prepare_env;
-
-        pbft_msg viewchange_message;
-        *(viewchange_message.add_prepared_proofs()) = proof;
-
-        bzn_envelope viewchange_env;
-        viewchange_env.set_pbft(viewchange_message.SerializeAsString());
-
-        *(newview.add_viewchange_messages()) = viewchange_env;
-
-        EXPECT_EQ(100U, pbft::last_sequence_in_newview_preprepare_messages(newview));
-    }
 }
