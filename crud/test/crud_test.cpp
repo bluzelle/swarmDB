@@ -583,37 +583,6 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 }
 
 
-TEST(crud, test_that_has_db_request_sends_proper_response)
-{
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
-
-    crud.start();
-
-    // has db...
-    database_msg msg;
-
-    msg.mutable_header()->set_db_uuid("uuid");
-    msg.mutable_header()->set_nonce(uint64_t(123));
-    msg.mutable_has_db();
-
-    // nothing should happen...
-    crud.handle_request("caller_id", msg, nullptr);
-
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
-
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
-        }));
-
-    crud.handle_request("caller_id", msg, mock_session);
-}
-
-
 TEST(crud, test_that_create_db_request_sends_proper_response)
 {
     bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
@@ -651,6 +620,59 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
         }));
 
     // try to create it again...
+    crud.handle_request("caller_id", msg, mock_session);
+}
+
+
+TEST(crud, test_that_has_db_request_sends_proper_response)
+{
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
+
+    crud.start();
+
+    database_msg msg;
+
+    // create db...
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+    msg.mutable_create_db();
+
+    // nothing should happen...
+    crud.handle_request("caller_id", msg, nullptr);
+
+    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+
+    // request has db..
+    msg.release_create_db();
+    msg.mutable_has_db();
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.response_case(), database_response::kHasDb);
+            ASSERT_EQ(resp.has_db().uuid(), "uuid");
+            ASSERT_TRUE(resp.has_db().has());
+        }));
+
+    crud.handle_request("caller_id", msg, mock_session);
+
+    // request invalid db...
+    msg.mutable_header()->set_db_uuid("invalid-uuid");
+
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [](std::shared_ptr<bzn::encoded_message> msg, bool /*end_session*/)
+        {
+            database_response resp;
+
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.response_case(), database_response::kHasDb);
+            ASSERT_EQ(resp.has_db().uuid(), "invalid-uuid");
+            ASSERT_FALSE(resp.has_db().has());
+        }));
+
     crud.handle_request("caller_id", msg, mock_session);
 }
 
