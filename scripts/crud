@@ -114,13 +114,13 @@ def send_status_request(node):
     req["bzn-api"] = "status"
     req["transaction_id"] = random.randint(1,sys.maxint);
 
-    print("Sending : \n" + json.dumps(req,indent=4))
+    print("Sending : \n" + json.dumps(req, indent=4))
     print("-" * 60 + '\n')
 
     ws.send(json.dumps(req))
     resp = ws.recv()
 
-    print("Response: \n{}".format(resp))
+    print("Response: \n{}".format(resp).expandtabs(4))
     print("-" * 60 + '\n')
 
     ws.close()

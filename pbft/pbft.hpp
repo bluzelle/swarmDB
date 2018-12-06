@@ -193,7 +193,6 @@ namespace bzn
         void join_swarm();
         // VIEWCHANGE/NEWVIEW Helper methods
         static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
-        //static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages) const;
         pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders) const;
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message) const;

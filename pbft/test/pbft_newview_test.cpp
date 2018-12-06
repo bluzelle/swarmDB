@@ -73,135 +73,8 @@ namespace bzn
         size_t
         max_faulty_replicas_allowed() { return TEST_PEER_LIST.size() / 3; }
 
-//        void
-//        execute_handle_failure_expect_sut_to_send_viewchange()
-//        {
-//            // I expect that a replica forced to handle a failure will invalidate
-//            // its' view, and cause the replica to send a VIEWCHANGE messsage
-//            EXPECT_CALL(*mock_node, send_message_str(_, _))
-//                    .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message) {
-//                        bzn_envelope envelope;
-//                        envelope.ParseFromString(*encoded_message);
-//
-//                        pbft_msg view_change;
-//                        view_change.ParseFromString(envelope.pbft());
-//                        EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-//                        EXPECT_TRUE(2 == view_change.view());
-//                        EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-//                    }));
-//            this->pbft->handle_failure();
-//        }
-//
-//        void
-//        send_some_viewchange_messages(size_t n, bool(*f)(std::shared_ptr<std::string> wrapped_msg))
-//        {
-//            size_t count{0};
-//            EXPECT_CALL(*mock_node, send_message_str(_, ResultOf(f, Eq(true))))
-//                    .Times(Exactly(TEST_PEER_LIST.size()))
-//                    .WillRepeatedly(Invoke([&](auto &, auto &) {
-//
-//
-//                        EXPECT_EQ( n, count);
-//
-//
-//
-//
-//                    }));
-//
-//            pbft_msg pbft_msg;
-//            pbft_msg.set_type(PBFT_MSG_VIEWCHANGE);
-//            pbft_msg.set_view(this->pbft->get_view() + 1);
-//
-//            // let's pretend that the sytem under test is receiving view change messages
-//            // from the other replicas
-//            for (const auto &peer : TEST_PEER_LIST)
-//            {
-//                if (peer.uuid == this->uuid)
-//                {
-//                    continue;
-//                }
-//
-//                count++;
-//                this->pbft->handle_message(pbft_msg, this->default_original_msg);
-//                if (count == n)
-//                {
-//                    break;
-//                }
-//            }
-//        }
-//
-//        void
-//        set_checkpoint(uint64_t sequence)
-//        {
-//            for (const auto &peer : TEST_PEER_LIST)
-//            {
-//                pbft_msg msg;
-//                msg.set_type(PBFT_MSG_CHECKPOINT);
-//                msg.set_view(this->pbft->get_view());
-//                msg.set_sequence(sequence);
-//                msg.set_state_hash(std::to_string(sequence));
-//
-//                wrapped_bzn_msg wmsg;
-//                wmsg.set_type(BZN_MSG_PBFT);
-//                wmsg.set_sender(peer.uuid);
-//                // wmsg.set_signature(???)
-//                wmsg.set_payload(msg.SerializeAsString());
-//
-//                this->pbft->handle_message(msg, this->default_original_msg);
-//            }
-//        }
-    };
 
-//    TEST_F(pbft_newview_test, test_pre_prepares_contiguous)
-//    {
-//        auto set_pre_prepare_sequence = [](pbft_msg& sut, const uint64_t sequence)
-//        {
-//            bzn_envelope envelope;
-//            pbft_msg pre_prepare;
-//            pre_prepare.set_sequence(sequence);
-//            envelope.set_pbft(pre_prepare.SerializeAsString());
-//            *(sut.add_pre_prepare_messages()) = envelope;
-//        };
-//
-//        pbft_msg sut;
-//
-//        // empty pre_prepare list is contiguous
-//        EXPECT_TRUE(pbft::pre_prepares_contiguous(0, sut));
-//
-//        // add two contiguous pre preps
-//        set_pre_prepare_sequence(sut, 837465);
-//        set_pre_prepare_sequence(sut, 837466);
-//        EXPECT_TRUE(pbft::pre_prepares_contiguous(837465, sut));
-//
-//        // missed pre preps must fail
-//        set_pre_prepare_sequence(sut, 837468);
-//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-//
-//        sut.clear_pre_prepare_messages();
-//
-//        // out of order pre prepares must fail
-//        set_pre_prepare_sequence(sut, 837466);
-//        set_pre_prepare_sequence(sut, 837465);
-//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-//
-//        sut.clear_pre_prepare_messages();
-//
-//        // duplicate pre prepare sequences must fail
-//        set_pre_prepare_sequence(sut, 837465);
-//        set_pre_prepare_sequence(sut, 837466);
-//        set_pre_prepare_sequence(sut, 837466);
-//        set_pre_prepare_sequence(sut, 837467);
-//        EXPECT_FALSE(pbft::pre_prepares_contiguous(837465, sut));
-//
-//        sut.clear_pre_prepare_messages();
-//
-//        // lets make a big list
-//        for(uint64_t i{450}; i<550; ++i)
-//        {
-//          set_pre_prepare_sequence(sut, i);
-//        }
-//        EXPECT_TRUE(pbft::pre_prepares_contiguous(450, sut));
-//    }
+    };
 
     TEST_F(pbft_newview_test, make_newview)
     {
@@ -230,14 +103,6 @@ namespace bzn
 
         EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
         EXPECT_EQ(new_view_index, newview.view());
-
-        //EXPECT_TRUE(newview.viewchange_messages_size() + 1 <= newview.viewchange_messages_size());
-
-
-
-
-        // TODO view_change_messages, pre_prepare_messages
-        // ...
     }
 
     TEST_F(pbft_newview_test, test_get_primary)

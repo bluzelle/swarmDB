@@ -447,7 +447,3 @@ namespace bzn
         EXPECT_EQ(this->pbft->view, 2U);
     }
 }
-
-
-
-

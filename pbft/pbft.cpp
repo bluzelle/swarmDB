@@ -1827,19 +1827,6 @@ pbft::make_viewchange(
         {
             *(prepared_proof->add_prepare()) = sender_envelope.second;
         }
-
-
-
-
-
-//        bzn_envelope env;
-//        bool is_ok = env.ParseFromString(operation->get_preprepare());
-//        LOG(info) << is_ok;
-//        prepared_proofs->set_pre_prepare(operation->get_preprepare());
-//        for (const auto &prepared : operation->get_prepares())
-//        {
-//            prepared_proofs->add_prepare(prepared);
-//        }
     }
 
     return viewchange;
