@@ -1435,6 +1435,7 @@ pbft::make_signed_envelope(std::string serialized_pbft_message) const
     bzn_envelope envelope;
     envelope.set_pbft(serialized_pbft_message);
     envelope.set_sender(this->get_uuid());
+    this->crypto->sign(envelope);
     return envelope;
 }
 
