@@ -1327,7 +1327,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
 }
 
 void
-pbft::fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares) const
+pbft::fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares) const
 {
     uint64_t last_sequence_number{0};
     for(const auto& pre_prepare : pre_prepares)
@@ -1362,8 +1362,8 @@ pbft::fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t ne
 pbft_msg
 pbft::make_newview(
         uint64_t new_view_index
-        ,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders
-        , const std::map<uint64_t, bzn_envelope> &pre_prepare_messages
+        , const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders
+        , const std::map<uint64_t, bzn_envelope>& pre_prepare_messages
 ) const
 {
     pbft_msg newview;
@@ -1385,7 +1385,7 @@ pbft::make_newview(
 }
 
 pbft_msg
-pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders) const
+pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const
 {
     //  Computing O (set of new preprepares for new-view message)
     std::map<uint64_t, bzn_envelope> pre_prepares;

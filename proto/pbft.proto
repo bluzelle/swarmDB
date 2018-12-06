@@ -107,14 +107,6 @@ message pbft_peer_info
     uint32 http_port = 3;
     string name = 4;
     string uuid = 5;
-    pbft_request_type type = 6;
-    oneof msg
-    {
-        database_msg operation = 7;
-        pbft_internal_msg command = 8;
-    }
-    uint64 timestamp = 9;
-    string client = 10;
 }
 
 enum pbft_internal_msg_type {

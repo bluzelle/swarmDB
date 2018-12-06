@@ -193,16 +193,15 @@ namespace bzn
         void join_swarm();
         // VIEWCHANGE/NEWVIEW Helper methods
         static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::unordered_set<std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
-        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages) const;
-        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders) const;
+        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
+        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message) const;
         std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
-        void fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares) const;
+        void fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares) const;
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
-        //static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
         static uint64_t last_sequence_in_newview_preprepare_messages(const pbft_msg &newview);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
