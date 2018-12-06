@@ -83,7 +83,6 @@ def send_request(node, uuid, msg, loop=False, ws=None):
 
         ws.send_binary(msg_outer.SerializeToString())
 
-        handle_response(ws)
         resp = handle_response(ws)
 
     else:
