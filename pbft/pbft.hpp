@@ -144,7 +144,7 @@ namespace bzn
 
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
-        bzn_envelope wrap_message(const pbft_msg& message);
+        bzn_envelope wrap_message(const pbft_msg& message) const;
         bzn_envelope wrap_message(const pbft_membership_msg&) const;
         bzn_envelope wrap_message(const audit_message& message) const;
 
@@ -194,14 +194,13 @@ namespace bzn
         // VIEWCHANGE/NEWVIEW Helper methods
         static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
         //static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
-        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages);
-        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders);
-        bzn_envelope make_signed_envelope(std::string serialized_pbft_message);
+        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages) const;
+        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders) const;
+        bzn_envelope make_signed_envelope(std::string serialized_pbft_message) const;
         std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
-        std::optional<bzn::checkpoint_t> validate_viewchange_checkpoints(const pbft_msg &viewchange_message) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
         void save_checkpoint(const pbft_msg& msg);
-        void fill_in_missing_pre_prepares(uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares);
+        void fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares) const;
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
         static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);

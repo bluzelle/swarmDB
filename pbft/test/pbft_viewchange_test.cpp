@@ -19,9 +19,6 @@
 #include <pbft/test/pbft_proto_test.hpp>
 #include <utils/make_endpoint.hpp>
 
-// https://coveralls.io/builds/20296851/source?filename=pbft/pbft.cpp
-
-
 namespace bzn
 {
     class pbft_viewchange_test : public pbft_proto_test
@@ -77,53 +74,38 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, test_fill_in_missing_pre_prepares)
     {
-        std::map<uint64_t, bzn_envelope> pre_prepares;
-
         auto mock_crypto = this->build_pft_with_mock_crypto();
 
-        //std::pair<uint64_t, bzn::hash_t>;
-        this->pbft->stable_checkpoint = std::make_pair(uint64_t(100), "<checkpoint hash value>");
+        EXPECT_CALL(*mock_crypto, sign(_))
+                .WillRepeatedly(Invoke([&](bzn_envelope &msg)
+                                 {
+                                     msg.set_sender(this->pbft->get_uuid());
+                                     msg.set_signature("mock_signature");
+                                     return true;
+                                 }));
 
-        EXPECT_CALL(*mock_crypto, sign(_)).WillOnce(Invoke([&](bzn_envelope &msg)
-                                                           {
-                                                               msg.set_sender(this->pbft->get_uuid());
-                                                               msg.set_signature("mock_signature");
-                                                               return true;
-                                                           }));
+        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
+                .WillRepeatedly(Invoke([&](auto env) {return env.SerializeAsString();}));
+        
         bzn_envelope envelope;
+        std::map<uint64_t, bzn_envelope> pre_prepares;
+        pre_prepares.insert(std::make_pair(uint64_t(103), envelope));
+        pre_prepares.insert(std::make_pair(uint64_t(101), envelope));
+        this->pbft->fill_in_missing_pre_prepares(99, 4, pre_prepares);
+        EXPECT_TRUE(0 < pre_prepares.count(102));
 
-        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first + 3), envelope));
-        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first + 1), envelope));
-        this->pbft->fill_in_missing_pre_prepares(4, pre_prepares);
+        ///////////////////////////////////////                                                                 }));
+        pre_prepares.insert(std::make_pair(uint64_t(107), envelope));
+        this->pbft->fill_in_missing_pre_prepares(99, 4, pre_prepares);
 
-        EXPECT_TRUE(0 < pre_prepares.count(this->pbft->stable_checkpoint.first + 2));
-
-
-        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Invoke([&](bzn_envelope &msg)
-                                                                 {
-                                                                     msg.set_sender(this->pbft->get_uuid());
-                                                                     msg.set_signature("mock_signature");
-                                                                     return true;
-                                                                 }));
-
-        pre_prepares.insert(std::make_pair(uint64_t(this->pbft->stable_checkpoint.first + 7), envelope));
-
-        this->pbft->fill_in_missing_pre_prepares(4, pre_prepares);
-
-        uint64_t sequence = this->pbft->stable_checkpoint.first + 1;
+        uint64_t sequence = 100;
         for (const auto pre_prepare : pre_prepares)
         {
-            EXPECT_TRUE(0 < pre_prepares.count(sequence));
+            EXPECT_EQ(sequence , pre_prepare.first);
             ++sequence;
         }
 
         EXPECT_TRUE(0 == pre_prepares.count(sequence));
-
-
-        // what if the first pre prepare is missing?
-        this->pbft->stable_checkpoint = std::make_pair(uint64_t(99), "<checkpoint hash value>");
-        this->pbft->fill_in_missing_pre_prepares(4, pre_prepares);
-        EXPECT_TRUE(0 < pre_prepares.count(100));
     }
 
     TEST_F(pbft_viewchange_test, pbft_with_invalid_view_drops_messages)
@@ -222,7 +204,7 @@ namespace bzn
                                 auto checkpoint = p.first;
                                 auto uuids = p.second;
 
-                                // there will be a checkpoint 100, with a hashe value of "100"
+                                // there will be a checkpoint 100, with a hash value of "100"
                                 EXPECT_EQ(uint64_t(100), checkpoint.first);
                                 EXPECT_EQ("100", checkpoint.second);
 
@@ -238,32 +220,6 @@ namespace bzn
                                 }
                             }
                         }));
-        this->pbft->handle_failure();
-    }
-
-    TEST_F(pbft_viewchange_test, validate_viewchange_checkpoints)
-    {
-        uint64_t current_sequence{0};
-
-        this->generate_checkpoint_at_sequence_100(current_sequence);
-
-        this->run_transaction_through_primary_times(2, current_sequence);
-
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
-                {
-                    pbft_msg viewchange;
-
-                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
-                    EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft()));
-
-                    auto pair = this->pbft->validate_viewchange_checkpoints(viewchange);
-                    uint64_t checkpoint = pair->first;
-                    hash_t hash = pair->second;
-
-                    EXPECT_EQ(uint64_t(100), checkpoint);
-                    LOG (debug) << hash;
-                }));
         this->pbft->handle_failure();
     }
 
