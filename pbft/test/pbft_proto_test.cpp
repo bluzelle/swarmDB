@@ -63,11 +63,9 @@ namespace bzn
         return operation;
     }
 
-    // send a preprepare message to SUT
     void
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
-        // after preprepares is sent, SUT will send out prepares to all nodes
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 

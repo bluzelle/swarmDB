@@ -91,13 +91,13 @@ namespace bzn
 
         bool is_view_valid() const;
 
-        uint64_t get_view() const { return this->view; }
+        uint64_t get_view() const;
 
         bzn::json_message get_status() override;
 
         bool is_valid_viewchange_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
 
-        bool is_valid_newview_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
+        bool is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const;
 
         /*
          * maximum number of tolerable faults (this can be a parameter, but for now we assume it has the worst-case value)
@@ -133,8 +133,8 @@ namespace bzn
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
-        void handle_viewchange    (const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_newview       (const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -192,7 +192,7 @@ namespace bzn
 
         void join_swarm();
         // VIEWCHANGE/NEWVIEW Helper methods
-        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, std::unordered_map<bzn::uuid_t, std::string> stable_checkpoint_proof, std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations);
+        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::unordered_set<std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope> &pre_prepare_messages) const;
         pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope> viewchange_envelopes_from_senders) const;
         bzn_envelope make_signed_envelope(std::string serialized_pbft_message) const;
@@ -202,7 +202,7 @@ namespace bzn
         void fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope> &pre_prepares) const;
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
-        static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
+        //static bool pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg);
         static uint64_t last_sequence_in_newview_preprepare_messages(const pbft_msg &newview);
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf

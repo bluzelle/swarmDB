@@ -59,7 +59,7 @@ namespace bzn
 
         bzn_envelope preprepare_message;
 
-        std::map<bzn::uuid_t, bzn_envelope> prepare_messages;  // uuid_t is the sender uuid, prepared messages
+        std::map<bzn::uuid_t, bzn_envelope> prepare_messages;
 
     private:
         size_t faulty_nodes_bound() const;

@@ -19,8 +19,8 @@
 
 namespace bzn
 {
-    // View, sequence
-    using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>; // view #, seq#, hash
+    // View, sequence, hash
+    using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
 
     // View, sequence
     using log_key_t = std::tuple<uint64_t, uint64_t>;
