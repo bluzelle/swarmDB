@@ -232,10 +232,12 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
     {
         std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        const bool has = this->storage->has(request.header().db_uuid(), request.has().key());
+        database_response response;
 
-        this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::not_found,
-            database_response(), session);
+        response.mutable_has()->set_key(request.has().key());
+        response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
