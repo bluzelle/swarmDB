@@ -29,18 +29,21 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
            : storage(std::move(storage))
            , subscription_manager(std::move(subscription_manager))
            , message_handlers{
-                 {database_msg::kCreate,      std::bind(&crud::handle_create,      this, _1, _2, _3)},
-                 {database_msg::kRead,        std::bind(&crud::handle_read,        this, _1, _2, _3)},
-                 {database_msg::kUpdate,      std::bind(&crud::handle_update,      this, _1, _2, _3)},
-                 {database_msg::kDelete,      std::bind(&crud::handle_delete,      this, _1, _2, _3)},
-                 {database_msg::kHas,         std::bind(&crud::handle_has,         this, _1, _2, _3)},
-                 {database_msg::kKeys,        std::bind(&crud::handle_keys,        this, _1, _2, _3)},
-                 {database_msg::kSize,        std::bind(&crud::handle_size,        this, _1, _2, _3)},
-                 {database_msg::kSubscribe,   std::bind(&crud::handle_subscribe,   this, _1, _2, _3)},
-                 {database_msg::kUnsubscribe, std::bind(&crud::handle_unsubscribe, this, _1, _2, _3)},
-                 {database_msg::kCreateDb,    std::bind(&crud::handle_create_db,   this, _1, _2, _3)},
-                 {database_msg::kDeleteDb,    std::bind(&crud::handle_delete_db,   this, _1, _2, _3)},
-                 {database_msg::kHasDb,       std::bind(&crud::handle_has_db,      this, _1, _2, _3)}}
+                 {database_msg::kCreate,        std::bind(&crud::handle_create,         this, _1, _2, _3)},
+                 {database_msg::kRead,          std::bind(&crud::handle_read,           this, _1, _2, _3)},
+                 {database_msg::kUpdate,        std::bind(&crud::handle_update,         this, _1, _2, _3)},
+                 {database_msg::kDelete,        std::bind(&crud::handle_delete,         this, _1, _2, _3)},
+                 {database_msg::kHas,           std::bind(&crud::handle_has,            this, _1, _2, _3)},
+                 {database_msg::kKeys,          std::bind(&crud::handle_keys,           this, _1, _2, _3)},
+                 {database_msg::kSize,          std::bind(&crud::handle_size,           this, _1, _2, _3)},
+                 {database_msg::kSubscribe,     std::bind(&crud::handle_subscribe,      this, _1, _2, _3)},
+                 {database_msg::kUnsubscribe,   std::bind(&crud::handle_unsubscribe,    this, _1, _2, _3)},
+                 {database_msg::kCreateDb,      std::bind(&crud::handle_create_db,      this, _1, _2, _3)},
+                 {database_msg::kDeleteDb,      std::bind(&crud::handle_delete_db,      this, _1, _2, _3)},
+                 {database_msg::kHasDb,         std::bind(&crud::handle_has_db,         this, _1, _2, _3)},
+                 {database_msg::kWriters,       std::bind(&crud::handle_writers,        this, _1, _2, _3)},
+                 {database_msg::kAddWriters,    std::bind(&crud::handle_add_writers,    this, _1, _2, _3)},
+                 {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)}}
 {
 }
 
@@ -229,10 +232,12 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
     {
         std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        const bool has = this->storage->has(request.header().db_uuid(), request.has().key());
+        database_response response;
 
-        this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::not_found,
-            database_response(), session);
+        response.mutable_has()->set_key(request.has().key());
+        response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
@@ -367,7 +372,7 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
 
     if (db_exists)
     {
-        if (!is_caller_owner(caller_id, perms))
+        if (!this->is_caller_owner(caller_id, perms))
         {
             result = bzn::storage_result::access_denied;
         }
@@ -409,6 +414,122 @@ crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& r
 }
 
 
+void
+crud::handle_writers(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    if (session)
+    {
+        bzn::storage_result result{bzn::storage_result::not_found};
+
+        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+        const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+        if (db_exists)
+        {
+            database_response resp;
+
+            resp.mutable_writers()->set_owner(perms[OWNER_KEY].asString());
+
+            for(const auto& writer : perms[WRITERS_KEY])
+            {
+                resp.mutable_writers()->add_writers(writer.asString());
+            }
+
+            this->send_response(request, bzn::storage_result::ok, std::move(resp), session);
+
+            return;
+        }
+        else
+        {
+            this->send_response(request, result, database_response(), session);
+        }
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. WRITERS not executed.";
+}
+
+
+void
+crud::handle_add_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_owner(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            this->add_writers(request, perms);
+
+            LOG(debug) << "updating db perms: " << perms.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
+
+            if (result = this->storage->update(PERMISSION_UUID, request.header().db_uuid(), perms.toStyledString()); result != bzn::storage_result::ok)
+            {
+                throw std::runtime_error("Failed to update database permissions: " + bzn::storage_result_msg.at(result));
+            }
+        }
+    }
+
+    if (session)
+    {
+        this->send_response(request, result, database_response(), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. ADD_WRITERS response not sent,";
+}
+
+
+void
+crud::handle_remove_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_owner(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            this->remove_writers(request, perms);
+
+            LOG(debug) << "updating db perms: " << perms.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
+
+            if (result = this->storage->update(PERMISSION_UUID, request.header().db_uuid(), perms.toStyledString()); result != bzn::storage_result::ok)
+            {
+                throw std::runtime_error("Failed to update database permissions: " + bzn::storage_result_msg.at(result));
+            }
+        }
+    }
+
+    if (session)
+    {
+        this->send_response(request, result, database_response(), session);
+
+        return;
+    }
+
+    LOG(warning) << "session no longer available. REMOVE_WRITERS response not sent,";
+}
+
+
 std::pair<bool, Json::Value>
 crud::get_database_permissions(const bzn::uuid_t& uuid) const
 {
@@ -443,7 +564,7 @@ crud::create_permission_data(const bzn::caller_id_t& caller_id) const
     Json::Value json;
 
     json[OWNER_KEY] = caller_id;
-    json[WRITERS_KEY] = Json::Value();
+    json[WRITERS_KEY] = Json::Value(Json::arrayValue);
 
     LOG(debug) << "created db perms: " << json.toStyledString();
 
@@ -452,16 +573,16 @@ crud::create_permission_data(const bzn::caller_id_t& caller_id) const
 
 
 bool
-crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& json) const
+crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
 {
-    return json[OWNER_KEY] == caller_id;
+    return perms[OWNER_KEY] == caller_id;
 }
 
 
 bool
-crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& json) const
+crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
 {
-    for(const auto& writer_id : json[WRITERS_KEY])
+    for(const auto& writer_id : perms[WRITERS_KEY])
     {
         if (writer_id == caller_id)
         {
@@ -469,7 +590,61 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& j
         }
     }
 
-    return this->is_caller_owner(caller_id, json);
+    return this->is_caller_owner(caller_id, perms);
+}
+
+
+void
+crud::add_writers(const database_msg& request, Json::Value& perms)
+{
+    const std::string owner = perms[OWNER_KEY].asString();
+
+    std::set<std::string> current_writers;
+
+    for (auto& writer : perms[WRITERS_KEY])
+    {
+        current_writers.emplace(writer.asString());
+    }
+
+    for (const auto& writer : request.add_writers().writers())
+    {
+        // owner never should be in the writers list...
+        if (writer != owner)
+        {
+            current_writers.insert(writer);
+        }
+    }
+
+    perms[WRITERS_KEY].clear();
+
+    for (auto&& writer : current_writers)
+    {
+        perms[WRITERS_KEY].append(std::move(writer));
+    }
+}
+
+
+void
+crud::remove_writers(const database_msg& request, Json::Value& perms)
+{
+    std::set<std::string> current_writers;
+
+    for (auto& writer : perms[WRITERS_KEY])
+    {
+        current_writers.emplace(writer.asString());
+    }
+
+    for (const auto& writer : request.remove_writers().writers())
+    {
+        current_writers.erase(writer);
+    }
+
+    perms[WRITERS_KEY].clear();
+
+    for (auto&& writer : current_writers)
+    {
+        perms[WRITERS_KEY].append(std::move(writer));
+    }
 }
 
 
@@ -485,6 +660,8 @@ crud::save_state()
 std::shared_ptr<std::string>
 crud::get_saved_state()
 {
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
     return this->storage->get_snapshot();
 }
 
