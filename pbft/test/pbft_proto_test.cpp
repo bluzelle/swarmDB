@@ -63,6 +63,7 @@ namespace bzn
         return operation;
     }
 
+    // send a preprepare message to SUT
     void
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
