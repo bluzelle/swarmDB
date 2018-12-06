@@ -1193,38 +1193,6 @@ pbft::get_sequences_and_request_hashes_from_proofs(
     return true;
 }
 
-//bool
-//pbft::pre_prepares_contiguous(uint64_t latest_sequence, const pbft_msg& newview_msg)
-//{
-//    if (0 == newview_msg.pre_prepare_messages_size())
-//    {
-//        return true;
-//    }
-//
-//    auto extract_sequence = [](const bzn_envelope pre_prepare_envelope)->uint64_t
-//            {
-//                pbft_msg pre_prepare_message;
-//                pre_prepare_message.ParseFromString(pre_prepare_envelope.pbft());
-//                return pre_prepare_message.sequence();
-//            };
-//
-//    // We are assuming that the pre prepare messages are stored sequentially by sequence number in newview_msg.pre_prepare_messages
-//    uint64_t last_sequence{extract_sequence(newview_msg.pre_prepare_messages(0))};
-//    for (int i{1}; i < newview_msg.pre_prepare_messages_size(); ++i)
-//    {
-//        uint64_t current_sequence{extract_sequence(newview_msg.pre_prepare_messages(i))};
-//        if (last_sequence + 1 != current_sequence)
-//        {
-//            return false;
-//        }
-//        last_sequence = current_sequence;
-//    }
-//    return last_sequence == latest_sequence;
-//}
-
-// prepared_proofs is not a member of a new_view message. You need to
-// iterate over all the prepared_proofs in all the viewchange messages
-// in the new_view.
 uint64_t
 pbft::last_sequence_in_newview_preprepare_messages(const pbft_msg &newview)
 {
