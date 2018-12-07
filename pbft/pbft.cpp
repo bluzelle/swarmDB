@@ -817,7 +817,8 @@ pbft::notify_audit_failure_detected()
 void
 pbft::handle_failure()
 {
-    LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE";
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+    LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: " << this->view + 1;
     this->notify_audit_failure_detected();
     this->view_is_valid = false;
     pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, this->prepared_operations_since_last_checkpoint())};
@@ -1109,6 +1110,12 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         return false;
     }
 
+    if (!(viewchange_message.view() > this->get_view()))
+    {
+        LOG(error) << "is_valid_viewchange_message - new view " <<  viewchange_message.view() << " is not greater than current view " << this->get_view();
+        return false;
+    }
+
     auto valid_checkpoint_hashes = this->validate_and_extract_checkpoint_hashes(viewchange_message);
 
     if (valid_checkpoint_hashes.empty())
@@ -1157,7 +1164,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
 
             if (preprepare_message.sequence() != prepare_msg.sequence() || preprepare_message.view() != prepare_msg.view() || preprepare_message.request_hash() != prepare_msg.request_hash())
             {
-                LOG(error) << "is_valid_viewchange_message - a pre prepare message has invalid sequence, view or request hash";
+                LOG(error) << "is_valid_viewchange_message - a pre prepare message has mismatched sequence, view or request hash";
                 return false;
             }
 
@@ -1212,6 +1219,12 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
             !this->is_valid_viewchange_message(viewchange_msg, original_msg))
         {
             LOG(error) << "is_valid_newview_message - new view message contains invalid viewchange message";
+            return false;
+        }
+
+        if (viewchange_msg.view() != theirs.view())
+        {
+            LOG(error) << "is_valid_newview_message - a view change message has a different view than the new view message";
             return false;
         }
         viewchange_senders.insert(original_msg.sender());
@@ -1358,6 +1371,12 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
             //       and request hash, but using the new view number
             pbft_msg pre_prepare;
             pre_prepare.ParseFromString(prepared_proof.pre_prepare().pbft());
+
+            if (pre_prepares.count(pre_prepare.sequence())>0)
+            {
+                continue;
+            }
+
             pre_prepare.set_view(new_view);
 
             if (pre_prepare.sequence() <= max_checkpoint_sequence)
@@ -1421,6 +1440,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         this->last_view_sent = msg.view();
         pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, this->prepared_operations_since_last_checkpoint())};
         this->broadcast(this->wrap_message(viewchange_message));
+        this->view_is_valid = false;
     }
 
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin(),
@@ -1444,10 +1464,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-    this->broadcast(
-            this->wrap_message(
-                    this->build_newview(
-                            viewchange->first, viewchange_envelopes_from_senders)));
+    this->broadcast(this->wrap_message(this->build_newview(viewchange->first, viewchange_envelopes_from_senders)));
 
     // primary of the new view moves to new view
     this->view = msg.view();

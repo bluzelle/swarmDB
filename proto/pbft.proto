@@ -114,14 +114,6 @@ enum pbft_internal_msg_type {
     PBFT_IMSG_NEW_CONFIG = 1;
 }
 
-enum pbft_request_type {
-    PBFT_REQ_UNDEFINED = 0;
-    PBFT_REQ_DATABASE = 1;
-    PBFT_REQ_NEW_CONFIG = 2;
-    PBFT_REQ_INTERNAL = 3;
-    PBFT_REQ_NO_OP = 4;
-}
-
 message pbft_internal_msg
 {
     pbft_internal_msg_type type = 1;
