@@ -1383,22 +1383,12 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
             {
                 continue;
             }
-            pre_prepares[pre_prepare.sequence()] = this->make_signed_envelope(pre_prepare.SerializeAsString());
+            pre_prepares[pre_prepare.sequence()] = this->wrap_message(pre_prepare);
         }
     }
     this->fill_in_missing_pre_prepares(max_checkpoint_sequence, new_view, pre_prepares);
 
     return this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares);
-}
-
-bzn_envelope
-pbft::make_signed_envelope(std::string serialized_pbft_message) const
-{
-    bzn_envelope envelope;
-    envelope.set_pbft(serialized_pbft_message);
-    envelope.set_sender(this->get_uuid());
-    this->crypto->sign(envelope);
-    return envelope;
 }
 
 void

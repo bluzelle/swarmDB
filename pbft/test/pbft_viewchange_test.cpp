@@ -144,30 +144,6 @@ namespace bzn
         EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
     }
 
-    TEST_F(pbft_viewchange_test, test_make_signed_envelope)
-    {
-        const std::string mock_signature{"signature"};
-
-        auto mockcrypto = this->build_pft_with_mock_crypto();
-
-        pbft_msg message;
-        message.set_type(PBFT_MSG_VIEWCHANGE);
-        message.set_sequence(383439);
-        message.set_request_hash("request_hash");
-        message.set_view(484575);
-
-        EXPECT_CALL(*mockcrypto, sign(_)).WillOnce(Invoke([&](bzn_envelope& msg)
-        {
-            msg.set_sender(this->pbft->get_uuid());
-            msg.set_signature(mock_signature);
-            return true;
-        }));
-        bzn_envelope signed_envelope = this->pbft->make_signed_envelope(message.SerializeAsString());
-
-        EXPECT_EQ(TEST_NODE_UUID, signed_envelope.sender());
-        EXPECT_EQ(mock_signature, signed_envelope.signature());
-    }
-
     TEST_F(pbft_viewchange_test, test_is_peer)
     {
         const bzn::peer_address_t NOT_PEER{"127.0.0.1", 9091, 9991, "not_a_peer", "uuid_nope"};
