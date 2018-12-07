@@ -402,10 +402,12 @@ crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& r
     {
         std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        const bool has_db = this->storage->has(PERMISSION_UUID, request.header().db_uuid());
+        database_response response;
 
-        this->send_response(request, (has_db) ? bzn::storage_result::ok : bzn::storage_result::not_found,
-            database_response(), session);
+        response.mutable_has_db()->set_uuid(request.header().db_uuid());
+        response.mutable_has_db()->set_has(this->storage->has(PERMISSION_UUID, request.header().db_uuid()));
+
+        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 
         return;
     }
