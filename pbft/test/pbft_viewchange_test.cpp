@@ -16,6 +16,7 @@
 #include <mocks/mock_node_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_crypto_base.hpp>
+#include <mocks/mock_options_base.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 #include <utils/make_endpoint.hpp>
 
@@ -345,8 +346,11 @@ namespace bzn
                                 { return std::move(audit_heartbeat_timer2); }
                         ));
 
-        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST
-                , "uuid2", mock_service2, this->mock_failure_detector, this->crypto);
+        auto mock_options = std::make_shared<bzn::mock_options_base>();
+
+        EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Invoke([](){return "uuid2";}));
+        
+        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2, this->mock_failure_detector, this->crypto);
         pbft2->set_audit_enabled(false);
 
         pbft2->start();

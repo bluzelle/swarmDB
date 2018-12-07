@@ -16,6 +16,7 @@
 
 #include <node/node_base.hpp>
 #include <gmock/gmock.h>
+#include <options/options_base.hpp>
 
 namespace bzn {
 
@@ -65,6 +66,8 @@ class mock_options_base : public options_base {
       uint16_t());
   MOCK_CONST_METHOD0(peer_validation_enabled,
       bool());
+    MOCK_CONST_METHOD0(get_signed_key,
+            std::string());
 };
 
 }  // namespace bzn

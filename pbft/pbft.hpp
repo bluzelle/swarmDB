@@ -288,8 +288,6 @@ namespace bzn
         friend class pbft_join_leave_test;
         friend class pbft_viewchange_test;
 
-        std::shared_ptr<crypto_base> crypto;
-
         std::map<bzn::hash_t, std::shared_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
     };
 
