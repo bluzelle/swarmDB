@@ -38,10 +38,14 @@ namespace bzn::test
     const bzn::uuid_t TEST_NODE_UUID{"uuid1"};
     const bzn::uuid_t SECOND_NODE_UUID{"uuid0"};
 
+    const std::string TEST_NODE_ADDR("127.0.0.1");
+    const uint16_t TEST_NODE_LISTEN_PORT(8084);
+    const uint16_t TEST_NODE_HTTP_PORT(8884);
+
     const bzn::peers_list_t TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid0"}
                                            , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
                                            , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
-                                           , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
+                                           , {TEST_NODE_ADDR, TEST_NODE_LISTEN_PORT, TEST_NODE_HTTP_PORT, "name4", TEST_NODE_UUID}};
 
 
     class pbft_test : public Test
@@ -111,6 +115,7 @@ namespace bzn::test
     bool is_prepare(std::shared_ptr<bzn_envelope> msg);
     bool is_commit(std::shared_ptr<bzn_envelope> msg);
     bool is_checkpoint(std::shared_ptr<bzn_envelope> msg);
+    bool is_join(std::shared_ptr<bzn_envelope> msg);
     bool is_audit(std::shared_ptr<bzn_envelope> msg);
 
     bzn_envelope from(uuid_t uuid);
