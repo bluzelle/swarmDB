@@ -1117,8 +1117,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
     }
 
     auto valid_checkpoint_hashes = this->validate_and_extract_checkpoint_hashes(viewchange_message);
-
-    if (valid_checkpoint_hashes.empty())
+    if (valid_checkpoint_hashes.empty() && viewchange_message.sequence() != 0)
     {
         LOG(error) << "is_valid_viewchange_message - the checkpoint is invalid";
         return false;
