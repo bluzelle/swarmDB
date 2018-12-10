@@ -1138,7 +1138,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         }
 
         pbft_msg preprepare_message;
-        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint.first.first))
+        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint.first.first) || preprepare_message.type() != PBFT_MSG_PREPREPARE)
         {
             LOG(error) << "is_valid_viewchange_message - a pre prepare message has an invalid sequence number, or is malformed";
             return false;
@@ -1156,7 +1156,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
 
             // does the sequence number, view number and hash match those of the pre prepare
             pbft_msg prepare_msg;
-            if (!prepare_msg.ParseFromString(prepare_envelope.pbft()))
+            if (!prepare_msg.ParseFromString(prepare_envelope.pbft()) || prepare_msg.type() != PBFT_MSG_PREPARE)
             {
                 LOG(error) << "is_valid_viewchange_message - a prepare message is invalid";
                 return false;
@@ -1215,8 +1215,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
     {
         bzn_envelope original_msg{theirs.viewchange_messages(i)};
         // - are each of those viewchange messages valid?
-        if (!viewchange_msg.ParseFromString(original_msg.pbft()) ||
-            !this->is_valid_viewchange_message(viewchange_msg, original_msg))
+        if (!viewchange_msg.ParseFromString(original_msg.pbft()) || viewchange_msg.type() != PBFT_MSG_VIEWCHANGE || !this->is_valid_viewchange_message(viewchange_msg, original_msg))
         {
             LOG(error) << "is_valid_newview_message - new view message contains invalid viewchange message";
             return false;
@@ -1273,7 +1272,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         ours_pbft.ParseFromString(ours.pre_prepare_messages(i).pbft());
         theirs_pbft.ParseFromString(theirs.pre_prepare_messages(i).pbft());
 
-        if (ours_pbft.type() != theirs_pbft.type() || ours_pbft.view() != theirs_pbft.view() || ours_pbft.sequence() != theirs_pbft.sequence() || ours_pbft.request_hash() != theirs_pbft.request_hash())
+        if (ours_pbft.type() != theirs_pbft.type() || theirs_pbft.type() != PBFT_MSG_PREPREPARE || ours_pbft.view() != theirs_pbft.view() || ours_pbft.sequence() != theirs_pbft.sequence() || ours_pbft.request_hash() != theirs_pbft.request_hash())
         {
             LOG(error) << "is_valid_newview_message - type, view, sequence or request hash mismatch between our view change and their viewchange";
             return false;
