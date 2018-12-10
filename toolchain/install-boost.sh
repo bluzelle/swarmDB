@@ -27,7 +27,7 @@ if [ ! -e ${BOOST_PACKAGE_DIR}/libs ]; then
     mkdir -p ${BOOST_PACKAGE_DIR}
     curl -L ${BOOST_URL} | tar -xz -C ${BOOST_PACKAGE_DIR} --strip-components=1
     cd ${BOOST_PACKAGE_DIR}
-    ./bootstrap.sh --prefix=${BOOST_PACKAGE_DIR} --with-libraries=${BOOST_LIBS}
+    ./bootstrap.sh --prefix=${BOOST_PACKAGE_DIR}
     ./b2 --tool-set=gcc-7 install -d0
 else
     echo "Using cached Boost"

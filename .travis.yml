@@ -93,7 +93,6 @@ script:
   - ${CXX} --version
   - echo CXXFLAGS=${CXXFLAGS}
   - make openssl
-  - make rocksdb
   - make
   - make static_analysis
   - ctest
