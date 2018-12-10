@@ -9,4 +9,4 @@ target_link_libraries(bootstrap utils)
 target_include_directories(bootstrap PRIVATE ${JSONCPP_INCLUDE_DIRS})
 add_dependencies(bootstrap openssl)
 
-add_subdirectory(test)
+#add_subdirectory(test)
