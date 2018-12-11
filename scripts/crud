@@ -96,7 +96,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
                 print("Waiting....\n")
                 resp = database_pb2.database_response()
                 resp.ParseFromString(ws.recv())
-                print("Response: \n{}".format(resp))
+                print("Response: \n{}".format(resp).expandtabs(4))
                 print("-" * 60 + '\n')
             except KeyboardInterrupt:
                 break
