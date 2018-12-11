@@ -26,6 +26,9 @@
 #include <mutex>
 #include <gtest/gtest_prod.h>
 #include <options/options_base.hpp>
+#include <pbft/pbft_failure_detector.hpp>
+#include <include/boost_asio_beast.hpp>
+#include <limits>
 
 namespace
 {
@@ -34,6 +37,7 @@ namespace
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
+    const std::string NOOP_REQUEST_HASH = "<no op request hash>";
 }
 
 namespace bzn
@@ -65,7 +69,7 @@ namespace bzn
 
         bool is_primary() const override;
 
-        const peer_address_t& get_primary() const override;
+        const peer_address_t& get_primary(std::optional<uint64_t> view = std::nullopt) const override;
 
         const bzn::uuid_t& get_uuid() const override;
 
@@ -85,7 +89,15 @@ namespace bzn
 
         std::string get_name() override;
 
+        bool is_view_valid() const;
+
+        uint64_t get_view() const;
+
         bzn::json_message get_status() override;
+
+        bool is_valid_viewchange_message(const pbft_msg& msg, const bzn_envelope& original_msg) const;
+
+        bool is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const;
 
         /*
          * maximum number of tolerable faults (this can be a parameter, but for now we assume it has the worst-case value)
@@ -121,6 +133,8 @@ namespace bzn
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
+        void handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg);
+        void handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg);
 
         void maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op);
         void do_preprepare(const std::shared_ptr<pbft_operation>& op);
@@ -130,7 +144,7 @@ namespace bzn
 
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
-        bzn_envelope wrap_message(const pbft_msg& message);
+        bzn_envelope wrap_message(const pbft_msg& message) const;
         bzn_envelope wrap_message(const pbft_membership_msg&) const;
         bzn_envelope wrap_message(const audit_message& message) const;
 
@@ -177,6 +191,16 @@ namespace bzn
         void saw_request(const bzn_envelope& msg, const request_hash_t& hash);
 
         void join_swarm();
+        // VIEWCHANGE/NEWVIEW Helper methods
+        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::unordered_set<std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
+        pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
+        pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
+        std::unordered_set<std::shared_ptr<bzn::pbft_operation>> prepared_operations_since_last_checkpoint();
+        std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
+        void save_checkpoint(const pbft_msg& msg);
+        void fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t new_view, std::map<uint64_t, bzn_envelope>& pre_prepares) const;
+        bool is_peer(const bzn::uuid_t& peer) const;
+        bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         uint64_t view = 1;
@@ -189,6 +213,7 @@ namespace bzn
 
         const bzn::uuid_t uuid;
         std::shared_ptr<bzn::options_base> options;
+
         std::shared_ptr<pbft_service_base> service;
 
         std::shared_ptr<pbft_failure_detector_base> failure_detector;
@@ -196,29 +221,72 @@ namespace bzn
         std::mutex pbft_lock;
 
         std::map<bzn::operation_key_t, std::shared_ptr<bzn::pbft_operation>> operations;
+
         std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
 
         std::once_flag start_once;
 
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
+
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
 
         bool audit_enabled = true;
         bool in_swarm = false;
 
         checkpoint_t stable_checkpoint{0, INITIAL_CHECKPOINT_HASH};
+
         std::unordered_map<uuid_t, std::string> stable_checkpoint_proof;
 
         std::set<checkpoint_t> local_unstable_checkpoints;
+
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
+
         pbft_config_store configurations;
 
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
 
+        std::shared_ptr<crypto_base> crypto;
+
+        // VIEWCHANGE/NEWVIEW members
+        bool view_is_valid = true;
+        uint64_t last_view_sent{0};
+
+        std::map<uint64_t,std::map<bzn::uuid_t, bzn_envelope>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
+
+        FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
+        FRIEND_TEST(pbft_test, valid_leave_request_test);
+        FRIEND_TEST(pbft_test, invalid_leave_request_test);
+        FRIEND_TEST(pbft_test, test_new_config_preprepare_handling);
+        FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
+        FRIEND_TEST(pbft_test, test_new_config_commit_handling);
+        FRIEND_TEST(pbft_test, test_move_to_new_config);
+        FRIEND_TEST(pbft_test, full_test);
+
+        FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
+        FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
+        FRIEND_TEST(pbft_viewchange_test, test_is_peer);
+        FRIEND_TEST(pbft_viewchange_test, validate_and_extract_checkpoint_hashes);
+        FRIEND_TEST(pbft_viewchange_test, validate_viewchange_checkpoints);
+        FRIEND_TEST(pbft_viewchange_test, test_is_valid_viewchange_message);
+        FRIEND_TEST(pbft_viewchange_test, make_viewchange_makes_valid_message);
+        FRIEND_TEST(pbft_viewchange_test, test_prepared_operations_since_last_checkpoint);
+        FRIEND_TEST(pbft_viewchange_test, test_fill_in_missing_pre_prepares);
+        FRIEND_TEST(pbft_viewchange_test, test_save_checkpoint);
+        FRIEND_TEST(pbft_viewchange_test, test_handle_viewchange);
+
+        FRIEND_TEST(pbft_newview_test, test_pre_prepares_contiguous);
+        FRIEND_TEST(pbft_newview_test, make_newview);
+        FRIEND_TEST(pbft_newview_test, build_newview);
+        FRIEND_TEST(pbft_newview_test, primary_handle_newview);
+        FRIEND_TEST(pbft_newview_test, backup_handle_newview);
+        FRIEND_TEST(pbft_newview_test, validate_and_extract_checkpoint_hashes);
+        FRIEND_TEST(pbft_newview_test, test_get_primary);
+        FRIEND_TEST(pbft_newview_test, get_sequences_and_request_hashes_from_proofs);
+        FRIEND_TEST(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs);
+
         friend class pbft_proto_test;
         friend class pbft_join_leave_test;
-
-        std::shared_ptr<crypto_base> crypto;
+        friend class pbft_viewchange_test;
 
         std::map<bzn::hash_t, std::shared_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
     };

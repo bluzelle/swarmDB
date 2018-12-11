@@ -26,9 +26,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options("-fdiagnostics-color=auto")
 
-if (APPLE)
-    add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
-endif(APPLE)
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic")
 if (APPLE)
