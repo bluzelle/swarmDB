@@ -19,7 +19,7 @@
 
 namespace bzn
 {
-    // View, sequence
+    // View, sequence, hash
     using operation_key_t = std::tuple<uint64_t, uint64_t, hash_t>;
 
     // View, sequence
@@ -130,6 +130,10 @@ namespace bzn
          * @return the parsed database_msg associated wtih this operation
          */
         virtual const database_msg& get_database_msg() const = 0;
+
+        virtual const bzn_envelope get_preprepare() const = 0;
+
+        virtual const std::map<uuid_t, bzn_envelope>& get_prepares() const = 0;
 
         virtual ~pbft_operation() = default;
     };

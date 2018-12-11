@@ -104,9 +104,9 @@ namespace bzn::test
     uuid_t extract_sender(std::string msg);
 
     bzn_envelope
-    wrap_pbft_msg(const pbft_msg& msg);
+    wrap_pbft_msg(const pbft_msg& msg, const bzn::uuid_t sender="");
 
-    bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg);
+    bzn_envelope wrap_pbft_membership_msg(const pbft_membership_msg& msg, const bzn::uuid_t sender);
 
     bzn_envelope
     wrap_request(const database_msg& msg);
@@ -117,6 +117,8 @@ namespace bzn::test
     bool is_checkpoint(std::shared_ptr<bzn_envelope> msg);
     bool is_join(std::shared_ptr<bzn_envelope> msg);
     bool is_audit(std::shared_ptr<bzn_envelope> msg);
+    bool is_viewchange(std::shared_ptr<bzn_envelope> wrapped_msg);
+    bool is_newview(std::shared_ptr<bzn_envelope> wrapped_msg);
 
     bzn_envelope from(uuid_t uuid);
 }

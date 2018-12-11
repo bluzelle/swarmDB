@@ -26,7 +26,6 @@ message bzn_envelope
     {
         bytes database_msg = 10;
         bytes pbft_internal_request = 11;
-
         bytes database_response = 12;
         bytes json = 13;
         bytes audit = 14;
@@ -42,6 +41,5 @@ message bzn_msg
     oneof msg
     {
         database_msg db = 10;
-        string json = 11;
     }
 }

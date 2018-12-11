@@ -115,8 +115,7 @@ namespace bzn
                     .Times(Exactly(1));
             }
 
-            auto wmsg = wrap_pbft_msg(preprepare);
-            wmsg.set_sender("bob");
+            auto wmsg = wrap_pbft_msg(preprepare, "bob");
             pbft->handle_message(preprepare, wmsg);
             return preprepare;
         }
@@ -130,8 +129,7 @@ namespace bzn
             prepare.set_type(PBFT_MSG_PREPARE);
             prepare.set_request_hash(op->get_request_hash());
 
-            auto wmsg = wrap_pbft_msg(prepare);
-            wmsg.set_sender(node.uuid);
+            auto wmsg = wrap_pbft_msg(prepare, node.uuid);
             pbft->handle_message(prepare, wmsg);
         }
 
@@ -144,8 +142,7 @@ namespace bzn
             commit.set_type(PBFT_MSG_COMMIT);
             commit.set_request_hash(op->get_request_hash());
 
-            auto wmsg = wrap_pbft_msg(commit);
-            wmsg.set_sender(node.uuid);
+            auto wmsg = wrap_pbft_msg(commit, node.uuid);
             pbft->handle_message(commit, wmsg);
         }
 
@@ -205,8 +202,7 @@ namespace bzn
                 .Times(Exactly(1));
         }
 
-        auto wmsg = wrap_pbft_membership_msg(join_msg);
-        wmsg.set_sender(new_peer.uuid);
+        auto wmsg = wrap_pbft_membership_msg(join_msg, new_peer.uuid);
         this->handle_membership_message(wmsg);
     }
 
@@ -235,8 +231,7 @@ namespace bzn
                 .Times(Exactly(1));
         }
 
-        auto wmsg = wrap_pbft_membership_msg(leave_msg);
-        wmsg.set_sender(peer.uuid);
+        auto wmsg = wrap_pbft_membership_msg(leave_msg, peer.uuid);
         this->handle_membership_message(wmsg);
     }
 
@@ -257,8 +252,7 @@ namespace bzn
 
         // leave message should be ignored
 
-        auto wmsg = wrap_pbft_membership_msg(leave_msg);
-        wmsg.set_sender(new_peer.uuid);
+        auto wmsg = wrap_pbft_membership_msg(leave_msg, new_peer.uuid);
         this->handle_membership_message(wmsg);
     }
 
@@ -407,7 +401,7 @@ namespace bzn
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 response.set_result(true);
-                this->handle_membership_message(test::wrap_pbft_membership_msg(response));
+                this->handle_membership_message(test::wrap_pbft_membership_msg(response, ""));
             }));
 
         this->build_pbft();
@@ -498,7 +492,7 @@ namespace bzn
         join_msg.set_allocated_peer_info(info);
 
         // here we go...
-        this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg), this->mock_session);
+        this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, this->pbft->get_uuid()), this->mock_session);
     }
 
     TEST_F(pbft_join_leave_test, existing_node_cant_join_swarm)
@@ -526,7 +520,7 @@ namespace bzn
         join_msg.set_type(PBFT_MMSG_JOIN);
         join_msg.set_allocated_peer_info(info);
 
-        this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg), this->mock_session);
+        this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, peer.uuid), this->mock_session);
     }
 
     TEST_F(pbft_join_leave_test, node_handles_unsolicited_join_rejection)
@@ -538,6 +532,6 @@ namespace bzn
         pbft_membership_msg response;
         response.set_type(PBFT_MMSG_JOIN_RESPONSE);
         response.set_result(false);
-        this->handle_membership_message(test::wrap_pbft_membership_msg(response));
+        this->handle_membership_message(test::wrap_pbft_membership_msg(response, "bad_uuid"));
     }
 }

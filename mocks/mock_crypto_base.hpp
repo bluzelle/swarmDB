@@ -14,36 +14,20 @@
 
 #pragma once
 
-#include <string>
-#include <optional>
-
-#include <node/node_base.hpp>
-#include <bootstrap/bootstrap_peers.hpp>
-#include <bootstrap/peer_address.hpp>
-#include <pbft/pbft_operation.hpp>
-
-#include <proto/pbft.pb.h>
+#include <crypto/crypto_base.hpp>
+#include <gmock/gmock.h>
 
 namespace bzn
 {
-    using client_t = std::string; //placeholder
-
-    class pbft_base
+    class Mockcrypto_base : public crypto_base
     {
     public:
-        virtual void start() = 0;
+        MOCK_METHOD1(sign, bool(bzn_envelope& msg));
 
-        virtual void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) = 0;
+        MOCK_METHOD1(verify, bool(const bzn_envelope& msg));
 
-        virtual bool is_primary() const = 0;
+        MOCK_METHOD1(hash, std::string(const std::string& msg));
 
-        virtual const peer_address_t& get_primary(std::optional<uint64_t> view) const = 0;
-
-        virtual const bzn::uuid_t& get_uuid() const = 0;
-
-        virtual void handle_failure() = 0;
-
-        virtual ~pbft_base() = default;
-
+        MOCK_METHOD1(hash,  std::string(const bzn_envelope& msg));
     };
 }
