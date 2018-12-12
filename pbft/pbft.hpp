@@ -243,6 +243,7 @@ namespace bzn
         uint64_t last_view_sent{0};
 
         std::map<uint64_t,std::map<bzn::uuid_t, bzn_envelope>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
+        std::shared_ptr<bzn_envelope> saved_newview;
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
 

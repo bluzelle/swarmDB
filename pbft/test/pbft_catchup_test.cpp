@@ -67,6 +67,39 @@ namespace bzn
 
             this->membership_handler(wmsg, this->mock_session);
         }
+
+        bzn_envelope
+        build_viewchange_msg(const uuid_t& uuid, uint64_t view, uint64_t sequence)
+        {
+            pbft_msg viewchange;
+            viewchange.set_type(PBFT_MSG_VIEWCHANGE);
+            viewchange.set_view(view);
+            viewchange.set_sequence(sequence);
+
+            for (auto& p : TEST_PEER_LIST)
+            {
+                pbft_msg cp = this->build_checkpoint_msg(sequence, view);
+                *(viewchange.add_checkpoint_messages()) = wrap_pbft_msg(cp, p.uuid);
+            }
+
+            return wrap_pbft_msg(viewchange, uuid);
+        }
+
+        bzn_envelope
+        build_newview_msg(uint64_t view, uint64_t sequence)
+        {
+            pbft_msg newview;
+            newview.set_type(PBFT_MSG_NEWVIEW);
+            newview.set_view(view);
+            newview.set_sequence(sequence);
+
+            for (auto& p : TEST_PEER_LIST)
+            {
+                *(newview.add_viewchange_messages()) = build_viewchange_msg(p.uuid, view, sequence);
+            }
+
+            return wrap_pbft_msg(newview, this->uuid);
+        }
     };
 
     TEST_F(pbft_catchup_test, node_requests_state_after_unknown_checkpoint)
@@ -150,15 +183,18 @@ namespace bzn
         }
 
         // send the node the checkpoint "data"
+        const uint64_t new_view = 3;
         pbft_membership_msg reply;
         reply.set_type(PBFT_MMSG_SET_STATE);
         reply.set_sequence(100);
         reply.set_state_hash("100");
         reply.set_state_data("state_100");
+        reply.set_allocated_newview_msg(new bzn_envelope(build_newview_msg(new_view, 100)));
         auto wmsg = wrap_pbft_membership_msg(reply, "see_node_adopts_requested_checkpoint");
         this->membership_handler(wmsg, nullptr);
 
         EXPECT_EQ(this->pbft->latest_stable_checkpoint(), checkpoint_t(100, "100"));
+        EXPECT_EQ(this->pbft->get_view(), new_view);
     }
 
     TEST_F(pbft_catchup_test, node_doesnt_adopt_wrong_checkpoint)
