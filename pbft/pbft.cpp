@@ -59,7 +59,7 @@ pbft::pbft(
     // TODO: stable checkpoint should be read from disk first: KEP-494
     this->low_water_mark = this->stable_checkpoint.first;
     this->high_water_mark = this->stable_checkpoint.first + std::lround(CHECKPOINT_INTERVAL*HIGH_WATER_INTERVAL_IN_CHECKPOINTS);
-    this->service->save_service_state_at((this->next_issued_sequence_number % CHECKPOINT_INTERVAL) + CHECKPOINT_INTERVAL);
+    this->service->save_service_state_at(((this->next_issued_sequence_number / CHECKPOINT_INTERVAL) + 1) * CHECKPOINT_INTERVAL);
 }
 
 void
@@ -164,6 +164,8 @@ pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_b
 void
 pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
+    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+
     pbft_membership_msg inner_msg;
     if (!inner_msg.ParseFromString(msg.pbft_membership()))
     {
@@ -493,6 +495,9 @@ pbft::handle_join_response(const pbft_membership_msg& msg)
 void
 pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const
 {
+    LOG(debug) << boost::format("Got request for state data for checkpoint: seq: %1%, hash: %2%")
+                  % msg.sequence() % msg.state_hash();
+
     // get stable checkpoint for request
     checkpoint_t req_cp(msg.sequence(), msg.state_hash());
 
@@ -502,7 +507,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         if (!state)
         {
             LOG(debug) << boost::format("I'm missing data for checkpoint: seq: %1%, hash: %2%")
-                          % msg.sequence(), msg.state_hash();
+                          % msg.sequence() % msg.state_hash();
             // TODO: send error response
             return;
         }
@@ -519,7 +524,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
     else
     {
         LOG(debug) << boost::format("Request for checkpoint that I don't have: seq: %1%, hash: %2%")
-            % msg.sequence(), msg.state_hash();
+            % msg.sequence() % msg.state_hash();
         // TODO: send error response
     }
 }
