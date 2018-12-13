@@ -257,13 +257,13 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
 
         if (msg.sequence() > this->high_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
     }
