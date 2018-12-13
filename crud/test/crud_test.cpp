@@ -54,7 +54,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.error().message(), bzn::MSG_DATABASE_NOT_FOUND);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -103,7 +103,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::exists));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -118,7 +118,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_KEY_SIZE_TOO_LARGE);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::key_too_large));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -133,7 +133,7 @@ TEST(crud, test_that_create_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_VALUE_SIZE_TOO_LARGE);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::value_too_large));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -197,7 +197,7 @@ TEST(crud, test_that_read_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -333,7 +333,7 @@ TEST(crud, test_that_delete_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
         }));
 
     crud.handle_request("caller_id", msg, session);
@@ -636,7 +636,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
 
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_EXISTS);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_exists));
         }));
 
     // try to create it again...
@@ -718,7 +718,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::MSG_RECORD_NOT_FOUND);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
         }));
 
     crud.handle_request("caller_id", msg, mock_session);
@@ -742,7 +742,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
         }));
 
     // non-owner caller...
@@ -862,7 +862,7 @@ TEST(crud, test_that_add_writers_sends_proper_response)
 
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
         }));
 
     crud.handle_request("other_caller_id", msg, mock_session);
@@ -942,7 +942,7 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
 
             ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::MSG_ACCESS_DENIED);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
         }));
 
     crud.handle_request("other_caller_id", msg, mock_session);
