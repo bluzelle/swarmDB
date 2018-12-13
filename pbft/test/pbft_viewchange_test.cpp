@@ -428,4 +428,18 @@ namespace bzn
         EXPECT_EQ(this->pbft->view, 2U);
         EXPECT_EQ(pbft2->next_issued_sequence_number, 103U);
     }
+
+    TEST_F(pbft_viewchange_test, is_valid_viewchange_fails_if_no_checkpoint_yet)
+    {
+        // This test was written for KEP-902: is_valid_viewchange throws if no checkpoint yet
+        auto mock_crypto = this->build_pft_with_mock_crypto();
+        bzn_envelope original_message;
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)))).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env) { original_message = *viewchange_env; }));
+
+        this->pbft->handle_failure();
+
+        pbft_msg msg;
+        msg.ParseFromString(original_message.pbft());
+        EXPECT_FALSE(this->pbft->is_valid_viewchange_message(msg, original_message));
+    }
 }
