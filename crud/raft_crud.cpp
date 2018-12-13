@@ -115,7 +115,7 @@ raft_crud::do_raft_task_routing(const bzn::json_message& msg, const database_msg
             else
             {
 
-                response.mutable_error()->set_message(bzn::MSG_INVALID_RAFT_STATE);
+                response.mutable_error()->set_message(bzn::deprecated::MSG_INVALID_RAFT_STATE);
             }
         }
         break;
@@ -128,20 +128,20 @@ raft_crud::handle_create(const bzn::json_message& msg, const database_msg& reque
 {
     if (this->validate_value_size(request.create().value().size()))
     {
-        response.mutable_error()->set_message(bzn::MSG_VALUE_SIZE_TOO_LARGE);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_VALUE_SIZE_TOO_LARGE);
         return;
     }
 
     if (this->validate_key_size(request.create().key().size()))
     {
-        response.mutable_error()->set_message(bzn::MSG_KEY_SIZE_TOO_LARGE);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_KEY_SIZE_TOO_LARGE);
         return;
     }
 
     if (this->storage->has(request.header().db_uuid(), request.create().key()))
     {
 
-        response.mutable_error()->set_message(bzn::MSG_RECORD_EXISTS);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_RECORD_EXISTS);
         return;
     }
 
@@ -165,7 +165,7 @@ raft_crud::handle_read(const bzn::json_message& /*msg*/, const database_msg& req
 
     if (this->raft->get_state() == bzn::raft_state::leader)
     {
-        response.mutable_error()->set_message(bzn::MSG_RECORD_NOT_FOUND);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_RECORD_NOT_FOUND);
         return;
     }
 
@@ -178,13 +178,13 @@ raft_crud::handle_update(const bzn::json_message& msg, const database_msg& reque
 {
     if (this->validate_value_size(request.update().value().size()))
     {
-        response.mutable_error()->set_message(bzn::MSG_VALUE_SIZE_TOO_LARGE);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_VALUE_SIZE_TOO_LARGE);
         return;
     }
 
     if (!this->storage->has(request.header().db_uuid(), request.update().key()))
     {
-        response.mutable_error()->set_message(bzn::MSG_RECORD_NOT_FOUND);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_RECORD_NOT_FOUND);
         return;
     }
 
@@ -215,7 +215,7 @@ raft_crud::handle_delete(const bzn::json_message& msg, const database_msg& reque
         return;
     }
 
-    response.mutable_error()->set_message(bzn::MSG_RECORD_NOT_FOUND);
+    response.mutable_error()->set_message(bzn::deprecated::MSG_RECORD_NOT_FOUND);
 }
 
 
@@ -303,7 +303,7 @@ raft_crud::handle_ws_crud_messages(const bzn::json_message& ws_msg, std::shared_
     if (!ws_msg.isMember("msg"))
     {
         LOG(error) << "Invalid message: " << ws_msg.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
     }
@@ -311,7 +311,7 @@ raft_crud::handle_ws_crud_messages(const bzn::json_message& ws_msg, std::shared_
     if (!msg.ParseFromString(boost::beast::detail::base64_decode(ws_msg["msg"].asString())))
     {
         LOG(error) << "Failed to decode message: " << ws_msg.toStyledString().substr(0,MAX_MESSAGE_SIZE) << "...";
-        response.mutable_error()->set_message(bzn::MSG_INVALID_CRUD_COMMAND);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_INVALID_CRUD_COMMAND);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
     }
@@ -319,7 +319,7 @@ raft_crud::handle_ws_crud_messages(const bzn::json_message& ws_msg, std::shared_
     if (msg.msg_case() != msg.kDb)
     {
         LOG(error) << "Invalid message type: " << msg.msg_case();
-        response.mutable_error()->set_message(bzn::MSG_INVALID_ARGUMENTS);
+        response.mutable_error()->set_message(bzn::deprecated::MSG_INVALID_ARGUMENTS);
         session->send_message(std::make_shared<std::string>(response.SerializeAsString()), true);
         return;
     }
@@ -335,7 +335,7 @@ raft_crud::handle_ws_crud_messages(const bzn::json_message& ws_msg, std::shared_
 void
 raft_crud::do_candidate_tasks(const bzn::json_message& /*msg*/, const database_msg& /*request*/, database_response& response)
 {
-    response.mutable_error()->set_message(bzn::MSG_ELECTION_IN_PROGRESS);
+    response.mutable_error()->set_message(bzn::deprecated::MSG_ELECTION_IN_PROGRESS);
 }
 
 
