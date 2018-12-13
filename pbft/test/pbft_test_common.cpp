@@ -81,7 +81,6 @@ namespace bzn::test
         database_msg db;
         this->request_msg.set_database_msg(db.SerializeAsString());
 
-        this->options->get_mutable_simple_options().set("uuid", this->uuid);
         this->options->get_mutable_simple_options().set("listener_address", TEST_NODE_ADDR);
         this->options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
         this->options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
@@ -98,6 +97,7 @@ namespace bzn::test
     void
     pbft_test::build_pbft()
     {
+        this->options->get_mutable_simple_options().set("uuid", this->uuid);
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context
