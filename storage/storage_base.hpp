@@ -34,6 +34,7 @@ namespace bzn
         value_too_large,
         key_too_large,
         db_not_found,
+        db_exists,
         access_denied
     };
 
@@ -45,6 +46,7 @@ namespace bzn
         {storage_result::value_too_large, "VALUE_SIZE_TOO_LARGE"},
         {storage_result::key_too_large,   "KEY_SIZE_TOO_LARGE"},
         {storage_result::db_not_found,    "DATABASE_NOT_FOUND"},
+        {storage_result::db_exists,       "DATABASE_EXISTS"},
         {storage_result::access_denied,   "ACCESS_DENIED"}};
 
 
