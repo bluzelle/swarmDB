@@ -158,7 +158,8 @@ namespace bzn
         EXPECT_FALSE(this->pbft->is_peer(NOT_PEER.uuid));
     }
 
-    TEST_F(pbft_viewchange_test, validate_and_extract_checkpoint_hashes) {
+    TEST_F(pbft_viewchange_test, validate_and_extract_checkpoint_hashes)
+    {
         uint64_t current_sequence{0};
         generate_checkpoint_at_sequence_100(current_sequence);
 
