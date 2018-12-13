@@ -231,7 +231,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
         msg->set_sender(this->options->get_uuid());
     }
 
-    if(msg->signature().empty() && this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    if (msg->signature().empty())
     {
         this->crypto->sign(*msg);
     }

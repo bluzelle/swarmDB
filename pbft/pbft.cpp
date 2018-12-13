@@ -767,7 +767,7 @@ pbft::wrap_message(const pbft_msg& msg) const
     result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
     result.set_timestamp(this->now());
-//    this->crypto->sign(result);
+    this->crypto->sign(result);
 
     return result;
 }
@@ -779,7 +779,7 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
     result.set_pbft_membership(msg.SerializeAsString());
     result.set_sender(this->uuid);
     result.set_timestamp(this->now());
-//    this->crypto->sign(result);
+    this->crypto->sign(result);
     
     return result;
 }
@@ -791,7 +791,7 @@ pbft::wrap_message(const audit_message& msg) const
     result.set_audit(msg.SerializeAsString());
     result.set_sender(this->uuid);
     result.set_timestamp(this->now());
-//    this->crypto->sign(result);
+    this->crypto->sign(result);
 
     return result;
 }
