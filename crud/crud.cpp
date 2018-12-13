@@ -360,7 +360,7 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
 
     if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
     {
-        result = bzn::storage_result::exists;
+        result = bzn::storage_result::db_exists;
     }
     else
     {
@@ -381,7 +381,7 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
 void
 crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    bzn::storage_result result{bzn::storage_result::not_found};
+    bzn::storage_result result{bzn::storage_result::db_not_found};
 
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
