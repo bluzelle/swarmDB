@@ -33,7 +33,9 @@ namespace
 
 TEST(crud, test_that_create_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
 
     database_msg msg;
 
@@ -77,6 +79,8 @@ TEST(crud, test_that_create_sends_proper_response)
     msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
         [&](auto msg, auto)
@@ -138,7 +142,9 @@ TEST(crud, test_that_create_sends_proper_response)
 
 TEST(crud, test_that_read_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
 
     database_msg msg;
 
@@ -155,6 +161,8 @@ TEST(crud, test_that_read_sends_proper_response)
 
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
     crud.handle_request("caller_id", msg, session);
@@ -201,7 +209,9 @@ TEST(crud, test_that_read_sends_proper_response)
 
 TEST(crud, test_that_update_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
 
     database_msg msg;
 
@@ -219,6 +229,8 @@ TEST(crud, test_that_update_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
+
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
     crud.handle_request("caller_id", msg, session);
 
@@ -227,6 +239,8 @@ TEST(crud, test_that_update_sends_proper_response)
     msg.mutable_create()->release_value();
 
     // update key...
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
+
     msg.mutable_update()->set_key("key");
     msg.mutable_update()->set_value("updated");
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
@@ -265,7 +279,9 @@ TEST(crud, test_that_update_sends_proper_response)
 
 TEST(crud, test_that_delete_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager);
 
     database_msg msg;
 
@@ -282,6 +298,8 @@ TEST(crud, test_that_delete_sends_proper_response)
 
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false));
     crud.handle_request("caller_id", msg, session);
@@ -301,6 +319,8 @@ TEST(crud, test_that_delete_sends_proper_response)
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
         }));
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
     crud.handle_request("caller_id", msg, session);
 
@@ -322,7 +342,7 @@ TEST(crud, test_that_delete_sends_proper_response)
 
 TEST(crud, test_that_has_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
 
     database_msg msg;
 
@@ -386,7 +406,7 @@ TEST(crud, test_that_has_sends_proper_response)
 
 TEST(crud, test_that_keys_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
 
     database_msg msg;
 
@@ -457,7 +477,7 @@ TEST(crud, test_that_keys_sends_proper_response)
 
 TEST(crud, test_that_size_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), nullptr);
+    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>());
 
     database_msg msg;
 
