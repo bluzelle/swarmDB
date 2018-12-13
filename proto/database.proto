@@ -51,7 +51,7 @@ message database_msg
 message database_header
 {
     string db_uuid = 1;
-    uint64 nonce = 2;
+    uint64 nonce = 2 [jstype = JS_STRING];
 }
 
 message database_create
