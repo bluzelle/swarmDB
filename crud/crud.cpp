@@ -13,9 +13,11 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <crud/crud.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
 
 using namespace bzn;
 using namespace std::placeholders;
+
 
 namespace
 {
@@ -120,6 +122,11 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
         else
         {
             result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+
+            if (result == bzn::storage_result::ok)
+            {
+                this->subscription_manager->inspect_commit(request);
+            }
         }
     }
 
@@ -179,6 +186,11 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
         else
         {
             result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
+
+            if (result == bzn::storage_result::ok)
+            {
+                this->subscription_manager->inspect_commit(request);
+            }
         }
     }
 
@@ -211,6 +223,11 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
         else
         {
             result = this->storage->remove(request.header().db_uuid(), request.delete_().key());
+
+            if (result == bzn::storage_result::ok)
+            {
+                this->subscription_manager->inspect_commit(request);
+            }
         }
     }
 
@@ -565,7 +582,7 @@ crud::create_permission_data(const bzn::caller_id_t& caller_id) const
 {
     Json::Value json;
 
-    json[OWNER_KEY] = caller_id;
+    json[OWNER_KEY] = boost::trim_copy(caller_id);
     json[WRITERS_KEY] = Json::Value(Json::arrayValue);
 
     LOG(debug) << "created db perms: " << json.toStyledString();
@@ -577,7 +594,7 @@ crud::create_permission_data(const bzn::caller_id_t& caller_id) const
 bool
 crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
 {
-    return perms[OWNER_KEY] == caller_id;
+    return perms[OWNER_KEY] == boost::trim_copy(caller_id);
 }
 
 
@@ -586,7 +603,7 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
 {
     for(const auto& writer_id : perms[WRITERS_KEY])
     {
-        if (writer_id == caller_id)
+        if (writer_id == boost::trim_copy(caller_id))
         {
             return true;
         }

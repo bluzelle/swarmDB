@@ -257,13 +257,13 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
 
         if (msg.sequence() > this->high_water_mark)
         {
-            LOG(debug) << "Dropping message becasue it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
             return false;
         }
     }
@@ -1441,7 +1441,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
                                          {
                                              return ((this->get_primary(p.first).uuid == this->get_uuid()) &&
                                                      (p.first > this->view) &&
-                                                     (p.second.size() >= 2 * this->max_faulty_nodes() + 1));
+                                                     (p.second.size() == 2 * this->max_faulty_nodes() + 1));
                                          });
 
     if (viewchange == this->valid_viewchange_messages_for_view.end())
@@ -1458,10 +1458,6 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
     }
 
     this->broadcast(this->wrap_message(this->build_newview(viewchange->first, viewchange_envelopes_from_senders)));
-
-    // primary of the new view moves to new view
-    this->view = msg.view();
-    this->view_is_valid = true;
 }
 
 void

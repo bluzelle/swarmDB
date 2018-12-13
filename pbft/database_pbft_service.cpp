@@ -95,13 +95,14 @@ database_pbft_service::process_awaiting_operations()
 
         if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session() && op_it->second->session()->is_open())
         {
-            this->crud->handle_request("caller id", request, op_it->second->session());
+            this->crud->handle_request(op_it->second->get_request().sender(), request, op_it->second->session());
         }
         else
         {
             // session not found then this was probably loaded from the database...
             LOG(info) << "We do not have a pending operation for this request";
-            this->crud->handle_request("caller_id", request, nullptr);
+
+            this->crud->handle_request(op_it->second->get_request().sender(), request, nullptr);
         }
 
         if (op_it != this->operations_awaiting_result.end())
