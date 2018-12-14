@@ -81,6 +81,11 @@ namespace bzn::test
         database_msg db;
         this->request_msg.set_database_msg(db.SerializeAsString());
 
+        this->options->get_mutable_simple_options().set("listener_address", TEST_NODE_ADDR);
+        this->options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
+        this->options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
+        this->options->get_mutable_simple_options().set("crypto_enabled_incoming", std::to_string(false));
+
         preprepare_msg = pbft_msg();
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
@@ -92,16 +97,12 @@ namespace bzn::test
     void
     pbft_test::build_pbft()
     {
-        auto options = std::make_shared<bzn::options>();
-        options->get_mutable_simple_options().set("uuid", this->uuid);
-        options->get_mutable_simple_options().set("listener_address", TEST_NODE_ADDR);
-        options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
-        options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
+        this->options->get_mutable_simple_options().set("uuid", this->uuid);
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context
                 , TEST_PEER_LIST
-                , options
+                , this->options
                 , this->mock_service
                 , this->mock_failure_detector
                 , this->crypto
