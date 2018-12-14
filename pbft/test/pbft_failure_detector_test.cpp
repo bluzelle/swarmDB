@@ -125,9 +125,9 @@ namespace
         ASSERT_TRUE(this->failure_detected);
     }
 
-    TEST_F(pbft_failure_detector_test, timeout_restarts_timer)
+    TEST_F(pbft_failure_detector_test, timeout_doesnt_restart_timer)
     {
-        EXPECT_CALL(*(this->request_timer), expires_from_now(_)).Times(Exactly(2));
+        EXPECT_CALL(*(this->request_timer), expires_from_now(_)).Times(Exactly(1));
         this->build_failure_detector();
 
         this->failure_detector->request_seen(req_a);
