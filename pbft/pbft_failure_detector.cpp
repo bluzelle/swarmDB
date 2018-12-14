@@ -42,7 +42,12 @@ pbft_failure_detector::handle_timeout(boost::system::error_code /*ec*/)
     if (this->completed_requests.count(this->ordered_requests.front())  == 0)
     {
         LOG(error) << "Failure detector detected unexecuted request " << this->ordered_requests.front() << '\n';
-        this->start_timer();
+        this->ordered_requests.pop_front();
+        if (this->ordered_requests.size() > 0)
+        {
+            this->start_timer();
+        }
+
         this->io_context->post(std::bind(this->failure_handler));
         return;
     }
