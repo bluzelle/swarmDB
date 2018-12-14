@@ -101,6 +101,11 @@ crypto::deterministic_serialize(const bzn_envelope& msg)
 bool
 crypto::verify(const bzn_envelope& msg)
 {
+    if (!this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_INCOMING))
+    {
+        return true;
+    }
+
     BIO_ptr_t bio(BIO_new(BIO_s_mem()), &BIO_free);
     EC_KEY_ptr_t pubkey(nullptr, &EC_KEY_free);
     EVP_PKEY_ptr_t key(EVP_PKEY_new(), &EVP_PKEY_free);
@@ -146,6 +151,11 @@ crypto::verify(const bzn_envelope& msg)
 bool
 crypto::sign(bzn_envelope& msg)
 {
+    if (!this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    {
+        return true;
+    }
+
     if (msg.sender().empty())
     {
         msg.set_sender(this->options->get_uuid());

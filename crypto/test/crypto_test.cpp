@@ -60,6 +60,8 @@ public:
 
         this->options->get_mutable_simple_options().set(bzn::option_names::NODE_PRIVATEKEY_FILE, private_key_file);
         this->options->get_mutable_simple_options().set(bzn::option_names::NODE_PUBKEY_FILE, public_key_file);
+        this->options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_INCOMING, std::to_string(true));
+        this->options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_OUTGOING, std::to_string(true));
 
         this->crypto = std::make_shared<bzn::crypto>(this->options);
 

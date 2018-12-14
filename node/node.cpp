@@ -147,10 +147,7 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 {
     std::lock_guard<std::mutex> lock(this->message_map_mutex);
 
-    if (this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_INCOMING)
-        && (!msg.sender().empty())
-        && (!this->crypto->verify(msg))
-    )
+    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -231,7 +228,7 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
         msg->set_sender(this->options->get_uuid());
     }
 
-    if(msg->signature().empty() && this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    if (msg->signature().empty())
     {
         this->crypto->sign(*msg);
     }
