@@ -209,7 +209,6 @@ namespace bzn
 
         this->run_transaction_through_primary_times(2, current_sequence);
 
-
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true))))
                 .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
                 {
@@ -217,7 +216,6 @@ namespace bzn
                     pbft_msg viewchange;
                     EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
                     EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
-
                 }));
 
         this->pbft->handle_failure();
@@ -429,17 +427,43 @@ namespace bzn
         EXPECT_EQ(pbft2->next_issued_sequence_number, 103U);
     }
 
-    TEST_F(pbft_viewchange_test, is_valid_viewchange_fails_if_no_checkpoint_yet)
+    TEST_F(pbft_viewchange_test, is_valid_viewchange_does_not_throw_if_no_checkpoint_yet)
     {
         // This test was written for KEP-902: is_valid_viewchange throws if no checkpoint yet
+        uint64_t current_sequence{0};
         auto mock_crypto = this->build_pft_with_mock_crypto();
         bzn_envelope original_message;
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)))).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env) { original_message = *viewchange_env; }));
+        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
+            {return true;}));
+        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>())).WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
+            {return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());}));
+        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)))).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env)
+            { original_message = *viewchange_env; }));
+
+        this->run_transaction_through_primary_times(1, current_sequence);
 
         this->pbft->handle_failure();
 
-        pbft_msg msg;
-        msg.ParseFromString(original_message.pbft());
-        EXPECT_FALSE(this->pbft->is_valid_viewchange_message(msg, original_message));
+        auto latest_checkpoint{this->pbft->latest_checkpoint()};
+        EXPECT_EQ(0U, latest_checkpoint.first);
+        EXPECT_EQ(INITIAL_CHECKPOINT_HASH, latest_checkpoint.second);
+
+        pbft_msg viewchange_message;
+        viewchange_message.ParseFromString(original_message.pbft());
+
+        // It was the dereferencing of an empty valid_checkpoint_hashes that was causing is_valid_viewchange_message to throw an exception
+        auto valid_checkpoint_hashes{this->pbft->validate_and_extract_checkpoint_hashes(viewchange_message)};
+        // ensure that the valid_checkpoint_hashes is indeed empty
+        EXPECT_TRUE(valid_checkpoint_hashes.empty());
+
+        try
+        {
+            // even though there is no checkpoint, it is still valid to request a view change, and thus possible to have a valid viewchange message
+            EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange_message, original_message));
+        }
+        catch(...)
+        {
+            FAIL() << "is_valid_viewchange_message must not throw and exception simply because there are no valid checkpoints";
+        }
     }
 }
