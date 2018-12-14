@@ -426,5 +426,6 @@ namespace bzn
         this->pbft->handle_failure();
 
         EXPECT_EQ(this->pbft->view, 2U);
+        EXPECT_EQ(pbft2->next_issued_sequence_number, 103U);
     }
 }
