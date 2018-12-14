@@ -1247,9 +1247,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         viewchange_envelopes_from_senders[viewchange_env.sender()] = viewchange_env;
     }
 
-    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders);
-
-
+    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders).first;
     if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size() )
     {
         LOG(error) << "is_valid_newview_message - expected " << ours.pre_prepare_messages_size() << " preprepares in new view, found " << theirs.pre_prepare_messages_size();
@@ -1343,7 +1341,7 @@ pbft::make_newview(
     return newview;
 }
 
-pbft_msg
+std::pair<pbft_msg, uint64_t>
 pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const
 {
     //  Computing O (set of new preprepares for new-view message)
@@ -1356,6 +1354,7 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
         viewchange.ParseFromString(sender_viewchange_envelope.second.pbft());
         max_checkpoint_sequence = std::max(max_checkpoint_sequence, viewchange.sequence());
     }
+    uint64_t next_seq = max_checkpoint_sequence + 1;
 
     //  - for each of the 2f+1 viewchange messages
     for (const auto& sender_viewchange_envelope : viewchange_envelopes_from_senders)
@@ -1387,11 +1386,12 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
                 continue;
             }
             pre_prepares[pre_prepare.sequence()] = this->wrap_message(pre_prepare);
+            next_seq = std::max(next_seq, pre_prepare.sequence() + 1);
         }
     }
     this->fill_in_missing_pre_prepares(max_checkpoint_sequence, new_view, pre_prepares);
 
-    return this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares);
+    return std::make_pair(this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares), next_seq);
 }
 
 void
@@ -1457,7 +1457,9 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-    this->broadcast(this->wrap_message(this->build_newview(viewchange->first, viewchange_envelopes_from_senders)));
+    auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
+    this->next_issued_sequence_number = res.second;
+    this->broadcast(this->wrap_message(res.first));
 }
 
 void
