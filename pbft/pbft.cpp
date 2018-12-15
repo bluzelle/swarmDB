@@ -1117,24 +1117,35 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
 
     if (!(viewchange_message.view() > this->get_view()))
     {
-        LOG(error) << "is_valid_viewchange_message - new view " <<  viewchange_message.view() << " is not greater than current view " << this->get_view();
+        LOG(error) << "is_valid_viewchange_message - new view " << viewchange_message.view() << " is not greater than current view " << this->get_view();
         return false;
     }
 
-    auto valid_checkpoint_hashes = this->validate_and_extract_checkpoint_hashes(viewchange_message);
+    auto valid_checkpoint_hashes{this->validate_and_extract_checkpoint_hashes(viewchange_message)};
     if (valid_checkpoint_hashes.empty() && viewchange_message.sequence() != 0)
     {
         LOG(error) << "is_valid_viewchange_message - the checkpoint is invalid";
         return false;
     }
-    const auto valid_checkpoint = *(valid_checkpoint_hashes.begin());
 
+    // KEP-902: If we do not have a valid checkpoint hash, then we must set the valid_checkpoint_sequence value to 0.
+    uint64_t valid_checkpoint_sequence = (valid_checkpoint_hashes.empty() ? 0 : valid_checkpoint_hashes.begin()->first.first);
+
+    // Snuck into KEP-902: Isabel notes that viewchange messages should not have sequences, and this will be  refactored
+    // out in the near future, but since we are using it we must make the comparison to the expected
+    // valid_checkpoint_sequence
+    if (viewchange_message.sequence() != valid_checkpoint_sequence)
+    {
+        LOG(error) << "is_valid_viewchange_message - the viewchange sequence: " << viewchange_message.sequence() << ", is different from the sequence that is expected: " <<  valid_checkpoint_sequence;
+        return false;
+    }
 
     // TODO: (see KEP-882) Refactor this block into a new method - Isabel: should extract a validate_prepared_proof method
     // all the the prepared proofs are valid  (contains a pre prepare and 2f+1 mathcin prepares)
     for (int i{0}; i < viewchange_message.prepared_proofs_size(); ++i)
     {
         const bzn_envelope& pre_prepare_envelope{viewchange_message.prepared_proofs(i).pre_prepare()};
+
         if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
         {
             LOG(error) << "is_valid_viewchange_message - a pre prepare message has a bad envelope, or the sender is not in the peers list";
@@ -1142,7 +1153,7 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         }
 
         pbft_msg preprepare_message;
-        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint.first.first) || preprepare_message.type() != PBFT_MSG_PREPREPARE)
+        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint_sequence) || preprepare_message.type() != PBFT_MSG_PREPREPARE)
         {
             LOG(error) << "is_valid_viewchange_message - a pre prepare message has an invalid sequence number, or is malformed";
             return false;
