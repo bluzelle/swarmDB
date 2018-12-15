@@ -273,6 +273,7 @@ namespace bzn
         FRIEND_TEST(pbft_viewchange_test, test_fill_in_missing_pre_prepares);
         FRIEND_TEST(pbft_viewchange_test, test_save_checkpoint);
         FRIEND_TEST(pbft_viewchange_test, test_handle_viewchange);
+        FRIEND_TEST(pbft_viewchange_test, is_valid_viewchange_does_not_throw_if_no_checkpoint_yet);
 
         FRIEND_TEST(pbft_newview_test, test_pre_prepares_contiguous);
         FRIEND_TEST(pbft_newview_test, make_newview);
