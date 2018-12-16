@@ -71,7 +71,7 @@ ExternalProject_Add(rocksdb
     TIMEOUT 30
     INSTALL_COMMAND ""
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND make -e DISABLE_JEMALLOC=1 static_lib ${BUILD_FLAGS}
+    BUILD_COMMAND PORTABLE=1 make -e DISABLE_JEMALLOC=1 static_lib ${BUILD_FLAGS}
     BUILD_IN_SOURCE true
     DOWNLOAD_NO_PROGRESS true
     )
