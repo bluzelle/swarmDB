@@ -122,9 +122,13 @@ TEST(status_test, test_that_status_request_queries_status_providers)
     EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::encoded_message>>(), false)).WillOnce(Invoke(
         [&](std::shared_ptr<bzn::encoded_message> msg, bool)
         {
-            status_response sr;
+            bzn_envelope env;
 
-            ASSERT_TRUE(sr.ParseFromString(*msg));
+            ASSERT_TRUE(env.ParseFromString(*msg));
+            ASSERT_EQ(env.payload_case(), bzn_envelope::kStatusResponse);
+
+            status_response sr;
+            ASSERT_TRUE(sr.ParseFromString(env.status_response()));
             ASSERT_TRUE(sr.pbft_enabled());
             ASSERT_EQ(sr.swarm_version(), SWARM_VERSION);
             ASSERT_EQ(sr.swarm_git_commit(), SWARM_GIT_COMMIT);
