@@ -238,12 +238,13 @@ def status_handler(args):
 
     print("Sending: \n{}".format(msg_outer).expandtabs(4))
     ws.send_binary(msg_outer.SerializeToString())
-    resp = status_pb2.status_response()
-    resp.ParseFromString(ws.recv())
 
+    env = bluzelle_pb2.bzn_envelope()
+    env.ParseFromString(ws.recv())
+    resp = status_pb2.status_response()
+    resp.ParseFromString(env.status_response)
     print("Response: \n{}".format(resp).expandtabs(4))
-    modules = json.loads(resp.module_status_json)
-    print("{}".format(json.dumps(modules,indent=4)))
+    print("Response: \n{}".format(resp.module_status_json).expandtabs(4))
     print("-" * 60 + '\n')
 
     return resp
