@@ -53,6 +53,15 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
     if (auto result = this->unstable_storage->create(this->uuid, std::to_string(op->get_sequence()), op->get_database_msg().SerializeAsString());
         result != bzn::storage_result::ok)
     {
+        if (result == bzn::storage_result::exists)
+        {
+            // KEP-899 - We do not want to throw a runtime error for duplicates, as it is possible that
+            // during a view change we may try to perform duplicate operatiosn that have already been
+            // done in previous views.
+            LOG(warning) << "failed to store pbft request, possible duplicate? : " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
+            return;
+        }
+
         LOG(fatal) << "failed to store pbft request: " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
 
         // these are fatal... something bad is going on.
