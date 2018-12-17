@@ -62,7 +62,7 @@ TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_d
 }
 
 
-TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
+TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw_for_duplicate)
 {
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
@@ -79,8 +79,14 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     bzn_envelope request;
     request.set_database_msg(dmsg.SerializeAsString());
     operation->record_request(request);
-
-    EXPECT_THROW(dps.apply_operation(operation), std::runtime_error);
+    try
+    {
+        dps.apply_operation(operation);
+    }
+    catch(...)
+    {
+        FAIL() << "apply_operation must not throw in the case of attempting to add an existing database entry";
+    }
 }
 
 TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_operation)
