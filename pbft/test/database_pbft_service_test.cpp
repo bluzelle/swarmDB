@@ -79,14 +79,8 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw
     bzn_envelope request;
     request.set_database_msg(dmsg.SerializeAsString());
     operation->record_request(request);
-    try
-    {
-        dps.apply_operation(operation);
-    }
-    catch(...)
-    {
-        FAIL() << "apply_operation must not throw in the case of attempting to add an existing database entry";
-    }
+
+    EXPECT_NO_THROW(dps.apply_operation(operation));
 }
 
 TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_operation)
