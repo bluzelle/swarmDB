@@ -137,54 +137,49 @@ line argument:
 The configuration file is a JSON format file, as seen in the following example:
 
     {
+				"listener_address" : "127.0.0.1",
+				"listener_port" : 50000,
+				"ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
+				"ethereum_io_api_token" : "<your API key here>",
+				"bootstrap_file" : "/home/isabel/swarmdb/local/nodes/peers.json",
+				"debug_logging" : true,
+				"log_to_stdout" : true,
+				"use_pbft": true,
         "bootstrap_file": "./peers.json",
-        "ethereum": "0xddbd<...>121a",
-        "ethereum_io_api_token": "53IW57FSZSZS3QXJUEBYT8F4YZ9IZFXBPQ",
-        "listener_address": "127.0.0.1",
-        "listener_port": 49152,
-        "http_port": 8080,
-        "log_to_stdout": true,
-        "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5",
-        "max_storage" : "2GB",
-        "logfile_dir" : "logs/",
-        "logfile_rotation_size" : "64K",
-        "logfile_max_size" : "640K",
-        "debug_logging" : false,
-        "peer_validation_enabled" : false 
-        "signed_key": "LjMrLq8pw3 <...> +QbThXaQ="
     }
 
-where the properties are:
+The complete documentation of the options available for this file is given by 
 
-- "bootstrap_file" - the path to a file containing the list of peers in the swarm that this node will be participating in. See below.
-- "debug_logging" (optional)- set this value to true to include debug level log messages in the logs
-- "ethereum" - is your Ethereum block chain address, used to pay for transactions.
+    $ swarm --help
+
+but the properties likely useful for a minimal swarm are summarized here:
+
+- "use_pbft" - use pbft consensus (instead of legacy raft code)
+- "bootstrap_file" - path to peers file (see below)
+- "debug_logging" - show more log info
+- "ethereum" - is your Ethereum block chain address, used to pay for transactions. For now, you will not be charged, and you do not actually need to own this address.
 - "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
-- "listener_address" - the ip address that SwarmDB will use
-- "listener_port" - the socket address where SwarmDB will listen for protobuf and web socket requests.
-- "http_port" - the listen port where a HTTP api is exposed for blockchain integration
-- "log_to_stdout" (optional) - directs SwarmDB to log output to stdout when true.
-- "logfile_dir" (optional -- If running on the same machine the log dir MUST be unique for each node) - location of log files (default: logs/)
-- "logfile_max_size" (optional) - approx. maximum combined size of the logs before deletion occurs (default: 512K)
-- "logfile_rotation_size" (optional) - approximate size of log file must be before rotation (default: 64K)
-- "max_storage" (optional) - the approximate maximum limit for the storage that SwarmDB will use in the current instance (default: 2G)
-- "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself.
-- "peer_validation_enabled" (optional)- set this to true to enable blacklisting and uuid signature verification
-- "signed_key" - (required if peer_validation enabled) a key generated from the node's UUID and the Bluzelle private key. If peer_validation_enabled is set to true, the node owner must provide the node's uuid to a Bluzelle representative who will generate the signed_key. The key must be added to the config file as a single line of text with no carriage returns or line feeds.
-
-All size entries use the same notation as storage: B, K, M, G & T or none
-(bytes)
-
+- "listener_address" - the ip address that SwarmDB will listen on (this should be "127.0.0.1" unless you are doing something fancy)
+- "listener_port" - the port that SwarmDB will listen on (each node running on the same host should use a different port)
+- "log_to_stdout" (optional) - log to stdout as well as log file
+- "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself. This should be specified if and only if node cryptography is disabled (the default) - otherwise, nodes use their private keys as their identifier.
 
 #### The Bluzelle Bootstrap File
 
 The bootstrap file, identified in the config file by the "bootstrap_file"
-parameter, see above, provides a list of other nodes in the the swarm that the
-local instance of the SwarmDB daemon can communicate with. Note that this may
-not represent the current quorum so if it is sufficently out of date, you may
-need to find the current list of nodes.
+parameter, see above, provides a list of nodes in the the swarm that the
+local instance of the SwarmDB daemon can communicate with. If the membership
+of the swarm has changed, these nodes will be used to introduce the node to
+the current swarm and catch it up to the current state, and the bootstrap file
+acts as a "starting peers list".
 
-The booststrap file format a JSON array, containing JSON objects describing
+If you are running a static testnet (i.e., nodes do not join or leave the swarm)
+then every node should have the same bootstrap_file, and it should include
+an entry for every node. Thus, each node will appear in its own bootstrap file. 
+If a node is not already in the swarm when it starts (i.e., it should dynamically join
+the swarm) then it should not be in its own bootstrap file.
+
+The booststrap file format is a JSON array, containing JSON objects describing
 nodes as seen in the following example:
 
     [
@@ -219,90 +214,18 @@ where the Peer object parameters are (ALL PARAMETERS MUST MATCH THE PEER CONFIGU
 - "port" - the socket address that the external node will listen for protobuf and web socket requests. (listen_port in the config file)
 - "uuid" - the universally unique identifier that the external node uses to uniquely identify itself. This is required to be unique per node and consistent between the peerlist and the config.
 
-Please ensure that a JSON object representing the local node is also included
-in the array of peers.
+Note that if node cryptography is enabled (see swarmdb --help), node uuids are their public keys.
 
 
-#### Steps to setup Daemon configuration files:
+#### Steps to setup and run Daemon:
 
-1. Create each of the JSON files below in swarmDB/build/output/, where the swarm executable resides. \(bluzelle.json, bluzelle2.json, bluzelle3.json, peers.json\).
+1. Create each of the JSON files as described above in swarmDB/build/output/, where the swarm executable resides. \(bluzelle.json, bluzelle2.json, bluzelle3.json, bluzelle4.json, peers.json\).
 2. Create an account with Etherscan: [https://etherscan.io/register](https://etherscan.io/register)
 3. Create an Etherscan API KEY by clicking Developers -&gt; API-KEYs.
 4. Add your Etherscan API KEY Token to the configuration files.
-5. Modify the `listener_address` to use your local interface IP.
-
-   ```text
-   $ ifconfig en1
-   en1: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
-    inet6 fe80::1837:c97f:df86:c36f%en1 prefixlen 64 secured scopeid 0xa
-   -->>inet 192.168.0.34 netmask 0xffffff00 broadcast 192.168.0.255
-    nd6 options=201<PERFORMNUD,DAD>
-    media: autoselect
-    status: active
-   ```
-
-In the above case, the IP address of the local interface is `192.168.0.34`.
-
-If you do not see `inet <ipaddress>`, run `ifconfig` and comb through manually to find your local IP address.
-
-1. Modify the `ethereum` address to be an Ethereum mainnet address that contains tokens or use the sample address provided below.
-
-**Requirements:**
-
-* You must provide a valid Ethereum address with a balance &gt; 0 and an Etherscan API key.
-* A unique ID \(uuid\) must be specified for each daemon.
-* Listener address and port must match peer list.
-
-Configuration files for Daemon:
-
-```text
-// debug_logging is an optional setting (default is false)
-
-// bluzelle.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50000,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9",
-  "debug_logging" : true,
-  "log_to_stdout" : false
-}
-
-// bluzelle2.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50001,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7",
-  "debug_logging" : true,
-  "log_to_stdout" : true
-}
-
-// bluzelle3.json
-{
-  "listener_address" : "127.0.0.1",
-  "listener_port" : 50002,
-  "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-  "ethereum_io_api_token" : "**********************************",
-  "bootstrap_file" : "./peers.json",
-  "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41",
-  "debug_logging" : true,
-  "log_to_stdout" : true
-}
-
-// peers.json
-[
-  {"name": "peer1", "host": "127.0.0.1", "port": 50000, "http_port" : 8080, "uuid" : "60ba0788-9992-4cdb-b1f7-9f68eef52ab9"},
-  {"name": "peer2", "host": "127.0.0.1", "port": 50001, "http_port" : 8081, "uuid" : "c7044c76-135b-452d-858a-f789d82c7eb7"},
-  {"name": "peer3", "host": "127.0.0.1", "port": 50002, "http_port" : 8082, "uuid" : "3726ec5f-72b4-4ce6-9e60-f5c47f619a41"}
-]
-```
-
-1. Deploy your swarm of Daemons. From the swarmDB/build/output/ directory, run:
+5. Modify the `ethereum` address to be an Ethereum mainnet address that contains tokens or use the sample address provided above.
+6. Ensure that each swarmdb instance is configured to listen on a different port and has a different uuid, and that the peers file contains correct uuids and addresses for all nodes
+7. Deploy your swarm of Daemons. From the swarmDB/build/output/ directory, run:
 
 ```text
 $ ./swarm -c bluzelle.json
