@@ -62,7 +62,7 @@ TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_d
 }
 
 
-TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
+TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw_for_duplicate)
 {
     auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
 
@@ -80,7 +80,7 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_throws)
     request.set_database_msg(dmsg.SerializeAsString());
     operation->record_request(request);
 
-    EXPECT_THROW(dps.apply_operation(operation), std::runtime_error);
+    EXPECT_NO_THROW(dps.apply_operation(operation));
 }
 
 TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_operation)

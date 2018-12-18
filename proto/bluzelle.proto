@@ -32,6 +32,7 @@ message bzn_envelope
         bytes pbft = 15;
         bytes pbft_membership = 16;
         bytes status_request = 17;
+        bytes status_response = 18;
     }
 }
 
