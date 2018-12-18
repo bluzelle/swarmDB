@@ -294,7 +294,10 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 
     if (session)
     {
-        this->sessions_waiting_on_forwarded_requests.insert(std::make_pair(hash, session));
+        if (this->sessions_waiting_on_forwarded_requests.find(hash) == this->sessions_waiting_on_forwarded_requests.end())
+        {
+            this->sessions_waiting_on_forwarded_requests[hash] = session;
+        }
     }
 
     if (!this->is_primary())
