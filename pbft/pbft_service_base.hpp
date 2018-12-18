@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <include/bluzelle.hpp>
 #include <proto/bluzelle.pb.h>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/operations/pbft_operation.hpp>
 
 namespace bzn
 {

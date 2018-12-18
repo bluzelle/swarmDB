@@ -14,7 +14,7 @@
 #pragma once
 #include <gtest/gtest.h>
 #include <include/bluzelle.hpp>
-#include <pbft/pbft_operation.hpp>
+#include <pbft/operations/pbft_operation.hpp>
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft.hpp>
 #include <pbft/dummy_pbft_service.hpp>
@@ -65,6 +65,8 @@ namespace bzn::test
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
+                std::make_shared<bzn::pbft_operation_manager>();
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
