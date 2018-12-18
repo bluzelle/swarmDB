@@ -245,10 +245,12 @@ main(int argc, const char* argv[])
             auto unstable_storage = std::make_shared<bzn::mem_storage>();
             auto stable_storage = std::make_shared<bzn::mem_storage>();
             auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
+            auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
+            LOG(warning) << "not giving operation manager a storage";
 
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
                 std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
-                , failure_detector, crypto);
+                , failure_detector, crypto, operation_manager);
 
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 

@@ -17,7 +17,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <utils/make_endpoint.hpp>
 #include <gtest/gtest.h>
-#include <pbft/pbft_memory_operation.hpp>
+#include <pbft/operations/pbft_memory_operation.hpp>
 
 namespace bzn::test
 {
@@ -26,9 +26,9 @@ namespace bzn::test
     {
         this->build_pbft();
         ASSERT_TRUE(pbft->is_primary());
-        ASSERT_EQ(0u, pbft->outstanding_operations_count());
+        ASSERT_EQ(0u, this->operation_manager->held_operations_count());
         pbft->handle_database_message(this->request_msg, this->mock_session);
-        ASSERT_EQ(1u, pbft->outstanding_operations_count());
+        ASSERT_EQ(1u, this->operation_manager->held_operations_count());
     }
 
     TEST_F(pbft_test, test_requests_fire_preprepare)

@@ -13,7 +13,7 @@
 
 #include <pbft/test/pbft_test_common.hpp>
 #include <boost/range/irange.hpp>
-#include <pbft/pbft_memory_operation.hpp>
+#include <pbft/operations/pbft_memory_operation.hpp>
 
 namespace bzn::test
 {
@@ -161,7 +161,7 @@ namespace bzn::test
             this->pbft->handle_message(msg, default_original_msg);
         }
 
-        EXPECT_EQ(9u, this->pbft->outstanding_operations_count());
+        EXPECT_EQ(9u, this->operation_manager->held_operations_count());
 
         this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
         for (const auto& peer : TEST_PEER_LIST)
@@ -170,7 +170,7 @@ namespace bzn::test
             this->pbft->handle_message(msg, from(peer.uuid));
         }
 
-        EXPECT_EQ(0u, this->pbft->outstanding_operations_count());
+        EXPECT_EQ(0u, this->operation_manager->held_operations_count());
     }
 
     TEST_F(pbft_checkpoint_test, initial_checkpoint_matches)

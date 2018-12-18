@@ -2,9 +2,6 @@ add_library(pbft STATIC
     pbft_base.hpp
     pbft.hpp
     pbft.cpp
-    pbft_operation.hpp
-    pbft_memory_operation.hpp
-    pbft_memory_operation.cpp
     pbft_configuration.hpp
     pbft_configuration.cpp
     dummy_pbft_service.cpp
@@ -21,8 +18,9 @@ add_library(pbft STATIC
     database_pbft_service.hpp
     )
 
-target_link_libraries(pbft utils proto)
+target_link_libraries(pbft utils pbft_operations proto)
 target_include_directories(pbft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 add_dependencies(pbft openssl)
 
 add_subdirectory(test)
+add_subdirectory(operations)
