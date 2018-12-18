@@ -68,6 +68,14 @@ crypto::extract_payload(const bzn_envelope& msg)
         {
             return msg.pbft_membership();
         }
+        case bzn_envelope::kStatusRequest:
+        {
+            return msg.status_request();
+        }
+        case bzn_envelope::kStatusResponse:
+        {
+            return msg.status_response();
+        }
         default :
         {
             throw std::runtime_error(
