@@ -91,7 +91,7 @@ audit::handle_primary_alive_timeout(const boost::system::error_code& ec)
 {
     if (ec && ec != boost::system::errc::operation_canceled)
     {
-        LOG(error) << "primary alive timeout canceled " << ec.message();
+        LOG(trace) << "primary alive timeout canceled " << ec.message();
         return;
     }
     if (ec == boost::system::errc::operation_canceled)
