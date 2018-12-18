@@ -30,7 +30,7 @@ namespace bzn
         std::shared_ptr<Mockcrypto_base>
         build_pft_with_mock_crypto()
         {
-            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<NiceMock<Mockcrypto_base>>();
             this->crypto = mockcrypto;
             this->build_pbft();
             return mockcrypto;
@@ -57,11 +57,7 @@ namespace bzn
                                                return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
                                            }));
 
-            EXPECT_CALL(*mockcrypto, verify(_))
-                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-                                           {
-                                               return true;
-                                           }));
+            EXPECT_CALL(*mockcrypto, verify(_)).WillRepeatedly(Return(true));
 
             for (current_sequence=1; current_sequence < 100; ++current_sequence)
             {
@@ -292,7 +288,7 @@ namespace bzn
         auto mock_crypto = this->build_pft_with_mock_crypto();
 
         // I expect 3 calls from crypto::verify
-        EXPECT_CALL(*mock_crypto, verify(_)).Times(3).WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/){return true;}));
+        EXPECT_CALL(*mock_crypto, verify(_)).Times(3).WillRepeatedly(Return(true));
 
         pbft_msg msg;
 
@@ -362,18 +358,8 @@ namespace bzn
                                            return env.SerializeAsString();
                                        }));
 
-        EXPECT_CALL(*mock_crypto, verify(_))
-                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-                                       {
-                                           return true;
-                                       }));
-
-
-        EXPECT_CALL(*mock_crypto, sign(_))
-                .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-                                       {
-                                           return true;
-                                       }));
+        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
+        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
 
 
         // set up a stable checkpoint plus a couple of uncommitted transactions on sut1
@@ -435,8 +421,10 @@ namespace bzn
         uint64_t current_sequence{0};
         auto mock_crypto = this->build_pft_with_mock_crypto();
         bzn_envelope original_message;
-        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-            {return true;}));
+
+        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
+        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
+
         EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>())).WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
             {return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());}));
         EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)))).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env)
