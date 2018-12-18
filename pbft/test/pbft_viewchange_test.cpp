@@ -30,7 +30,7 @@ namespace bzn
         std::shared_ptr<Mockcrypto_base>
         build_pft_with_mock_crypto()
         {
-            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<NiceMock<Mockcrypto_base>>();
+            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
             this->crypto = mockcrypto;
             this->build_pbft();
             return mockcrypto;
@@ -49,15 +49,16 @@ namespace bzn
         void
         generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
         {
-            auto mockcrypto = this->build_pft_with_mock_crypto();
+            auto mock_crypto = this->build_pft_with_mock_crypto();
 
-            EXPECT_CALL(*mockcrypto, hash(An<const bzn_envelope&>()))
+            EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
                     .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
                                            {
                                                return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
                                            }));
 
-            EXPECT_CALL(*mockcrypto, verify(_)).WillRepeatedly(Return(true));
+            EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
+            EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
 
             for (current_sequence=1; current_sequence < 100; ++current_sequence)
             {
