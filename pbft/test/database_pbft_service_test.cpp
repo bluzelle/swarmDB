@@ -15,7 +15,7 @@
 #include <mocks/mock_storage_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <pbft/database_pbft_service.hpp>
-#include <pbft/pbft_memory_operation.hpp>
+#include <pbft/operations/pbft_memory_operation.hpp>
 #include <storage/mem_storage.hpp>
 #include <mocks/mock_crud_base.hpp>
 

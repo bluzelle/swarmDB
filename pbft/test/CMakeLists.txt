@@ -1,6 +1,5 @@
 set(test_srcs
     pbft_test.cpp
-    pbft_operation_test.cpp
     pbft_failure_detector_test.cpp
     pbft_audit_test.cpp
     pbft_test_common.cpp
@@ -15,6 +14,6 @@ set(test_srcs
     pbft_proto_test.cpp
     pbft_newview_test.cpp
     pbft_viewchange_test.cpp)
-set(test_libs pbft crypto options ${Protobuf_LIBRARIES} bootstrap storage)
+set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} bootstrap storage)
 
 add_gmock_test(pbft)

@@ -40,7 +40,7 @@ namespace bzn
                 {
                     if (operation == nullptr)
                     {
-                        operation = this->pbft->find_operation(this->view, msg.sequence(), msg.request_hash());
+                        operation = this->operation_manager->find_or_construct(this->view, msg.sequence(), msg.request_hash(), this->pbft->current_peers_ptr());
 
                         // the SUT needs the pre-prepare it sends to itself in order to execute state machine
                         this->send_preprepare(operation->get_sequence(), operation->get_request());
@@ -125,7 +125,7 @@ namespace bzn
         }
 
         // tell pbft that this operation has been executed
-        this->service_execute_handler(this->pbft->find_operation(this->view, sequence, request_hash));
+        this->service_execute_handler(this->operation_manager->find_or_construct(this->view, sequence, request_hash, pbft->current_peers_ptr()));
     }
 
     void
@@ -149,16 +149,23 @@ namespace bzn
         this->pbft->checkpoint_reached_locally(seq);
     }
 
-    void
-    pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence)
+    pbft_msg
+    pbft_proto_test::build_checkpoint_msg(uint64_t sequence, uint64_t view)
     {
         pbft_msg cp;
         cp.set_sequence(sequence);
         cp.set_type(PBFT_MSG_CHECKPOINT);
         cp.set_state_hash(std::to_string(sequence));
+        cp.set_view(view);
 
-        auto wmsg = wrap_pbft_msg(cp, node.uuid);
-        this->pbft->handle_message(cp, wmsg);
+        return cp;
+    }
+
+    void
+    pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence, uint64_t view)
+    {
+        auto msg = build_checkpoint_msg(sequence, view);
+        this->pbft->handle_message(msg, wrap_pbft_msg(msg, node.uuid));
     }
 
     void

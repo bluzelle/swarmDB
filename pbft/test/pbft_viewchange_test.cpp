@@ -229,7 +229,8 @@ namespace bzn
 
         this->run_transaction_through_primary_times(2, current_sequence);
 
-        auto viewchange = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->stable_checkpoint_proof, this->pbft->prepared_operations_since_last_checkpoint());
+        auto ops = this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first);
+        auto viewchange = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->stable_checkpoint_proof, ops);
 
         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
         EXPECT_EQ(current_sequence, viewchange.sequence());
@@ -267,22 +268,22 @@ namespace bzn
 
         generate_checkpoint_at_sequence_100(current_sequence);
 
-        EXPECT_EQ(size_t(0), this->pbft->prepared_operations_since_last_checkpoint().size());
+        EXPECT_EQ(size_t(0), this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first).size());
 
         run_transaction_through_primary(false);
         current_sequence++;
-        EXPECT_EQ(size_t(1), this->pbft->prepared_operations_since_last_checkpoint().size());
+        EXPECT_EQ(size_t(1), this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first).size());
 
         run_transaction_through_primary(false);
         current_sequence++;
-        EXPECT_EQ(size_t(2), this->pbft->prepared_operations_since_last_checkpoint().size());
+        EXPECT_EQ(size_t(2), this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first).size());
 
-        auto operations = this->pbft->prepared_operations_since_last_checkpoint();
+        auto operations = this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first);
         for(const auto& operation : operations)
         {
             // TODO: what other tests?
-            EXPECT_EQ(uint64_t(1), operation->get_view());
-            EXPECT_TRUE(operation->get_sequence() > 100 && operation->get_sequence() <= current_sequence);
+            EXPECT_EQ(uint64_t(1), operation.second->get_view());
+            EXPECT_TRUE(operation.second->get_sequence() > 100 && operation.second->get_sequence() <= current_sequence);
         }
     }
 
@@ -348,8 +349,9 @@ namespace bzn
         auto mock_options = std::make_shared<bzn::mock_options_base>();
 
         EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Invoke([](){return "uuid2";}));
-        
-        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2, this->mock_failure_detector, this->crypto);
+
+        auto manager2 = std::make_shared<bzn::pbft_operation_manager>();
+        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2, this->mock_failure_detector, this->crypto, manager2);
         pbft2->set_audit_enabled(false);
 
         pbft2->start();

@@ -33,30 +33,33 @@ namespace bzn
     class pbft_operation
     {
     public:
+
+        pbft_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
+
         /**
          * Store a session that waits on the result of the operation (will not persist across crashes)
          * @param session shared_ptr to session
          */
-        virtual void set_session(std::shared_ptr<bzn::session_base> session) = 0;
+        virtual void set_session(std::shared_ptr<bzn::session_base> session);
 
         /**
          * @return the saved session, if any
          */
-        virtual std::shared_ptr<bzn::session_base> session() const = 0;
+        virtual std::shared_ptr<bzn::session_base> session() const;
 
         /**
          * @return do we have a session
          */
-        virtual bool has_session() const = 0;
+        virtual bool has_session() const;
 
         /**
          * @return the operation_key_t that uniquely identifies this operation
          */
-        virtual operation_key_t get_operation_key() const = 0;
+        virtual operation_key_t get_operation_key() const;
 
-        virtual uint64_t get_sequence() const = 0;
-        virtual uint64_t get_view() const = 0;
-        virtual const hash_t& get_request_hash() const = 0;
+        virtual uint64_t get_sequence() const;
+        virtual uint64_t get_view() const;
+        virtual const hash_t& get_request_hash() const;
 
         /**
          * @return the current stage of the operation, defined as
@@ -131,10 +134,24 @@ namespace bzn
          */
         virtual const database_msg& get_database_msg() const = 0;
 
-        virtual const bzn_envelope get_preprepare() const = 0;
+        /**
+         * @return the recorded preprepare envelope
+         */
+        virtual bzn_envelope get_preprepare() const = 0;
 
-        virtual const std::map<uuid_t, bzn_envelope>& get_prepares() const = 0;
+        /**
+         * @return the collection of saved prepare envelopes as a map of sender -> envelope
+         */
+        virtual std::map<uuid_t, bzn_envelope> get_prepares() const = 0;
 
         virtual ~pbft_operation() = default;
+
+    private:
+        bool session_saved = false;
+        std::shared_ptr<bzn::session_base> listener_session;
+
+        const uint64_t view;
+        const uint64_t sequence;
+        const bzn::hash_t request_hash;
     };
 }
