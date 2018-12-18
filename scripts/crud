@@ -234,6 +234,7 @@ def status_handler(args):
     ws = websocket.create_connection("ws://" + args.node)
     msg_outer = bluzelle_pb2.bzn_envelope()
     msg_inner = status_pb2.status_request()
+    msg_outer.sender = CRUD_SCRIPT_SENDER_ID
     msg_outer.status_request = msg_inner.SerializeToString()
 
     print("Sending: \n{}".format(msg_outer).expandtabs(4))
