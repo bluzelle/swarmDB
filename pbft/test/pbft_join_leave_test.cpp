@@ -391,7 +391,7 @@ namespace bzn
         EXPECT_EQ(this->configurations().get(current_config->get_hash()), nullptr);
     }
 
-    TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)
+    TEST_F(pbft_join_leave_test, DISABLED_node_not_in_swarm_asks_to_join)
     {
         this->uuid = "somenode";
         EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true))))
@@ -495,7 +495,7 @@ namespace bzn
         this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, this->pbft->get_uuid()), this->mock_session);
     }
 
-    TEST_F(pbft_join_leave_test, existing_node_cant_join_swarm)
+    TEST_F(pbft_join_leave_test, DISABLED_existing_node_cant_join_swarm)
     {
         this->build_pbft();
 
@@ -523,7 +523,7 @@ namespace bzn
         this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, peer.uuid), this->mock_session);
     }
 
-    TEST_F(pbft_join_leave_test, node_handles_unsolicited_join_rejection)
+    TEST_F(pbft_join_leave_test, DISABLED_node_handles_unsolicited_join_rejection)
     {
         this->build_pbft();
 
