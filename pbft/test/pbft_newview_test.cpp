@@ -45,11 +45,8 @@ namespace bzn
                                                return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
                                            }));
 
-            EXPECT_CALL(*mockcrypto, verify(_))
-                    .WillRepeatedly(Invoke([&](const bzn_envelope& /*msg*/)
-                                           {
-                                               return true;
-                                           }));
+            EXPECT_CALL(*mockcrypto, sign(_)).WillRepeatedly(Return(true));
+            EXPECT_CALL(*mockcrypto, verify(_)).WillRepeatedly(Return(true));
 
             for (current_sequence=1; current_sequence < 100; ++current_sequence)
             {
