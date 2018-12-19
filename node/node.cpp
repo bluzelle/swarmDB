@@ -209,7 +209,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
                                            std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2));
                             
                             // send the message requested...
-                            session->send_message(msg, false);
+                            session->send_message(msg, true);
                         });
             });
 }
