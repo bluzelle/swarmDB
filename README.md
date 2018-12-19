@@ -17,8 +17,8 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 1. Setup a local docker-compose swarm with the instructions found [here](https://github.com/bluzelle/docker-swarm-deploy)
 2. Run `docker-compose up` in the same directory of your docker-compose.yml. This command will initialize the swarm within your local docker-machine. Full docker-compose documentation can be found [here](https://docs.docker.com/compose/)
 3. Nodes are available on localhost port 51010-51012
-4. [Connect a test websocket client](https://github.com/bluzelle/swarmDB#testing-locally) with our [websocket API](https://bluzelle.github.io/api/#websocket-api)
-5. Create a node server application using our node.js [library](https://github.com/bluzelle/bluzelle-js) and [API](https://bluzelle.github.io/api/)
+4. [Connect a test websocket client](https://github.com/bluzelle/swarmDB#testing-locally) 
+5. Create a node server application using our node.js [library](https://github.com/bluzelle/bluzelle-js)
 6. `CTRL-C` to terminate the docker-compose swarm
 
 ## Getting started building from source
