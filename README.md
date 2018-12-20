@@ -378,29 +378,94 @@ Follow instructions in readme.md
 #### Connectivity Test
 
 ```text
-$ ./crud -n localhost:50000 status
-Sending : 
-{
-    "transaction_id": 4283375944065669395, 
-    "bzn-api": "status"
-}
+$ ./crud -p -n localhost:50000 status
+
+Client: crud-script-0
+Sending: 
+sender: "crud-script-0"
+status_request: ""
+
 ------------------------------------------------------------
 
 Response: 
+
+swarm_version: "0.3.1443"
+swarm_git_commit: "0.3.1096-41-g91cef89"
+uptime: "1 days, 17 hours, 29 minutes"
+module_status_json: ... 
+pbft_enabled: true
+
+Response: 
 {
-	"bzn-api" : "status",
-	"module" : 
-	[
-		{
-			"name" : "raft",
-			"status" : 
-			{
-				"state" : "candidate"
-			}
-		}
-	],
-	"transaction_id" : 4283375944065669395,
-	"version" : "0.0.0-desk"
+    "module" : 
+    [
+        {
+            "name" : "pbft",
+            "status" : 
+            {
+                "is_primary" : false,
+                "latest_checkpoint" : 
+                {
+                    "hash" : "",
+                    "sequence_number" : 3800
+                },
+                "latest_stable_checkpoint" : 
+                {
+                    "hash" : "",
+                    "sequence_number" : 3800
+                },
+                "next_issued_sequence_number" : 1,
+                "outstanding_operations_count" : 98,
+                "peer_index" : 
+                [
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_0",
+                        "port" : 50000,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE/HIPqL97zXbPN8CW609Dddu4vSKx/xnS1sle0FTgyzaDil1UmmQkrlTsQQqpU7N/kVMbAY+/la3Rawfw6VjVpA=="
+                    },
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_1",
+                        "port" : 50001,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAELUJ3AivScRn6sfBgBsBi3I18mpOC5NZ552ma0QTFSHVdPGj98OBMhxMkyKRI6UhAeuUTDf/mCFM5EqsSRelSQw=="
+                    },
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_2",
+                        "port" : 50002,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEg+lS+GZNEOqhftj041jCjLabPrOxkkpTHSWgf6RNjyGKenwlsdYF9Xg1UH1FZCpNVkHhCLi2PZGk6EYMQDXqUg=="
+                    }
+                ],
+                "primary" : 
+                {
+                    "host" : "127.0.0.1",
+                    "host_port" : 50001,
+                    "name" : "node_1",
+                    "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAELUJ3AivScRn6sfBgBsBi3I18mpOC5NZ552ma0QTFSHVdPGj98OBMhxMkyKRI6UhAeuUTDf/mCFM5EqsSRelSQw=="
+                },
+                "unstable_checkpoints_count" : 0,
+                "view" : 1
+            }
+        }
+    ]
+}
+
+------------------------------------------------------------
+```
+
+#### Create database
+```text
+
+./crud -p -n localhost:50000 create-db -u myuuid
+
+Client: crud-script-0
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 2998754133578549919
 }
 
 ------------------------------------------------------------
@@ -409,66 +474,35 @@ Response:
 #### Create
 
 ```text
-$ ./crud -n localhost:50000 create -u myuuid -k mykey -v myvalue
-  Sending: db {
-    header {
-      db_uuid: "myuuid"
-      transaction_id: 1149205427773053859
-    }
-    create {
-      key: "mykey"
-      value: "myvalue"
-    }
-  }
+$ ./crud -p -n localhost:50000 create -u myuuid -k mykey -v myvalue
 
-  ------------------------------------------------------------
-
-  redirecting to leader at 127.0.0.1:50002...
-
-  Sending: db {
-    header {
-      db_uuid: "myuuid"
-      transaction_id: 8606810256052859786
-    }
-    create {
-      key: "mykey"
-      value: "myvalue"
-    }
-  }
-
-  ------------------------------------------------------------
-
-  Response: 
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8606810256052859786
-  }
-
-  ------------------------------------------------------------
+Client: crud-script-0
+------------------------------------------------------------
+  
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 9167923913779064632
+}
+  
+------------------------------------------------------------
 ```
 
 #### Read
 
 ```text
-$ ./crud -n localhost:50000 read -u myuuid -k mykey
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 638497919636113033
-  }
-  read {
-    key: "mykey"
-  }
-}
+$ ./crud -p -n localhost:50000 read -u myuuid -k mykey
 
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 638497919636113033
+  nonce: 1298794800698891064
 }
-resp {
+read {
+  key: "mykey"
   value: "myvalue"
 }
 
@@ -478,39 +512,15 @@ resp {
 #### Update
 
 ```text
-$ ./crud -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 7847882878681328930
-  }
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
-}
+$ ./crud -p -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
 
-------------------------------------------------------------
-
-redirecting to leader at 127.0.0.1:50002...
-
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 2491234936151888566
-  }
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
-}
-
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2491234936151888566
+  nonce: 9006453024945657757
 }
 
 ------------------------------------------------------------
@@ -519,63 +529,32 @@ header {
 #### Delete
 
 ```text
-$ ./crud -n localhost:50000 delete -u myuuid -k mykey
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8470321215009858819
-  }
-  delete {
-    key: "mykey"
-  }
-}
+$ ./crud -p -n localhost:50000 delete -u myuuid -k mykey
 
-------------------------------------------------------------
-
-redirecting to leader at 127.0.0.1:50002...
-
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8085312586421869529
-  }
-  delete {
-    key: "mykey"
-  }
-}
-
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 8085312586421869529
+  nonce: 7190311901863172254
 }
 
 ------------------------------------------------------------
 ```
+
 #### Subscribe
-```text
-$ ./crud -n localhost:50000 subscribe -u myuuid -k mykey
-Sending: 
-db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 2808384922078102053
-  }
-  subscribe {
-    key: "mykey"
-  }
-}
 
+```text
+$ ./crud -p -n localhost:50000 subscribe -u myuuid -k mykey
+
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
-}
-resp {
+  nonce: 8777225851310409007
 }
 
 ------------------------------------------------------------
@@ -585,19 +564,34 @@ Waiting....
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
+  nonce: 8777225851310409007
 }
-resp {
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
+subscription_update {
+  key: "mykey"
+  value: "myvalue"
 }
 
 ------------------------------------------------------------
 
 Waiting....
 ```
+
+#### Delete database
+```text
+./crud -p -n localhost:50000 delete-db -u myuuid
+
+Client: crud-script-0
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 1540670102065057350
+}
+
+------------------------------------------------------------
+```
+
 #### Adding or Removing A Peer
 
 Dynamically adding and removing peers is not supported in this release. This functionality will be available in a subsequent version of swarmDB.
@@ -606,14 +600,21 @@ Dynamically adding and removing peers is not supported in this release. This fun
 
 ```text
 $ ./crud --help
-usage: crud [-h] [-p] -n NODE
-            {status,create,read,update,delete,has,keys,size,subscribe} ...
+usage: crud [-h] [-p] [-i ID] -n NODE
+            {status,create-db,delete-db,has-db,writers,add-writer,remove-writer,create,read,update,delete,has,keys,size,subscribe}
+            ...
 
 crud
 
 positional arguments:
-  {status,create,read,update,delete,has,keys,size,subscribe}
+  {status,create-db,delete-db,has-db,writers,add-writer,remove-writer,create,read,update,delete,has,keys,size,subscribe}
     status              Status
+    create-db           Create database
+    delete-db           Delete database
+    has-db              Has database
+    writers             Database writers
+    add-writer          Add database writers
+    remove-writer       Remove database writers
     create              Create k/v
     read                Read k/v
     update              Update k/v
@@ -626,7 +627,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p, --use_pbft        Direct message to pbft instead of raft
+  -i ID, --id ID        Crud script sender id (default 0)
 
 required arguments:
   -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
-```

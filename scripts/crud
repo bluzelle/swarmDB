@@ -315,7 +315,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-p", "--use_pbft", action="store_true", help="Direct message to pbft instead of raft")
 
-    parser.add_argument("-i", "--id", type=str, default="0", help="Crud script sender id", required=False)
+    parser.add_argument("-i", "--id", type=str, default="0", help="Crud script sender id (default 0)", required=False)
 
     required = parser.add_argument_group('required arguments')
 
@@ -440,7 +440,7 @@ if __name__ == "__main__":
         pass
 
     CRUD_SCRIPT_SENDER_ID += "-" + args.id
-    print("Client: " + CRUD_SCRIPT_SENDER_ID)
+    print("\nClient: " + CRUD_SCRIPT_SENDER_ID)
 
     resp = args.func(args)
 
