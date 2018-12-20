@@ -71,7 +71,7 @@ This will result in a custom Boost install at `~/myboost/1_68_0/`that will not o
 
 ```text
 $ mkdir -p ~/mycmake
-$ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
+$ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
 ```
 
 Again, this will result in a custom cmake install into `~/mycmake/` and will not overwrite your system's cmake.
@@ -118,7 +118,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
+$ ~/mycmake/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
