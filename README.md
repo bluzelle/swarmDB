@@ -118,7 +118,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
+$ ~/mycmake/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
