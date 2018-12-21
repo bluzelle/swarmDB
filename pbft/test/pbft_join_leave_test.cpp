@@ -111,7 +111,7 @@ namespace bzn
             {
                 EXPECT_CALL(*(mock_node),
                     send_message(bzn::make_endpoint(p),
-                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
+                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE)), _))
                     .Times(Exactly(1));
             }
 
@@ -198,7 +198,7 @@ namespace bzn
             EXPECT_CALL(*(this->mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
-                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
                 .Times(Exactly(1));
         }
 
@@ -227,7 +227,7 @@ namespace bzn
             EXPECT_CALL(*(this->mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
-                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
                 .Times(Exactly(1));
         }
 
@@ -301,7 +301,7 @@ namespace bzn
             EXPECT_CALL(*(mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
-                        message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
+                        message_has_correct_pbft_type(PBFT_MSG_COMMIT)), _))
                 .Times(Exactly(1));
         }
 
@@ -340,7 +340,7 @@ namespace bzn
             EXPECT_CALL(*(mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
-                        message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
+                        message_has_correct_pbft_type(PBFT_MSG_COMMIT)), _))
                 .Times(Exactly(1));
         }
 
@@ -394,9 +394,9 @@ namespace bzn
     TEST_F(pbft_join_leave_test, DISABLED_node_not_in_swarm_asks_to_join)
     {
         this->uuid = "somenode";
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true)), _))
             .Times(Exactly(1))
-            .WillOnce(Invoke([&](auto, auto)
+            .WillOnce(Invoke([&](auto, auto, bool /*close_session*/)
             {
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
@@ -409,7 +409,7 @@ namespace bzn
 
     TEST_F(pbft_join_leave_test, node_in_swarm_doesnt_ask_to_join)
     {
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true)), _))
             .Times(Exactly(0));
         this->build_pbft();
     }
@@ -422,9 +422,9 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true))))
+                send_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true)), _))
                 .Times(Exactly(1))
-                .WillOnce(Invoke([&](auto, auto &envelope)
+                .WillOnce(Invoke([&](auto, auto &envelope, bool /*close_session*/)
                 {
                     pbft_msg msg;
                     EXPECT_TRUE(msg.ParseFromString(envelope->pbft()));
@@ -432,7 +432,7 @@ namespace bzn
                     if (p.uuid == TEST_NODE_UUID)
                     {
                         EXPECT_CALL(*(mock_node),
-                            send_message(_, ResultOf(test::is_prepare, Eq(true))))
+                            send_message(_, ResultOf(test::is_prepare, Eq(true)), _))
                             .Times(Exactly(TEST_PEER_LIST.size()));
 
                         // reflect the pre-prepare back
@@ -455,9 +455,9 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true))))
+                send_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true)), _))
                 .Times(Exactly(1))
-                .WillOnce(Invoke([&](auto, auto &wmsg)
+                .WillOnce(Invoke([&](auto, auto &wmsg, bool /*close_session*/)
                 {
                     pbft_msg msg;
                     EXPECT_TRUE(msg.ParseFromString(wmsg->pbft()));
