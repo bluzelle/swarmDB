@@ -165,12 +165,12 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 }
 
 void
-node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
+node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg, bool close_session)
 {
     if (this->chaos->is_message_delayed())
     {
         const boost::asio::ip::tcp::endpoint ep_copy = ep;
-        this->chaos->reschedule_message(std::bind(&node::send_message_str, shared_from_this(), std::move(ep_copy), std::move(msg)));
+        this->chaos->reschedule_message(std::bind(&node::send_message_str, shared_from_this(), std::move(ep_copy), std::move(msg), close_session));
         return;
     }
 
@@ -182,7 +182,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
     std::shared_ptr<bzn::asio::tcp_socket_base> socket = this->io_context->make_unique_tcp_socket();
 
     socket->async_connect(ep,
-            [self = shared_from_this(), socket, ep, msg](const boost::system::error_code& ec)
+            [self = shared_from_this(), socket, ep, msg, close_session](const boost::system::error_code& ec)
             {
                 if (ec)
                 {
@@ -195,7 +195,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
                 std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(socket->get_tcp_socket());
 
                 ws->async_handshake(ep.address().to_string(), "/",
-                        [self, ws, msg](const boost::system::error_code& ec)
+                        [self, ws, msg, close_session](const boost::system::error_code& ec)
                         {
                             if (ec)
                             {
@@ -209,7 +209,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
                                            std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2));
                             
                             // send the message requested...
-                            session->send_message(msg, true);
+                            session->send_message(msg, close_session);
                         });
             });
 }
@@ -217,11 +217,11 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
 void
 node::send_message_json(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg)
 {
-    this->send_message_str(ep, std::make_shared<bzn::encoded_message>(msg->toStyledString()));
+    this->send_message_str(ep, std::make_shared<bzn::encoded_message>(msg->toStyledString()), true);
 }
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
+node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg, bool close_session)
 {
     if(msg->sender().empty())
     {
@@ -233,5 +233,5 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
         this->crypto->sign(*msg);
     }
 
-    this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()));
+    this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()), close_session);
 }

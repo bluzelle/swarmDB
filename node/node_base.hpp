@@ -60,15 +60,17 @@ namespace bzn
          * signature fields, if not already set.
          * @param ep            host to send the message to
          * @param msg           message to send
+         * @param close_session don't expect a response on this session
          */
-        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) = 0;
+        virtual void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg, bool close_session) = 0;
 
         /**
          * Convenience method to connect and send a message to a node. Will set sender and signature fields as appropriate.
          * @param ep            host to send the message to
          * @param msg           message to send
+         * @param close_session don't expect a response on this session
          */
-        virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) = 0;
+        virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg, bool close_session) = 0;
     };
 
 } // bzn
