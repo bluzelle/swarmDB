@@ -71,7 +71,7 @@ This will result in a custom Boost install at `~/myboost/1_68_0/`that will not o
 
 ```text
 $ mkdir -p ~/mycmake
-$ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Darwin-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
+$ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
 ```
 
 Again, this will result in a custom cmake install into `~/mycmake/` and will not overwrite your system's cmake.
@@ -118,7 +118,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
+$ ~/mycmake/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
 $ sudo make install
 ```
 
@@ -301,29 +301,94 @@ Follow instructions in readme.md
 #### Connectivity Test
 
 ```text
-$ ./crud -n localhost:50000 status
-Sending : 
-{
-    "transaction_id": 4283375944065669395, 
-    "bzn-api": "status"
-}
+$ ./crud -p -n localhost:50000 status
+
+Client: crud-script-0
+Sending: 
+sender: "crud-script-0"
+status_request: ""
+
 ------------------------------------------------------------
 
 Response: 
+
+swarm_version: "0.3.1443"
+swarm_git_commit: "0.3.1096-41-g91cef89"
+uptime: "1 days, 17 hours, 29 minutes"
+module_status_json: ... 
+pbft_enabled: true
+
+Response: 
 {
-	"bzn-api" : "status",
-	"module" : 
-	[
-		{
-			"name" : "raft",
-			"status" : 
-			{
-				"state" : "candidate"
-			}
-		}
-	],
-	"transaction_id" : 4283375944065669395,
-	"version" : "0.0.0-desk"
+    "module" : 
+    [
+        {
+            "name" : "pbft",
+            "status" : 
+            {
+                "is_primary" : false,
+                "latest_checkpoint" : 
+                {
+                    "hash" : "",
+                    "sequence_number" : 3800
+                },
+                "latest_stable_checkpoint" : 
+                {
+                    "hash" : "",
+                    "sequence_number" : 3800
+                },
+                "next_issued_sequence_number" : 1,
+                "outstanding_operations_count" : 98,
+                "peer_index" : 
+                [
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_0",
+                        "port" : 50000,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE/HIPqL97zXbPN8CW609Dddu4vSKx/xnS1sle0FTgyzaDil1UmmQkrlTsQQqpU7N/kVMbAY+/la3Rawfw6VjVpA=="
+                    },
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_1",
+                        "port" : 50001,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAELUJ3AivScRn6sfBgBsBi3I18mpOC5NZ552ma0QTFSHVdPGj98OBMhxMkyKRI6UhAeuUTDf/mCFM5EqsSRelSQw=="
+                    },
+                    {
+                        "host" : "127.0.0.1",
+                        "name" : "node_2",
+                        "port" : 50002,
+                        "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEg+lS+GZNEOqhftj041jCjLabPrOxkkpTHSWgf6RNjyGKenwlsdYF9Xg1UH1FZCpNVkHhCLi2PZGk6EYMQDXqUg=="
+                    }
+                ],
+                "primary" : 
+                {
+                    "host" : "127.0.0.1",
+                    "host_port" : 50001,
+                    "name" : "node_1",
+                    "uuid" : "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAELUJ3AivScRn6sfBgBsBi3I18mpOC5NZ552ma0QTFSHVdPGj98OBMhxMkyKRI6UhAeuUTDf/mCFM5EqsSRelSQw=="
+                },
+                "unstable_checkpoints_count" : 0,
+                "view" : 1
+            }
+        }
+    ]
+}
+
+------------------------------------------------------------
+```
+
+#### Create database
+```text
+
+./crud -p -n localhost:50000 create-db -u myuuid
+
+Client: crud-script-0
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 2998754133578549919
 }
 
 ------------------------------------------------------------
@@ -332,66 +397,35 @@ Response:
 #### Create
 
 ```text
-$ ./crud -n localhost:50000 create -u myuuid -k mykey -v myvalue
-  Sending: db {
-    header {
-      db_uuid: "myuuid"
-      transaction_id: 1149205427773053859
-    }
-    create {
-      key: "mykey"
-      value: "myvalue"
-    }
-  }
+$ ./crud -p -n localhost:50000 create -u myuuid -k mykey -v myvalue
 
-  ------------------------------------------------------------
-
-  redirecting to leader at 127.0.0.1:50002...
-
-  Sending: db {
-    header {
-      db_uuid: "myuuid"
-      transaction_id: 8606810256052859786
-    }
-    create {
-      key: "mykey"
-      value: "myvalue"
-    }
-  }
-
-  ------------------------------------------------------------
-
-  Response: 
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8606810256052859786
-  }
-
-  ------------------------------------------------------------
+Client: crud-script-0
+------------------------------------------------------------
+  
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 9167923913779064632
+}
+  
+------------------------------------------------------------
 ```
 
 #### Read
 
 ```text
-$ ./crud -n localhost:50000 read -u myuuid -k mykey
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 638497919636113033
-  }
-  read {
-    key: "mykey"
-  }
-}
+$ ./crud -p -n localhost:50000 read -u myuuid -k mykey
 
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 638497919636113033
+  nonce: 1298794800698891064
 }
-resp {
+read {
+  key: "mykey"
   value: "myvalue"
 }
 
@@ -401,39 +435,15 @@ resp {
 #### Update
 
 ```text
-$ ./crud -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 7847882878681328930
-  }
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
-}
+$ ./crud -p -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
 
-------------------------------------------------------------
-
-redirecting to leader at 127.0.0.1:50002...
-
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 2491234936151888566
-  }
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
-}
-
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2491234936151888566
+  nonce: 9006453024945657757
 }
 
 ------------------------------------------------------------
@@ -442,63 +452,32 @@ header {
 #### Delete
 
 ```text
-$ ./crud -n localhost:50000 delete -u myuuid -k mykey
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8470321215009858819
-  }
-  delete {
-    key: "mykey"
-  }
-}
+$ ./crud -p -n localhost:50000 delete -u myuuid -k mykey
 
-------------------------------------------------------------
-
-redirecting to leader at 127.0.0.1:50002...
-
-Sending: db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 8085312586421869529
-  }
-  delete {
-    key: "mykey"
-  }
-}
-
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 8085312586421869529
+  nonce: 7190311901863172254
 }
 
 ------------------------------------------------------------
 ```
+
 #### Subscribe
-```text
-$ ./crud -n localhost:50000 subscribe -u myuuid -k mykey
-Sending: 
-db {
-  header {
-    db_uuid: "myuuid"
-    transaction_id: 2808384922078102053
-  }
-  subscribe {
-    key: "mykey"
-  }
-}
 
+```text
+$ ./crud -p -n localhost:50000 subscribe -u myuuid -k mykey
+
+Client: crud-script-0
 ------------------------------------------------------------
 
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
-}
-resp {
+  nonce: 8777225851310409007
 }
 
 ------------------------------------------------------------
@@ -508,179 +487,57 @@ Waiting....
 Response: 
 header {
   db_uuid: "myuuid"
-  transaction_id: 2808384922078102053
+  nonce: 8777225851310409007
 }
-resp {
-  update {
-    key: "mykey"
-    value: "mynewvalue"
-  }
+subscription_update {
+  key: "mykey"
+  value: "myvalue"
 }
 
 ------------------------------------------------------------
 
 Waiting....
 ```
+
+#### Delete database
+```text
+./crud -p -n localhost:50000 delete-db -u myuuid
+
+Client: crud-script-0
+------------------------------------------------------------
+
+Response: 
+header {
+  db_uuid: "myuuid"
+  nonce: 1540670102065057350
+}
+
+------------------------------------------------------------
+```
+
 #### Adding or Removing A Peer
 
-Please note that RAFT nodes automatically add themselves to a RAFT swarm on 
-start up. 
-
-The node will first attempt to determine if it is a member of the swarm described 
-in the bootstrap file, and if it finds that it is not, it will automatically send 
-the add_peer request to the leader.
-
-If the RAFT node has peer_validation_enabled set to true, a valid signed_key for the 
-node must be set in the configuration file:
-
-        "peer_validation_enabled" : false 
-        "signed_key": "LjMrLq8pw3 <...> +QbThXaQ="
-        
-the signed key can be obtaied from a Bluzelle representative.  
-
-```text
-Nodes are added to, or removed from, the network with the add_peer and
-remove_peer commands, sent to a leader via WebSocket protocol with the
-following JSON objects:
-
-    Adding a peer:
-
-    {
-        "bzn-api":"raft",
-        "cmd":"add_peer",
-        "data":{
-            "peer":{
-                "host":"<HOST-URL>",
-                "http_port":<HTTPPORT>,
-                "name":"<NODE-NAME>",
-                "port":<PORT>,
-                "uuid":"<UUID>",
-                "signature" : "<signature>"
-            }
-        }
-    }
-
-    The "name" object, <NODE-NAME>, can be a human readable name for the node, "Fluffy" for example.
-    The "uuid" object must be a universally unique identifer that uniquely identifies the node within the swarm, or any
-    other swarm. This value can be generated online at a site like: https://www.uuidgenerator.net/
-    The "signature" object is a signature string associated with your node's UUID provided by a Bluzelle representative. 
-      
-    Remove an existing peer:
-
-    {
-        "bzn-api":"raft",
-        "cmd":"remove_peer",
-        "data":{
-            "uuid":"<UUID>"
-        }
-    }
-
-Given a swarm of nodes, a new node can be added via the command line with a
-WebSocket client such as wscat (https://www.npmjs.com/package/wscat).
-
-If the swarm has security enabled, before a new node can participate in a swarm 
-it must be validated by the leader against a cryptographic signature. You can 
-obtain this signature by providing the nodes' UUID to a Bluzelle representative 
-who will cryptographically sign the UUID and send you a signature file whose 
-contents must be included in the add_peer command to be sent to the swarm leader.
-
-Start the node that you want to add to the swarm, remember that the local peers
-list must include the information for the local node for your node to be able
-to start. When your node does start, it will not be able to participate in the
-swarm until you add it to the swarm.
-
-Create your add_peer JSON object, and use wscat to send it to the swarm leader,
-note that the signature object is only required for swarms whose nodes have set
-the peer_validation_enabled object to true in thier config files:
-
-    $ wscat -c  http://<leader-address>:<port>
-    connected (press CTRL+C to quit)
-    >{"bzn-api":"raft","cmd":"add_peer","data":{"peer":{"host":"104.25.178.61","http_port":84,"name":"peer3","port":49154,"uuid":"7dda1fcb-d494-4fc1-8645-a14056d13afd","signature":"Dprtbr<...>4vk="}}}
-    >
-    disconnected
-    $
-
-the leader will validate the new node, and if successful, add the new node 
-to the swarm.
-
-To remove the node, create a remove_peer JSON object, and use wscat to send it
-to the swarm leader:
-
-    $ wscat -c  http://<leader-address>:<port>
-    connected (press CTRL+C to quit)
-    >{"bzn-api" : "raft", "cmd" : "remove_peer", "data" : { "uuid" : "7dda1fcb-d494-4fc1-8645-a14056d13afd" }}
-    >
-    disconnected
-    $
-
-and the node will be removed from the peer list.
-```
-
-#### Get the List of Peers from the Leader
-
-The active peers in the swarm can be obtained by sending a "get_peers" 
-WebSocket command to the leader. To perform this command create a JSON 
-command object and send it via wscat:
-
-    $ wscat -c http://<leader_address>:port
-    connected (press CTRL+C to quit)
-    >{"bzn-api" : "raft", "cmd" : "get_peers"}
-    >
-
-and the response will look like:
-
-    {
-        "message" :
-        [
-            {
-                "host" : "127.0.0.1",
-                "http_port" : 9082,
-                "name" : "peer0",
-                "port" : 49152,
-                "uuid" : "2e34a07f-fd6d-4575-927e-f83a9edd1866"
-            },
-            {
-                "host" : "127.0.0.1",
-                "http_port" : 9083,
-                "name" : "peer1",
-                "port" : 49153,
-                "uuid" : "a05809a3-0b77-4881-8fa7-b0e0e2ee9107"
-            }
-        ]
-    }
-
-If you send the request to a follower, the response will be:
-
-    {
-        "error" : "ERROR_GET_PEERS_MUST_BE_SENT_TO_LEADER",
-        "message" :
-        {
-            "leader" :
-            {
-                "host" : "127.0.0.1",
-                "http_port" : 9082,
-                "name" : "peer0",
-                "port" : 49152,
-                "uuid" : "2e34a07f-fd6d-4575-927e-f83a9edd1866"
-            }
-        }
-    }
-
-and you can resend the request to the leader.
-
+Dynamically adding and removing peers is not supported in this release. This functionality will be available in a subsequent version of swarmDB.
 
 #### Help & Options
 
 ```text
 $ ./crud --help
-usage: crud [-h] [-p] -n NODE
-            {status,create,read,update,delete,has,keys,size,subscribe} ...
+usage: crud [-h] [-p] [-i ID] -n NODE
+            {status,create-db,delete-db,has-db,writers,add-writer,remove-writer,create,read,update,delete,has,keys,size,subscribe}
+            ...
 
 crud
 
 positional arguments:
-  {status,create,read,update,delete,has,keys,size,subscribe}
+  {status,create-db,delete-db,has-db,writers,add-writer,remove-writer,create,read,update,delete,has,keys,size,subscribe}
     status              Status
+    create-db           Create database
+    delete-db           Delete database
+    has-db              Has database
+    writers             Database writers
+    add-writer          Add database writers
+    remove-writer       Remove database writers
     create              Create k/v
     read                Read k/v
     update              Update k/v
@@ -693,7 +550,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p, --use_pbft        Direct message to pbft instead of raft
+  -i ID, --id ID        Crud script sender id (default 0)
 
 required arguments:
   -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
-```
