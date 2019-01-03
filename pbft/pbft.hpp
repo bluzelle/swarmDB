@@ -34,6 +34,7 @@
 namespace
 {
     const std::chrono::milliseconds HEARTBEAT_INTERVAL{std::chrono::milliseconds(5000)};
+    const std::chrono::seconds NEW_CONFIG_INTERVAL{std::chrono::seconds(30)};
     const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
@@ -152,6 +153,7 @@ namespace bzn
         void broadcast(const bzn_envelope& message);
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
+        void handle_new_config_timeout(const boost::system::error_code& ec);
 
         void notify_audit_failure_detected();
 
@@ -174,9 +176,11 @@ namespace bzn
         const std::vector<bzn::peer_address_t>& current_peers() const;
         const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config);
-        bool is_configuration_acceptable_in_new_view(hash_t config_hash);
-        bool move_to_new_configuration(hash_t config_hash);
+        bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
+        bool move_to_new_configuration(const hash_t& config_hash);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
+        bool adopt_config_from_viewchange(const std::map<uuid_t, bzn_envelope>& viewchange_envelopes);
+        bool validate_config_in_newview(const pbft_msg& msg);
 
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 
@@ -186,7 +190,7 @@ namespace bzn
 
         void join_swarm();
         // VIEWCHANGE/NEWVIEW Helper methods
-        static pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
+        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         std::pair<pbft_msg, uint64_t> build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
@@ -220,9 +224,12 @@ namespace bzn
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
 
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
+        std::unique_ptr<bzn::asio::steady_timer_base> new_config_timer;
 
         bool audit_enabled = true;
-        bool in_swarm = false;
+
+        enum class swarm_status {not_joined, joining, waiting, joined};
+        swarm_status in_swarm = swarm_status::not_joined;
 
         checkpoint_t stable_checkpoint{0, INITIAL_CHECKPOINT_HASH};
 
@@ -246,15 +253,6 @@ namespace bzn
         std::shared_ptr<bzn_envelope> saved_newview;
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
-
-        FRIEND_TEST(pbft_test, join_request_generates_new_config_preprepare);
-        FRIEND_TEST(pbft_test, valid_leave_request_test);
-        FRIEND_TEST(pbft_test, invalid_leave_request_test);
-        FRIEND_TEST(pbft_test, test_new_config_preprepare_handling);
-        FRIEND_TEST(pbft_test, test_new_config_prepare_handling);
-        FRIEND_TEST(pbft_test, test_new_config_commit_handling);
-        FRIEND_TEST(pbft_test, test_move_to_new_config);
-        FRIEND_TEST(pbft_test, full_test);
 
         FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);
