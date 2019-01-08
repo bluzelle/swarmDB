@@ -739,14 +739,10 @@ pbft::handle_new_config_timeout(const boost::system::error_code& ec)
     }
 
     // send viewchange with new config
-    // TODO: should the current view be invalidated?
     auto config = this->configurations.newest();
     if (config)
     {
-        this->view_is_valid = false;
-        auto view_change = pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first
-            , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first));
-        this->broadcast(this->wrap_message(view_change));
+        this->initiate_viewchange();
     }
     else
     {
@@ -832,9 +828,15 @@ pbft::handle_failure()
     LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: " << this->view + 1;
     this->notify_audit_failure_detected();
     this->new_config_timer->cancel();
+    this->initiate_viewchange();
+}
+
+void
+pbft::initiate_viewchange()
+{
     this->view_is_valid = false;
-    auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
-    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
+    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first
+        , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first))};
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1338,8 +1340,10 @@ pbft::make_newview(
     pbft_msg newview;
     newview.set_type(PBFT_MSG_NEWVIEW);
     newview.set_view(new_view_index);
-    newview.set_config_hash(this->configurations.current()->get_hash());
-    newview.set_config(this->configurations.current()->to_string());
+
+    //  new view always uses our latest prepared configuration
+    newview.set_config_hash(this->configurations.newest()->get_hash());
+    newview.set_config(this->configurations.newest()->to_string());
 
     // V is the set of 2f+1 view change messages
     for (const auto &sender_viewchange_envelope: viewchange_envelopes_from_senders)
@@ -1445,10 +1449,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
-        auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
-        pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
-        this->broadcast(this->wrap_message(viewchange_message));
-        this->view_is_valid = false;
+        this->initiate_viewchange();
     }
 
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin(),
@@ -1472,17 +1473,9 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-    // figure out which config to use. As primary we need to switch to the new config now so
-    // we send newview message to any new nodes.
-    // note - this isn't optimal, we're parsing all these messages multiple times.
-    if (!adopt_config_from_viewchange(viewchange_envelopes_from_senders))
-    {
-        LOG (error) << "No valid configuration for new view, aborting...";
-        return;
-    }
-
     auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
     this->next_issued_sequence_number = res.second;
+    this->move_to_new_configuration(this->configurations.newest()->get_hash());
     this->broadcast(this->wrap_message(res.first));
 }
 
@@ -1510,6 +1503,8 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         this->configurations.enable(hash);
 
         // we need to switch to this configuration now so we have the peer info to validate the message
+        // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
+        // can't really trust this. We need to get the config from an external source.
         this->move_to_new_configuration(hash);
 
         if (!this->is_valid_newview_message(msg, original_msg))
@@ -1713,47 +1708,6 @@ pbft::move_to_new_configuration(const hash_t& config_hash)
 bool
 pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* config */)
 {
-    return true;
-}
-
-bool
-pbft::adopt_config_from_viewchange(const std::map<uuid_t, bzn_envelope>& viewchange_envelopes)
-{
-    std::map<bzn::hash_t, size_t> config_hashes;
-
-    for (const auto &viewchange_envelope : viewchange_envelopes)
-    {
-        pbft_msg viewchange_message;
-        viewchange_message.ParseFromString(viewchange_envelope.second.pbft());
-
-        // accumulate this viewchange's "vote" for the config to use
-        (config_hashes.insert(std::make_pair(viewchange_message.config_hash(), 0))).first->second++;
-    }
-
-    auto config_it = std::find_if(config_hashes.begin(), config_hashes.end(), [this](auto& config)
-    {
-        return config.second >= 2 * this->max_faulty_nodes() + 1;
-    });
-
-    if (config_it == config_hashes.end())
-    {
-        LOG (error) << "viewchange messages do not have a consensus on which configuration to use";
-        return false;
-    }
-
-    if (this->configurations.get(config_it->first) == nullptr || !this->configurations.is_enabled(config_it->first))
-    {
-        LOG (error) << "requested view configuration is not available";
-        return false;
-    }
-
-    auto new_config = config_it->first;
-    if (!this->is_configuration_acceptable_in_new_view(new_config) || !this->move_to_new_configuration(new_config))
-    {
-        LOG (error) << "Unable to switch to new view configuration";
-        return false;
-    }
-
     return true;
 }
 

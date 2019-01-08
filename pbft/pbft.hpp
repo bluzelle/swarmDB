@@ -179,7 +179,6 @@ namespace bzn
         bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
         bool move_to_new_configuration(const hash_t& config_hash);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
-        bool adopt_config_from_viewchange(const std::map<uuid_t, bzn_envelope>& viewchange_envelopes);
         bool validate_config_in_newview(const pbft_msg& msg);
 
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
@@ -189,7 +188,9 @@ namespace bzn
         void saw_request(const bzn_envelope& msg, const request_hash_t& hash);
 
         void join_swarm();
+
         // VIEWCHANGE/NEWVIEW Helper methods
+        void initiate_viewchange();
         pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         std::pair<pbft_msg, uint64_t> build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
