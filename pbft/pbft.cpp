@@ -188,7 +188,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
                 this->forward_request_to_primary(msg);
                 return;
             }
-            this->handle_join_or_leave(inner_msg, session);
+            this->handle_join_or_leave(inner_msg, session, hash);
             break;
         case PBFT_MMSG_GET_STATE:
             this->handle_get_state(inner_msg, std::move(session));
@@ -408,7 +408,8 @@ pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 }
 
 void
-pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session)
+pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session
+    , const std::string& msg_hash)
 {
     if (msg.has_peer_info())
     {
@@ -447,7 +448,7 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::
         }
 
         this->configurations.add(config);
-        this->broadcast_new_configuration(config);
+        this->broadcast_new_configuration(config, msg.type() == PBFT_MMSG_JOIN ? msg_hash : "");
     }
     else
     {
@@ -663,17 +664,22 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         }
 
         // send response to new node
-        auto session = op->session();
-        if (session && session->is_open())
+        auto session_it = this->sessions_waiting_on_forwarded_requests.find(op->get_config_request().join_request_hash());
+        if (session_it != this->sessions_waiting_on_forwarded_requests.end())
         {
-            pbft_membership_msg response;
-            response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-            response.set_result(true);
-            auto env = this->wrap_message(response);
-            session->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+            if (session_it->second->is_open())
+            {
+                pbft_membership_msg response;
+                response.set_type(PBFT_MMSG_JOIN_RESPONSE);
+                response.set_result(true);
+                auto env = this->wrap_message(response);
+                session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
 
-            // TODO: start timer for sending viewchange KEP-825
+                // TODO: start timer for sending viewchange KEP-825
 
+            }
+
+            this->sessions_waiting_on_forwarded_requests.erase(session_it);
         }
         else
         {
@@ -1559,10 +1565,11 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 }
 
 void
-pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
+pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash)
 {
     auto cfg_msg = new pbft_config_msg;
     cfg_msg->set_configuration(config->to_string());
+    cfg_msg->set_join_request_hash(join_request_hash);
     bzn_envelope req;
     req.set_pbft_internal_request(cfg_msg->SerializeAsString());
 
@@ -1700,10 +1707,10 @@ pbft::join_swarm()
     // are we already in the peers list?
     if (this->is_peer(this->uuid))
     {
+        this->in_swarm = true;
         return;
     }
 
-#if 0 // disabling dynamic peering for now
     auto info = new pbft_peer_info;
     info->set_host(this->options->get_listener().address().to_string());
     info->set_port(this->options->get_listener().port());
@@ -1724,9 +1731,5 @@ pbft::join_swarm()
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
     this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr, false);
 
-    // TODO: set timer and retry with different peer if we don't get a response
-#else
-    LOG(fatal) << "This node is not a member of the swarm, exiting.";
-    throw std::runtime_error("This node is not a member of the swarm, exiting.");
-#endif
+    // TODO: set timer and retry with different peer if we don't get a response - KEP-980
 }

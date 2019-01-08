@@ -124,7 +124,7 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session, const std::string& msg_hash);
         void handle_join_response(const pbft_membership_msg& msg);
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
@@ -173,7 +173,7 @@ namespace bzn
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
         const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
-        void broadcast_new_configuration(pbft_configuration::shared_const_ptr config);
+        void broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash);
         bool is_configuration_acceptable_in_new_view(hash_t config_hash);
         bool move_to_new_configuration(hash_t config_hash);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);

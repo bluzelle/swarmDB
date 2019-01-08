@@ -57,6 +57,7 @@ message pbft_config_msg
 {
     // for new_config
     string configuration = 1;
+    bytes join_request_hash = 2;
 }
 
 enum pbft_msg_type
