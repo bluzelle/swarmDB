@@ -75,6 +75,29 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
 }
 
 
+bool
+database_pbft_service::apply_operation_now(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
+{
+    if (msg.payload_case() == bzn_envelope::kDatabaseMsg)
+    {
+        database_msg db_msg;
+
+        db_msg.ParseFromString(msg.database_msg());
+
+        if (db_msg.msg_case() == database_msg::kQuickRead)
+        {
+            LOG(debug) << "handling quick read";
+
+            this->crud->handle_request(msg.sender(), db_msg, std::move(session));
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 void
 database_pbft_service::process_awaiting_operations()
 {

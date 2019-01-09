@@ -187,8 +187,42 @@ TEST(crud, test_that_read_sends_proper_response)
 
     crud.handle_request("caller_id", msg, session);
 
+    // quick read key...
+    msg.release_read();
+    msg.mutable_quick_read()->set_key("key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kRead);
+            ASSERT_EQ(resp.read().key(), "key");
+            ASSERT_EQ(resp.read().value(), "value");
+        }));
+
+    crud.handle_request("caller_id", msg, session);
+
     // read invalid key...
+    msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
+    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
+        [&](auto msg, auto)
+        {
+            database_response resp;
+            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
+            ASSERT_EQ(resp.header().db_uuid(), "uuid");
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
+        }));
+
+    crud.handle_request("caller_id", msg, session);
+
+    // quick read invalid key...
+    msg.release_read();
+    msg.mutable_quick_read()->set_key("invalid-key");
     EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>(), false)).WillOnce(Invoke(
         [&](auto msg, auto)
         {

@@ -990,7 +990,11 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
     }
 
     LOG(debug) << "got database message";
-    this->handle_request(mutable_msg, session);
+
+    if (!this->service->apply_operation_now(msg, session))
+    {
+        this->handle_request(mutable_msg, session);
+    }
 }
 
 uint64_t

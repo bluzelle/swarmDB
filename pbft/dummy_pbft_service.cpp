@@ -47,6 +47,12 @@ dummy_pbft_service::apply_operation(const std::shared_ptr<pbft_operation>& op)
     }
 }
 
+bool
+dummy_pbft_service::apply_operation_now(const bzn_envelope& /*msg*/, std::shared_ptr<bzn::session_base> /*session*/)
+{
+    return false;
+}
+
 void
 dummy_pbft_service::consolidate_log(uint64_t sequence_number)
 {
