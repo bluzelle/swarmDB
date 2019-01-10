@@ -179,7 +179,6 @@ namespace bzn
         bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
         bool move_to_new_configuration(const hash_t& config_hash);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
-        bool validate_config_in_newview(const pbft_msg& msg);
 
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
 

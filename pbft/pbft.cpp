@@ -1485,12 +1485,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     // are we just now joining the swarm?
     if (this->in_swarm == swarm_status::waiting)
     {
-        if (!validate_config_in_newview(msg))
-        {
-            LOG(debug) << "newview received with unsubstantiated configuration";
-            return;
-        }
-
         auto newconfig = std::make_shared<pbft_configuration>();
         if (!newconfig->from_string(msg.config()))
         {
@@ -1671,7 +1665,7 @@ pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
 bool
 pbft::is_configuration_acceptable_in_new_view(const hash_t& config_hash)
 {
-    return this->configurations.is_enabled(config_hash);
+    return this->configurations.get(config_hash) != nullptr;
 }
 
 void
@@ -1695,37 +1689,16 @@ pbft::move_to_new_configuration(const hash_t& config_hash)
     if (this->configurations.current()->get_hash() == config_hash)
         return true;
 
-    if (this->configurations.is_enabled(config_hash))
-    {
-        this->configurations.set_current(config_hash);
-        this->configurations.remove_prior_to(config_hash);
-        return true;
-    }
-
-    return false;
+    assert(this->configurations.get(config_hash) != nullptr);
+    this->configurations.set_current(config_hash);
+    this->configurations.remove_prior_to(config_hash);
+    return true;
 }
 
 bool
 pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /* config */)
 {
     return true;
-}
-
-bool
-pbft::validate_config_in_newview(const pbft_msg& msg)
-{
-    size_t match_count = 0;
-    for (int i = 0; i < msg.viewchange_messages_size(); i++)
-    {
-        pbft_msg viewchange;
-        if (viewchange.ParseFromString(msg.viewchange_messages(i).pbft()) &&
-            viewchange.config_hash() == msg.config_hash())
-        {
-            match_count++;
-        }
-    }
-
-    return match_count >= this->honest_majority_size(msg.viewchange_messages_size());
 }
 
 timestamp_t
