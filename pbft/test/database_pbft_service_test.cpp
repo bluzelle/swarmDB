@@ -120,6 +120,45 @@ TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_ope
 }
 
 
+TEST(database_pbft_service, test_that_apply_operation_now_is_handled)
+{
+    auto mem_storage = std::make_shared<bzn::mem_storage>();
+    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+    auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+
+    bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
+
+    // requires pbft...
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid(TEST_UUID);
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_create()->set_key("key2");
+        msg.mutable_create()->set_value("value2");
+
+        bzn_envelope env;
+        env.set_database_msg(msg.SerializeAsString());
+
+        ASSERT_FALSE(dps.apply_operation_now(env, nullptr));
+    }
+
+    // bypass pbft using quick read...
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid(TEST_UUID);
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_quick_read()->set_key("key2");
+
+        bzn_envelope env;
+        env.set_database_msg(msg.SerializeAsString());
+
+        EXPECT_CALL(*mock_crud, handle_request(_,_,_));
+
+        ASSERT_TRUE(dps.apply_operation_now(env, nullptr));
+    }
+}
+
+
 TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_registered_handler_is_scheduled)
 {
     auto mem_storage = std::make_shared<bzn::mem_storage>();

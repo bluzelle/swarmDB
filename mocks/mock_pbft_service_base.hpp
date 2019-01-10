@@ -32,6 +32,8 @@ namespace bzn {
           void(bzn::execute_handler_t handler));
       MOCK_METHOD1(apply_operation,
           void(const std::shared_ptr<pbft_operation>&));
+      MOCK_METHOD2(apply_operation_now,
+          bool(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session));
       MOCK_CONST_METHOD1(get_service_state,
           std::shared_ptr<bzn::service_state_t>(uint64_t sequence_number));
       MOCK_METHOD2(set_service_state,

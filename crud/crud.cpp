@@ -45,7 +45,8 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
                  {database_msg::kHasDb,         std::bind(&crud::handle_has_db,         this, _1, _2, _3)},
                  {database_msg::kWriters,       std::bind(&crud::handle_writers,        this, _1, _2, _3)},
                  {database_msg::kAddWriters,    std::bind(&crud::handle_add_writers,    this, _1, _2, _3)},
-                 {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)}}
+                 {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)},
+                 {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)}}
 {
 }
 
@@ -148,13 +149,15 @@ crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
     {
         std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        const auto result = this->storage->read(request.header().db_uuid(), request.read().key());
+        const bzn::key_t key = (request.msg_case() == database_msg::kRead) ? request.read().key() : request.quick_read().key();
+
+        const auto result = this->storage->read(request.header().db_uuid(), key);
 
         database_response response;
 
         if (result)
         {
-            response.mutable_read()->set_key(request.read().key());
+            response.mutable_read()->set_key(key);
             response.mutable_read()->set_value(*result);
         }
 
