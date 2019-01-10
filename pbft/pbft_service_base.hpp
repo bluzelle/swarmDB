@@ -70,6 +70,8 @@ namespace bzn
          */
         virtual void apply_operation(const std::shared_ptr<pbft_operation>& op) = 0;
 
+        virtual bool apply_operation_now(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) = 0;
+
         /*
          * Get the hash of the database state (presumably this will be a merkle tree root, but the details don't matter
          * for now)- same semantics as query

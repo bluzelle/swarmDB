@@ -30,6 +30,7 @@ namespace bzn
     public:
         dummy_pbft_service(std::shared_ptr<bzn::asio::io_context_base> io_context);
         void apply_operation(const std::shared_ptr<pbft_operation>& op) override;
+        bool apply_operation_now(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) override;
         void consolidate_log(uint64_t sequence_number) override;
         void register_execute_handler(execute_handler_t handler) override;
         bzn::hash_t service_state_hash(uint64_t sequence_number) const override;

@@ -45,6 +45,8 @@ message database_msg
         database_request        writers = 16;
         database_writers        add_writers = 17;
         database_writers        remove_writers = 18;
+
+        database_read           quick_read = 19;
     }
 }
 

@@ -180,6 +180,12 @@ def read_request(key):
     return msg
 
 
+def quick_read_request(key):
+    msg = bluzelle_pb2.bzn_msg()
+    msg.db.quick_read.key = key
+    return msg
+
+
 def update_request(key, value):
     msg = bluzelle_pb2.bzn_msg()
     msg.db.update.key = key
@@ -287,6 +293,10 @@ def read_handler(args):
     return send_request(args.node, args.uuid, read_request(args.key))
 
 
+def qread_handler(args):
+    return send_request(args.node, args.uuid, quick_read_request(args.key))
+
+
 def delete_handler(args):
     return send_request(args.node, args.uuid, delete_request(args.key))
 
@@ -382,6 +392,14 @@ if __name__ == "__main__":
     read_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     read_parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
     read_parser.set_defaults(func=read_handler)
+
+    # Quick read
+    qread_parser = subparsers.add_parser('qread', help="Quick read k/v")
+    qread_group = qread_parser.add_argument_group('required arguments')
+    qread_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    qread_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    qread_parser.add_argument("-s", "--save", type=str, default=None, help="save to file")
+    qread_parser.set_defaults(func=qread_handler)
 
     # Update
     update_parser = subparsers.add_parser('update', help="Update k/v")
