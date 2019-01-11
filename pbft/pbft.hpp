@@ -121,6 +121,8 @@ namespace bzn
          */
         static size_t honest_member_size(size_t swarm_size);
 
+        static uint32_t generate_random_number(uint32_t min, uint32_t max);
+
     private:
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -129,7 +131,7 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session, const std::string& msg_hash);
+        void handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session, const std::string& msg_hash);
         void handle_join_response(const pbft_membership_msg& msg);
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
@@ -181,7 +183,7 @@ namespace bzn
 
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash);
         bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
-        bool move_to_new_configuration(const hash_t& config_hash);
+        bool move_to_new_configuration(const hash_t& config_hash, uint64_t view);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
 
         void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
@@ -244,6 +246,7 @@ namespace bzn
         std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
 
         pbft_config_store configurations;
+        bool new_config_in_flight = false;
 
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
 

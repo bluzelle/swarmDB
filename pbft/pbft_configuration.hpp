@@ -69,4 +69,3 @@ namespace bzn
         hash_t cached_hash;
     };
 }
-

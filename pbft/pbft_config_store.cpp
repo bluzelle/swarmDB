@@ -16,88 +16,52 @@
 
 using namespace bzn;
 
-bool
+void
 pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 {
-    if (this->find_by_hash(config->get_hash()) != this->configs.end())
+    auto res = this->configs.insert(std::make_pair(config->get_hash(), config_info{++this->index, config}));
+    if (!res.second)
     {
-        return false;
+        // reset the configuration info without losing its previous view(s)
+        res.first->second.index = this->index;
+        res.first->second.state = pbft_config_state::accepted;
     }
-
-    // TODO - should we be making a copy here instead?
-    // currently the added config could be changed externally after being added
-    return (this->configs.insert(std::make_pair(this->next_index++, std::make_pair(std::move(config), false)))).second;
-}
-
-pbft_config_store::config_map::const_iterator
-pbft_config_store::find_by_hash(hash_t hash) const
-{
-    auto config = std::find_if(this->configs.begin(), this->configs.end(),
-        [hash](auto c)
-        {
-            return c.second.first->get_hash() == hash;
-        });
-
-    return config;
-}
-
-bool
-pbft_config_store::set_current(const hash_t& hash)
-{
-    auto config = this->find_by_hash(hash);
-    if (config == this->configs.end())
-    {
-        return false;
-    }
-
-    this->current_index = config->first;
-    return true;
-}
-
-bool
-pbft_config_store::remove_prior_to(const hash_t& hash)
-{
-    auto config = this->find_by_hash(hash);
-    if (config == this->configs.end())
-    {
-        return false;
-    }
-
-    // erase any earlier config that isn't the current one
-    for (auto it = this->configs.begin(); it != config; )
-    {
-        if (it->first != this->current_index)
-        {
-            it = this->configs.erase(it);
-        }
-        else
-        {
-            it++;
-        }
-    }
-    return true;
 }
 
 pbft_configuration::shared_const_ptr
 pbft_config_store::get(const hash_t& hash) const
 {
-    auto config = this->find_by_hash(hash);
-    return config != this->configs.end() ? config->second.first : nullptr;
+    auto it = this->configs.find(hash);
+    return it == this->configs.end() ? nullptr : it->second.config;
+}
+
+pbft_configuration::shared_const_ptr
+pbft_config_store::get(uint64_t view) const
+{
+    auto it = this->view_configs.find(view);
+    return it == this->view_configs.end() ? nullptr : get(it->second);
 }
 
 bool
-pbft_config_store::enable(const hash_t& hash, bool val)
+pbft_config_store::set_prepared(const hash_t& hash)
 {
-    // can't find_by_hash here because we need a non-const
-    auto config = std::find_if(this->configs.begin(), this->configs.end(),
-        [hash](auto& c)
-        {
-            return c.second.first->get_hash() == hash;
-        });
+    return this->set_state(hash, pbft_config_state::prepared);
+}
 
-    if (config != this->configs.end())
+bool
+pbft_config_store::set_committed(const hash_t& hash)
+{
+    if (this->set_state(hash, pbft_config_state::committed))
     {
-        config->second.second = val;
+        // when a configuration is committed, we won't accept new_view with any earlier config
+        for (auto& elem : this->configs)
+        {
+            if (elem.second.state != pbft_config_state::current && elem.second.index < this->configs[hash].index)
+            {
+                elem.second.state = pbft_config_state::deprecated;
+            }
+        }
+
         return true;
     }
 
@@ -105,28 +69,86 @@ pbft_config_store::enable(const hash_t& hash, bool val)
 }
 
 bool
-pbft_config_store::is_enabled(const hash_t& hash) const
+pbft_config_store::set_current(const hash_t& hash, uint64_t view)
 {
-    auto config = this->find_by_hash(hash);
-    return config != this->configs.end() ? config->second.second : false;
+    if (this->view_configs.find(view) != this->view_configs.end())
+    {
+        LOG(error) << "Attempt to set configuration for a view that already has one: " << view;
+        return false;
+    }
+
+    auto it = this->configs.find(hash);
+    if (it != this->configs.end())
+    {
+        it->second.state = pbft_config_state::current;
+        it->second.views.insert(view);
+        this->view_configs[view] = hash;
+
+        this->current_config = hash;
+        return true;
+    }
+    return false;
 }
 
 pbft_configuration::shared_const_ptr
 pbft_config_store::current() const
 {
-    auto it = this->configs.find(this->current_index);
-    return it != this->configs.end() ? it->second.first : nullptr;
+    auto it = this->configs.find(this->current_config);
+    return it == this->configs.end() ? nullptr : it->second.config;
 }
 
-pbft_configuration::shared_const_ptr
-pbft_config_store::newest() const
+hash_t
+pbft_config_store::newest_prepared() const
 {
-    auto config = std::find_if(this->configs.rbegin(), this->configs.rend(),
-        [](auto& c)
-        {
-            // is config enabled?
-            return c.second.second;
-        });
+    return this->newest({pbft_config_state::prepared, pbft_config_state::committed, pbft_config_state::current});
+}
 
-    return (config == this->configs.rend()) ? nullptr : config->second.first;
+hash_t
+pbft_config_store::newest_committed() const
+{
+    return this->newest({pbft_config_state::committed, pbft_config_state::current});
+}
+
+pbft_config_store::pbft_config_state
+pbft_config_store::get_state(const hash_t& hash) const
+{
+    auto it = this->configs.find(hash);
+    return it == this->configs.end() ? pbft_config_state::unknown : it->second.state;
+}
+
+bool pbft_config_store::is_acceptable(const hash_t& hash) const
+{
+    return this->get_state(hash) != pbft_config_state::unknown && this->get_state(hash) != pbft_config_state::deprecated;
+}
+
+bool
+pbft_config_store::set_state(const hash_t& hash, pbft_config_state state)
+{
+    auto it = this->configs.find(hash);
+    if (it != this->configs.end())
+    {
+        it->second.state = state;
+        return true;
+    }
+    return false;
+}
+
+hash_t
+pbft_config_store::newest(const std::list<pbft_config_state>& states) const
+{
+    hash_t hash;
+    uint64_t max{0};
+    for (auto elem : this->configs)
+    {
+        if (elem.second.index > max && std::any_of(states.begin(), states.end(), [elem](auto state)
+        {
+            return elem.second.state == state;
+        }))
+        {
+            max = elem.second.index;
+            hash = elem.first;
+        }
+    }
+
+    return hash;
 }
