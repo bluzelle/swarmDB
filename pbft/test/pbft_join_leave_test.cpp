@@ -15,6 +15,7 @@
 #include <utils/make_endpoint.hpp>
 #include <pbft/test/pbft_proto_test.hpp>
 #include <utils/bytes_to_debug_string.hpp>
+#include <mocks/mock_options_base.hpp>
 
 using namespace ::testing;
 
@@ -99,7 +100,7 @@ namespace bzn
 
             pbft_msg preprepare;
             preprepare.set_view(1);
-            preprepare.set_sequence(100);
+            preprepare.set_sequence(1);
             preprepare.set_type(PBFT_MSG_PREPREPARE);
             preprepare.set_allocated_request(new bzn_envelope(*req));
             auto crypto = std::make_shared<bzn::crypto>(std::make_shared<bzn::options>());
@@ -115,7 +116,7 @@ namespace bzn
                     .Times(Exactly(1));
             }
 
-            auto wmsg = wrap_pbft_msg(preprepare, "bob");
+            auto wmsg = wrap_pbft_msg(preprepare, "uuid0");
             pbft->handle_message(preprepare, wmsg);
             return preprepare;
         }
@@ -151,9 +152,9 @@ namespace bzn
             return this->pbft->handle_membership_message(msg, session);
         }
 
-        pbft_config_store &configurations()
+        pbft_config_store &configurations(std::shared_ptr<bzn::pbft> the_pbft)
         {
-            return this->pbft->configurations;
+            return the_pbft->configurations;
         }
 
         bool is_configuration_acceptable_in_new_view(hash_t config_hash)
@@ -174,6 +175,28 @@ namespace bzn
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
         {
             return this->pbft->handle_commit(msg, original_msg);
+        }
+
+        void handle_viewchange(std::shared_ptr<bzn::pbft> the_pbft, const pbft_msg& msg, const bzn_envelope& original_msg)
+        {
+            the_pbft->handle_viewchange(msg, original_msg);
+        }
+
+        void handle_newview(std::shared_ptr<bzn::pbft> the_pbft, const bzn_envelope& original_msg)
+        {
+            pbft_msg msg;
+            ASSERT_TRUE(msg.ParseFromString(original_msg.pbft()));
+            the_pbft->handle_newview(msg, original_msg);
+        }
+
+        void set_swarm_status_waiting(std::shared_ptr<bzn::pbft> the_pbft)
+        {
+            the_pbft->in_swarm = pbft::swarm_status::waiting;
+        }
+
+        bool is_in_swarm(std::shared_ptr<bzn::pbft> the_pbft)
+        {
+            return the_pbft->in_swarm == pbft::swarm_status::joined;
         }
     };
 
@@ -266,10 +289,10 @@ namespace bzn
         send_new_config_preprepare(pbft, this->mock_node, config);
 
         // the config should now be stored by this node, but not marked enabled/current
-        ASSERT_NE(this->configurations().get(config.get_hash()), nullptr);
-        EXPECT_FALSE(this->configurations().is_enabled(config.get_hash()));
-        EXPECT_NE(*(this->configurations().current()), config);
-        EXPECT_FALSE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
+        ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
+        EXPECT_FALSE(this->configurations(this->pbft).is_enabled(config.get_hash()));
+        EXPECT_NE(*(this->configurations(this->pbft).current()), config);
+        EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
 
     TEST_F(pbft_join_leave_test, test_new_config_prepare_handling)
@@ -309,9 +332,9 @@ namespace bzn
         send_new_config_prepare(pbft, node, op);
 
         // and now the config should be enabled and acceptable, but not current
-        ASSERT_NE(this->configurations().get(config.get_hash()), nullptr);
-        EXPECT_TRUE(this->configurations().is_enabled(config.get_hash()));
-        EXPECT_NE(*(this->configurations().current()), config);
+        ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
+        EXPECT_TRUE(this->configurations(this->pbft).is_enabled(config.get_hash()));
+        EXPECT_NE(*(this->configurations(this->pbft).current()), config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
 
@@ -319,17 +342,37 @@ namespace bzn
     {
         this->build_pbft();
 
+        // set up a second pbft to be the new primary after a view change
+        auto mock_node2 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        auto mock_io_context2 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
+        auto audit_heartbeat_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto new_config_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto mock_service2 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
+        auto mock_options = std::make_shared<bzn::mock_options_base>();
+        auto manager2 = std::make_shared<bzn::pbft_operation_manager>();
+        EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
+            .Times(AtMost(2)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer2);}))
+            .WillOnce(Invoke([&](){return std::move(new_config_timer2);}));
+        EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Return("uuid2"));
+        EXPECT_CALL(*mock_options, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
+        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2,
+            this->mock_failure_detector, this->crypto, manager2);
+        pbft2->set_audit_enabled(false);
+        pbft2->start();
+
         // insert and enable a dummy configuration prior to the new one to be proposed
         auto dummy_config = std::make_shared<pbft_configuration>();
         dummy_config->add_peer(new_peer2);
-        EXPECT_TRUE(this->configurations().add(dummy_config));
-        this->configurations().enable(dummy_config->get_hash());
+        EXPECT_TRUE(this->configurations(this->pbft).add(dummy_config));
+        this->configurations(this->pbft).enable(dummy_config->get_hash());
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
 
         // PREPREPARE step
-        pbft_configuration config;
-        config.add_peer(new_peer);
-        auto msg = send_new_config_preprepare(pbft, this->mock_node, config);
+        auto config = std::make_shared<pbft_configuration>(*(this->configurations(this->pbft).current()));
+        config->add_peer(new_peer);
+        this->configurations(pbft2).add(config);
+        this->configurations(pbft2).enable(config->get_hash());
+        auto msg = send_new_config_preprepare(pbft, this->mock_node, *config);
 
         auto op = this->find_operation(msg);
         ASSERT_NE(op, nullptr);
@@ -359,36 +402,110 @@ namespace bzn
         }
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
 
+        this->new_config_timer_callback = nullptr;
+
         // one more commit should do it...
         bzn::peer_address_t node(*nodes++);
         send_new_config_commit(pbft, node, op);
 
         // and now the config should be enabled and acceptable
-        ASSERT_NE(this->configurations().get(config.get_hash()), nullptr);
-        EXPECT_TRUE(this->configurations().is_enabled(config.get_hash()));
-        EXPECT_NE(*(this->configurations().current()), config);
-        EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
+        ASSERT_NE(this->configurations(this->pbft).get(config->get_hash()), nullptr);
+        EXPECT_TRUE(this->configurations(this->pbft).is_enabled(config->get_hash()));
+        EXPECT_NE(*(this->configurations(this->pbft).current()), *config);
+        EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config->get_hash()));
 
         // and no earlier one should be present (apart from the current configuration)
-        EXPECT_EQ(this->configurations().get(dummy_config->get_hash()), nullptr);
+        EXPECT_EQ(this->configurations(this->pbft).get(dummy_config->get_hash()), nullptr);
         EXPECT_FALSE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
+
+        // pbft should set a timer to do a viewchange
+        ASSERT_TRUE(this->new_config_timer_callback != nullptr);
+
+        // when timer callback is called, pbft should broadcast viewchange message
+        for (auto const &p : TEST_PEER_LIST)
+        {
+            EXPECT_CALL(*mock_node, send_message(bzn::make_endpoint(p), ResultOf(is_viewchange, Eq(true)), _))
+                .Times((Exactly(1)))
+                .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/)
+                {
+                    // reflect viewchange message to second pbft from all nodes
+                    pbft_msg msg;
+                    ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                    EXPECT_TRUE(msg.config_hash() == config->get_hash());
+                    wmsg->set_sender(p.uuid);
+                    this->handle_viewchange(pbft2, msg, *wmsg);
+                }));
+        }
+
+        // once second pbft gets f+1 viewchanges it will broadcast a viewchange message
+        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(is_viewchange, Eq(true)), _))
+            .Times((Exactly(TEST_PEER_LIST.size())))
+            .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/)
+            {
+                pbft_msg msg;
+                ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                EXPECT_TRUE(msg.config_hash() == config->get_hash());
+            }));
+
+        auto newview_env = std::make_shared<bzn_envelope>();
+        // second pbft should send a newview with the new configuration
+        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(is_newview, Eq(true)), _))
+            .Times((Exactly(TEST_PEER_LIST.size() + 1)))
+            .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/) {
+                pbft_msg msg;
+                ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                EXPECT_TRUE(msg.config_hash() == config->get_hash());
+                EXPECT_TRUE(msg.config() == config->to_string());
+
+                newview_env = wmsg;
+            }));
+
+        // kick off timer callback
+        this->new_config_timer_callback(boost::system::error_code());
+
+
+        // set up a third pbft to receive the new_view message and join the swarm
+        auto mock_node3 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        auto mock_io_context3 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
+        auto audit_heartbeat_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto new_config_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto mock_service3 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
+        auto mock_options3 = std::make_shared<bzn::mock_options_base>();
+        auto manager3 = std::make_shared<bzn::pbft_operation_manager>();
+        EXPECT_CALL(*(mock_io_context3), make_unique_steady_timer())
+            .Times(AtMost(2)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer3);}))
+            .WillOnce(Invoke([&](){return std::move(new_config_timer3);}));
+        EXPECT_CALL(*mock_options3, get_uuid()).WillRepeatedly(Return("uuid3"));
+        EXPECT_CALL(*mock_options3, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
+        auto pbft3 = std::make_shared<bzn::pbft>(mock_node3, mock_io_context3, TEST_PEER_LIST, mock_options3, mock_service3,
+            this->mock_failure_detector, this->crypto, manager3);
+        pbft3->set_audit_enabled(false);
+        pbft3->start();
+
+        // simulate that the new pbft has just joined the swarm and is waiting for a new_view
+        this->set_swarm_status_waiting(pbft3);
+        this->handle_newview(pbft3, *newview_env);
+        EXPECT_TRUE(this->is_in_swarm(pbft3));
     }
 
     TEST_F(pbft_join_leave_test, test_move_to_new_config)
     {
         this->build_pbft();
 
-        auto current_config = this->configurations().current();
+        auto current_config = this->configurations(this->pbft).current();
         auto config = std::make_shared<pbft_configuration>();
         config->add_peer(new_peer);
-        this->configurations().add(config);
-        EXPECT_FALSE(this->move_to_new_configuration(config->get_hash()));
-
-        this->configurations().enable(config->get_hash());
+        this->configurations(this->pbft).add(config);
         EXPECT_TRUE(this->move_to_new_configuration(config->get_hash()));
 
-        // previous configuration should have been removed
-        EXPECT_EQ(this->configurations().get(current_config->get_hash()), nullptr);
+        this->configurations(this->pbft).enable(config->get_hash());
+        EXPECT_TRUE(this->move_to_new_configuration(config->get_hash()));
+
+        // previous configuration should not have been removed
+        EXPECT_NE(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
+
+        this->configurations(this->pbft).remove_prior_to(config->get_hash());
+        EXPECT_EQ(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
     }
 
     TEST_F(pbft_join_leave_test, DISABLED_node_not_in_swarm_asks_to_join)

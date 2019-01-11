@@ -49,6 +49,7 @@ pbft::pbft(
     , failure_detector(std::move(failure_detector))
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
+    , new_config_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
     , operation_manager(std::move(operation_manager))
 {
@@ -458,17 +459,25 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::
 void
 pbft::handle_join_response(const pbft_membership_msg& msg)
 {
-    if (!this->in_swarm)
+    if (this->in_swarm == swarm_status::joining)
     {
         if (msg.result())
         {
-            this->in_swarm = true;
+            this->in_swarm = swarm_status::waiting;
             LOG(debug) << "Successfully joined the swarm, waiting for NEW_VIEW message...";
         }
         else
         {
-            LOG(error) << "Request to join swarm rejected. Aborting...";
-            throw (std::runtime_error("Request to join swarm rejected."));
+            // since we're not persisting configuration to disk, we could be in one of two situations:
+            // either we've been rejected, or we restarted and the swarm still thinks we're a member.
+            // for now (since there's no blacklist yet) we'll assume the latter and try to continue.
+            // there is a potential for problems here if we don't have the latest configuration.
+            // TODO: change this to abort once we're persisting configuration
+            LOG(error) << "Request to join swarm rejected - did we exit and restart?";
+            this->in_swarm = swarm_status::joined;
+
+//            LOG(error) << "Request to join swarm rejected. Aborting...";
+//            throw (std::runtime_error("Request to join swarm rejected."));
         }
     }
     else
@@ -660,6 +669,11 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         {
             // get rid of all other previous configs, except for currently active one
             this->configurations.remove_prior_to(config.get_hash());
+
+            this->new_config_timer->cancel();
+            this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
+            this->new_config_timer->async_wait(
+                std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
         }
 
         // send response to new node
@@ -707,6 +721,32 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
             , this->crypto->hash(request), nullptr);
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
+    }
+}
+
+void
+pbft::handle_new_config_timeout(const boost::system::error_code& ec)
+{
+    if (ec == boost::asio::error::operation_aborted)
+    {
+        return;
+    }
+
+    if (ec)
+    {
+        LOG(error) << "handle_new_config_timeout error: " << ec.message();
+        return;
+    }
+
+    // send viewchange with new config
+    auto config = this->configurations.newest();
+    if (config)
+    {
+        this->initiate_viewchange();
+    }
+    else
+    {
+        LOG(error) << "unable to send viewchange because we don't have a valid new configuration";
     }
 }
 
@@ -787,9 +827,16 @@ pbft::handle_failure()
     std::lock_guard<std::mutex> lock(this->pbft_lock);
     LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: " << this->view + 1;
     this->notify_audit_failure_detected();
+    this->new_config_timer->cancel();
+    this->initiate_viewchange();
+}
+
+void
+pbft::initiate_viewchange()
+{
     this->view_is_valid = false;
-    auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
-    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
+    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first
+        , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first))};
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1294,6 +1341,10 @@ pbft::make_newview(
     newview.set_type(PBFT_MSG_NEWVIEW);
     newview.set_view(new_view_index);
 
+    //  new view always uses our latest prepared configuration
+    newview.set_config_hash(this->configurations.newest()->get_hash());
+    newview.set_config(this->configurations.newest()->to_string());
+
     // V is the set of 2f+1 view change messages
     for (const auto &sender_viewchange_envelope: viewchange_envelopes_from_senders)
     {
@@ -1398,10 +1449,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         msg.view() > this->last_view_sent)
     {
         this->last_view_sent = msg.view();
-        auto ops = this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first);
-        pbft_msg viewchange_message{make_viewchange(msg.view(), this->latest_stable_checkpoint().first, this->stable_checkpoint_proof, ops)};
-        this->broadcast(this->wrap_message(viewchange_message));
-        this->view_is_valid = false;
+        this->initiate_viewchange();
     }
 
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin(),
@@ -1427,19 +1475,59 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
 
     auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
     this->next_issued_sequence_number = res.second;
+    this->move_to_new_configuration(this->configurations.newest()->get_hash());
     this->broadcast(this->wrap_message(res.first));
 }
 
 void
 pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    if (!this->is_valid_newview_message(msg, original_msg))
+    // are we just now joining the swarm?
+    if (this->in_swarm == swarm_status::waiting)
+    {
+        auto newconfig = std::make_shared<pbft_configuration>();
+        if (!newconfig->from_string(msg.config()))
+        {
+            LOG(debug) << "newview received with invalid configuration";
+            return;
+        }
+
+        auto hash = newconfig->get_hash();
+        this->configurations.add(newconfig);
+        this->configurations.enable(hash);
+
+        // we need to switch to this configuration now so we have the peer info to validate the message
+        // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
+        // can't really trust this. We need to get the config from an external source.
+        this->move_to_new_configuration(hash);
+
+        if (!this->is_valid_newview_message(msg, original_msg))
+        {
+            LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message while waiting to join swarm";
+            return;
+        }
+
+        // adopt checkpoint in newview message
+        pbft_msg viewchange;
+        viewchange.ParseFromString(msg.viewchange_messages(0).pbft());
+        this->save_checkpoint(viewchange);
+        this->in_swarm = swarm_status::joined;
+    }
+    else if (!this->is_valid_newview_message(msg, original_msg))
     {
         LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message ";
         return;
     }
 
     LOG(debug) << "handle_newview - recieved valid NEWVIEW message";
+
+    // validate requested configuration and switch to it
+    if (!this->is_configuration_acceptable_in_new_view(msg.config_hash()) ||
+        !this->move_to_new_configuration(msg.config_hash()))
+    {
+        LOG(debug) << "unable to switch to configuration in new view";
+        return;
+    }
 
     this->view = msg.view();
     this->view_is_valid = true;
@@ -1575,9 +1663,9 @@ pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config)
 }
 
 bool
-pbft::is_configuration_acceptable_in_new_view(hash_t config_hash)
+pbft::is_configuration_acceptable_in_new_view(const hash_t& config_hash)
 {
-    return this->configurations.is_enabled(config_hash);
+    return this->configurations.get(config_hash) != nullptr;
 }
 
 void
@@ -1596,16 +1684,14 @@ pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_oper
 }
 
 bool
-pbft::move_to_new_configuration(hash_t config_hash)
+pbft::move_to_new_configuration(const hash_t& config_hash)
 {
-    if (this->configurations.is_enabled(config_hash))
-    {
-        this->configurations.set_current(config_hash);
-        this->configurations.remove_prior_to(config_hash);
+    if (this->configurations.current()->get_hash() == config_hash)
         return true;
-    }
 
-    return false;
+    assert(this->configurations.get(config_hash) != nullptr);
+    this->configurations.set_current(config_hash);
+    return true;
 }
 
 bool
@@ -1655,6 +1741,7 @@ pbft::make_viewchange(
     viewchange.set_type(PBFT_MSG_VIEWCHANGE);
     viewchange.set_view(new_view);
     viewchange.set_sequence(base_sequence_number);  // base_sequence_number = n = sequence # of last valid checkpoint
+    viewchange.set_config_hash(this->configurations.newest()->get_hash());
 
     // C = a set of local 2*f + 1 valid checkpoint messages
     for (const auto& msg : stable_checkpoint_proof)
@@ -1704,6 +1791,7 @@ pbft::join_swarm()
     // are we already in the peers list?
     if (this->is_peer(this->uuid))
     {
+        this->in_swarm = swarm_status::joined;
         return;
     }
 
@@ -1727,6 +1815,8 @@ pbft::join_swarm()
     LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
     this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr, false);
+
+    this->in_swarm = swarm_status::joining;
 
     // TODO: set timer and retry with different peer if we don't get a response
 #else

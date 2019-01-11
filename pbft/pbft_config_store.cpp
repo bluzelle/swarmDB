@@ -19,6 +19,11 @@ using namespace bzn;
 bool
 pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 {
+    if (this->find_by_hash(config->get_hash()) != this->configs.end())
+    {
+        return false;
+    }
+
     // TODO - should we be making a copy here instead?
     // currently the added config could be changed externally after being added
     return (this->configs.insert(std::make_pair(this->next_index++, std::make_pair(std::move(config), false)))).second;
@@ -111,4 +116,17 @@ pbft_config_store::current() const
 {
     auto it = this->configs.find(this->current_index);
     return it != this->configs.end() ? it->second.first : nullptr;
+}
+
+pbft_configuration::shared_const_ptr
+pbft_config_store::newest() const
+{
+    auto config = std::find_if(this->configs.rbegin(), this->configs.rend(),
+        [](auto& c)
+        {
+            // is config enabled?
+            return c.second.second;
+        });
+
+    return (config == this->configs.rend()) ? nullptr : config->second.first;
 }

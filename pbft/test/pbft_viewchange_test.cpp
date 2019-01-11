@@ -332,16 +332,16 @@ namespace bzn
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer2 =
                 std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::Mocksteady_timer_base> new_config_timer2 =
+            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service2 =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
 
         EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
-                .Times(AtMost(1))
-                .WillOnce(
-                        Invoke(
-                                [&]()
-                                { return std::move(audit_heartbeat_timer2); }
-                        ));
+            .Times(AtMost(2)).WillOnce(Invoke([&]()
+            { return std::move(audit_heartbeat_timer2); }))
+            .WillOnce(Invoke([&]()
+            { return std::move(new_config_timer2); }));
 
         auto mock_options = std::make_shared<bzn::mock_options_base>();
 

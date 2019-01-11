@@ -51,6 +51,11 @@ message pbft_msg
 
     repeated bzn_envelope pre_prepare_messages = 12;
 
+    // for viewchange, newview
+    string config_hash = 13;
+
+    // for newview
+    string config = 14;
 }
 
 message pbft_config_msg
