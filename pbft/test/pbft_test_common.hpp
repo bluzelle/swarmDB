@@ -76,7 +76,11 @@ namespace bzn::test
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer =
                 std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
 
+        std::unique_ptr<bzn::asio::Mocksteady_timer_base> new_config_timer =
+                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
+        bzn::asio::wait_handler new_config_timer_callback;
 
         bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;

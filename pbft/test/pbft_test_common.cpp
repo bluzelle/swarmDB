@@ -55,12 +55,17 @@ namespace bzn::test
                         ));
 
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
-                .Times(AtMost(1))
+                .Times(AtMost(2))
                 .WillOnce(
                         Invoke(
                                 [&]()
                                 { return std::move(this->audit_heartbeat_timer); }
-                        ));
+                        ))
+                .WillOnce(
+                    Invoke(
+                        [&]()
+                        { return std::move(this->new_config_timer); }
+                    ));
 
         EXPECT_CALL(*(this->audit_heartbeat_timer), async_wait(_))
                 .Times(AnyNumber())
@@ -68,6 +73,14 @@ namespace bzn::test
                         Invoke(
                                 [&](auto handler)
                                 { this->audit_heartbeat_timer_callback = handler; }
+                        ));
+
+        EXPECT_CALL(*(this->new_config_timer), async_wait(_))
+                .Times(AnyNumber())
+                .WillRepeatedly(
+                        Invoke(
+                            [&](auto handler)
+                            { this->new_config_timer_callback = handler; }
                         ));
 
         EXPECT_CALL(*(this->mock_service), register_execute_handler(_))
@@ -85,6 +98,7 @@ namespace bzn::test
         this->options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
         this->options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
         this->options->get_mutable_simple_options().set("crypto_enabled_incoming", std::to_string(false));
+        this->options->get_mutable_simple_options().set("crypto_enabled_outgoing", std::to_string(false));
 
         preprepare_msg = pbft_msg();
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);

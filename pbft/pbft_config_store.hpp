@@ -46,6 +46,9 @@ namespace bzn
         // returns whether the configuration with the given hash is enabled
         bool is_enabled(const hash_t& hash) const;
 
+        // returns the most recent enabled configuration
+        pbft_configuration::shared_const_ptr newest() const;
+
     private:
         using index_t = uint64_t;
         using config_map = std::map<index_t, std::pair<pbft_configuration::shared_const_ptr, bool>>;
