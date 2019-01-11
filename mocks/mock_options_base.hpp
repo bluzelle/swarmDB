@@ -45,7 +45,7 @@ class mock_options_base : public options_base {
   MOCK_CONST_METHOD0(get_uuid,
       bzn::uuid_t());
   MOCK_CONST_METHOD0(get_ws_idle_timeout,
-      std::chrono::seconds());
+      std::chrono::milliseconds());
   MOCK_CONST_METHOD0(get_audit_mem_size,
       size_t());
   MOCK_CONST_METHOD0(get_state_dir,

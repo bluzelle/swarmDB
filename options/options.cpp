@@ -151,11 +151,11 @@ options::get_log_to_stdout() const
 }
 
 
-std::chrono::seconds
+std::chrono::milliseconds
 options::get_ws_idle_timeout() const
 {
     //TODO: Remove this?
-    return std::chrono::seconds(raw_opts.get<uint64_t>(WS_IDLE_TIMEOUT));
+    return std::chrono::milliseconds(raw_opts.get<uint64_t>(WS_IDLE_TIMEOUT));
 }
 
 

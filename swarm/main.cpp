@@ -16,7 +16,6 @@
 #include <bootstrap/bootstrap_peers.hpp>
 #include <chaos/chaos.hpp>
 #include <crud/crud.hpp>
-#include <crud/raft_crud.hpp>
 #include <crud/subscription_manager.hpp>
 #include <crypto/crypto.hpp>
 #include <crypto/crypto_base.hpp>
@@ -28,7 +27,6 @@
 #include <pbft/pbft.hpp>
 #include <pbft/database_pbft_service.hpp>
 #include <pbft/pbft_failure_detector.hpp>
-#include <raft/raft.hpp>
 #include <status/status.hpp>
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
@@ -254,7 +252,7 @@ main(int argc, const char* argv[])
         auto crypto = std::make_shared<bzn::crypto>(options);
         auto chaos = std::make_shared<bzn::chaos>(io_context, options);
         auto websocket = std::make_shared<bzn::beast::websocket>();
-        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, options->get_ws_idle_timeout(), boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
+        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
         std::shared_ptr<bzn::status> status;
 
@@ -265,85 +263,41 @@ main(int argc, const char* argv[])
             audit->start();
         }
 
-        if (options->pbft_enabled())
+        auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
+
+        // which type of storage?
+        std::shared_ptr<bzn::storage_base> stable_storage;
+        std::shared_ptr<bzn::storage_base> unstable_storage;
+
+        if (options->get_mem_storage())
         {
-            auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
+            LOG(info) << "Using in-memory testing storage";
 
-            // which type of storage?
-            std::shared_ptr<bzn::storage_base> stable_storage;
-            std::shared_ptr<bzn::storage_base> unstable_storage;
-
-            if (options->get_mem_storage())
-            {
-                LOG(info) << "Using in-memory testing storage";
-
-                stable_storage = std::make_shared<bzn::mem_storage>();
-                unstable_storage = std::make_shared<bzn::mem_storage>();
-            }
-            else
-            {
-                LOG(info) << "Using RocksDB storage";
-
-                stable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "db", options->get_uuid());
-                unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
-            }
-
-            auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node);
-            auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
-
-            auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
-                std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
-                ,failure_detector , crypto, operation_manager);
-
-            node->start(pbft);
-
-            pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
-
-            status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
-
-            crud->start();
-            pbft->start();
-            status->start();
+            stable_storage = std::make_shared<bzn::mem_storage>();
+            unstable_storage = std::make_shared<bzn::mem_storage>();
         }
         else
         {
-            node->start(nullptr);
+            LOG(info) << "Using RocksDB storage";
 
-            // create http server using our configured listener address & http port number...
-            auto ep = options->get_listener();
-            ep.port(options->get_http_port());
-
-            auto raft = std::make_shared<bzn::raft>(
-                    io_context, node, peers.get_peers(),
-                    options->get_uuid(), options->get_state_dir(), options->get_max_storage(),
-                    options->peer_validation_enabled(), options->get_signed_key());
-
-            // which type of storage?
-            std::shared_ptr<bzn::storage_base> storage;
-
-            if (options->get_mem_storage())
-            {
-                LOG(info) << "Using in-memory testing storage";
-                storage = std::make_shared<bzn::mem_storage>();
-            }
-            else
-            {
-                LOG(info) << "Using RocksDB storage";
-                storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "db", options->get_uuid());
-            }
-
-            auto crud = std::make_shared<bzn::raft_crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));
-            auto http_server = std::make_shared<bzn::http::server>(io_context, crud, ep);
-
-            raft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
-
-            raft->initialize_storage_from_log(storage);
-
-            // These are here because they are not yet integrated with pbft
-            http_server->start();
-            crud->start();
-            raft->start();
+            stable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "db", options->get_uuid());
+            unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
         }
+
+        auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
+        auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
+
+        auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
+            std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
+            ,failure_detector , crypto, operation_manager);
+
+        pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
+
+        status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
+
+        crud->start();
+        pbft->start();
+        status->start();
 
         print_banner(*options, eth_balance);
 
