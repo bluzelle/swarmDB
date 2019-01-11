@@ -501,7 +501,10 @@ namespace bzn
         this->configurations(this->pbft).enable(config->get_hash());
         EXPECT_TRUE(this->move_to_new_configuration(config->get_hash()));
 
-        // previous configuration should have been removed
+        // previous configuration should not have been removed
+        EXPECT_NE(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
+
+        this->configurations(this->pbft).remove_prior_to(config->get_hash());
         EXPECT_EQ(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
     }
 

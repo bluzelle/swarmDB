@@ -1691,7 +1691,6 @@ pbft::move_to_new_configuration(const hash_t& config_hash)
 
     assert(this->configurations.get(config_hash) != nullptr);
     this->configurations.set_current(config_hash);
-    this->configurations.remove_prior_to(config_hash);
     return true;
 }
 
