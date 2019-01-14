@@ -26,7 +26,7 @@ namespace bzn
     class rocksdb_storage : public bzn::storage_base
     {
     public:
-        rocksdb_storage(const std::string& state_dir, const bzn::uuid_t& uuid);
+        rocksdb_storage(const std::string& state_dir, const std::string& db_name, const bzn::uuid_t& uuid);
 
         bzn::storage_result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
 
