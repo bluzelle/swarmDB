@@ -241,16 +241,31 @@ main(int argc, const char* argv[])
         {
             auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
 
-            // todo: for now use mem storage instead of rocksdb...
-            auto unstable_storage = std::make_shared<bzn::mem_storage>();
-            auto stable_storage = std::make_shared<bzn::mem_storage>();
+            // which type of storage?
+            std::shared_ptr<bzn::storage_base> stable_storage;
+            std::shared_ptr<bzn::storage_base> unstable_storage;
+
+            if (options->get_mem_storage())
+            {
+                LOG(info) << "Using in-memory testing storage";
+
+                stable_storage = std::make_shared<bzn::mem_storage>();
+                unstable_storage = std::make_shared<bzn::mem_storage>();
+            }
+            else
+            {
+                LOG(info) << "Using RocksDB storage";
+
+                stable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "db", options->get_uuid());
+                unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
+            }
+
             auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
             auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
-            LOG(warning) << "not giving operation manager a storage";
 
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
                 std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
-                , failure_detector, crypto, operation_manager);
+                ,failure_detector , crypto, operation_manager);
 
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
@@ -282,7 +297,7 @@ main(int argc, const char* argv[])
             else
             {
                 LOG(info) << "Using RocksDB storage";
-                storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), options->get_uuid());
+                storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "db", options->get_uuid());
             }
 
             auto crud = std::make_shared<bzn::raft_crud>(node, raft, storage, std::make_shared<bzn::subscription_manager>(io_context));

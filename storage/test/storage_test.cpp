@@ -61,7 +61,7 @@ namespace
     template<>
     std::shared_ptr<bzn::storage_base> create_storage<bzn::rocksdb_storage>()
     {
-        return std::make_shared<bzn::rocksdb_storage>("./", NODE_UUID);
+        return std::make_shared<bzn::rocksdb_storage>("./", "utest", NODE_UUID);
     }
 }
 
