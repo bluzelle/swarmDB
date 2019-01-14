@@ -27,7 +27,7 @@ namespace
 }
 
 
-rocksdb_storage::rocksdb_storage(const std::string& state_dir, const bzn::uuid_t& uuid)
+rocksdb_storage::rocksdb_storage(const std::string& state_dir, const std::string& db_name, const bzn::uuid_t& uuid)
 {
     rocksdb::Options options;
 
@@ -36,7 +36,14 @@ rocksdb_storage::rocksdb_storage(const std::string& state_dir, const bzn::uuid_t
     options.create_if_missing = true;
 
     rocksdb::DB* rocksdb;
-    rocksdb::Status s = rocksdb::DB::Open(options, boost::filesystem::path(state_dir).append(uuid).string(), &rocksdb);
+
+    const std::string db_path = boost::filesystem::path(state_dir).append(uuid).append(db_name).string();
+
+    boost::filesystem::create_directories(db_path);
+
+    LOG(info) << "database path: " << db_path;
+
+    rocksdb::Status s = rocksdb::DB::Open(options, db_path, &rocksdb);
 
     if (!s.ok())
     {
