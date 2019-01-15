@@ -62,6 +62,7 @@ message pbft_config_msg
 {
     // for new_config
     string configuration = 1;
+    bytes join_request_hash = 2;
 }
 
 enum pbft_msg_type
@@ -113,19 +114,6 @@ message pbft_peer_info
     uint32 http_port = 3;
     string name = 4;
     string uuid = 5;
-}
-
-enum pbft_internal_msg_type {
-    PBFT_IMSG_UNDEFINED = 0;
-    PBFT_IMSG_NEW_CONFIG = 1;
-}
-
-message pbft_internal_msg
-{
-    pbft_internal_msg_type type = 1;
-
-    // for new_config
-    string configuration = 2;
 }
 
 message prepared_proof
