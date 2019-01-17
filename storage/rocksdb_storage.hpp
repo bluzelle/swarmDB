@@ -51,6 +51,11 @@ namespace bzn
         bool load_snapshot(const std::string& data) override;
 
     private:
+        void open();
+
+        const std::string db_path;
+        const std::string snapshot_file;
+
         std::unique_ptr<rocksdb::DB> db;
 
         bool has_priv(const bzn::uuid_t& uuid, const  std::string& key);
