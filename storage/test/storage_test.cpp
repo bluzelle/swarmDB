@@ -265,26 +265,26 @@ TYPED_TEST(storageTest, test_that_storage_can_remove_all_keys_values_associated_
     EXPECT_EQ(std::nullopt, this->storage->read(USER_UUID, KEY));
 }
 
-// TODO: refactor this as a typed test once rocksdb_storage supports checkpoints
-TEST(mem_snapshot_test, test_snapshot)
+
+TYPED_TEST(storageTest, test_snapshot)
 {
     const bzn::uuid_t user_0{"b9dc2595-15ee-435a-8af7-7cafc132f527"};
 
-    std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
-    storage->create(user_0, "key1", "value1");
-    EXPECT_TRUE(storage->has(user_0, "key1"));
-    EXPECT_TRUE(storage->create_snapshot());
+    this->storage->create(user_0, "key1", "value1");
+    EXPECT_TRUE(this->storage->has(user_0, "key1"));
+    EXPECT_TRUE(this->storage->create_snapshot());
 
-    storage->create(user_0, "key2", "value2");
-    storage->create(user_0, "key3", "value3");
-    EXPECT_TRUE(storage->has(user_0, "key2"));
-    EXPECT_TRUE(storage->has(user_0, "key3"));
+    this->storage->create(user_0, "key2", "value2");
+    this->storage->create(user_0, "key3", "value3");
+    EXPECT_TRUE(this->storage->has(user_0, "key2"));
+    EXPECT_TRUE(this->storage->has(user_0, "key3"));
 
-    auto state = storage->get_snapshot();
+    auto state = this->storage->get_snapshot();
     EXPECT_NE(state, nullptr);
 
-    EXPECT_TRUE(storage->load_snapshot(*state));
-    EXPECT_TRUE(storage->has(user_0, "key1"));
-    EXPECT_FALSE(storage->has(user_0, "key2"));
-    EXPECT_FALSE(storage->has(user_0, "key3"));
+    EXPECT_FALSE(this->storage->load_snapshot("aslkdfkslfdk"));
+    EXPECT_TRUE(this->storage->load_snapshot(*state));
+    EXPECT_TRUE(this->storage->has(user_0, "key1"));
+    EXPECT_FALSE(this->storage->has(user_0, "key2"));
+    EXPECT_FALSE(this->storage->has(user_0, "key3"));
 }
