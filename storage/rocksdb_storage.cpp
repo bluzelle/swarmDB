@@ -314,11 +314,13 @@ rocksdb_storage::load_snapshot(const std::string& data)
         return false;
     }
 
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const std::string tmp_snapshot(this->snapshot_file + ".tmp");
+
     try
     {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
-
-        std::ofstream snapshot(this->snapshot_file);
+        std::ofstream snapshot(tmp_snapshot);
         snapshot << data;
     }
     catch (std::exception& ex)
@@ -328,13 +330,11 @@ rocksdb_storage::load_snapshot(const std::string& data)
         return false;
     }
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
-
     // bring down the database...
     this->db.reset();
 
     // move current database out of the way...
-    std::string tmp_path(this->db_path + ".tmp");
+    const std::string tmp_path(this->db_path + ".tmp");
 
     boost::system::error_code ec;
     boost::filesystem::rename(this->db_path, tmp_path, ec);
@@ -352,13 +352,15 @@ rocksdb_storage::load_snapshot(const std::string& data)
     rocksdb::UndumpOptions undump_options;
 
     undump_options.db_path = this->db_path;
-    undump_options.dump_location = this->snapshot_file;
+    undump_options.dump_location = tmp_snapshot;
     undump_options.compact_db = true;
 
     if (rocksdb::DbUndumpTool().Run(undump_options))
     {
         boost::system::error_code ec;
         boost::filesystem::remove_all(tmp_path, ec);
+        boost::filesystem::remove(this->snapshot_file);
+        boost::filesystem::rename(tmp_snapshot, this->snapshot_file);
 
         if (ec)
         {
@@ -376,6 +378,7 @@ rocksdb_storage::load_snapshot(const std::string& data)
     // any exceptions will be fatal...
     boost::filesystem::remove_all(this->db_path);
     boost::filesystem::rename(tmp_path, this->db_path);
+    boost::filesystem::remove(tmp_snapshot);
 
     // bring db back online...
     this->open();
