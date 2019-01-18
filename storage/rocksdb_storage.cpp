@@ -14,6 +14,7 @@
 
 #include <storage/rocksdb_storage.hpp>
 #include <boost/filesystem.hpp>
+#include <rocksdb/db_dump_tool.h>
 #include <thread>
 
 using namespace bzn;
@@ -28,6 +29,15 @@ namespace
 
 
 rocksdb_storage::rocksdb_storage(const std::string& state_dir, const std::string& db_name, const bzn::uuid_t& uuid)
+    : db_path(boost::filesystem::path(state_dir).append(uuid).append(db_name).string())
+    , snapshot_file(boost::filesystem::path(state_dir).append(uuid).append("SNAPSHOT." + db_name).string())
+{
+    this->open();
+}
+
+
+void
+rocksdb_storage::open()
 {
     rocksdb::Options options;
 
@@ -36,8 +46,6 @@ rocksdb_storage::rocksdb_storage(const std::string& state_dir, const std::string
     options.create_if_missing = true;
 
     rocksdb::DB* rocksdb;
-
-    const std::string db_path = boost::filesystem::path(state_dir).append(uuid).append(db_name).string();
 
     boost::filesystem::create_directories(db_path);
 
@@ -256,20 +264,124 @@ rocksdb_storage::has_priv(const bzn::uuid_t& uuid, const  std::string& key)
     return false;
 }
 
+
 bool
 rocksdb_storage::create_snapshot()
 {
-    return false;
+    rocksdb::DumpOptions dump_options;
+
+    dump_options.db_path = this->db_path;
+    dump_options.dump_location = this->snapshot_file;
+    dump_options.anonymous = true;
+
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    return rocksdb::DbDumpTool().Run(dump_options);
 }
+
 
 std::shared_ptr<std::string>
 rocksdb_storage::get_snapshot()
 {
-    return nullptr;
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    std::stringstream snapshot;
+
+    // check if file exists...
+    try
+    {
+        std::ifstream s(this->snapshot_file);
+        snapshot << s.rdbuf();
+    }
+    catch (std::exception& ex)
+    {
+        LOG(error) << "Exception reading snapshot: " << ex.what();
+
+        return {};
+    }
+
+    return std::make_shared<std::string>(snapshot.str());
 }
 
+
 bool
-rocksdb_storage::load_snapshot(const std::string& /*data*/)
+rocksdb_storage::load_snapshot(const std::string& data)
 {
+    if (!boost::filesystem::exists(this->snapshot_file))
+    {
+        LOG(error) << "no snapshot found";
+
+        return false;
+    }
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const std::string tmp_snapshot(this->snapshot_file + ".tmp");
+
+    try
+    {
+        std::ofstream snapshot(tmp_snapshot);
+        snapshot << data;
+    }
+    catch (std::exception& ex)
+    {
+        LOG(error) << "saving snapshot failed: " << ex.what();
+
+        return false;
+    }
+
+    // bring down the database...
+    this->db.reset();
+
+    // move current database out of the way...
+    const std::string tmp_path(this->db_path + ".tmp");
+
+    boost::system::error_code ec;
+    boost::filesystem::rename(this->db_path, tmp_path, ec);
+
+    if (ec)
+    {
+        LOG(error) << "creating temporary db backup failed: " << ec.message();
+
+        // bring db back online...
+        this->open();
+
+        return false;
+    }
+
+    rocksdb::UndumpOptions undump_options;
+
+    undump_options.db_path = this->db_path;
+    undump_options.dump_location = tmp_snapshot;
+    undump_options.compact_db = true;
+
+    if (rocksdb::DbUndumpTool().Run(undump_options))
+    {
+        boost::system::error_code ec;
+        boost::filesystem::remove_all(tmp_path, ec);
+        boost::filesystem::remove(this->snapshot_file);
+        boost::filesystem::rename(tmp_snapshot, this->snapshot_file);
+
+        if (ec)
+        {
+            LOG(error) << "failed to remove temporary db backup: " << ec.message();
+        }
+
+        // bring db back online...
+        this->open();
+
+        return true;
+    }
+
+    LOG(error) << "failed to load snapshot";
+
+    // any exceptions will be fatal...
+    boost::filesystem::remove_all(this->db_path);
+    boost::filesystem::rename(tmp_path, this->db_path);
+    boost::filesystem::remove(tmp_snapshot);
+
+    // bring db back online...
+    this->open();
+
     return false;
 }

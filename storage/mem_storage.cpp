@@ -211,6 +211,7 @@ mem_storage::remove(const bzn::uuid_t& uuid)
     return bzn::storage_result::not_found;
 }
 
+
 bool
 mem_storage::create_snapshot()
 {
@@ -225,12 +226,14 @@ mem_storage::create_snapshot()
 
         return true;
     }
-    catch(std::exception &e)
+    catch (std::exception& ex)
     {
-        LOG(error) << "Exception creating snapshot: " << e.what();
+        LOG(error) << "Exception creating snapshot: " << ex.what();
     }
+
     return false;
 }
+
 
 std::shared_ptr<std::string>
 mem_storage::get_snapshot()
@@ -238,6 +241,7 @@ mem_storage::get_snapshot()
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
     return this->latest_snapshot;
 }
+
 
 bool
 mem_storage::load_snapshot(const std::string& data)
@@ -253,9 +257,10 @@ mem_storage::load_snapshot(const std::string& data)
 
         return true;
     }
-    catch(std::exception &e)
+    catch (std::exception& ex)
     {
-        LOG(error) << "Exception loading snapshot: " << e.what();
+        LOG(error) << "Exception loading snapshot: " << ex.what();
     }
+
     return false;
 }
