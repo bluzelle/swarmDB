@@ -35,6 +35,7 @@ namespace
 {
     const std::chrono::milliseconds HEARTBEAT_INTERVAL{std::chrono::milliseconds(5000)};
     const std::chrono::seconds NEW_CONFIG_INTERVAL{std::chrono::seconds(30)};
+    const std::chrono::seconds JOIN_RETRY_INTERVAL{std::chrono::seconds(30)};
     const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
@@ -160,6 +161,7 @@ namespace bzn
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
         void handle_new_config_timeout(const boost::system::error_code& ec);
+        void handle_join_retry_timeout(const boost::system::error_code& ec);
 
         void notify_audit_failure_detected();
 
@@ -231,6 +233,7 @@ namespace bzn
 
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
         std::unique_ptr<bzn::asio::steady_timer_base> new_config_timer;
+        std::unique_ptr<bzn::asio::steady_timer_base> join_retry_timer;
 
         bool audit_enabled = true;
 
