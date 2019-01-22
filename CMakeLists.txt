@@ -43,33 +43,18 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
 
-set(REQUIRED_BOOST "1.68.0")
-set(Boost_USE_STATIC_LIBS on)
-
-find_package(
-    Boost ${REQUIRED_BOOST}
-    REQUIRED COMPONENTS
-    log
-    program_options
-    system
-    thread
-    serialization
-)
-
-if(Boost_FOUND)
-    message(STATUS "Boost: ${Boost_INCLUDE_DIRS}")
-    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-endif()
-
 find_package(CURL REQUIRED)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+set(REQUIRED_BOOST "1.68.0")
+set(BOOST_URL_HASH "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf")
 
+include(cmake/boost.cmake)
 include(cmake/jsoncpp.cmake)
 include(cmake/rocksdb.cmake)
 include(cmake/googletest.cmake)
 include(cmake/openssl.cmake)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
 
 enable_testing()
