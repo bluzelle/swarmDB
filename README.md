@@ -25,19 +25,7 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 
 ### Installation - macOSX
 
-**Boost**
-
-```text
-$ export BOOST_VERSION="1.68.0"
-$ export BOOST_INSTALL_DIR="$HOME/myboost"
-
-$ mkdir -p ~/myboost
-$ toolchain/install-boost.sh
-```
-
-This will result in a custom Boost install at `~/myboost/1_68_0/`that will not collide with your system's Boost.
-
-**Other dependencies \(Protobuf, CMake\)**
+**Dependencies \(Protobuf, CMake\)**
 
 ```text
 $ brew update && brew install protobuf && brew install snappy && brew install lz4 && brew upgrade cmake
@@ -52,20 +40,6 @@ $ brew install ccache
 ```
 
 ### Installation - Ubuntu
-
-**Boost**
-
-Open up a console and install the compatible version of Boost:
-
-```text
-$ ENV BOOST_VERSION="1.68.0"
-$ ENV BOOST_INSTALL_DIR="$HOME/myboost"
-
-$ mkdir -p ~/myboost
-$ toolchain/install-boost.sh
-```
-
-This will result in a custom Boost install at `~/myboost/1_68_0/`that will not overwrite your system's Boost.
 
 **CMake**
 
@@ -90,16 +64,6 @@ If available, cmake will attempt to use ccache \([https://ccache.samba.org](http
 $ sudo apt-get install ccache
 ```
 
-### Building the Daemon with CLion IDE
-
-Ensure that you set your cmake args to pass in:
-
-```text
--DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/
-```
-
-The project root can be directly imported into CLion.
-
 ### Building the Daemon from Command Line Interface \(CLI\)
 
 Here are the steps to build the Daemon and unit test application from the command line:
@@ -109,7 +73,7 @@ Here are the steps to build the Daemon and unit test application from the comman
 ```text
 $ mkdir build
 $ cd build
-$ cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
+$ cmake ..
 $ sudo make install
 ```
 
@@ -118,7 +82,7 @@ $ sudo make install
 ```text
 $ mkdir build
 $ cd build
-$ ~/mycmake/bin/cmake -DBOOST_ROOT:PATHNAME=$HOME/myboost/1_68_0/ ..
+$ ~/mycmake/bin/cmake ..
 $ sudo make install
 ```
 
