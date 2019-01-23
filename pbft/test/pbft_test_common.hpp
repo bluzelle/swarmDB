@@ -30,6 +30,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
+#include <storage/mem_storage.hpp>
 
 using namespace ::testing;
 
@@ -65,8 +66,9 @@ namespace bzn::test
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
         std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
-                std::make_shared<bzn::pbft_operation_manager>();
+                std::make_shared<bzn::pbft_operation_manager>(storage);
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);

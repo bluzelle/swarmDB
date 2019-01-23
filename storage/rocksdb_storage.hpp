@@ -50,6 +50,15 @@ namespace bzn
 
         bool load_snapshot(const std::string& data) override;
 
+        void remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last) override;
+
+        std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid
+            , const std::string& first, const std::string& last
+            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
+
+        std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
+
     private:
         void open();
 
@@ -61,6 +70,10 @@ namespace bzn
         bool has_priv(const bzn::uuid_t& uuid, const  std::string& key);
 
         std::shared_mutex lock; // for multi-reader and single writer access
+
+        void do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate
+            , std::function<void(const bzn::key_t&, const bzn::value_t&)> action);
     };
 
 } // bzn

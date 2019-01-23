@@ -92,7 +92,8 @@ pbft_operation_manager::delete_operations_until(uint64_t sequence)
 
     if (this->storage)
     {
-        LOG(warning) << "cleaning up operation state from storage not implemented (KEP-909)";
+        LOG(debug) << "cleaning up operation state from storage";
+        pbft_persistent_operation::remove_range(this->storage.value(), 0, sequence);
     }
 }
 
@@ -108,26 +109,30 @@ pbft_operation_manager::prepared_operations_since(uint64_t sequence)
     std::map<uint64_t, std::shared_ptr<pbft_operation>> result;
     const auto maybe_store = [&](const std::shared_ptr<pbft_operation>& op)
     {
-        if (op->get_sequence() > sequence && op->is_prepared())
+        const auto search = result.find(op->get_sequence());
+        if (search == result.end() || result[op->get_sequence()]->get_view() < op->get_view())
         {
-            const auto search = result.find(op->get_sequence());
-            if (search == result.end() || result[op->get_sequence()]->get_view() < op->get_view())
-            {
-                result[op->get_sequence()] = op;
-            }
+            result[op->get_sequence()] = op;
         }
     };
 
-    for (const auto& pair : this->held_operations)
-    {
-        // This is an inefficient search, but we can fix it if it matters
-        maybe_store(pair.second);
-    }
-
-    // Now, add anything we can find from storage
     if (this->storage)
     {
-        LOG(warning) << "finding prepared operations from storage not implemented (KEP-908)";
+        for (const auto& op : pbft_persistent_operation::prepared_operations_in_range(*this->storage, sequence + 1))
+        {
+            maybe_store(op);
+        }
+    }
+    else
+    {
+        for (const auto& pair : this->held_operations)
+        {
+            if (pair.second->get_sequence() > sequence && pair.second->is_prepared())
+            {
+                // This is an inefficient search, but we can fix it if it matters
+                maybe_store(pair.second);
+            }
+        }
     }
 
     return result;
