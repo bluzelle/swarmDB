@@ -123,15 +123,43 @@ init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std
 }
 
 
-size_t
-get_state_file_size(const bzn::options& options)
+boost::uintmax_t
+get_dir_size(const boost::filesystem::path& dir)
 {
-    boost::filesystem::path state_file_path{options.get_state_dir() + "/" + options.get_uuid() + ".dat"};
-    if (boost::filesystem::exists(state_file_path))
+    namespace fs = boost::filesystem;
+
+    if (fs::is_directory(dir))
     {
-        return size_t(boost::filesystem::file_size(state_file_path));
+        boost::uintmax_t size{};
+
+        fs::directory_iterator dir_it(dir);
+
+        for (dir_it = fs::begin(dir_it); dir_it != fs::end(dir_it); ++dir_it)
+        {
+            const fs::directory_entry& dir_entry = *dir_it;
+
+            if (fs::is_regular_file(dir_entry.path()))
+            {
+                size += fs::file_size(dir_entry.path());
+            }
+            else
+            {
+                if (fs::is_directory(dir_entry.path()))
+                {
+                    size += get_dir_size(dir_entry.path());
+                }
+            }
+        }
+        return size;
     }
     return 0;
+}
+
+
+size_t
+get_state_dir_size(const bzn::options& options)
+{
+    return get_dir_size(boost::filesystem::path{options.get_state_dir() + options.get_uuid()});
 }
 
 
@@ -147,8 +175,9 @@ print_banner(const bzn::options& options, double eth_balance)
        << "               On port: " << options.get_listener().port() << "\n"
        << "             HTTP port: " << options.get_http_port()  << "\n"
        << "         Token Balance: " << eth_balance << " ETH" << "\n"
-       << "       Maximum Storage: " << options.get_max_storage() << " Bytes" << "\n"
-       << "          Used Storage: " << get_state_file_size(options) << " Bytes" << "\n"
+       // todo: disabled for now...
+       //<< "       Maximum Storage: " << options.get_max_storage() << " Bytes" << "\n"
+       << "          Used Storage: " << get_state_dir_size(options) << " Bytes" << "\n"
        << '\n';
 
     std::cout << ss.str();
@@ -314,7 +343,7 @@ main(int argc, const char* argv[])
             raft->start();
             status->start();
         }
-        
+
         print_banner(*options, eth_balance);
 
         start_worker_threads_and_wait(io_context);
