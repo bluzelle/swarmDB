@@ -74,23 +74,12 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     else:
         msg.db.header.nonce = random.randint(1,sys.maxint)
 
-    req = {}
-    req["bzn-api"] = "database";
-    req["msg"] = base64.b64encode(msg.SerializeToString())
+    msg_outer = bluzelle_pb2.bzn_envelope()
+    msg_outer.database_msg = msg.db.SerializeToString()
+    msg_outer.sender = CRUD_SCRIPT_SENDER_ID
 
-    if use_pbft:
-        msg_outer = bluzelle_pb2.bzn_envelope()
-        msg_outer.database_msg = msg.db.SerializeToString()
-        msg_outer.sender = CRUD_SCRIPT_SENDER_ID
-
-        ws.send_binary(msg_outer.SerializeToString())
-
-        resp = handle_response(ws)
-
-    else:
-        print("Sending: \n{}".format(msg).expandtabs(4))
-        ws.send(json.dumps(req))
-        resp = handle_response(ws)
+    ws.send_binary(msg_outer.SerializeToString())
+    resp = handle_response(ws)
 
     if loop:
         while 1:
@@ -110,22 +99,23 @@ def send_request(node, uuid, msg, loop=False, ws=None):
 
 
 def send_status_request(node):
-    ws = websocket.create_connection("ws://" + node)
+    ws = websocket.create_connection("ws://" + args.node)
+    msg_outer = bluzelle_pb2.bzn_envelope()
+    msg_inner = status_pb2.status_request()
+    msg_outer.sender = CRUD_SCRIPT_SENDER_ID
+    msg_outer.status_request = msg_inner.SerializeToString()
 
-    req = {}
-    req["bzn-api"] = "status"
-    req["transaction_id"] = random.randint(1,sys.maxint);
+    print("Sending: \n{}".format(msg_outer).expandtabs(4))
+    ws.send_binary(msg_outer.SerializeToString())
 
-    print("Sending : \n" + json.dumps(req, indent=4))
-    print("-" * 60 + '\n')
-
-    ws.send(json.dumps(req))
-    resp = ws.recv()
-
+    env = bluzelle_pb2.bzn_envelope()
+    env.ParseFromString(ws.recv())
+    resp = status_pb2.status_response()
+    resp.ParseFromString(env.status_response)
     print("Response: \n{}".format(resp).expandtabs(4))
+    print("Response: \n{}".format(resp.module_status_json).expandtabs(4))
     print("-" * 60 + '\n')
 
-    ws.close()
     return resp
 
 
@@ -232,29 +222,7 @@ def unsubscribe_request(key):
 
 
 def status_handler(args):
-    global use_pbft
-
-    if not use_pbft:
-        return send_status_request(args.node)
-
-    ws = websocket.create_connection("ws://" + args.node)
-    msg_outer = bluzelle_pb2.bzn_envelope()
-    msg_inner = status_pb2.status_request()
-    msg_outer.sender = CRUD_SCRIPT_SENDER_ID
-    msg_outer.status_request = msg_inner.SerializeToString()
-
-    print("Sending: \n{}".format(msg_outer).expandtabs(4))
-    ws.send_binary(msg_outer.SerializeToString())
-
-    env = bluzelle_pb2.bzn_envelope()
-    env.ParseFromString(ws.recv())
-    resp = status_pb2.status_response()
-    resp.ParseFromString(env.status_response)
-    print("Response: \n{}".format(resp).expandtabs(4))
-    print("Response: \n{}".format(resp.module_status_json).expandtabs(4))
-    print("-" * 60 + '\n')
-
-    return resp
+    return send_status_request(args.node)
 
 
 def create_db_handler(args):
@@ -322,8 +290,6 @@ def subscribe_handler(args):
 if __name__ == "__main__":
 
     parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
-
-    parser.add_argument("-p", "--use_pbft", action="store_true", help="Direct message to pbft instead of raft")
 
     parser.add_argument("-i", "--id", type=str, default="0", help="Crud script sender id (default 0)", required=False)
 
@@ -443,9 +409,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    global use_pbft
-    use_pbft = args.use_pbft
-
     try:
         if args.file:
             # if user gave us a file we need to read it as our value
