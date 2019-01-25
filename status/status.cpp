@@ -23,12 +23,7 @@ namespace
 {
     const std::string NAME_KEY{"name"};
     const std::string STATUS_KEY{"status"};
-    const std::string STATUS_MSG{"status"};
-    const std::string VERSION_KEY{"version"};
     const std::string MODULE_KEY{"module"};
-    const std::string UPTIME_KEY{"uptime"};
-    const std::string COMMIT_KEY{"commit"};
-    const std::string PBFT_ENABLED_KEY{"pbft_enabled"};
 
     std::string get_uptime(const std::chrono::steady_clock::time_point& start_time)
     {
@@ -48,11 +43,10 @@ namespace
 }
 
 
-status::status(std::shared_ptr<bzn::node_base> node, bzn::status::status_provider_list_t&& status_providers, const bool pbft_enabled)
+status::status(std::shared_ptr<bzn::node_base> node, bzn::status::status_provider_list_t&& status_providers)
     : node(std::move(node))
     , status_providers(std::move(status_providers))
     , start_time(std::chrono::steady_clock::now())
-    , pbft_enabled(pbft_enabled)
 {
 }
 
@@ -63,12 +57,6 @@ status::start()
     std::call_once(this->start_once,
         [this]()
         {
-            if (!this->node->register_for_message(STATUS_MSG,
-                std::bind(&status::handle_ws_status_messages, shared_from_this(), std::placeholders::_1, std::placeholders::_2)))
-            {
-                throw std::runtime_error("Unable to register for STATUS messages!");
-            }
-
             if (!this->node->register_for_message(bzn_envelope::kStatusRequest,
                 std::bind(&status::handle_status_request_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2)))
             {
@@ -101,23 +89,6 @@ status::query_modules()
 
 
 void
-status::handle_ws_status_messages(const bzn::json_message& ws_msg, std::shared_ptr<bzn::session_base> session)
-{
-    auto response_msg = std::make_shared<bzn::json_message>(ws_msg);
-
-    (*response_msg)[VERSION_KEY] = SWARM_VERSION;
-    (*response_msg)[COMMIT_KEY] = SWARM_GIT_COMMIT;
-    (*response_msg)[UPTIME_KEY] = get_uptime(this->start_time);
-    (*response_msg)[MODULE_KEY] = this->query_modules();
-    (*response_msg)[PBFT_ENABLED_KEY] = this->pbft_enabled;
-
-    LOG(debug) << response_msg->toStyledString().substr(0, MAX_MESSAGE_SIZE);
-
-    session->send_message(response_msg, false);
-}
-
-
-void
 status::handle_status_request_message(const bzn_envelope& /*msg*/, std::shared_ptr<bzn::session_base> session)
 {
     status_response srm;
@@ -125,7 +96,7 @@ status::handle_status_request_message(const bzn_envelope& /*msg*/, std::shared_p
     srm.set_swarm_version(SWARM_VERSION);
     srm.set_swarm_git_commit(SWARM_GIT_COMMIT);
     srm.set_uptime(get_uptime(this->start_time));
-    srm.set_pbft_enabled(this->pbft_enabled);
+    srm.set_pbft_enabled(true);
 
     Json::Value module_status;
     module_status[MODULE_KEY] = this->query_modules();
