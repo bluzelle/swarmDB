@@ -39,14 +39,14 @@ namespace bzn
         request->set_sender(TEST_NODE_UUID);
 
         // the first time we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request);
 
         auto request2 = new bzn_envelope(*request);
 
         // this time no pre-prepare should be issued
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(0));
         this->handle_request(*request2);
     }
@@ -69,7 +69,7 @@ namespace bzn
         request->set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request);
 
@@ -79,7 +79,7 @@ namespace bzn
         request2->set_timestamp(request2->timestamp() + 1);
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request2);
 
@@ -95,7 +95,7 @@ namespace bzn
         request3->set_database_msg(dmsg3->SerializeAsString());
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request3);
     }
@@ -118,7 +118,7 @@ namespace bzn
         request->set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request);
 
@@ -127,7 +127,7 @@ namespace bzn
         request2->set_sender(SECOND_NODE_UUID);
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(*request2);
     }
@@ -149,7 +149,7 @@ namespace bzn
         request->set_sender(TEST_NODE_UUID);
 
         // we should NOT get pre-prepare messages since this is an old request
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_preprepare, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true)), _))
             .Times(Exactly(0));
         this->handle_request(*request);
     }

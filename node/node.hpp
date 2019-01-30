@@ -19,6 +19,7 @@
 #include <chaos/chaos_base.hpp>
 #include <crypto/crypto_base.hpp>
 #include <options/options_base.hpp>
+#include <pbft/pbft_base.hpp>
 #include <json/json.h>
 #include <mutex>
 #include <atomic>
@@ -28,6 +29,8 @@
 
 namespace bzn
 {
+    class pbft;
+
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {
     public:
@@ -38,13 +41,15 @@ namespace bzn
 
         bool register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler) override;
 
-        void start() override;
+        void start(std::shared_ptr<bzn::pbft_base> pbft) override;
 
         void send_message_json(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg) override;
 
         void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg, bool close_session) override;
 
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg, bool close_session) override;
+
+        void send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);
@@ -55,6 +60,7 @@ namespace bzn
         void priv_msg_handler(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session);
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
 
+        std::shared_ptr<bzn::pbft_base>               pbft;
         std::unique_ptr<bzn::asio::tcp_acceptor_base> tcp_acceptor;
         std::shared_ptr<bzn::asio::io_context_base>   io_context;
         std::unique_ptr<bzn::asio::tcp_socket_base>   acceptor_socket;

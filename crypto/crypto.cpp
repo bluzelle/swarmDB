@@ -29,7 +29,7 @@ crypto::crypto(std::shared_ptr<bzn::options_base> options)
         : options(std::move(options))
 {
     LOG(info) << "Using " << SSLeay_version(SSLEAY_VERSION);
-    if(this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    if (this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
     {
         this->load_private_key();
     }
@@ -246,7 +246,7 @@ crypto::hash(const std::string& msg)
             && (1 == EVP_DigestUpdate(context.get(), msg.c_str(), msg.size()))
             && (1 == EVP_DigestFinal_ex(context.get(), hash_buffer.get(), NULL));
 
-    if(!success)
+    if (!success)
     {
         this->log_openssl_errors();
         throw std::runtime_error(std::string("\nfailed to compute message hash ") + msg);

@@ -106,7 +106,7 @@ namespace  bzn
             }));
 
         auto node = std::make_shared<bzn::node>(mock_io_context, mock_websocket, mock_chaos, std::chrono::milliseconds(0), TEST_ENDPOINT, crypto, options);
-        node->start();
+        node->start(nullptr);
 
         // call the handler to test do_accept() is not called on error and do_accept() is called again...
         accept_handler(boost::asio::error::operation_aborted);
@@ -115,7 +115,7 @@ namespace  bzn
         accept_handler(boost::system::error_code());
 
         // calling start again should not call do_accept()...
-        node->start();
+        node->start(nullptr);
     }
 
 
@@ -283,7 +283,7 @@ namespace  bzn
                 session->send_message(std::make_shared<bzn::json_message>(msg), true);
             });
 
-        node->start();
+        node->start(nullptr);
 
         io_context->run();
     }

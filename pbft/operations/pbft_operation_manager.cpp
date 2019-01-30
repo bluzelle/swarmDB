@@ -23,7 +23,7 @@ using namespace bzn;
 pbft_operation_manager::pbft_operation_manager(std::optional<std::shared_ptr<bzn::storage_base>> storage)
     : storage(storage)
 {
-    if(!storage)
+    if (!storage)
     {
         LOG(warning) << "pbft operation operation manager constructed without a storage backend; operations will not be persistent";
     }
@@ -43,7 +43,7 @@ pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, cons
         LOG(debug) << "Creating operation for seq " << sequence << " view " << view << " req " << bytes_to_debug_string(request_hash);
 
         std::shared_ptr<pbft_operation> op;
-        if(this->storage)
+        if (this->storage)
         {
             op = std::make_shared<pbft_persistent_operation>(view, sequence, request_hash, *(this->storage), peers_list->size());
         }

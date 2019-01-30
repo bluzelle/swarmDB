@@ -17,9 +17,9 @@ namespace bzn::test
 {
     TEST_F(pbft_test, test_local_commit_sends_audit_messages)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(false)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_audit, Eq(false)), _))
                 .Times(AnyNumber());
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_audit, Eq(true)), _))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();
@@ -47,7 +47,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, primary_sends_primary_status)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_audit, Eq(true)), _))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();
@@ -59,7 +59,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, nonprimary_does_not_send_primary_status)
     {
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(is_audit, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_audit, Eq(true)), _))
                 .Times(Exactly(0));
 
         this->uuid = SECOND_NODE_UUID;

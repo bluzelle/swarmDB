@@ -55,7 +55,7 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
 void
 pbft_persistent_operation::record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg)
 {
-    if(msg.type() != pbft_msg_type::PBFT_MSG_PREPREPARE
+    if (msg.type() != pbft_msg_type::PBFT_MSG_PREPREPARE
        && msg.type() != pbft_msg_type::PBFT_MSG_PREPARE
        && msg.type() != pbft_msg_type::PBFT_MSG_COMMIT)
     {
@@ -184,7 +184,7 @@ pbft_persistent_operation::load_transient_request() const
     }
 
     const auto response = this->storage->read(this->prefix, REQUEST_KEY);
-    if(!response.has_value())
+    if (!response.has_value())
     {
         return;
     }

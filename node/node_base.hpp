@@ -22,6 +22,8 @@
 
 namespace bzn
 {
+    class pbft_base;
+
     class node_base
     {
     public:
@@ -46,7 +48,7 @@ namespace bzn
         /**
          * Start server's listener etc.
          */
-        virtual void start() = 0;
+        virtual void start(std::shared_ptr<bzn::pbft_base> pbft) = 0;
 
         /**
          * Convenience method to connect and send a message to a node
@@ -71,6 +73,14 @@ namespace bzn
          * @param close_session don't expect a response on this session
          */
         virtual void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg, bool close_session) = 0;
+
+        /*
+         * Convenience method to connect and send a database message to a node by the node's uuid
+         * @param uuid          host to send the message to
+         * @param msg           message to send
+         * @param close_session don't expect a response on this session
+         */
+        virtual void send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session) = 0;
     };
 
 } // bzn

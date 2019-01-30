@@ -15,6 +15,8 @@
 #include <include/bluzelle.hpp>
 #include <node/node.hpp>
 #include <node/session.hpp>
+#include <utils/make_endpoint.hpp>
+#include <pbft/pbft.hpp>
 
 using namespace bzn;
 
@@ -38,9 +40,13 @@ node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
 
 
 void
-node::start()
+node::start(std::shared_ptr<bzn::pbft_base> pbft)
 {
-    std::call_once(this->start_once, &node::do_accept, this);
+    std::call_once(this->start_once, [&]
+        {
+            this->pbft = std::move(pbft);
+            this->do_accept();
+        });
 }
 
 
@@ -223,7 +229,7 @@ node::send_message_json(const boost::asio::ip::tcp::endpoint& ep, std::shared_pt
 void
 node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg, bool close_session)
 {
-    if(msg->sender().empty())
+    if (msg->sender().empty())
     {
         msg->set_sender(this->options->get_uuid());
     }
@@ -234,4 +240,19 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
     }
 
     this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()), close_session);
+}
+
+void
+node::send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session)
+{
+    try
+    {
+        auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
+        boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
+        this->send_message(endpoint, msg, close_session);
+    }
+    catch (const std::runtime_error& err)
+    {
+        LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
+    }
 }

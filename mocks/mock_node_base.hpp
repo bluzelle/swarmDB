@@ -28,14 +28,18 @@ class Mocknode_base : public node_base {
       bool(const std::string& msg_type, bzn::message_handler message_handler));
   MOCK_METHOD2(register_for_message,
       bool(const bzn_envelope::PayloadCase msg_type, bzn::protobuf_handler message_handler));
-  MOCK_METHOD0(start,
-      void());
+  MOCK_METHOD1(start,
+      void(std::shared_ptr<bzn::pbft_base> pbft));
   MOCK_METHOD2(send_message_json,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::json_message> msg));
   MOCK_METHOD3(send_message,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg, bool close_session));
   MOCK_METHOD3(send_message_str,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg, bool close_session));
+  MOCK_METHOD3(send_message,
+      void(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session));
+  MOCK_METHOD1(set_consensus,
+      void(const std::shared_ptr<bzn::pbft_base>& pbft));
 };
 
 }  // namespace bzn
