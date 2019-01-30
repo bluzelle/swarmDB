@@ -29,7 +29,8 @@
 
 namespace bzn
 {
-    class pbft;
+    using ep_key_t = std::string;
+    using session_death_handler = std::function<void()>;
 
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {
@@ -53,15 +54,17 @@ namespace bzn
 
         void do_accept();
 
+
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+        void priv_session_death_handler(const ep_key_t& ep_key);
 
         std::shared_ptr<bzn::pbft_base>               pbft;
 
         std::shared_ptr<bzn::session_base> open_session(const boost::asio::ip::tcp::endpoint& ep);
 
-        std::string key_from_ep(const boost::asio::ip::tcp::endpoint& ep);
+        ep_key_t key_from_ep(const boost::asio::ip::tcp::endpoint& ep);
 
-        std::unordered_map<std::string, std::shared_ptr<bzn::session_base>> sessions;
+        std::unordered_map<ep_key_t, std::weak_ptr<bzn::session_base>> sessions;
         std::mutex session_map_mutex;
 
         std::unique_ptr<bzn::asio::tcp_acceptor_base> tcp_acceptor;
@@ -79,8 +82,6 @@ namespace bzn
 
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::options_base> options;
-
-        std::function<void(const bzn_envelope&, std::shared_ptr<bzn::session_base>)> weak_priv_protobuf_handler;
     };
 
 } // bzn

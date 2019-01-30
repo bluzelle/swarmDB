@@ -31,7 +31,7 @@ namespace bzn {
             void());
         MOCK_CONST_METHOD0(is_open,
             bool());
-        MOCK_METHOD1(open_connection, void(std::shared_ptr<bzn::beast::websocket_base> ws_factory));
-        MOCK_METHOD1(accept_connection, void(std::shared_ptr<bzn::beast::websocket_stream_base> ws));
+        MOCK_METHOD1(open, void(std::shared_ptr<bzn::beast::websocket_base> ws_factory));
+        MOCK_METHOD1(accept, void(std::shared_ptr<bzn::beast::websocket_stream_base> ws));
     };
 }  // namespace bzn

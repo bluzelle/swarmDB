@@ -91,8 +91,16 @@ node::do_accept()
                 std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
-                auto session = std::make_shared<bzn::session>(self->io_context, ++self->session_id_counter, ep, self->chaos, self->weak_priv_protobuf_handler, self->options->get_ws_idle_timeout());
-                session->accept_connection(std::move(ws));
+                auto session = std::make_shared<bzn::session>(
+                        self->io_context
+                        , ++self->session_id_counter
+                        , ep
+                        , self->chaos
+                        , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
+                        , self->options->get_ws_idle_timeout()
+                        , [](){});
+
+                session->accept(std::move(ws));
 
                 LOG(info) << "accepting new incomming connection with " << key;
                 // Do not attempt to identify the incoming session; one ip address could be running multiple daemons
@@ -126,25 +134,40 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 }
 
 void
+node::priv_session_death_handler(const ep_key_t& ep_key)
+{
+    std::shared_ptr<bzn::session_base> session;
+    std::lock_guard<std::mutex> lock(this->session_map_mutex);
+    if (this->sessions.find(ep_key) != this->sessions.end() && (session = this->sessions.at(ep_key).lock()) && session->is_open())
+    {
+        // the session may have already been replaced, and we don't want to remove the new one if so
+        return;
+    }
+    this->sessions.erase(ep_key);
+}
+
+void
 node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) {
     std::shared_ptr<bzn::session_base> session;
+
     {
         std::lock_guard<std::mutex> lock(this->session_map_mutex);
         auto key = this->key_from_ep(ep);
 
-        if (this->sessions.find(key) == this->sessions.end() || !this->sessions.at(key)->is_open()) {
-            auto session = std::make_shared<bzn::session>(
+        if (this->sessions.find(key) == this->sessions.end() || !(session = this->sessions.at(key).lock()) || !session->is_open())
+        {
+            session = std::make_shared<bzn::session>(
                     this->io_context
                     , ++this->session_id_counter
                     , ep
                     , this->chaos
-                    , this->weak_priv_protobuf_handler
-                    , this->options->get_ws_idle_timeout());
-            session->open_connection(this->websocket);
+                    , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+                    , this->options->get_ws_idle_timeout()
+                    , std::bind(&node::priv_session_death_handler, shared_from_this(), key));
+            session->open(this->websocket);
             sessions.insert_or_assign(key, session);
         }
-
-        session = this->sessions.at(key);
+        // else session was assigned by the condition
     }
 
     session->send_message(msg);
@@ -166,8 +189,8 @@ node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn
     this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()));
 }
 
-std::string
-node::key_from_ep(const boost::asio::ip::tcp::endpoint &ep)
+ep_key_t
+node::key_from_ep(const boost::asio::ip::tcp::endpoint& ep)
 {
     return ep.address().to_string() + ":" + std::to_string(ep.port());
 }

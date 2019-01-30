@@ -256,13 +256,6 @@ main(int argc, const char* argv[])
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
         std::shared_ptr<bzn::status> status;
 
-        chaos->start();
-
-        if (options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED))
-        {
-            audit->start();
-        }
-
         auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
 
         // which type of storage?
@@ -295,9 +288,17 @@ main(int argc, const char* argv[])
 
         status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
 
+        node->start();
+        chaos->start();
         crud->start();
         pbft->start();
         status->start();
+        chaos->start();
+
+        if (options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED))
+        {
+            audit->start();
+        }
 
         print_banner(*options, eth_balance);
 

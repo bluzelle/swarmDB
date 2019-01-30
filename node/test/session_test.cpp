@@ -66,7 +66,7 @@ public:
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT);
+        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, [](){});
     }
 
     void yield()
@@ -93,8 +93,8 @@ namespace bzn
 
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
-        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT);
-        session->accept_connection(mock_websocket_stream);
+        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, [](){});
+        session->accept(mock_websocket_stream);
         accept_handler(boost::system::error_code{});
 
         EXPECT_EQ(bzn::session_id(1), session->get_session_id());
@@ -104,7 +104,15 @@ namespace bzn
     {
         this->session->send_message(std::make_shared<std::string>("hihi"));
 
-        this->session->accept_connection(this->mock.websocket->make_unique_websocket_stream(this->mock.io_context->make_unique_tcp_socket()->get_tcp_socket()));
+        this->session
+            ->accept(
+                    this->mock
+                        .websocket
+                        ->make_unique_websocket_stream(
+                                this->mock
+                                    .io_context
+                                    ->make_unique_tcp_socket()
+                                    ->get_tcp_socket()));
         this->mock.ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->yield();
@@ -114,7 +122,15 @@ namespace bzn
 
     TEST_F(session_test2, idle_timeout_closes_session)
     {
-        this->session->accept_connection(this->mock.websocket->make_unique_websocket_stream(this->mock.io_context->make_unique_tcp_socket()->get_tcp_socket()));
+        this->session
+            ->accept(
+                    this->mock
+                        .websocket
+                        ->make_unique_websocket_stream(
+                                this->mock
+                                    .io_context
+                                    ->make_unique_tcp_socket()
+                                    ->get_tcp_socket()));
         this->mock.ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->mock.timer_callbacks.at(0)(boost::system::error_code{});

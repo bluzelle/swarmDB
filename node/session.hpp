@@ -22,6 +22,8 @@
 #include <memory>
 #include <mutex>
 #include <list>
+#include <atomic>
+#include <node/node.hpp>
 
 #include <gtest/gtest_prod.h>
 
@@ -37,7 +39,8 @@ namespace bzn
                 boost::asio::ip::tcp::endpoint ep,
                 std::shared_ptr<bzn::chaos_base> chaos,
                 bzn::protobuf_handler proto_handler,
-                std::chrono::milliseconds ws_idle_timeout);
+                std::chrono::milliseconds ws_idle_timeout,
+                bzn::session_death_handler death_handler);
 
         ~session();
 
@@ -49,14 +52,14 @@ namespace bzn
 
         bool is_open() const override;
 
-        void open_connection(std::shared_ptr<bzn::beast::websocket_base> ws_factory) override;
-        void accept_connection(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
-
-        void start_idle_timeout();
+        void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) override;
+        void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
 
     private:
         void do_read();
         void do_write();
+
+        void start_idle_timeout();
 
         const bzn::session_id session_id;
         const boost::asio::ip::tcp::endpoint ep;
@@ -67,18 +70,18 @@ namespace bzn
 
         std::list<std::shared_ptr<bzn::encoded_message>> write_queue;
 
-        bzn::message_handler handler;
         bzn::protobuf_handler proto_handler;
+        bzn::session_death_handler death_handler;
 
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;
 
         std::mutex socket_lock;
-        bool writing = false;
-        bool reading = false;
-        bool closing = false;
 
-        bool activity = false;
+        std::atomic<bool> writing = false;
+        std::atomic<bool> reading = false;
+        std::atomic<bool> closing = false;
+        std::atomic<bool> activity = false;
 
         boost::asio::mutable_buffers_1 write_buffer;
     };

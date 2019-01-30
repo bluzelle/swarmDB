@@ -57,12 +57,12 @@ namespace bzn
         /**
          * Create a new websocket connection for this session
          */
-        virtual void open_connection(std::shared_ptr<bzn::beast::websocket_base> ws_factory) = 0;
+        virtual void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) = 0;
 
         /**
          * Accept an incoming connection on some websocket
          */
-        virtual void accept_connection(std::shared_ptr<bzn::beast::websocket_stream_base> ws) = 0;
+        virtual void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) = 0;
     };
 
 } // bzn

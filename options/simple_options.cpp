@@ -87,7 +87,7 @@ simple_options::build_options()
                         po::value<std::string>()->default_value("./.state/"),
                         "location for state files")
                 (WS_IDLE_TIMEOUT.c_str(),
-                        po::value<uint64_t>()->default_value(10000),
+                        po::value<uint64_t>()->default_value(300000),
                         "websocket idle timeout (ms)");
 
     po::options_description logging("Logging");
