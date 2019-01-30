@@ -30,7 +30,7 @@
 namespace bzn
 {
     using ep_key_t = std::string;
-    using session_death_handler = std::function<void()>;
+    using session_shutdown_handler = std::function<void()>;
 
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {
@@ -56,7 +56,7 @@ namespace bzn
 
 
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
-        void priv_session_death_handler(const ep_key_t& ep_key);
+        void priv_session_shutdown_handler(const ep_key_t& ep_key);
 
         std::shared_ptr<bzn::pbft_base>               pbft;
 

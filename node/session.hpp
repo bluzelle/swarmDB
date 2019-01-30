@@ -40,7 +40,7 @@ namespace bzn
                 std::shared_ptr<bzn::chaos_base> chaos,
                 bzn::protobuf_handler proto_handler,
                 std::chrono::milliseconds ws_idle_timeout,
-                bzn::session_death_handler death_handler);
+                bzn::session_shutdown_handler death_handler);
 
         ~session();
 
@@ -71,7 +71,7 @@ namespace bzn
         std::list<std::shared_ptr<bzn::encoded_message>> write_queue;
 
         bzn::protobuf_handler proto_handler;
-        bzn::session_death_handler death_handler;
+        bzn::session_shutdown_handler death_handler;
 
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;

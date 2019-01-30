@@ -26,7 +26,7 @@ session::session(
         std::shared_ptr<bzn::chaos_base> chaos,
         bzn::protobuf_handler proto_handler,
         std::chrono::milliseconds ws_idle_timeout,
-        bzn::session_death_handler death_handler
+        bzn::session_shutdown_handler death_handler
 )
         : session_id(session_id)
         , ep(std::move(ep))

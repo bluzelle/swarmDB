@@ -134,7 +134,7 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 }
 
 void
-node::priv_session_death_handler(const ep_key_t& ep_key)
+node::priv_session_shutdown_handler(const ep_key_t& ep_key)
 {
     std::shared_ptr<bzn::session_base> session;
     std::lock_guard<std::mutex> lock(this->session_map_mutex);
@@ -163,7 +163,7 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
                     , this->chaos
                     , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
                     , this->options->get_ws_idle_timeout()
-                    , std::bind(&node::priv_session_death_handler, shared_from_this(), key));
+                    , std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key));
             session->open(this->websocket);
             sessions.insert_or_assign(key, session);
         }
