@@ -238,30 +238,32 @@ simple_options::handle_config_file_options()
 {
     Json::Value json;
 
+    std::ifstream ifile;
+    ifile.exceptions(std::ios::failbit);
+
     try
     {
-        std::ifstream ifile(config_file);
-        ifile.exceptions(std::ios::failbit);
-
-        Json::Reader reader;
-        if (!reader.parse(ifile, json))
-        {
-            throw std::runtime_error("Failed to parse: " + config_file + " : " + reader.getFormattedErrorMessages());
-        }
+        ifile.open(config_file);
     }
-    catch (std::exception& /*e*/)
+    catch (const std::exception& /*ex*/)
     {
         throw std::runtime_error("Failed to load: " + config_file + " : " + strerror(errno));
     }
 
-    if(!json.isObject())
+    Json::Reader reader;
+    if (!reader.parse(ifile, json))
+    {
+        throw std::runtime_error("Failed to parse: " + config_file + " : " + reader.getFormattedErrorMessages());
+    }
+
+    if (!json.isObject())
     {
         throw std::runtime_error("Config file should be an object");
     }
 
     po::parsed_options parsed(&(this->options_root));
 
-    for(const auto& name : json.getMemberNames())
+    for (const auto& name : json.getMemberNames())
     {
         const auto& json_val = json[name];
 
