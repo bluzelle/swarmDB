@@ -26,14 +26,14 @@ session::session(
         std::shared_ptr<bzn::chaos_base> chaos,
         bzn::protobuf_handler proto_handler,
         std::chrono::milliseconds ws_idle_timeout,
-        bzn::session_shutdown_handler death_handler
+        bzn::session_shutdown_handler shutdown_handler
 )
         : session_id(session_id)
         , ep(std::move(ep))
         , io_context(std::move(io_context))
         , chaos(std::move(chaos))
         , proto_handler(std::move(proto_handler))
-        , death_handler(std::move(death_handler))
+        , shutdown_handler(std::move(shutdown_handler))
         , idle_timer(this->io_context->make_unique_steady_timer())
         , ws_idle_timeout(std::move(ws_idle_timeout))
         , write_buffer(nullptr, 0)
@@ -268,7 +268,7 @@ session::close()
 
     this->closing = true;
     LOG(debug) << "closing session " << std::to_string(this->session_id);
-    this->io_context->post(this->death_handler);
+    this->io_context->post(this->shutdown_handler);
 
     if (this->websocket->is_open())
     {
