@@ -100,6 +100,7 @@ namespace bzn
 
         EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
         EXPECT_EQ(new_view_index, newview.view());
+        EXPECT_EQ(this->pbft->next_issued_sequence_number, current_sequence + 1);
     }
 
     TEST_F(pbft_newview_test, test_get_primary)
