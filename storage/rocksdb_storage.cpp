@@ -390,7 +390,7 @@ rocksdb_storage::load_snapshot(const std::string& data)
 void
 rocksdb_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     std::vector<bzn::key_t> v;
 

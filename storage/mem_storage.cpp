@@ -269,10 +269,9 @@ mem_storage::load_snapshot(const std::string& data)
 void
 mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     auto inner_db = this->kv_store.find(uuid);
-
     if (inner_db != this->kv_store.end())
     {
         auto match = inner_db->second.lower_bound(first);

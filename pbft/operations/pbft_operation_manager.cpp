@@ -93,7 +93,7 @@ pbft_operation_manager::delete_operations_until(uint64_t sequence)
     if (this->storage)
     {
         LOG(debug) << "cleaning up operation state from storage";
-        pbft_persistent_operation::remove_range(this->storage.value(), 0, sequence);
+        pbft_persistent_operation::remove_range(*this->storage, 0, sequence);
     }
 }
 
