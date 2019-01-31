@@ -301,7 +301,7 @@ mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std:
         auto end_it = last.empty() ? inner_db->second.end() : inner_db->second.lower_bound(last);
         for (auto it = inner_db->second.lower_bound(first); it != inner_db->second.end() && it != end_it; it++)
         {
-            if (!predicate || predicate.value()(it->first, it->second))
+            if (!predicate || (*predicate)(it->first, it->second))
             {
                 action(it->first, it->second);
             }

@@ -421,7 +421,7 @@ rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const 
     for (iter->Seek(start_key); iter->Valid() && iter->key().starts_with(uuid) && iter->key().ToString() >= start_key
         && (end_key.empty() || iter->key().ToString() < end_key); iter->Next())
     {
-        if (!predicate || predicate.value()(iter->key().ToString().substr(uuid.size()), iter->value().ToString()))
+        if (!predicate || (*predicate)(iter->key().ToString().substr(uuid.size()), iter->value().ToString()))
         {
             action(iter->key().ToString().substr(uuid.size()), iter->value().ToString());
         }
