@@ -196,13 +196,13 @@ node::key_from_ep(const boost::asio::ip::tcp::endpoint& ep)
 }
 
 void
-node::send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session)
+node::send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg)
 {
     try
     {
         auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
         boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
-        this->send_message(endpoint, msg, close_session);
+        this->send_message(endpoint, msg);
     }
     catch (const std::runtime_error& err)
     {

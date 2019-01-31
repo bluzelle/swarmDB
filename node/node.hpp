@@ -46,7 +46,7 @@ namespace bzn
 
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 
-        void send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg, bool close_session) override;
+        void send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);

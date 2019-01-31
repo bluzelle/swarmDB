@@ -277,7 +277,7 @@ main(int argc, const char* argv[])
             unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
         }
 
-        auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
+        auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node);
         auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
 
         auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
@@ -288,7 +288,7 @@ main(int argc, const char* argv[])
 
         status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
 
-        node->start();
+        node->start(pbft);
         chaos->start();
         crud->start();
         pbft->start();

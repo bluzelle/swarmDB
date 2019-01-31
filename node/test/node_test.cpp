@@ -85,7 +85,7 @@ namespace  bzn
 
     TEST_F(node_test2, test_accept_incoming_connection)
     {
-        this->node->start();
+        this->node->start(nullptr);
 
         this->yield();
         EXPECT_EQ(mock.socket_count, 1u);
@@ -98,7 +98,7 @@ namespace  bzn
 
     TEST_F(node_test2, test_make_new_connection)
     {
-        this->node->start();
+        this->node->start(nullptr);
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
 
@@ -108,7 +108,7 @@ namespace  bzn
 
     TEST_F(node_test2, test_reuse_connection)
     {
-        this->node->start();
+        this->node->start(nullptr);
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
         this->yield();
@@ -124,7 +124,7 @@ namespace  bzn
 
     TEST_F(node_test2, new_session_for_new_ep)
     {
-        this->node->start();
+        this->node->start(nullptr);
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test A"));
         this->yield();
@@ -140,7 +140,7 @@ namespace  bzn
 
     TEST_F(node_test2, test_replace_dead_session)
     {
-        this->node->start();
+        this->node->start(nullptr);
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
         this->yield();

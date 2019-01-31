@@ -43,7 +43,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_forwarded_to_primary_when_not_primary)
     {
         EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), A<std::shared_ptr<bzn_envelope>>())).Times(1).WillRepeatedly(Invoke(
-                [&](auto ep, auto msg, bool /*close_session*/)
+                [&](auto ep, auto msg)
                 {
                     EXPECT_EQ(ep, make_endpoint(this->pbft->get_primary()));
                     EXPECT_EQ(msg->payload_case(), bzn_envelope::kDatabaseMsg);

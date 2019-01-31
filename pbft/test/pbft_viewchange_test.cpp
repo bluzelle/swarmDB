@@ -207,7 +207,7 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env, bool /*close_session*/)
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
                 {
                     EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
                     pbft_msg viewchange;

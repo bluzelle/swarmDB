@@ -82,7 +82,7 @@ namespace bzn
 
         bzn_envelope viewchange_envelope;
         EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto& viewchange_env, bool /*close_session*/) {viewchange_envelope = *viewchange_env;}));
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto& viewchange_env) {viewchange_envelope = *viewchange_env;}));
         this->pbft->handle_failure();
 
         pbft_msg viewchange;
