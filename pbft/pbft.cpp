@@ -1074,6 +1074,12 @@ pbft::get_view() const
     return this->view;
 }
 
+std::shared_ptr<bzn::node_base>
+pbft::get_node()
+{
+    return this->node;
+}
+
 bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {

@@ -88,7 +88,7 @@ database_pbft_service::apply_operation_now(const bzn_envelope& msg, std::shared_
         {
             LOG(debug) << "handling quick read";
 
-            this->crud->handle_request(msg.sender(), db_msg, std::move(session));
+            this->crud->handle_request(msg.sender(), db_msg, session);
 
             return true;
         }

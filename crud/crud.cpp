@@ -14,6 +14,7 @@
 
 #include <crud/crud.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
+#include <utils/make_endpoint.hpp>
 
 using namespace bzn;
 using namespace std::placeholders;
@@ -27,9 +28,10 @@ namespace
 }
 
 
-crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager)
+crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager, std::shared_ptr<bzn::node_base> node)
            : storage(std::move(storage))
            , subscription_manager(std::move(subscription_manager))
+           , node(std::move(node))
            , message_handlers{
                  {database_msg::kCreate,        std::bind(&crud::handle_create,         this, _1, _2, _3)},
                  {database_msg::kRead,          std::bind(&crud::handle_read,           this, _1, _2, _3)},
@@ -63,7 +65,7 @@ crud::start()
 
 
 void
-crud::handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+crud::handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base> session)
 {
     if (auto it = this->message_handlers.find(request.msg_case()); it != this->message_handlers.end())
     {
@@ -101,9 +103,31 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     env.set_sender("placeholder for daemon's uuid"); // TODO
     // TODO: crypto
 
-    session->send_message(std::make_shared<std::string>(env.SerializeAsString()), false);
-}
+    if (session)
+    {
+        session->send_message(std::make_shared<std::string>(env.SerializeAsString()), false);
+    }
+    else
+    {
+        LOG(warning) << "session not set - response for the " << uint32_t(request.msg_case()) << " operation not sent via session";
+    }
 
+    if (this->node && !response.header().point_of_contact().empty())
+    {
+        try
+        {
+            this->node->send_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env), false);
+        }
+        catch(const std::runtime_error& err)
+        {
+            LOG(error) << err.what();
+        }
+    }
+    else
+    {
+        LOG(error) << "Unable to send response for the " << uint32_t(request.msg_case()) << " operation to point of contact - node not set in crud module";
+    }
+}
 
 void
 crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
@@ -131,43 +155,28 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. CREATE response not sent.";
+    this->send_response(request, result, database_response(), session);
 }
 
 
 void
 crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    const bzn::key_t key = (request.msg_case() == database_msg::kRead) ? request.read().key() : request.quick_read().key();
+
+    const auto result = this->storage->read(request.header().db_uuid(), key);
+
+    database_response response;
+
+    if (result)
     {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
-
-        const bzn::key_t key = (request.msg_case() == database_msg::kRead) ? request.read().key() : request.quick_read().key();
-
-        const auto result = this->storage->read(request.header().db_uuid(), key);
-
-        database_response response;
-
-        if (result)
-        {
-            response.mutable_read()->set_key(key);
-            response.mutable_read()->set_value(*result);
-        }
-
-        this->send_response(request, (result) ? bzn::storage_result::ok : bzn::storage_result::not_found,
-            std::move(response), session);
-
-        return;
+        response.mutable_read()->set_key(key);
+        response.mutable_read()->set_value(*result);
     }
 
-    LOG(warning) << "session no longer available. READ not executed.";
+    this->send_response(request, (result) ? bzn::storage_result::ok : bzn::storage_result::not_found, std::move(response), session);
 }
 
 
@@ -197,14 +206,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. UPDATE response not sent.";
+    this->send_response(request, result, database_response(), session);
 }
 
 
@@ -234,84 +236,56 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. DELETE response not sent.";
+    this->send_response(request, result, database_response(), session);
 }
 
 
 void
 crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
-    {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        database_response response;
+    database_response response;
 
-        response.mutable_has()->set_key(request.has().key());
-        response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+    response.mutable_has()->set_key(request.has().key());
+    response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
 
-        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. HAS not executed.";
+    this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }
 
 
 void
 crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    const auto keys = this->storage->get_keys(request.header().db_uuid());
+
+    database_response response;
+    response.mutable_keys();
+
+    for (const auto& key : keys)
     {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
-
-        const auto keys = this->storage->get_keys(request.header().db_uuid());
-
-        database_response response;
-        response.mutable_keys();
-
-        for (const auto& key : keys)
-        {
-            response.mutable_keys()->add_keys(key);
-        }
-
-        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
-
-        return;
+        response.mutable_keys()->add_keys(key);
     }
 
-    LOG(warning) << "session no longer available. KEYS not executed.";
+    this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }
 
 
 void
 crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
-    {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        const auto [keys, size] = this->storage->get_size(request.header().db_uuid());
+    const auto [keys, size] = this->storage->get_size(request.header().db_uuid());
 
-        database_response response;
+    database_response response;
 
-        response.mutable_size()->set_keys(keys);
-        response.mutable_size()->set_bytes(size);
+    response.mutable_size()->set_keys(keys);
+    response.mutable_size()->set_bytes(size);
 
-        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. SIZE not executed.";
+    this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }
 
 
@@ -370,14 +344,7 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
         result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id));
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. CREATE DB response not sent.";
+    this->send_response(request, result, database_response(), session);
 }
 
 
@@ -404,73 +371,51 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. DELETE DB response not sent.";
+    this->send_response(request, result, database_response(), session);
 }
 
 
 void
 crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
-    {
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        database_response response;
+    database_response response;
 
-        response.mutable_has_db()->set_uuid(request.header().db_uuid());
-        response.mutable_has_db()->set_has(this->storage->has(PERMISSION_UUID, request.header().db_uuid()));
+    response.mutable_has_db()->set_uuid(request.header().db_uuid());
+    response.mutable_has_db()->set_has(this->storage->has(PERMISSION_UUID, request.header().db_uuid()));
 
-        this->send_response(request, bzn::storage_result::ok, std::move(response), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. HAS DB not executed.";
+    this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }
 
 
 void
 crud::handle_writers(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    if (session)
-    {
-        bzn::storage_result result{bzn::storage_result::not_found};
+     bzn::storage_result result{bzn::storage_result::not_found};
+     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
-        std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
-        const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+     if (db_exists)
+     {
+         database_response resp;
 
-        if (db_exists)
-        {
-            database_response resp;
+         resp.mutable_writers()->set_owner(perms[OWNER_KEY].asString());
 
-            resp.mutable_writers()->set_owner(perms[OWNER_KEY].asString());
+         for(const auto& writer : perms[WRITERS_KEY])
+         {
+             resp.mutable_writers()->add_writers(writer.asString());
+         }
 
-            for(const auto& writer : perms[WRITERS_KEY])
-            {
-                resp.mutable_writers()->add_writers(writer.asString());
-            }
+         this->send_response(request, bzn::storage_result::ok, std::move(resp), session);
 
-            this->send_response(request, bzn::storage_result::ok, std::move(resp), session);
-
-            return;
-        }
-        else
-        {
-            this->send_response(request, result, database_response(), session);
-        }
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. WRITERS not executed.";
+         return;
+     }
+     else
+     {
+         this->send_response(request, result, database_response(), session);
+     }
 }
 
 
@@ -502,14 +447,7 @@ crud::handle_add_writers(const bzn::caller_id_t& caller_id, const database_msg& 
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. ADD_WRITERS response not sent,";
+    this->send_response(request, result, database_response(), session);
 }
 
 
@@ -541,14 +479,7 @@ crud::handle_remove_writers(const bzn::caller_id_t& caller_id, const database_ms
         }
     }
 
-    if (session)
-    {
-        this->send_response(request, result, database_response(), session);
-
-        return;
-    }
-
-    LOG(warning) << "session no longer available. REMOVE_WRITERS response not sent,";
+    this->send_response(request, result, database_response(), session);
 }
 
 

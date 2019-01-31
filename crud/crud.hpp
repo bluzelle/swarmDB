@@ -27,9 +27,9 @@ namespace bzn
     class crud final : public bzn::crud_base, public std::enable_shared_from_this<crud>
     {
     public:
-        crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager);
+        crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager, std::shared_ptr<bzn::node_base> node);
 
-        void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base>& session) override;
+        void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) override;
 
         void start() override;
 
@@ -71,8 +71,7 @@ namespace bzn
 
         void handle_remove_writers(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
 
-        void send_response(const database_msg& request, bzn::storage_result result, database_response&& response,
-                           std::shared_ptr<bzn::session_base>& session);
+        void send_response(const database_msg& request, bzn::storage_result result, database_response&& response, std::shared_ptr<bzn::session_base>& session);
 
         // helpers...
         std::pair<bool, Json::Value> get_database_permissions(const bzn::uuid_t& uuid) const;
@@ -88,7 +87,10 @@ namespace bzn
         void remove_writers(const database_msg& request, Json::Value& perms);
 
         std::shared_ptr<bzn::storage_base> storage;
+
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
+
+        std::shared_ptr<bzn::node_base> node;
 
         using message_handler_t = std::function<void(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)>;
 

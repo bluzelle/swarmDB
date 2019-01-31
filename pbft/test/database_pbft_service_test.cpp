@@ -215,30 +215,27 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
         InSequence dummy;
 
         EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
-            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base> /*session*/)
             {
                EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                EXPECT_EQ(request.create().key(), "key1");
                EXPECT_EQ(request.create().value(), "value1");
-               ASSERT_TRUE(session);
             }));
 
         EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
-            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base> /*session*/)
             {
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key2");
                 EXPECT_EQ(request.create().value(), "value2");
-                ASSERT_FALSE(session); // operation2 never had a session set
             }));
 
         EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
-            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base>& session)
+            [](const bzn::caller_id_t& /*caller_id*/, const database_msg& request, const std::shared_ptr<bzn::session_base> /*session*/)
             {
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key3");
                 EXPECT_EQ(request.create().value(), "value3");
-                ASSERT_TRUE(session); // operation3 session still around
             }));
     }
 

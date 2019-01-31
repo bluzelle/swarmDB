@@ -115,7 +115,7 @@ TEST_F(chaos_test, test_messages_sometimes_dropped_or_delayed_sometimes_not)
 
     for (int i=0; i<10000; i++)
     {
-        if(this->chaos->is_message_dropped())
+        if (this->chaos->is_message_dropped())
         {
             dropped_count ++;
         }
@@ -124,7 +124,7 @@ TEST_F(chaos_test, test_messages_sometimes_dropped_or_delayed_sometimes_not)
             not_dropped_count ++;
         }
 
-        if(this->chaos->is_message_delayed())
+        if (this->chaos->is_message_delayed())
         {
             delayed_count++;
         }

@@ -97,7 +97,7 @@ public:
 
     void save_file(const std::string& filename, const std::string& content)
     {
-        if(this->open_files.count(filename) > 0)
+        if (this->open_files.count(filename) > 0)
         {
             unlink(TEST_CONFIG_FILE.c_str());
         }
