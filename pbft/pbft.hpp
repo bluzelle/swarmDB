@@ -100,6 +100,10 @@ namespace bzn
 
         bool is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const;
 
+        std::shared_ptr<bzn::node_base> get_node();
+
+        const peer_address_t& get_peer_by_uuid(const std::string& uuid) const override;
+
         /*
          * maximum number of tolerable faults (this can be a parameter, but for now we assume it has the worst-case value)
          * f = floor( (n-1) / 3 )
@@ -174,7 +178,7 @@ namespace bzn
         bool initialize_configuration(const bzn::peers_list_t& peers);
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
-        const peer_address_t& get_peer_by_uuid(const std::string& uuid) const;
+
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash);
         bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
         bool move_to_new_configuration(const hash_t& config_hash);

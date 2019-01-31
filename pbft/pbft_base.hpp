@@ -43,6 +43,8 @@ namespace bzn
 
         virtual void handle_failure() = 0;
 
+        virtual const peer_address_t& get_peer_by_uuid(const std::string& uuid) const = 0;
+
         virtual ~pbft_base() = default;
 
     };

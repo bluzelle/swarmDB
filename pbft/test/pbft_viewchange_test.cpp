@@ -162,7 +162,7 @@ namespace bzn
 
         this->run_transaction_through_primary_times(2, current_sequence);
 
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true)), _))
                 .WillRepeatedly(Invoke(
                         [&](const auto & /*endpoint*/, const auto &viewchange_env, bool /*close_session*/)
                         {
@@ -206,7 +206,7 @@ namespace bzn
 
         this->run_transaction_through_primary_times(2, current_sequence);
 
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true)), _))
                 .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env, bool /*close_session*/)
                 {
                     EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
@@ -397,7 +397,7 @@ namespace bzn
                                            {
                                                 if (p.uuid == TEST_NODE_UUID)
                                                {
-                                                   EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_prepare, Eq(true)), _))
+                                                   EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true)), _))
                                                            .Times(Exactly(2 * TEST_PEER_LIST.size()));
                                                    pbft_msg msg;
                                                    ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
@@ -406,7 +406,7 @@ namespace bzn
                                            }));
         }
 
-        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(test::is_viewchange, Eq(true)), _))
+        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true)), _))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         // get sut1 to generate viewchange message
@@ -428,7 +428,7 @@ namespace bzn
 
         EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>())).WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
             {return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());}));
-        EXPECT_CALL(*mock_node, send_message(_, ResultOf(test::is_viewchange, Eq(true)), _)).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env, bool /*close_session*/)
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true)), _)).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env, bool /*close_session*/)
             { original_message = *viewchange_env; }));
 
         this->run_transaction_through_primary_times(1, current_sequence);

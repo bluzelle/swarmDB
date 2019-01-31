@@ -438,7 +438,7 @@ namespace bzn
         }
 
         // once second pbft gets f+1 viewchanges it will broadcast a viewchange message
-        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(is_viewchange, Eq(true)), _))
+        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_viewchange, Eq(true)), _))
             .Times((Exactly(TEST_PEER_LIST.size())))
             .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/)
             {
@@ -449,7 +449,7 @@ namespace bzn
 
         auto newview_env = std::make_shared<bzn_envelope>();
         // second pbft should send a newview with the new configuration
-        EXPECT_CALL(*mock_node2, send_message(_, ResultOf(is_newview, Eq(true)), _))
+        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_newview, Eq(true)), _))
             .Times((Exactly(TEST_PEER_LIST.size() + 1)))
             .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/) {
                 pbft_msg msg;
@@ -511,7 +511,7 @@ namespace bzn
     TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)
     {
         this->uuid = "somenode";
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true)), _))
             .Times(Exactly(1))
             .WillOnce(Invoke([&](auto, auto, bool /*close_session*/)
             {
@@ -526,7 +526,7 @@ namespace bzn
 
     TEST_F(pbft_join_leave_test, node_in_swarm_doesnt_ask_to_join)
     {
-        EXPECT_CALL(*this->mock_node, send_message(_, ResultOf(test::is_join, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true)), _))
             .Times(Exactly(0));
         this->build_pbft();
     }
@@ -552,7 +552,7 @@ namespace bzn
                     if (p.uuid == TEST_NODE_UUID)
                     {
                         EXPECT_CALL(*(mock_node),
-                            send_message(_, ResultOf(test::is_prepare, Eq(true)), _))
+                            send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true)), _))
                             .Times(Exactly(TEST_PEER_LIST.size()));
 
                         // reflect the pre-prepare back

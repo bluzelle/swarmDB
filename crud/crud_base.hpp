@@ -57,7 +57,7 @@ namespace bzn
     public:
         virtual ~crud_base() = default;
 
-        virtual void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, const std::shared_ptr<bzn::session_base>& session) = 0;
+        virtual void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) = 0;
 
         virtual void start() = 0;
 

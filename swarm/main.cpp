@@ -258,7 +258,6 @@ main(int argc, const char* argv[])
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
         std::shared_ptr<bzn::status> status;
 
-        node->start();
         chaos->start();
 
         if (options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED))
@@ -289,12 +288,14 @@ main(int argc, const char* argv[])
                 unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
             }
 
-            auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context));
+            auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node);
             auto operation_manager = std::make_shared<bzn::pbft_operation_manager>();
 
             auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
                 std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
                 ,failure_detector , crypto, operation_manager);
+
+            node->start(pbft);
 
             pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
@@ -306,6 +307,8 @@ main(int argc, const char* argv[])
         }
         else
         {
+            node->start(nullptr);
+
             // create http server using our configured listener address & http port number...
             auto ep = options->get_listener();
             ep.port(options->get_http_port());

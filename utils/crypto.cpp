@@ -368,7 +368,7 @@ namespace bzn::utils::crypto
         long len;
 
         ::FILE* fp = fopen(filename.c_str(), "r");
-        if( !fp)
+        if (!fp)
         {
             throw std::runtime_error("Failed to read pem file: " + filename);
         }
