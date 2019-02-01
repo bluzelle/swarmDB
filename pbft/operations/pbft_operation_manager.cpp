@@ -105,7 +105,6 @@ pbft_operation_manager::prepared_operations_since(uint64_t sequence)
     // simpleness with respect to dynamic peering. There cannot be multiple prepared operations with distinct
     // request hashes because we wouldn't accept the preprepares.
 
-    // First, search through the operations we have in memory
     std::map<uint64_t, std::shared_ptr<pbft_operation>> result;
     const auto maybe_store = [&](const std::shared_ptr<pbft_operation>& op)
     {
@@ -129,7 +128,6 @@ pbft_operation_manager::prepared_operations_since(uint64_t sequence)
         {
             if (pair.second->get_sequence() > sequence && pair.second->is_prepared())
             {
-                // This is an inefficient search, but we can fix it if it matters
                 maybe_store(pair.second);
             }
         }

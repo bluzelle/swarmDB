@@ -24,6 +24,8 @@ namespace bzn
     {
     public:
         pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, size_t );
+
+        // constructs operation already in storage
         pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
 
         void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) override;

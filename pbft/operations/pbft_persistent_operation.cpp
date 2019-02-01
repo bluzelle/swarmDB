@@ -46,7 +46,8 @@ pbft_persistent_operation::generate_key(const std::string& prefix, const std::st
 std::string
 pbft_persistent_operation::prefix_for_sequence(uint64_t sequence)
 {
-    return (boost::format("%020u_") % sequence).str();
+    return (boost::format("%020u_") % sequence).str();                // This is an inefficient search, but we can fix it if it matters
+
 }
 
 bool
@@ -92,13 +93,15 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
     }
 }
 
+// constructs operation already in storage without re-adding to storage
 pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash)
     : pbft_operation(view, sequence, request_hash)
-    , peers_size(1) // TODO: move peers_size out of operation
+    , peers_size(1) // TODO: move peers_size out of operation. for now, this allows is_* to succeed if stage is set appropriately
     , storage(std::move(storage))
     , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
-    // constructs operation already in storage without adding to storage
+    assert(this->storage->read(get_uuid(), generate_key(this->prefix, STAGE_KEY)));
+    LOG(info) << "re-hydrated operation with prefix " <<this->prefix;
 }
 
 void
