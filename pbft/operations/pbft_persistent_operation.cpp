@@ -374,6 +374,11 @@ pbft_persistent_operation::prepared_operations_in_range(std::shared_ptr<bzn::sto
                 auto op = std::make_shared<pbft_persistent_operation>(storage, view, sequence, hash);
                 results.push_back(op);
             }
+            else
+            {
+                LOG(error) << boost::format("Unable to parse stored operation at view:%1% sequence:%2% hash:%3%")
+                    % view % sequence % hash;
+            }
         }
     }
 
