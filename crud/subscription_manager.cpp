@@ -177,7 +177,7 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update
                         LOG(debug) << "notifying session [" << session_shared_ptr->get_session_id() << "] : " << uuid
                                    << ":" << key << ":" << subscription.first << ":" << value.substr(0, MAX_MESSAGE_SIZE);
 
-                        session_shared_ptr->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+                        session_shared_ptr->send_message(std::make_shared<std::string>(resp.SerializeAsString()));
                     }
                 }
             }

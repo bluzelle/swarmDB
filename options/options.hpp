@@ -47,7 +47,7 @@ namespace bzn
 
         bzn::uuid_t get_uuid() const override;
 
-        std::chrono::seconds get_ws_idle_timeout() const override;
+        std::chrono::milliseconds get_ws_idle_timeout() const override;
 
         size_t get_audit_mem_size() const override;
 

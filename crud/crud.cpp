@@ -105,7 +105,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
 
     if (session)
     {
-        session->send_message(std::make_shared<std::string>(env.SerializeAsString()), false);
+        session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
     }
     else
     {
@@ -116,7 +116,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     {
         try
         {
-            this->node->send_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env), false);
+            this->node->send_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env));
         }
         catch(const std::runtime_error& err)
         {

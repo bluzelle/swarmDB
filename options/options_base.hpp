@@ -111,7 +111,7 @@ namespace bzn
          * Get the websocket activity timeout
          * @return seconds
          */
-        virtual std::chrono::seconds get_ws_idle_timeout() const = 0;
+        virtual std::chrono::milliseconds get_ws_idle_timeout() const = 0;
 
 
         /**

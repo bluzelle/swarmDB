@@ -16,6 +16,7 @@
 
 #include <include/bluzelle.hpp>
 #include <proto/bluzelle.pb.h>
+#include <include/boost_asio_beast.hpp>
 
 
 namespace bzn
@@ -32,34 +33,10 @@ namespace bzn
         virtual ~session_base() = default;
 
         /**
-         * Start accepting new connections
-         * @param handler callback to execute when connection is established
-         */
-        virtual void start(
-                std::function<void(const json_message&, std::shared_ptr<session_base>)> handler
-                , bzn::protobuf_handler proto_handler
-        ) = 0;
-
-        /**
          * Send a message to the connected node
          * @param msg message
-         * @param end_session close connection after send
          */
-        virtual void send_message(std::shared_ptr<bzn::json_message> msg, bool end_session) = 0;
-
-
-        /**
-         * Send a message to the connected node
-         * @param msg message
-         * @param end_session close connection after send
-         */
-        virtual void send_message(std::shared_ptr<bzn::encoded_message> msg, bool end_session) = 0;
-
-        /**
-         * Send a message with no expected response
-         * @param msg message
-         */
-        virtual void send_datagram(std::shared_ptr<bzn::encoded_message> msg) = 0;
+        virtual void send_message(std::shared_ptr<bzn::encoded_message> msg) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.
@@ -76,6 +53,16 @@ namespace bzn
          * @return id
          */
         virtual bzn::session_id get_session_id() = 0;
+
+        /**
+         * Create a new websocket connection for this session
+         */
+        virtual void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) = 0;
+
+        /**
+         * Accept an incoming connection on some websocket
+         */
+        virtual void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) = 0;
     };
 
 } // bzn
