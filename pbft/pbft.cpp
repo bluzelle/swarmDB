@@ -1804,7 +1804,6 @@ pbft::join_swarm()
     auto info = new pbft_peer_info;
     info->set_host(this->options->get_listener().address().to_string());
     info->set_port(this->options->get_listener().port());
-    info->set_http_port(options->get_http_port());
     info->set_uuid(this->uuid);
 
     pbft_membership_msg join_msg;

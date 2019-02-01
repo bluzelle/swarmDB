@@ -118,7 +118,6 @@ The complete documentation of the options available for this file is given by
 
 but the properties likely useful for a minimal swarm are summarized here:
 
-- "use_pbft" - use pbft consensus (instead of legacy raft code)
 - "bootstrap_file" - path to peers file (see below)
 - "debug_logging" - show more log info
 - "ethereum" - is your Ethereum block chain address, used to pay for transactions. For now, you will not be charged, and you do not actually need to own this address.
@@ -149,14 +148,12 @@ nodes as seen in the following example:
     [
         {
             "host": "127.0.0.1",
-            "http_port": 9082,
             "name": "peer0",
             "port": 49152,
             "uuid": "d6707510-8ac6-43c1-b9a5-160cf54c99f5"
         },
         {
             "host": "127.0.0.1",
-            "http_port": 9083,
             "name": "peer1",
             "port": 49153,
             "uuid": "5c63dfdc-e251-4b9c-8c36-404972c9b4ec"
@@ -164,7 +161,6 @@ nodes as seen in the following example:
         ...
         {
             "host": "127.0.0.1",
-            "http_port": 9083,
             "name": "peer1",
             "port": 49153,
             "uuid": "ce4bfdc-63c7-5b9d-1c37-567978e9b893a"
@@ -173,7 +169,6 @@ nodes as seen in the following example:
 
 where the Peer object parameters are (ALL PARAMETERS MUST MATCH THE PEER CONFIGURATION):
 - "host" - the IP address associated with the external node 
-- "http_port" - the HTTP port on which the external node listens for HTTP client requests.
 - "name" - the human readable name that the external node uses
 - "port" - the socket address that the external node will listen for protobuf and web socket requests. (listen_port in the config file)
 - "uuid" - the universally unique identifier that the external node uses to uniquely identify itself. This is required to be unique per node and consistent between the peerlist and the config.
@@ -513,7 +508,6 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p, --use_pbft        Direct message to pbft instead of raft
   -i ID, --id ID        Crud script sender id (default 0)
 
 required arguments:

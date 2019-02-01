@@ -127,9 +127,6 @@ simple_options::build_options()
 
     po::options_description experimental("Experimental");
     experimental.add_options()
-                (PBFT_ENABLED.c_str(),
-                        po::value<bool>()->default_value(false),
-                        "use pbft consensus instead of raft (experimental)")
                 (PEER_VALIDATION_ENABLED.c_str(),
                         po::value<bool>()->default_value(false),
                         "require signed key for new peers to join swarm")
