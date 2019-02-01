@@ -25,6 +25,9 @@ namespace bzn
     public:
         pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, size_t );
 
+        // constructs operation already in storage
+        pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
+
         void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) override;
 
         pbft_operation_stage get_stage() const override;
@@ -46,10 +49,20 @@ namespace bzn
         std::map<bzn::uuid_t, bzn_envelope> get_prepares() const override;
 
         static std::string generate_prefix(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
+        static const std::string& get_uuid();
+
+        static std::vector<std::shared_ptr<pbft_persistent_operation>> prepared_operations_in_range(
+            std::shared_ptr<bzn::storage_base> storage, uint64_t start, std::optional<uint64_t> end = std::nullopt);
+        static void remove_range(std::shared_ptr<bzn::storage_base> storage, uint64_t first, uint64_t last);
 
     private:
         std::string typed_prefix(pbft_msg_type pbft_type) const;
         void load_transient_request() const;
+
+        static std::string prefix_for_sequence(uint64_t sequence);
+        static std::string generate_key(const std::string& prefix, const std::string& key);
+        static bool parse_prefix(const std::string& prefix, uint64_t& view, uint64_t& sequence, bzn::hash_t& hash);
+        std::string increment_prefix(const std::string& prefix) const;
 
         const size_t peers_size;
         const std::shared_ptr<bzn::storage_base> storage;

@@ -18,6 +18,7 @@
 #include <proto/database.pb.h>
 #include <pbft/operations/pbft_persistent_operation.hpp>
 #include <pbft/operations/pbft_operation.hpp>
+#include <boost/range/irange.hpp>
 
 using namespace ::testing;
 
@@ -171,5 +172,42 @@ namespace
         EXPECT_TRUE(op2->is_prepared());
         EXPECT_EQ(op2->get_preprepare().sender(), UUIDS.at(0));
         EXPECT_EQ(op2->get_prepares().size(), 4u);
+    }
+
+    TEST_F(persistent_operation_test, test_prepared_in_range)
+    {
+        for (auto i : boost::irange(0, 100))
+        {
+            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage, 4);
+            record_request(op);
+            record_pbft_messages(0, 1, PBFT_MSG_PREPREPARE, op);
+
+            // record 1-4 prepares
+            record_pbft_messages(0, (i % 4) + 1, PBFT_MSG_PREPARE, op);
+            if ((i % 4 + 1) > 2)
+            {
+                op->advance_operation_stage(bzn::pbft_operation_stage::commit);
+            }
+        }
+
+        EXPECT_EQ(bzn::pbft_persistent_operation::prepared_operations_in_range(this->storage, 0, 100).size(), 50u);
+    }
+
+    TEST_F(persistent_operation_test, test_remove_range)
+    {
+        for (auto i : boost::irange(0, 100))
+        {
+            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage, 4);
+            record_request(op);
+            record_pbft_messages(0, 1, PBFT_MSG_PREPREPARE, op);
+        }
+
+        // note - there's an extra operation in there from the constructor
+        EXPECT_EQ(this->storage->get_size(bzn::pbft_persistent_operation::get_uuid()).first, 301u);
+        bzn::pbft_persistent_operation::remove_range(this->storage, 50, 60);
+        EXPECT_EQ(this->storage->get_size(bzn::pbft_persistent_operation::get_uuid()).first, 271u);
+
+        bzn::pbft_persistent_operation::remove_range(this->storage, 0, 10);
+        EXPECT_EQ(this->storage->get_size(bzn::pbft_persistent_operation::get_uuid()).first, 240u);
     }
 }
