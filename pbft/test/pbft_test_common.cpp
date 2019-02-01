@@ -55,7 +55,7 @@ namespace bzn::test
                         ));
 
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
-                .Times(AtMost(2))
+                .Times(AtMost(3))
                 .WillOnce(
                         Invoke(
                                 [&]()
@@ -65,6 +65,11 @@ namespace bzn::test
                     Invoke(
                         [&]()
                         { return std::move(this->new_config_timer); }
+                    ))
+                .WillOnce(
+                    Invoke(
+                        [&]()
+                        { return std::move(this->join_retry_timer); }
                     ));
 
         EXPECT_CALL(*(this->audit_heartbeat_timer), async_wait(_))

@@ -362,12 +362,14 @@ namespace bzn
         auto mock_io_context2 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         auto audit_heartbeat_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto new_config_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto join_retry_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto mock_service2 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         auto mock_options = std::make_shared<bzn::mock_options_base>();
         auto manager2 = std::make_shared<bzn::pbft_operation_manager>();
         EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
-            .Times(AtMost(2)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer2);}))
-            .WillOnce(Invoke([&](){return std::move(new_config_timer2);}));
+            .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer2);}))
+            .WillOnce(Invoke([&](){return std::move(new_config_timer2);}))
+            .WillOnce(Invoke([&](){return std::move(join_retry_timer2);}));
         EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Return("uuid2"));
         EXPECT_CALL(*mock_options, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2,
@@ -479,12 +481,14 @@ namespace bzn
         auto mock_io_context3 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         auto audit_heartbeat_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto new_config_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto join_retry_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto mock_service3 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         auto mock_options3 = std::make_shared<bzn::mock_options_base>();
         auto manager3 = std::make_shared<bzn::pbft_operation_manager>();
         EXPECT_CALL(*(mock_io_context3), make_unique_steady_timer())
-            .Times(AtMost(2)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer3);}))
-            .WillOnce(Invoke([&](){return std::move(new_config_timer3);}));
+            .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer3);}))
+            .WillOnce(Invoke([&](){return std::move(new_config_timer3);}))
+            .WillOnce(Invoke([&](){return std::move(join_retry_timer3);}));
         EXPECT_CALL(*mock_options3, get_uuid()).WillRepeatedly(Return("uuid3"));
         EXPECT_CALL(*mock_options3, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto pbft3 = std::make_shared<bzn::pbft>(mock_node3, mock_io_context3, TEST_PEER_LIST, mock_options3, mock_service3,
@@ -522,7 +526,7 @@ namespace bzn
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 this->handle_membership_message(test::wrap_pbft_membership_msg(response, ""));
             }));
-
+        EXPECT_CALL(*this->join_retry_timer, async_wait(_));
         this->build_pbft();
     }
 

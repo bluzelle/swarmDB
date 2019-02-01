@@ -50,6 +50,7 @@ pbft::pbft(
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
     , new_config_timer(this->io_context->make_unique_steady_timer())
+    , join_retry_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
     , operation_manager(std::move(operation_manager))
 {
@@ -485,6 +486,7 @@ pbft::handle_join_response(const pbft_membership_msg& /*msg*/)
 {
     if (this->in_swarm == swarm_status::joining)
     {
+        this->join_retry_timer->cancel();
         this->in_swarm = swarm_status::waiting;
         LOG(debug) << "Successfully joined the swarm, waiting for NEW_VIEW message...";
     }
@@ -1816,8 +1818,26 @@ pbft::join_swarm()
     this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
 
     this->in_swarm = swarm_status::joining;
+    this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);
+    this->join_retry_timer->async_wait(
+        std::bind(&pbft::handle_join_retry_timeout, shared_from_this(), std::placeholders::_1));
+}
 
-    // TODO: set timer and retry with different peer if we don't get a response - KEP-980
+void
+pbft::handle_join_retry_timeout(const boost::system::error_code& ec)
+{
+    if (ec == boost::asio::error::operation_aborted)
+    {
+        return;
+    }
+
+    if (ec)
+    {
+        LOG(error) << "handle_new_join_retry_timeout error: " << ec.message();
+        return;
+    }
+
+    this->join_swarm();
 }
 
 uint32_t pbft::generate_random_number(uint32_t min, uint32_t max)
