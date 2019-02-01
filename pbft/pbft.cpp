@@ -422,7 +422,7 @@ pbft::handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& m
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 auto env = this->wrap_message(response);
-                session->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+                session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
             }
 
             return;

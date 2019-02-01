@@ -288,7 +288,7 @@ namespace bzn
         // leave message should be ignored
         EXPECT_CALL(*(this->mock_node),
             send_message(Matcher<const boost::asio::ip::tcp::endpoint&>(_), AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
-                message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
+                message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
             .Times(Exactly(0));
 
         auto wmsg = wrap_pbft_membership_msg(leave_msg, new_peer.uuid);
@@ -598,7 +598,7 @@ namespace bzn
             .WillOnce(Return(true));
 
         // ... and then a response should be sent
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response()), _))
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response())))
             .Times(Exactly(1));
 
         // set up the join message
@@ -624,7 +624,7 @@ namespace bzn
         EXPECT_CALL(*this->mock_session, is_open())
             .Times(Exactly(1))
             .WillOnce(Return(true));
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response()), _))
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response())))
             .Times(Exactly(1));
 
         auto peer = *TEST_PEER_LIST.begin();
