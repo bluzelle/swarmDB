@@ -20,6 +20,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <cstdlib>
+#include <regex>
+#include <boost/range/irange.hpp>
 
 using namespace ::testing;
 
@@ -287,4 +289,136 @@ TYPED_TEST(storageTest, test_snapshot)
     EXPECT_TRUE(this->storage->has(user_0, "key1"));
     EXPECT_FALSE(this->storage->has(user_0, "key2"));
     EXPECT_FALSE(this->storage->has(user_0, "key3"));
+}
+
+TYPED_TEST(storageTest, test_range_queries)
+{
+    const bzn::uuid_t user_0{"b9dc2595-15ee-435a-8af7-7cafc132f527"};
+
+    this->storage->create(user_0, "aaa", "value");
+    this->storage->create(user_0, "aab", "value");
+    this->storage->create(user_0, "abb", "value");
+    this->storage->create(user_0, "abc", "value");
+    this->storage->create(user_0, "bbc", "value");
+    this->storage->create(user_0, "bcc", "value");
+    this->storage->create(user_0, "bcd", "value");
+    this->storage->create(user_0, "bdd", "value");
+    this->storage->create(user_0, "bde", "value");
+    EXPECT_EQ(this->storage->get_size(user_0).first, 9u);
+
+    EXPECT_EQ(this->storage->get_keys_if(user_0, "a", "b").size(), 4u);
+    EXPECT_EQ(this->storage->read_if(user_0, "b", "c").size(), 5u);
+    EXPECT_EQ(this->storage->get_keys_if(user_0, "c", "d").size(), 0u);
+    EXPECT_EQ(this->storage->read_if(user_0, "ab", "ac").size(), 2u);
+
+    this->storage->remove_range(user_0, "a", "abb");
+    EXPECT_EQ(this->storage->get_size(user_0).first, 7u);
+
+    this->storage->remove_range(user_0, "aa", "bdd");
+    EXPECT_EQ(this->storage->get_size(user_0).first, 2u);
+
+    this->storage->remove_range(user_0, "be", "z");
+    EXPECT_EQ(this->storage->get_size(user_0).first, 2u);
+}
+
+TYPED_TEST(storageTest, test_predicate_queries)
+{
+    const bzn::uuid_t user_0{"b9dc2595-15ee-435a-8af7-7cafc132f527"};
+
+    for (auto i : boost::irange(0, 100))
+    {
+        // this line, for some unknown reason, causes the following build error:
+        // in function `bzn::pbft_persistent_operation::is_committed() const':
+        // undefined reference to `bzn::pbft::honest_majority_size(unsigned long)'
+        //auto suffix = (boost::format("%04u") % i).str();
+
+        auto suffix = i < 10 ? std::string{"000"} + std::to_string(i) : std::string{"00"} + std::to_string(i);
+        this->storage->create(user_0, "key_" + suffix, "value_" + suffix);
+    }
+
+    for (auto i : boost::irange(1, 10))
+    {
+        size_t count{};
+        auto res = this->storage->read_if(user_0, "", "",
+            [&](const std::string& /*key*/, const std::string& /*value*/) -> bool
+            {
+                return ++count % i == 0;
+            });
+
+        EXPECT_EQ(res.size(), count / i);
+    }
+
+    for (auto i : boost::irange(1, 10))
+    {
+        size_t count{};
+        auto res = this->storage->get_keys_if(user_0, "", "",
+            [&](const std::string& /*key*/, const std::string& /*value*/) -> bool
+            {
+                return ++count % i == 0;
+            });
+
+        EXPECT_EQ(res.size(), count / i);
+    }
+}
+
+TYPED_TEST(storageTest, test_regex_match_queries)
+{
+    const bzn::uuid_t user_0{"b9dc2595-15ee-435a-8af7-7cafc132f527"};
+
+    this->storage->create(user_0, "0001_somehash_1_0", "value");
+    this->storage->create(user_0, "0001_somehash_1_1", "value");
+    this->storage->create(user_0, "0001_somehash_1_2", "value");
+
+    this->storage->create(user_0, "0002_somehash_1_0", "value");
+    this->storage->create(user_0, "0002_somehash_1_1", "value");
+
+    this->storage->create(user_0, "0003_otherhash_1_0", "value");
+    this->storage->create(user_0, "0003_somehash_1_11", "value");
+    this->storage->create(user_0, "0003_somehash_1_2", "value");
+
+    this->storage->create(user_0, "0004_somehash_2_0", "value");
+
+    this->storage->create(user_0, "0005_otherhash_2_0", "value");
+    this->storage->create(user_0, "0005_another_hash_2_1", "value");
+    this->storage->create(user_0, "0005_somehash_2_2", "value");
+
+    this->storage->create(user_0, "0006_somehash_1_0", "value");
+    this->storage->create(user_0, "0006_somehash_1_1", "value");
+    this->storage->create(user_0, "0006_another_hash_1_2", "value");
+
+    EXPECT_EQ(this->storage->read_if(user_0, "", "").size(), 15u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0003", "0004").size(), 3u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0003", "").size(), 10u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0003", "0003").size(), 0u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0003", "0002").size(), 0u);
+
+    std::regex exp1(".*_.*_1_.*");
+    auto match_key1 = [&](const std::string& key, const std::string& /*value*/)->bool
+    {
+        return std::regex_search(key, exp1, std::regex_constants::match_continuous);
+    };
+
+    EXPECT_EQ(this->storage->read_if(user_0, "", "", match_key1).size(), 11u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "", match_key1).size(), 8u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "0006", match_key1).size(), 5u);
+
+    std::regex exp2(".*_.*_.*_1$");
+    auto match_key2 = [&](const std::string& key, const std::string& /*value*/)->bool
+    {
+        return std::regex_search(key, exp2, std::regex_constants::match_continuous);
+    };
+
+    EXPECT_EQ(this->storage->read_if(user_0, "", "", match_key2).size(), 4u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "", match_key2).size(), 3u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "0006", match_key2).size(), 2u);
+
+    std::regex exp3(".*_.*_.*_[1-2]$");
+    auto match_key3 = [&](const std::string& key, const std::string& /*value*/)->bool
+    {
+        return std::regex_search(key, exp3, std::regex_constants::match_continuous);
+    };
+
+    EXPECT_EQ(this->storage->read_if(user_0, "", "", match_key3).size(), 8u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "", match_key3).size(), 6u);
+    EXPECT_EQ(this->storage->read_if(user_0, "0002", "0006", match_key3).size(), 4u);
 }

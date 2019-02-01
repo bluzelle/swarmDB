@@ -31,6 +31,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
+#include <storage/mem_storage.hpp>
 
 using namespace ::testing;
 

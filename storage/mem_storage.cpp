@@ -16,6 +16,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/map.hpp>
 #include <sstream>
 
 using namespace bzn;
@@ -263,4 +264,74 @@ mem_storage::load_snapshot(const std::string& data)
     }
 
     return false;
+}
+
+void
+mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
+{
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    auto inner_db = this->kv_store.find(uuid);
+    if (inner_db != this->kv_store.end())
+    {
+        auto match = inner_db->second.lower_bound(first);
+        auto end = inner_db->second.lower_bound(last);
+        while (match != end)
+        {
+            match = inner_db->second.erase(match);
+        }
+    }
+}
+
+void
+mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate
+    , std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
+{
+    if (!last.empty() && last <= first)
+    {
+        return;
+    }
+
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    auto inner_db = this->kv_store.find(uuid);
+    if (inner_db != this->kv_store.end())
+    {
+        auto end_it = last.empty() ? inner_db->second.end() : inner_db->second.lower_bound(last);
+        for (auto it = inner_db->second.lower_bound(first); it != inner_db->second.end() && it != end_it; it++)
+        {
+            if (!predicate || (*predicate)(it->first, it->second))
+            {
+                action(it->first, it->second);
+            }
+        }
+    }
+}
+
+std::vector<std::pair<bzn::key_t, bzn::value_t>>
+mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
+{
+    std::vector<std::pair<bzn::key_t, bzn::value_t>> matches;
+
+    this->do_if(uuid, first, last, predicate, [&](auto key, auto value)
+    {
+        matches.emplace_back(std::make_pair(key, value));
+    });
+
+    return matches;
+}
+
+std::vector<bzn::key_t>
+mem_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
+{
+    std::vector<std::string> keys;
+    this->do_if(uuid, first, last, predicate, [&](auto key, auto /*value*/)
+    {
+        keys.emplace_back(key);
+    });
+
+    return keys;
 }
