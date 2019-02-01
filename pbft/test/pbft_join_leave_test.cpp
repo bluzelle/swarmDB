@@ -287,7 +287,7 @@ namespace bzn
 
         // leave message should be ignored
         EXPECT_CALL(*(this->mock_node),
-            send_message(_, AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
+            send_message(Matcher<const boost::asio::ip::tcp::endpoint&>(_), AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
                 message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
             .Times(Exactly(0));
 
