@@ -330,7 +330,7 @@ void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
     LOG(info) << "Forwarding request to primary";
-    this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env), true);
+    this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
 
@@ -433,7 +433,7 @@ pbft::handle_join_or_leave(const pbft_membership_msg& msg, std::shared_ptr<bzn::
                     response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                     response.set_result(false);
                     auto env = this->wrap_message(response);
-                    session->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+                    session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
                 }
                 return;
             }
@@ -518,7 +518,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         }
 
         auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
-        session->send_datagram(msg_ptr);
+        session->send_message(msg_ptr);
     }
     else
     {
@@ -571,7 +571,7 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : this->current_peers())
     {
-        this->node->send_message(make_endpoint(peer), msg_ptr, true);
+        this->node->send_message(make_endpoint(peer), msg_ptr);
     }
 }
 
@@ -687,7 +687,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 response.set_result(true);
                 auto env = this->wrap_message(response);
-                session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()), true);
+                session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()));
 
                 // TODO: start timer for sending viewchange KEP-825
 
@@ -961,7 +961,7 @@ pbft::request_checkpoint_state(const checkpoint_t& cp)
     // TODO: fix the race condition here where receiving node may not have had time to
     //  stabilize its checkpoint yet.
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(msg));
-    this->node->send_message(make_endpoint(selected), msg_ptr, false);
+    this->node->send_message(make_endpoint(selected), msg_ptr);
 }
 
 const peer_address_t&
@@ -1826,7 +1826,7 @@ pbft::join_swarm()
 
     LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr, false);
+    this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
 
     this->in_swarm = swarm_status::joining;
 

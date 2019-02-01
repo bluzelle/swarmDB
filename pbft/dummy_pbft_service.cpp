@@ -102,5 +102,5 @@ dummy_pbft_service::send_execute_response(const std::shared_ptr<pbft_operation>&
     resp.mutable_read()->set_value("dummy database execution of sequence " + std::to_string(op->get_sequence()));
 
     LOG(debug) << "Sending request result " << resp.ShortDebugString();
-    op->session()->send_datagram(std::make_shared<std::string>(resp.SerializeAsString()));
+    op->session()->send_message(std::make_shared<std::string>(resp.SerializeAsString()));
 }

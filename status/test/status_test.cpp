@@ -79,8 +79,8 @@ TEST(status_test, test_that_status_request_queries_status_providers)
             return status;
         }));
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::encoded_message>>(), false)).WillOnce(Invoke(
-        [&](std::shared_ptr<bzn::encoded_message> msg, bool)
+    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<bzn::encoded_message>>())).WillOnce(Invoke(
+        [&](std::shared_ptr<bzn::encoded_message> msg)
         {
             bzn_envelope env;
 

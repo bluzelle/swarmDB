@@ -22,6 +22,8 @@
 #include <memory>
 #include <mutex>
 #include <list>
+#include <atomic>
+#include <node/node.hpp>
 
 #include <gtest/gtest_prod.h>
 
@@ -31,15 +33,18 @@ namespace bzn
     class session final : public bzn::session_base, public std::enable_shared_from_this<session>
     {
     public:
-        session(std::shared_ptr<bzn::asio::io_context_base> io_context, bzn::session_id session_id, std::shared_ptr<bzn::beast::websocket_stream_base> websocket, std::shared_ptr<bzn::chaos_base> chaos, const std::chrono::milliseconds& ws_idle_timeout);
+        session(
+                std::shared_ptr<bzn::asio::io_context_base> io_context,
+                bzn::session_id session_id,
+                boost::asio::ip::tcp::endpoint ep,
+                std::shared_ptr<bzn::chaos_base> chaos,
+                bzn::protobuf_handler proto_handler,
+                std::chrono::milliseconds ws_idle_timeout,
+                bzn::session_shutdown_handler shutdown_handler);
 
-        void start(bzn::message_handler handler, bzn::protobuf_handler proto_handler) override;
+        ~session();
 
-        void send_message(std::shared_ptr<bzn::json_message> msg, bool end_session) override;
-
-        void send_message(std::shared_ptr<bzn::encoded_message> msg, bool end_session) override;
-
-        void send_datagram(std::shared_ptr<bzn::encoded_message> msg) override;
+        void send_message(std::shared_ptr<bzn::encoded_message> msg) override;
 
         void close() override;
 
@@ -47,24 +52,38 @@ namespace bzn
 
         bool is_open() const override;
 
+        void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) override;
+        void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
+
     private:
         void do_read();
+        void do_write();
 
         void start_idle_timeout();
 
-        std::unique_ptr<bzn::asio::strand_base> strand;
         const bzn::session_id session_id;
+        const boost::asio::ip::tcp::endpoint ep;
 
+        std::shared_ptr<bzn::asio::io_context_base> io_context;
         std::shared_ptr<bzn::beast::websocket_stream_base> websocket;
-        std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
-
         std::shared_ptr<bzn::chaos_base> chaos;
 
-        const std::chrono::milliseconds ws_idle_timeout;
-        bzn::message_handler handler;
-        bzn::protobuf_handler proto_handler;
+        std::list<std::shared_ptr<bzn::encoded_message>> write_queue;
 
-        std::mutex write_lock;
+        bzn::protobuf_handler proto_handler;
+        bzn::session_shutdown_handler shutdown_handler;
+
+        std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
+        const std::chrono::milliseconds ws_idle_timeout;
+
+        std::mutex socket_lock;
+
+        std::atomic<bool> writing = false;
+        std::atomic<bool> reading = false;
+        std::atomic<bool> closing = false;
+        std::atomic<bool> activity = false;
+
+        boost::asio::mutable_buffers_1 write_buffer;
     };
 
 } // blz

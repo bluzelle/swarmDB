@@ -108,7 +108,7 @@ namespace bzn
         this->build_pbft();
 
         // node shouldn't be sending any checkpoint messages right now
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true))))
             .Times((Exactly(0)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -121,7 +121,7 @@ namespace bzn
 
         // one more checkpoint message and the node should request state from a random node
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         bzn::peer_address_t node(*nodes++);
@@ -140,7 +140,7 @@ namespace bzn
         }
 
         // since the node has this checkpoint it should NOT request state for it
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(0)));
         stabilize_checkpoint(100);
     }
@@ -159,7 +159,7 @@ namespace bzn
 
         EXPECT_CALL(*this->mock_service, get_service_state(_)).Times(Exactly(1))
             .WillOnce(Invoke([](auto &) {return std::make_shared<std::string>("dummy_state");}));
-        EXPECT_CALL(*mock_session, send_datagram(ResultOf(is_set_state, Eq(true))))
+        EXPECT_CALL(*mock_session, send_message(ResultOf(is_set_state, Eq(true))))
             .Times((Exactly(1)));
         send_get_state_request(100);
     }
@@ -171,7 +171,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -204,7 +204,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true)), _))
+        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();

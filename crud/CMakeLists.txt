@@ -1,6 +1,4 @@
 add_library(crud STATIC
-    raft_crud.cpp
-    raft_crud.hpp
     crud_base.hpp
     subscription_manager.cpp
     subscription_manager.hpp

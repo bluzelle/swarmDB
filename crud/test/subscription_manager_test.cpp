@@ -189,7 +189,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         msg.mutable_create()->set_key("0");
         msg.mutable_create()->set_value("0");
 
-        EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session1, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -202,7 +202,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
-        EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session2, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -227,7 +227,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         msg.mutable_update()->set_key("1");
         msg.mutable_update()->set_value("1");
 
-        EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session1, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -240,7 +240,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
-        EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session2, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -264,7 +264,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
         msg.mutable_header()->set_nonce(123);
         msg.mutable_delete_()->set_key("1");
 
-        EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session1, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -277,7 +277,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::DELETE);
             }));
 
-        EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+        EXPECT_CALL(*mock_session2, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
             [](std::shared_ptr<std::string> msg)
             {
                 database_response resp;
@@ -338,7 +338,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
     sm->subscribe(TEST_UUID, "0", 0, response, mock_session1);
     sm->subscribe(TEST_UUID, "0", 1, response, mock_session2);
 
-    EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_session1, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
         [](std::shared_ptr<std::string> msg)
         {
             database_response resp;
@@ -351,7 +351,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
-    EXPECT_CALL(*mock_session2, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_session2, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
         [](std::shared_ptr<std::string> msg)
         {
             database_response resp;
@@ -373,7 +373,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
     wh(boost::system::error_code());
 
     // there should only be one...
-    EXPECT_CALL(*mock_session1, send_datagram(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_session1, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
         [](std::shared_ptr<std::string> msg)
         {
             database_response resp;

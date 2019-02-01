@@ -156,6 +156,8 @@ namespace bzn::beast {
             void(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler));
         MOCK_METHOD0(is_open,
             bool());
+        MOCK_METHOD1(binary,
+            void(bool bin));
     };
 
 }  // namespace bzn::beast

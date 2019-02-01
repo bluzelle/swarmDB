@@ -112,7 +112,7 @@ namespace bzn
             {
                 EXPECT_CALL(*(mock_node),
                     send_message(bzn::make_endpoint(p),
-                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE)), _))
+                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
                     .Times(Exactly(1));
             }
 
@@ -221,7 +221,7 @@ namespace bzn
             EXPECT_CALL(*(this->mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
-                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
+                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
         }
 
@@ -250,7 +250,7 @@ namespace bzn
             EXPECT_CALL(*(this->mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
-                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE)), _))
+                        message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
         }
 
@@ -324,7 +324,7 @@ namespace bzn
             EXPECT_CALL(*(mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
-                        message_has_correct_pbft_type(PBFT_MSG_COMMIT)), _))
+                        message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }
 
@@ -383,7 +383,7 @@ namespace bzn
             EXPECT_CALL(*(mock_node),
                 send_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
-                        message_has_correct_pbft_type(PBFT_MSG_COMMIT)), _))
+                        message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
         }
 
@@ -424,9 +424,9 @@ namespace bzn
         // when timer callback is called, pbft should broadcast viewchange message
         for (auto const &p : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*mock_node, send_message(bzn::make_endpoint(p), ResultOf(is_viewchange, Eq(true)), _))
+            EXPECT_CALL(*mock_node, send_message(bzn::make_endpoint(p), ResultOf(is_viewchange, Eq(true))))
                 .Times((Exactly(1)))
-                .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/)
+                .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
                     // reflect viewchange message to second pbft from all nodes
                     pbft_msg msg;
@@ -438,9 +438,9 @@ namespace bzn
         }
 
         // once second pbft gets f+1 viewchanges it will broadcast a viewchange message
-        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_viewchange, Eq(true)), _))
+        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_viewchange, Eq(true))))
             .Times((Exactly(TEST_PEER_LIST.size())))
-            .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/)
+            .WillRepeatedly(Invoke([&](auto, auto wmsg)
             {
                 pbft_msg msg;
                 ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
@@ -449,9 +449,9 @@ namespace bzn
 
         auto newview_env = std::make_shared<bzn_envelope>();
         // second pbft should send a newview with the new configuration
-        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_newview, Eq(true)), _))
+        EXPECT_CALL(*mock_node2, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_newview, Eq(true))))
             .Times((Exactly(TEST_PEER_LIST.size() + 1)))
-            .WillRepeatedly(Invoke([&](auto, auto wmsg, bool /*close_session*/) {
+            .WillRepeatedly(Invoke([&](auto, auto wmsg) {
                 pbft_msg msg;
                 ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
                 EXPECT_TRUE(msg.config_hash() == config->get_hash());
@@ -511,9 +511,9 @@ namespace bzn
     TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)
     {
         this->uuid = "somenode";
-        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
             .Times(Exactly(1))
-            .WillOnce(Invoke([&](auto, auto, bool /*close_session*/)
+            .WillOnce(Invoke([&](auto, auto)
             {
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
@@ -526,7 +526,7 @@ namespace bzn
 
     TEST_F(pbft_join_leave_test, node_in_swarm_doesnt_ask_to_join)
     {
-        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true)), _))
+        EXPECT_CALL(*this->mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
             .Times(Exactly(0));
         this->build_pbft();
     }
@@ -539,9 +539,9 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true)), _))
+                send_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true))))
                 .Times(Exactly(1))
-                .WillOnce(Invoke([&](auto, auto &envelope, bool /*close_session*/)
+                .WillOnce(Invoke([&](auto, auto &envelope)
                 {
                     pbft_msg msg;
                     EXPECT_TRUE(msg.ParseFromString(envelope->pbft()));
@@ -552,7 +552,7 @@ namespace bzn
                     if (p.uuid == TEST_NODE_UUID)
                     {
                         EXPECT_CALL(*(mock_node),
-                            send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true)), _))
+                            send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
                             .Times(Exactly(TEST_PEER_LIST.size()));
 
                         // reflect the pre-prepare back
@@ -575,9 +575,9 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true)), _))
+                send_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true))))
                 .Times(Exactly(1))
-                .WillOnce(Invoke([&](auto, auto &wmsg, bool /*close_session*/)
+                .WillOnce(Invoke([&](auto, auto &wmsg)
                 {
                     pbft_msg msg;
                     EXPECT_TRUE(msg.ParseFromString(wmsg->pbft()));
@@ -596,7 +596,7 @@ namespace bzn
             .WillOnce(Return(true));
 
         // ... and then a positive response should be sent
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(true)), _))
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(true))))
             .Times(Exactly(1));
 
         // set up the join message
@@ -625,7 +625,7 @@ namespace bzn
             .WillOnce(Return(true));
 
         // ... and then a negative response should be sent
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(false)), _))
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(false))))
             .Times(Exactly(1));
 
         auto peer = *TEST_PEER_LIST.begin();

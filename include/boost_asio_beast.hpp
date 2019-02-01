@@ -396,6 +396,8 @@ namespace bzn::beast
 
         virtual void async_handshake(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler) = 0;
 
+        virtual void binary(bool bin) = 0;
+
         virtual bool is_open() = 0;
     };
 
@@ -447,6 +449,11 @@ namespace bzn::beast
         bool is_open() override
         {
             return this->websocket.is_open();
+        }
+
+        void binary(bool bin) override
+        {
+            this->websocket.binary(bin);
         }
 
     private:

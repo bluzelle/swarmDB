@@ -148,7 +148,7 @@ audit::send_to_monitor(const std::string& stat)
 }
 
 void
-audit::handle(const bzn_envelope& env, std::shared_ptr<bzn::session_base> session)
+audit::handle(const bzn_envelope& env, std::shared_ptr<bzn::session_base> /*session*/)
 {
     audit_message message;
     if (!message.ParseFromString(env.audit()))
@@ -174,8 +174,6 @@ audit::handle(const bzn_envelope& env, std::shared_ptr<bzn::session_base> sessio
     {
         LOG(error) << "got an unknown audit message? " << message.DebugString();
     }
-
-    session->close();
 }
 
 void audit::handle_primary_status(const primary_status& primary_status)
