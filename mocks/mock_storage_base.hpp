@@ -22,35 +22,43 @@ namespace bzn {
     class Mockstorage_base : public storage_base {
     public:
         MOCK_METHOD3(create,
-                     bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
+            bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
         MOCK_METHOD2(read,
-                     std::optional<bzn::value_t> (const bzn::uuid_t& uuid, const std::string& key));
+            std::optional<bzn::value_t> (const bzn::uuid_t& uuid, const std::string& key));
         MOCK_METHOD3(update,
-                     bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
+            bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));
         MOCK_METHOD2(remove,
-                     bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key));
+            bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key));
         MOCK_METHOD0(start,
-                     bzn::storage_result());
+            bzn::storage_result());
         MOCK_METHOD1(save,
-                     bzn::storage_result(const std::string& path));
+            bzn::storage_result(const std::string& path));
         MOCK_METHOD1(load,
-                     bzn::storage_result(const std::string& path));
+            bzn::storage_result(const std::string& path));
         MOCK_METHOD1(error_msg,
-                     std::string(bzn::storage_result error_id));
+            std::string(bzn::storage_result error_id));
         MOCK_METHOD1(get_keys,
-                     std::vector<std::string>(const bzn::uuid_t& uuid));
+            std::vector<std::string>(const bzn::uuid_t& uuid));
         MOCK_METHOD2(has,
-                     bool(const bzn::uuid_t& uuid, const std::string& key));
+            bool(const bzn::uuid_t& uuid, const std::string& key));
         MOCK_METHOD1(get_size,
-                     std::pair<std::size_t, std::size_t>(const bzn::uuid_t& uuid));
+            std::pair<std::size_t, std::size_t>(const bzn::uuid_t& uuid));
         MOCK_METHOD1(remove,
-                     bzn::storage_result(const bzn::uuid_t& uuid));
+            bzn::storage_result(const bzn::uuid_t& uuid));
         MOCK_METHOD0(create_snapshot,
-                     bool());
+            bool());
         MOCK_METHOD0(get_snapshot,
-                     std::shared_ptr<std::string>());
+            std::shared_ptr<std::string>());
         MOCK_METHOD1(load_snapshot,
-                     bool(const std::string&));
-   };
+            bool(const std::string&));
+        MOCK_METHOD3(remove_range,
+            void(const bzn::uuid_t& uuid, const std::string&, const std::string&));
+        MOCK_METHOD4(get_keys_if,
+            std::vector<bzn::key_t>(const bzn::uuid_t&, const std::string&
+            , const std::string&, std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>>));
+        MOCK_METHOD4(read_if,
+            std::vector<std::pair<bzn::key_t, bzn::value_t>>(const bzn::uuid_t&, const std::string&
+            , const std::string&, std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>>));
+    };
 
 }  // namespace bzn

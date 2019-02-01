@@ -64,8 +64,8 @@ namespace bzn
         virtual bzn::storage_result remove(const bzn::uuid_t& uuid, const std::string& key) = 0;
 
         virtual std::vector<bzn::key_t> get_keys(const bzn::uuid_t& uuid) = 0;
-        
-        virtual bool has(const bzn::uuid_t& uuid, const  std::string& key) = 0;
+
+        virtual bool has(const bzn::uuid_t& uuid, const std::string& key) = 0;
 
         virtual std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) = 0;
 
@@ -76,6 +76,17 @@ namespace bzn
         virtual std::shared_ptr<std::string> get_snapshot() = 0;
 
         virtual bool load_snapshot(const std::string& data) = 0;
+
+        virtual void remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last) = 0;
+
+        virtual std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid
+            , const std::string& first, const std::string& last
+            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
+
+        virtual std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid
+            , const std::string& first, const std::string& last
+            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
+
     };
 
 } // bzn
