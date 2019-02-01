@@ -71,16 +71,13 @@ namespace bzn
         return false;
     }
 
-    MATCHER_P(message_is_join_response, result, "")
+    MATCHER(message_is_join_response, "")
     {
         bzn_envelope env;
         if (env.ParseFromString(*arg))
         {
             pbft_membership_msg msg;
-            if (msg.ParseFromString(env.pbft_membership()))
-            {
-                return msg.result() == result;
-            }
+            return msg.ParseFromString(env.pbft_membership()) && msg.type() == PBFT_MMSG_JOIN_RESPONSE;
         }
         return false;
     }
@@ -167,9 +164,9 @@ namespace bzn
             return this->operation_manager->find_or_construct(msg, this->pbft->current_peers_ptr());
         }
 
-        bool move_to_new_configuration(hash_t config_hash)
+        bool move_to_new_configuration(hash_t config_hash, uint64_t view)
         {
-            return this->pbft->move_to_new_configuration(config_hash);
+            return this->pbft->move_to_new_configuration(config_hash, view);
         }
 
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
@@ -197,6 +194,11 @@ namespace bzn
         bool is_in_swarm(std::shared_ptr<bzn::pbft> the_pbft)
         {
             return the_pbft->in_swarm == pbft::swarm_status::joined;
+        }
+
+        const std::vector<bzn::peer_address_t>& current_peers(std::shared_ptr<bzn::pbft> the_pbft)
+        {
+            return the_pbft->current_peers();
         }
     };
 
@@ -227,6 +229,16 @@ namespace bzn
 
         auto wmsg = wrap_pbft_membership_msg(join_msg, new_peer.uuid);
         this->handle_membership_message(wmsg);
+
+        // now there's a config change in flight, another join request should be rejected
+        auto info2 = new pbft_peer_info(*info);
+        info2->set_uuid("another_uuid");
+        pbft_membership_msg join_msg2;
+        join_msg2.set_type(PBFT_MMSG_JOIN);
+        join_msg2.set_allocated_peer_info(info2);
+        auto wmsg2 = wrap_pbft_membership_msg(join_msg2, info2->uuid());
+        EXPECT_CALL(*this->mock_session, close()).Times(Exactly(1));
+        this->handle_membership_message(wmsg2, this->mock_session);
     }
 
     TEST_F(pbft_join_leave_test, valid_leave_request_test)
@@ -274,6 +286,10 @@ namespace bzn
         leave_msg.set_allocated_peer_info(info);
 
         // leave message should be ignored
+        EXPECT_CALL(*(this->mock_node),
+            send_message(Matcher<const boost::asio::ip::tcp::endpoint&>(_), AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
+                message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
+            .Times(Exactly(0));
 
         auto wmsg = wrap_pbft_membership_msg(leave_msg, new_peer.uuid);
         this->handle_membership_message(wmsg);
@@ -288,9 +304,8 @@ namespace bzn
 
         send_new_config_preprepare(pbft, this->mock_node, config);
 
-        // the config should now be stored by this node, but not marked enabled/current
+        // the config should now be stored by this node, but not marked current
         ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
-        EXPECT_FALSE(this->configurations(this->pbft).is_enabled(config.get_hash()));
         EXPECT_NE(*(this->configurations(this->pbft).current()), config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
@@ -333,7 +348,7 @@ namespace bzn
 
         // and now the config should be enabled and acceptable, but not current
         ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
-        EXPECT_TRUE(this->configurations(this->pbft).is_enabled(config.get_hash()));
+        EXPECT_EQ(this->configurations(this->pbft).newest_prepared(), config.get_hash());
         EXPECT_NE(*(this->configurations(this->pbft).current()), config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
@@ -363,15 +378,15 @@ namespace bzn
         // insert and enable a dummy configuration prior to the new one to be proposed
         auto dummy_config = std::make_shared<pbft_configuration>();
         dummy_config->add_peer(new_peer2);
-        EXPECT_TRUE(this->configurations(this->pbft).add(dummy_config));
-        this->configurations(this->pbft).enable(dummy_config->get_hash());
+        this->configurations(this->pbft).add(dummy_config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
+        EXPECT_TRUE(this->configurations(this->pbft).set_prepared(dummy_config->get_hash()));
 
         // PREPREPARE step
         auto config = std::make_shared<pbft_configuration>(*(this->configurations(this->pbft).current()));
         config->add_peer(new_peer);
         this->configurations(pbft2).add(config);
-        this->configurations(pbft2).enable(config->get_hash());
+        this->configurations(pbft2).set_prepared(config->get_hash());
         auto msg = send_new_config_preprepare(pbft, this->mock_node, *config);
 
         auto op = this->find_operation(msg);
@@ -408,14 +423,11 @@ namespace bzn
         bzn::peer_address_t node(*nodes++);
         send_new_config_commit(pbft, node, op);
 
-        // and now the config should be enabled and acceptable
+        // and now the config should be committed
         ASSERT_NE(this->configurations(this->pbft).get(config->get_hash()), nullptr);
-        EXPECT_TRUE(this->configurations(this->pbft).is_enabled(config->get_hash()));
+        EXPECT_EQ(this->configurations(this->pbft).newest_committed(), config->get_hash());
         EXPECT_NE(*(this->configurations(this->pbft).current()), *config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config->get_hash()));
-
-        // and no earlier one should be present (apart from the current configuration)
-        EXPECT_EQ(this->configurations(this->pbft).get(dummy_config->get_hash()), nullptr);
         EXPECT_FALSE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
 
         // pbft should set a timer to do a viewchange
@@ -431,7 +443,6 @@ namespace bzn
                     // reflect viewchange message to second pbft from all nodes
                     pbft_msg msg;
                     ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
-                    EXPECT_TRUE(msg.config_hash() == config->get_hash());
                     wmsg->set_sender(p.uuid);
                     this->handle_viewchange(pbft2, msg, *wmsg);
                 }));
@@ -444,7 +455,6 @@ namespace bzn
             {
                 pbft_msg msg;
                 ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
-                EXPECT_TRUE(msg.config_hash() == config->get_hash());
             }));
 
         auto newview_env = std::make_shared<bzn_envelope>();
@@ -496,16 +506,9 @@ namespace bzn
         auto config = std::make_shared<pbft_configuration>();
         config->add_peer(new_peer);
         this->configurations(this->pbft).add(config);
-        EXPECT_TRUE(this->move_to_new_configuration(config->get_hash()));
-
-        this->configurations(this->pbft).enable(config->get_hash());
-        EXPECT_TRUE(this->move_to_new_configuration(config->get_hash()));
-
-        // previous configuration should not have been removed
-        EXPECT_NE(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
-
-        this->configurations(this->pbft).remove_prior_to(config->get_hash());
-        EXPECT_EQ(this->configurations(this->pbft).get(current_config->get_hash()), nullptr);
+        EXPECT_TRUE(this->move_to_new_configuration(config->get_hash(), 2));
+        EXPECT_TRUE(this->move_to_new_configuration(config->get_hash(), 3));
+        EXPECT_EQ(this->configurations(this->pbft).current(), config);
     }
 
     TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)
@@ -517,7 +520,6 @@ namespace bzn
             {
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-                response.set_result(true);
                 this->handle_membership_message(test::wrap_pbft_membership_msg(response, ""));
             }));
 
@@ -595,8 +597,8 @@ namespace bzn
             .Times(Exactly(1))
             .WillOnce(Return(true));
 
-        // ... and then a positive response should be sent
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(true))))
+        // ... and then a response should be sent
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response())))
             .Times(Exactly(1));
 
         // set up the join message
@@ -615,17 +617,14 @@ namespace bzn
         this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, this->pbft->get_uuid()), this->mock_session);
     }
 
-    TEST_F(pbft_join_leave_test, existing_node_cant_join_swarm)
+    TEST_F(pbft_join_leave_test, existing_node_can_rejoin_swarm)
     {
         this->build_pbft();
 
-        // the session will be checked
         EXPECT_CALL(*this->mock_session, is_open())
             .Times(Exactly(1))
             .WillOnce(Return(true));
-
-        // ... and then a negative response should be sent
-        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response(false))))
+        EXPECT_CALL(*this->mock_session, send_message(Matcher<std::shared_ptr<bzn::encoded_message>>(message_is_join_response())))
             .Times(Exactly(1));
 
         auto peer = *TEST_PEER_LIST.begin();
@@ -643,15 +642,24 @@ namespace bzn
         this->handle_membership_message(test::wrap_pbft_membership_msg(join_msg, peer.uuid), this->mock_session);
     }
 
-    TEST_F(pbft_join_leave_test, node_handles_unsolicited_join_rejection)
+    TEST_F(pbft_join_leave_test, cant_add_conflicting_peer)
     {
         this->build_pbft();
 
-        // no real expectations to set here, just that no exception will be thrown
+        auto info = new pbft_peer_info;
+        auto peer = *TEST_PEER_LIST.begin();
+        info->set_host(peer.host);
+        info->set_name(peer.name);
+        info->set_port(peer.port);
+        info->set_http_port(peer.http_port);
+        info->set_uuid("bogus_uuid");
 
-        pbft_membership_msg response;
-        response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-        response.set_result(false);
-        this->handle_membership_message(test::wrap_pbft_membership_msg(response, "bad_uuid"));
+        pbft_membership_msg join_msg;
+        join_msg.set_type(PBFT_MMSG_JOIN);
+        join_msg.set_allocated_peer_info(info);
+        auto wmsg = wrap_pbft_membership_msg(join_msg, info->uuid());
+
+        EXPECT_CALL(*this->mock_session, close()).Times(Exactly(1));
+        this->handle_membership_message(wmsg, this->mock_session);
     }
 }

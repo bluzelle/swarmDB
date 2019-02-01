@@ -25,6 +25,7 @@ using namespace bzn;
 pbft_configuration::pbft_configuration()
 {
     this->sorted_peers = std::make_shared<std::vector<bzn::peer_address_t>>();
+    this->cached_hash = this->create_hash();
 }
 
 bool

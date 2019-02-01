@@ -51,7 +51,7 @@ message pbft_msg
 
     repeated bzn_envelope pre_prepare_messages = 12;
 
-    // for viewchange, newview
+    // for newview
     string config_hash = 13;
 
     // for newview
@@ -92,9 +92,6 @@ message pbft_membership_msg
     // for set_state
     string state_data = 5;
     bzn_envelope newview_msg = 6;
-
-    // for join_response
-    bool result = 7;
 }
 
 enum pbft_membership_msg_type
