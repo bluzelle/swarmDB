@@ -19,6 +19,7 @@
 #include <pbft/pbft.hpp>
 #include <pbft/dummy_pbft_service.hpp>
 #include <pbft/pbft_failure_detector.hpp>
+#include <storage/mem_storage.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <proto/bluzelle.pb.h>
@@ -65,8 +66,9 @@ namespace bzn::test
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         std::shared_ptr<bzn::Mocksession_base> mock_session =
                 std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
         std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
-                std::make_shared<bzn::pbft_operation_manager>();
+                std::make_shared<bzn::pbft_operation_manager>(storage);
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
