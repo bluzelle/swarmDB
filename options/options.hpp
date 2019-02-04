@@ -63,10 +63,6 @@ namespace bzn
 
         size_t get_logfile_max_size() const override;
 
-        bool pbft_enabled() const override;
-
-        uint16_t get_http_port() const override;
-        
         bool peer_validation_enabled() const override;
 
         std::string get_signed_key() const override;

@@ -57,7 +57,7 @@ audit::start()
 {
     std::call_once(this->start_once, [this]()
     {
-        this->node->register_for_message(bzn_envelope::PayloadCase::kAudit,
+        this->node->register_for_message(bzn_envelope::kAudit,
             std::bind(&audit::handle, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
         if (this->monitor_endpoint)

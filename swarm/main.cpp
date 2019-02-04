@@ -20,7 +20,6 @@
 #include <crypto/crypto.hpp>
 #include <crypto/crypto_base.hpp>
 #include <ethereum/ethereum.hpp>
-#include <http/server.hpp>
 #include <node/node.hpp>
 #include <options/options.hpp>
 #include <options/simple_options.hpp>
@@ -171,7 +170,6 @@ print_banner(const bzn::options& options, double eth_balance)
        << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port() << "\n"
-       << "             HTTP port: " << options.get_http_port()  << "\n"
        << "         Token Balance: " << eth_balance << " ETH" << "\n"
        // todo: disabled for now...
        //<< "       Maximum Storage: " << options.get_max_storage() << " Bytes" << "\n"

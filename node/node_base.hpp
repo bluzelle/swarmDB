@@ -31,7 +31,7 @@ namespace bzn
 
         /**
          * Register for a callback to be execute when a certain message type arrives
-         * @param msg_type      message type (crud, raft etc.)
+         * @param msg_type      message type (crud, pbft etc.)
          * @param msg_handler   callback
          * @return true if registration succeeded
          */

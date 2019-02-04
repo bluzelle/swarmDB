@@ -84,13 +84,6 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
     }
 }
 
-bool
-options::pbft_enabled() const
-{
-    //TODO: Remove this
-    return this->raw_opts.get<bool>(PBFT_ENABLED);
-}
-
 
 std::string
 options::get_ethererum_address() const
@@ -226,14 +219,6 @@ options::parse_size(const std::string& max_value) const
     }
 
     throw std::runtime_error(std::string("\nUnable to parse size value from options: " + max_value));
-}
-
-
-uint16_t
-options::get_http_port() const
-{
-    //TODO: Remove this
-    return this->raw_opts.get<uint16_t>(HTTP_PORT);
 }
 
 
