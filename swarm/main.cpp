@@ -63,7 +63,7 @@ init_logging(const bzn::options& options)
 
     if (options.get_log_to_stdout())
     {
-        boost::log::add_console_log(std::cout, boost::log::keywords::format = format);
+        boost::log::add_console_log(std::cout, keywords::format = format, keywords::auto_flush = true);
     }
 
     boost::log::add_common_attributes();
