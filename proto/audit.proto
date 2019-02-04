@@ -16,13 +16,10 @@ syntax = "proto3";
 
 message audit_message {
     oneof msg {
-        raft_commit_notification raft_commit = 1;
-        leader_status leader_status = 2;
+        pbft_commit_notification pbft_commit = 1;
+        primary_status primary_status = 2;
 
-        pbft_commit_notification pbft_commit = 3;
-        primary_status primary_status = 4;
-
-        failure_detected failure_detected = 5;
+        failure_detected failure_detected = 3;
     }
 }
 
@@ -31,12 +28,6 @@ message leader_status {
     string leader = 2;
     uint64 current_log_index = 3;
     uint64 current_commit_index = 4;
-}
-
-message raft_commit_notification {
-    string sender_uuid = 1;
-    uint64 log_index = 2;
-    string operation = 3;
 }
 
 message primary_status {

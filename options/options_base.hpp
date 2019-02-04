@@ -164,19 +164,6 @@ namespace bzn
 
 
          /**
-          * Are we using pbft
-          */
-         virtual bool pbft_enabled() const = 0;
-
-
-         /**
-          * HTTP server port
-          * @return port
-          */
-         virtual uint16_t get_http_port() const = 0;
-
-         
-         /**
           * Temporary toggle for the peer validation while in QA. Defaults to false.
           * @return boolean if the peer_validation member is set to true. Default is false.
           */

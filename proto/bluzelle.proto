@@ -35,12 +35,3 @@ message bzn_envelope
         bytes status_response = 18;
     }
 }
-
-message bzn_msg
-{
-    // Keeping this around for raft
-    oneof msg
-    {
-        database_msg db = 10;
-    }
-}
