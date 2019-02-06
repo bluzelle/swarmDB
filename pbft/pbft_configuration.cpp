@@ -19,6 +19,7 @@
 #include <numeric>
 #include <iterator>
 #include <functional>
+#include <boost/format.hpp>
 
 using namespace bzn;
 
@@ -196,15 +197,18 @@ pbft_configuration::conflicting_peer_exists(const bzn::peer_address_t &peer) con
 {
     for (auto& p : this->peers)
     {
-        if (p.uuid == peer.uuid || p.name == peer.name)
+        if (p.uuid == peer.uuid)
         {
+            LOG(debug) << "rejecting peer with duplicate uuid: " << peer.uuid;
             return true;
         }
 
         if (p.host == peer.host)
         {
-            if (p.port == peer.port || p.http_port == peer.http_port)
+            if (p.port == peer.port)
             {
+                LOG(debug) << boost::format("rejecting peer with duplicate port: %1%/%2%")
+                              % p.port % peer.port;
                 return true;
             }
         }
@@ -216,7 +220,7 @@ pbft_configuration::conflicting_peer_exists(const bzn::peer_address_t &peer) con
 bool
 pbft_configuration::valid_peer(const bzn::peer_address_t &peer) const
 {
-    if (peer.name.empty() || peer.uuid.empty() || peer.host.empty() || !peer.port || !peer.http_port)
+    if (peer.uuid.empty() || peer.host.empty() || !peer.port)
     {
         return false;
     }
