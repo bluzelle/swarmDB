@@ -184,6 +184,23 @@ namespace bzn::test
         this->database_handler(this->request_msg, mock_session);
     }
 
+    TEST_F(pbft_test, database_response_is_forwarded_to_session)
+    {
+        this->build_pbft();
+        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
+
+        EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
+
+        this->pbft->sessions_waiting_on_forwarded_requests["utest"] = mock_session;
+
+        database_response resp;
+        resp.mutable_header()->set_request_hash("utest");
+
+        this->request_msg.set_database_response(resp.SerializeAsString());
+        this->database_response_handler(this->request_msg, mock_session);
+    }
+
+
     TEST_F(pbft_test, client_request_executed_results_in_message_response)
     {
         auto mock_session = std::make_shared<bzn::Mocksession_base>();

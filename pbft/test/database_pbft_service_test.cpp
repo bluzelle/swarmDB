@@ -220,6 +220,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
                EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                EXPECT_EQ(request.create().key(), "key1");
                EXPECT_EQ(request.create().value(), "value1");
+               EXPECT_EQ(request.header().request_hash(), "somehashc");
             }));
 
         EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
@@ -228,6 +229,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key2");
                 EXPECT_EQ(request.create().value(), "value2");
+                EXPECT_EQ(request.header().request_hash(), "somehasha");
             }));
 
         EXPECT_CALL(*mock_crud, handle_request(_, _, _)).WillOnce(Invoke(
@@ -236,6 +238,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
                 EXPECT_EQ(request.msg_case(), database_msg::kCreate);
                 EXPECT_EQ(request.create().key(), "key3");
                 EXPECT_EQ(request.create().value(), "value3");
+                EXPECT_EQ(request.header().request_hash(), "somehashb");
             }));
     }
 
