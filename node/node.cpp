@@ -147,7 +147,8 @@ node::priv_session_shutdown_handler(const ep_key_t& ep_key)
 }
 
 void
-node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) {
+node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
+{
     std::shared_ptr<bzn::session_base> session;
 
     {

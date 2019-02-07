@@ -73,14 +73,17 @@ pbft::start()
     std::call_once(this->start_once,
         [this]()
         {
-            this->node->register_for_message(bzn_envelope::PayloadCase::kPbft,
+            this->node->register_for_message(bzn_envelope::kPbft,
                 std::bind(&pbft::handle_bzn_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-            this->node->register_for_message(bzn_envelope::PayloadCase::kPbftMembership,
+            this->node->register_for_message(bzn_envelope::kPbftMembership,
                 std::bind(&pbft::handle_membership_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
             this->node->register_for_message(bzn_envelope::kDatabaseMsg,
                 std::bind(&pbft::handle_database_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+
+            this->node->register_for_message(bzn_envelope::kDatabaseResponse,
+                std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
             this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
             this->audit_heartbeat_timer->async_wait(
@@ -1045,6 +1048,29 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
         this->handle_request(mutable_msg, session);
     }
 }
+
+
+void
+pbft::handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
+{
+    database_msg db_msg;
+
+    if (db_msg.ParseFromString(msg.database_response()))
+    {
+        if (const auto session_it = this->sessions_waiting_on_forwarded_requests.find(db_msg.header().request_hash());
+            session_it != this->sessions_waiting_on_forwarded_requests.end())
+        {
+            session_it->second->send_message(std::make_shared<bzn::encoded_message>(msg.SerializeAsString()));
+            return;
+        }
+
+        LOG(warning) << "session not found for database response";
+        return;
+    }
+
+    LOG(error) << "failed to read database response";
+}
+
 
 uint64_t
 pbft::get_low_water_mark()

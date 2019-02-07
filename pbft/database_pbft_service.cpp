@@ -123,22 +123,23 @@ database_pbft_service::process_awaiting_operations()
 
         LOG(info) << "Executing request " << request.DebugString() << "..., sequence: " << key;
 
-        auto op_it = this->operations_awaiting_result.find(this->next_request_sequence);
-
-        if (op_it != this->operations_awaiting_result.end() && op_it->second->has_session() && op_it->second->session()->is_open())
+        if (auto op_it = this->operations_awaiting_result.find(this->next_request_sequence); op_it != this->operations_awaiting_result.end())
         {
-            this->crud->handle_request(op_it->second->get_request().sender(), request, op_it->second->session());
-        }
-        else
-        {
-            // session not found then this was probably loaded from the database...
-            LOG(info) << "We do not have a pending operation for this request";
+            // set request hash field for responses...
+            request.mutable_header()->set_request_hash(op_it->second->get_request_hash());
 
-            this->crud->handle_request(op_it->second->get_request().sender(), request, nullptr);
-        }
+            if (op_it->second->has_session() && op_it->second->session()->is_open())
+            {
+                this->crud->handle_request(op_it->second->get_request().sender(), request, op_it->second->session());
+            }
+            else
+            {
+                // session not found then this was probably loaded from the database...
+                LOG(info) << "We do not have a pending operation for this request";
 
-        if (op_it != this->operations_awaiting_result.end())
-        {
+                this->crud->handle_request(op_it->second->get_request().sender(), request, nullptr);
+            }
+
             this->io_context->post(std::bind(this->execute_handler, (*op_it).second));
         }
 
