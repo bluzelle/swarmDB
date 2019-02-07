@@ -91,6 +91,7 @@ namespace bzn::test
         bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
         bzn::protobuf_handler database_handler;
+        bzn::protobuf_handler database_response_handler;
         bzn::protobuf_handler membership_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;

@@ -43,8 +43,15 @@ namespace
     const std::string NOOP_REQUEST_HASH = "<no op request hash>";
 }
 
+
 namespace bzn
 {
+    namespace test
+    {
+        // fwd declare test as it's not in the same namespace...
+        class pbft_test_database_response_is_forwarded_to_session_Test;
+    }
+
     using request_hash_t = std::string;
     using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
     using timestamp_t = uint64_t;
@@ -68,6 +75,8 @@ namespace bzn
         void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) override;
 
         void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+
+        void handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
 
         bool is_primary() const override;
 
@@ -286,6 +295,7 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, test_get_primary);
         FRIEND_TEST(pbft_newview_test, get_sequences_and_request_hashes_from_proofs);
         FRIEND_TEST(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs);
+        FRIEND_TEST(bzn::test::pbft_test, database_response_is_forwarded_to_session);
 
         friend class pbft_proto_test;
         friend class pbft_join_leave_test;
