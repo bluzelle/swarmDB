@@ -37,6 +37,7 @@ namespace bzn
          * @param msg message
          */
         virtual void send_message(std::shared_ptr<bzn::encoded_message> msg) = 0;
+        virtual void send_signed_message(std::shared_ptr<bzn_envelope> msg) = 0;
 
         /**
          * Perform an orderly shutdown of the websocket.

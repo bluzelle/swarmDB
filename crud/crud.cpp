@@ -100,12 +100,10 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
 
     bzn_envelope env;
     env.set_database_response(response.SerializeAsString());
-    env.set_sender("placeholder for daemon's uuid"); // TODO
-    // TODO: crypto
 
     if (session)
     {
-        session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
+        session->send_signed_message(std::make_shared<bzn_envelope>(env));
     }
     else
     {
@@ -116,7 +114,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     {
         try
         {
-            this->node->send_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env));
+            this->node->send_signed_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env));
         }
         catch(const std::runtime_error& err)
         {

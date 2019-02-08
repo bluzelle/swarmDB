@@ -98,7 +98,8 @@ node::do_accept()
                         , self->chaos
                         , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
                         , self->options->get_ws_idle_timeout()
-                        , [](){});
+                        , [](){}
+                        , self->crypto);
 
                 session->accept(std::move(ws));
 
@@ -146,48 +147,40 @@ node::priv_session_shutdown_handler(const ep_key_t& ep_key)
     this->sessions.erase(ep_key);
 }
 
-void
-node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
+std::shared_ptr<bzn::session_base>
+node::find_session(const boost::asio::ip::tcp::endpoint& ep)
 {
     std::shared_ptr<bzn::session_base> session;
+    std::lock_guard<std::mutex> lock(this->session_map_mutex);
+    auto key = this->key_from_ep(ep);
 
+    if (this->sessions.find(key) == this->sessions.end() || !(session = this->sessions.at(key).lock()) || !session->is_open())
     {
-        std::lock_guard<std::mutex> lock(this->session_map_mutex);
-        auto key = this->key_from_ep(ep);
-
-        if (this->sessions.find(key) == this->sessions.end() || !(session = this->sessions.at(key).lock()) || !session->is_open())
-        {
-            session = std::make_shared<bzn::session>(
-                    this->io_context
-                    , ++this->session_id_counter
-                    , ep
-                    , this->chaos
-                    , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
-                    , this->options->get_ws_idle_timeout()
-                    , std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key));
-            session->open(this->websocket);
-            sessions.insert_or_assign(key, session);
-        }
-        // else session was assigned by the condition
+        session = std::make_shared<bzn::session>(
+                this->io_context
+                , ++this->session_id_counter
+                , ep
+                , this->chaos
+                , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+                , this->options->get_ws_idle_timeout()
+                , std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)
+                , this->crypto);
+        session->open(this->websocket);
+        sessions.insert_or_assign(key, session);
     }
-
-    session->send_message(msg);
+    return session;
 }
 
 void
-node::send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
+node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
 {
-    if (msg->sender().empty())
-    {
-        msg->set_sender(this->options->get_uuid());
-    }
+    this->find_session(ep)->send_message(msg);
+}
 
-    if (msg->signature().empty())
-    {
-        this->crypto->sign(*msg);
-    }
-
-    this->send_message_str(ep, std::make_shared<std::string>(msg->SerializeAsString()));
+void
+node::send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
+{
+    this->find_session(ep)->send_signed_message(msg);
 }
 
 ep_key_t
@@ -197,13 +190,13 @@ node::key_from_ep(const boost::asio::ip::tcp::endpoint& ep)
 }
 
 void
-node::send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg)
+node::send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg)
 {
     try
     {
         auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
         boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
-        this->send_message(endpoint, msg);
+        this->send_signed_message(endpoint, msg);
     }
     catch (const std::runtime_error& err)
     {
