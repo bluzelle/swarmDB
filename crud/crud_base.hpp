@@ -16,7 +16,7 @@
 
 #include <include/bluzelle.hpp>
 #include <node/session_base.hpp>
-#include <proto/bluzelle.pb.h>
+#include <proto/database.pb.h>
 
 
 namespace bzn
