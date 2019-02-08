@@ -52,7 +52,19 @@ pbft_configuration::from_string(const std::string& str)
         return false;
     }
 
-    if (!json.isMember("peers") || !json["peers"].isArray())
+    return this->from_json(json);
+}
+
+std::string
+pbft_configuration::to_string() const
+{
+    return this->to_json().toStyledString();
+}
+
+bool
+pbft_configuration::from_json(const Json::Value& json)
+{
+    if (!json.isMember("peers")/* || !json["peers"].isArray()*/)
     {
         LOG(error) << "Invalid configuration: " << json.toStyledString().substr(0, MAX_MESSAGE_SIZE) << "...";
         return false;
@@ -81,8 +93,8 @@ pbft_configuration::from_string(const std::string& str)
     return result;
 }
 
-std::string
-pbft_configuration::to_string() const
+Json::Value
+pbft_configuration::to_json() const
 {
     bzn::json_message json;
     json["peers"] = bzn::json_message();
@@ -98,7 +110,7 @@ pbft_configuration::to_string() const
         json["peers"].append(peer);
     }
 
-    return json.toStyledString();
+    return json;
 }
 
 hash_t

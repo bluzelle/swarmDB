@@ -32,6 +32,7 @@
 
 using namespace bzn;
 
+
 pbft::pbft(
     std::shared_ptr<bzn::node_base> node
     , std::shared_ptr<bzn::asio::io_context_base> io_context
@@ -41,8 +42,10 @@ pbft::pbft(
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
     , std::shared_ptr<bzn::crypto_base> crypto
     , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
+    , std::shared_ptr<bzn::storage_base> storage
     )
-    : node(std::move(node))
+    : storage(storage)
+    , node(std::move(node))
     , uuid(options->get_uuid())
     , options(options)
     , service(std::move(service))
@@ -53,18 +56,20 @@ pbft::pbft(
     , join_retry_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
     , operation_manager(std::move(operation_manager))
+    , configurations(storage)
 {
     if (peers.empty())
     {
         throw std::runtime_error("No peers found!");
     }
 
+    this->initialize_persistent_state();
     this->initialize_configuration(peers);
 
     // TODO: stable checkpoint should be read from disk first: KEP-494
-    this->low_water_mark = this->stable_checkpoint.first;
-    this->high_water_mark = this->stable_checkpoint.first + std::lround(CHECKPOINT_INTERVAL*HIGH_WATER_INTERVAL_IN_CHECKPOINTS);
-    this->service->save_service_state_at(((this->next_issued_sequence_number / CHECKPOINT_INTERVAL) + 1) * CHECKPOINT_INTERVAL);
+    this->low_water_mark = this->stable_checkpoint.value().first;
+    this->high_water_mark = this->stable_checkpoint.value().first + std::lround(CHECKPOINT_INTERVAL*HIGH_WATER_INTERVAL_IN_CHECKPOINTS);
+    this->service->save_service_state_at(((this->next_issued_sequence_number.value() / CHECKPOINT_INTERVAL) + 1) * CHECKPOINT_INTERVAL);
 }
 
 void
@@ -140,7 +145,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
     if (this->is_primary() && this->audit_enabled)
     {
         audit_message msg;
-        msg.mutable_primary_status()->set_view(this->view);
+        msg.mutable_primary_status()->set_view(this->view.value());
         msg.mutable_primary_status()->set_primary(this->uuid);
 
         this->broadcast(this->wrap_message(msg));
@@ -254,7 +259,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
     if (auto t = msg.type();t == PBFT_MSG_PREPREPARE || t == PBFT_MSG_PREPARE || t == PBFT_MSG_COMMIT)
     {
-        if (msg.view() != this->view)
+        if (msg.view() != this->view.value())
         {
             LOG(debug) << "Dropping message because it has the wrong view number";
             return false;
@@ -279,8 +284,9 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 std::shared_ptr<pbft_operation>
 pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t& request_hash)
 {
-    const uint64_t request_seq = this->next_issued_sequence_number++;
-    auto op = this->operation_manager->find_or_construct(this->view, request_seq, request_hash, this->current_peers_ptr());
+    const uint64_t request_seq = this->next_issued_sequence_number.value();
+    this->next_issued_sequence_number = request_seq + 1;
+    auto op = this->operation_manager->find_or_construct(this->view.value(), request_seq, request_hash, this->current_peers_ptr());
     op->record_request(request_env);
 
     return op;
@@ -360,7 +366,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     if (auto lookup = this->accepted_preprepares.find(log_key);
         lookup != this->accepted_preprepares.end()
-        && std::get<2>(lookup->second) != msg.request_hash())
+        && std::get<2>(lookup->second.value()) != msg.request_hash())
     {
 
         LOG(debug) << "Rejecting preprepare because I've already accepted a conflicting one \n";
@@ -373,7 +379,9 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
         this->maybe_record_request(msg, op);
 
         // This assignment will be redundant if we've seen this preprepare before, but that's fine
-        accepted_preprepares[log_key] = op->get_operation_key();
+        accepted_preprepares[log_key] = persistent<bzn::operation_key_t>{this->storage, op->get_operation_key()
+            , ACCEPTED_PREPREPARES_KEY, log_key};
+
 
         if (op->has_config_request())
         {
@@ -526,9 +534,9 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         reply.set_sequence(req_cp.first);
         reply.set_state_hash(req_cp.second);
         reply.set_state_data(*state);
-        if (this->saved_newview)
+        if (this->saved_newview.value().payload_case() == bzn_envelope::kPbft)
         {
-            reply.set_allocated_newview_msg(new bzn_envelope(*this->saved_newview));
+            reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview.value()));
         }
 
         auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
@@ -551,7 +559,7 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
     // make sure we don't have this checkpoint locally, but do know of a stablized one
     // based on the messages sent by peers.
     if (this->unstable_checkpoint_proofs[cp].size() >= this->quorum_size() &&
-        this->local_unstable_checkpoints.count(cp) == 0)
+        this->local_unstable_checkpoints.count(persistent<checkpoint_t>{cp}) == 0)
     {
         LOG(info) << boost::format("Adopting checkpoint %1% at seq %2%")
             % cp.second % cp.first;
@@ -565,7 +573,7 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
             if (newview.ParseFromString(msg.newview_msg().pbft()) && this->is_valid_newview_message(newview, msg.newview_msg()))
             {
                 this->view = newview.view();
-                LOG(info) << "setting view to " << this->view;
+                LOG(info) << "setting view to " << this->view.value();
             }
         }
 
@@ -778,7 +786,7 @@ pbft::is_primary() const
 const peer_address_t&
 pbft::get_primary(std::optional<uint64_t> view) const
 {
-    return this->current_peers()[view.value_or(this->view) % this->current_peers().size()];
+    return this->current_peers()[view.value_or(this->view.value()) % this->current_peers().size()];
 }
 
 bzn_envelope
@@ -844,7 +852,8 @@ void
 pbft::handle_failure()
 {
     std::lock_guard<std::mutex> lock(this->pbft_lock);
-    LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: " << this->view + 1;
+    LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: "
+        << this->view.value() + 1;
     this->notify_audit_failure_detected();
     this->new_config_timer->cancel();
     this->initiate_viewchange();
@@ -854,7 +863,7 @@ void
 pbft::initiate_viewchange()
 {
     this->view_is_valid = false;
-    pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first
+    pbft_msg view_change{pbft::make_viewchange(this->view.value() + 1, this->latest_stable_checkpoint().first
         , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first))};
     LOG(debug) << "Sending VIEWCHANGE for view " << this->view + 1;
     this->broadcast(this->wrap_message(view_change));
@@ -867,27 +876,28 @@ pbft::checkpoint_reached_locally(uint64_t sequence)
 
     LOG(info) << "Reached checkpoint " << sequence;
 
-    auto cp = this->local_unstable_checkpoints.emplace(sequence, this->service->service_state_hash(sequence)).first;
+    checkpoint_t chk{sequence, this->service->service_state_hash(sequence)};
+    auto cp = this->local_unstable_checkpoints.emplace(this->storage, chk, LOCAL_UNSTABLE_CHECKPOINTS_KEY, chk).first;
 
     pbft_msg cp_msg;
     cp_msg.set_type(PBFT_MSG_CHECKPOINT);
-    cp_msg.set_view(this->view);
+    cp_msg.set_view(this->view.value());
     cp_msg.set_sequence(sequence);
-    cp_msg.set_state_hash(cp->second);
+    cp_msg.set_state_hash(cp->value().second);
 
     this->broadcast(this->wrap_message(cp_msg));
 
-    this->maybe_stabilize_checkpoint(*cp);
+    this->maybe_stabilize_checkpoint(cp->value());
 }
 
 void
 pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    if (msg.sequence() <= stable_checkpoint.first)
+    if (msg.sequence() <= stable_checkpoint.value().first)
     {
         LOG(debug) << boost::format("Ignoring checkpoint message for seq %1% because I already have a stable checkpoint at seq %2%")
                    % msg.sequence()
-                   % stable_checkpoint.first;
+                   % stable_checkpoint.value().first;
         return;
     }
 
@@ -897,20 +907,23 @@ pbft::handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     checkpoint_t cp(msg.sequence(), msg.state_hash());
 
-    this->unstable_checkpoint_proofs[cp][original_msg.sender()] = original_msg.SerializeAsString();
+    this->unstable_checkpoint_proofs[cp][original_msg.sender()] = persistent<std::string>{this->storage
+        , original_msg.SerializeAsString(), UNSTABLE_CHECKPOINT_PROOFS_KEY, original_msg.sender(), cp};
+
     this->maybe_stabilize_checkpoint(cp);
 }
 
 bzn::checkpoint_t
 pbft::latest_stable_checkpoint() const
 {
-    return this->stable_checkpoint;
+    return this->stable_checkpoint.value();
 }
 
 bzn::checkpoint_t
 pbft::latest_checkpoint() const
 {
-    return this->local_unstable_checkpoints.empty() ? this->stable_checkpoint : *(this->local_unstable_checkpoints.rbegin());
+    return this->local_unstable_checkpoints.empty() ? this->stable_checkpoint.value()
+        : this->local_unstable_checkpoints.rbegin()->value();
 }
 
 size_t
@@ -927,7 +940,7 @@ pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
         return;
     }
 
-    if (this->local_unstable_checkpoints.count(cp) != 0)
+    if (this->local_unstable_checkpoints.count(persistent<checkpoint_t>{cp}) != 0)
     {
         this->stabilize_checkpoint(cp);
     }
@@ -942,7 +955,20 @@ void
 pbft::stabilize_checkpoint(const checkpoint_t& cp)
 {
     this->stable_checkpoint = cp;
-    this->stable_checkpoint_proof = this->unstable_checkpoint_proofs[cp];
+
+    // clear old stable_checkpoint_proof from storage
+    for (auto& elem : this->stable_checkpoint_proof)
+    {
+        elem.second.destroy();
+    }
+    this->stable_checkpoint_proof.clear();
+
+    // copy stable checkpoint proof into separate persistent storage
+    for (auto& elem : this->unstable_checkpoint_proofs[cp])
+    {
+        this->stable_checkpoint_proof[elem.first]
+            = {this->storage, elem.second.value(), STABLE_CHECKPOINT_PROOF_KEY, elem.first};
+    }
 
     LOG(info) << boost::format("Checkpoint %1% at seq %2% is now stable; clearing old data")
         % cp.second % cp.first;
@@ -1012,11 +1038,17 @@ pbft::set_checkpoint_state(const checkpoint_t& cp, const std::string& data)
 void
 pbft::clear_local_checkpoints_until(const checkpoint_t& cp)
 {
-    const auto local_start = this->local_unstable_checkpoints.begin();
+    auto local_start = this->local_unstable_checkpoints.begin();
     // Iterator to the first unstable checkpoint that's newer than this one. This logic assumes that CHECKPOINT_INTERVAL
     // is >= 2, otherwise we would have do do something awkward here
-    const auto local_end = this->local_unstable_checkpoints.upper_bound(checkpoint_t(cp.first+1, ""));
+    auto local_end = this->local_unstable_checkpoints.upper_bound(persistent<checkpoint_t>{{cp.first+1, "\x1"}});
     const size_t local_removed = std::distance(local_start, local_end);
+    std::for_each(local_start, local_end, [](auto& elem)
+    {
+        // to remove the element from storage we need to do it through an alias, since
+        // the contents of set elements cannot be modified
+        persistent<checkpoint_t>(elem).destroy();
+    });
     this->local_unstable_checkpoints.erase(local_start, local_end);
     LOG(debug) << boost::format("Cleared %1% unstable local checkpoints") % local_removed;
 }
@@ -1024,8 +1056,18 @@ pbft::clear_local_checkpoints_until(const checkpoint_t& cp)
 void
 pbft::clear_checkpoint_messages_until(const checkpoint_t& cp)
 {
-    const auto start = this->unstable_checkpoint_proofs.begin();
-    const auto end = this->unstable_checkpoint_proofs.upper_bound(checkpoint_t(cp.first+1, ""));
+    auto start = this->unstable_checkpoint_proofs.begin();
+    auto end = this->unstable_checkpoint_proofs.upper_bound(checkpoint_t(cp.first+1, ""));
+
+    // remove the inner map contents from storage
+    std::for_each(start, end, [](auto& map)
+    {
+        for (auto& elem : map.second)
+        {
+            elem.second.destroy();
+        }
+    });
+
     const size_t to_remove = std::distance(start, end);
     this->unstable_checkpoint_proofs.erase(start, end);
     LOG(debug) << boost::format("Cleared %1% unstable checkpoint proof sets") % to_remove;
@@ -1099,13 +1141,13 @@ pbft::get_high_water_mark()
 bool
 pbft::is_view_valid() const
 {
-    return this->view_is_valid;
+    return this->view_is_valid.value();
 }
 
 uint64_t
 pbft::get_view() const
 {
-    return this->view;
+    return this->view.value();
 }
 
 std::shared_ptr<bzn::node_base>
@@ -1484,13 +1526,14 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         return;
     }
 
-    this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] = original_msg;
+    this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] =
+        {this->storage, original_msg, VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, original_msg.sender(), msg.view()};
 
     this->save_checkpoint(msg);
 
-    if (this->view_is_valid &&
+    if (this->is_view_valid() &&
         this->valid_viewchange_messages_for_view[msg.view()].size() == this->max_faulty_nodes() + 1 &&
-        msg.view() > this->last_view_sent)
+        msg.view() > this->last_view_sent.value())
     {
         this->last_view_sent = msg.view();
         this->initiate_viewchange();
@@ -1500,7 +1543,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
                                          this->valid_viewchange_messages_for_view.end(), [&](const auto &p)
                                          {
                                              return ((this->get_primary(p.first).uuid == this->get_uuid()) &&
-                                                     (p.first > this->view) &&
+                                                     (p.first > this->view.value()) &&
                                                      (p.second.size() == 2 * this->max_faulty_nodes() + 1));
                                          });
 
@@ -1513,14 +1556,14 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
     for (const auto &sender_envelope : this->valid_viewchange_messages_for_view[msg.view()])
     {
         const auto &sender{sender_envelope.first};
-        const auto &viewchange_envelope{sender_envelope.second};
+        const auto &viewchange_envelope{sender_envelope.second.value()};
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
     auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
     this->next_issued_sequence_number = res.second;
-    this->move_to_new_configuration(res.first.config_hash(), this->view + 1);
-    LOG(debug) << "Sending NEWVIEW for view " << this->view + 1;
+    this->move_to_new_configuration(res.first.config_hash(), this->view.value() + 1);
+    LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
     this->broadcast(this->wrap_message(res.first));
 }
 
@@ -1538,12 +1581,15 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         }
 
         auto hash = newconfig->get_hash();
-        this->configurations.add(newconfig);
+        if (this->configurations.current()->get_hash() != hash)
+        {
+            this->configurations.add(newconfig);
 
-        // we need to switch to this configuration now so we have the peer info to validate the message
-        // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
-        // can't really trust this. We need to get the config from an external source.
-        this->move_to_new_configuration(hash, msg.view());
+            // we need to switch to this configuration now so we have the peer info to validate the message
+            // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
+            // can't really trust this. We need to get the config from an external source.
+            this->move_to_new_configuration(hash, msg.view());
+        }
 
         if (!this->is_valid_newview_message(msg, original_msg))
         {
@@ -1580,16 +1626,16 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     // after moving to the new view processes the preprepares
     for (size_t i{0}; i < static_cast<size_t>(msg.pre_prepare_messages_size()); ++i)
     {
-        const bzn_envelope original_msg = msg.pre_prepare_messages(i);
-        pbft_msg msg;
-        if (msg.ParseFromString(original_msg.pbft()))
+        const bzn_envelope original_msg2 = msg.pre_prepare_messages(i);
+        pbft_msg msg2;
+        if (msg2.ParseFromString(original_msg2.pbft()))
         {
-            this->handle_preprepare(msg, original_msg);
+            this->handle_preprepare(msg2, original_msg2);
         }
     }
 
     // save the newview message for providing with state messages
-    this->saved_newview = std::make_shared<bzn_envelope>(original_msg);
+    this->saved_newview = original_msg;
 }
 
 std::string
@@ -1621,8 +1667,8 @@ pbft::get_status()
     status["latest_checkpoint"]["hash"] = this->latest_checkpoint().second;
 
     status["unstable_checkpoints_count"] = uint64_t(this->unstable_checkpoints_count());
-    status["next_issued_sequence_number"] = this->next_issued_sequence_number;
-    status["view"] = this->view;
+    status["next_issued_sequence_number"] = this->next_issued_sequence_number.value();
+    status["view"] = this->view.value();
 
     status["peer_index"] = bzn::json_message();
     for (const auto& p : this->current_peers())
@@ -1642,21 +1688,25 @@ pbft::get_status()
 bool
 pbft::initialize_configuration(const bzn::peers_list_t& peers)
 {
-    auto config = std::make_shared<pbft_configuration>();
     bool config_good = true;
-    for (auto& p : peers)
-    {
-        config_good &= config->add_peer(p);
-    }
 
-    if (!config_good)
+    if (!this->configurations.current())
     {
-        LOG(warning) << "One or more peers could not be added to configuration";
-        LOG(warning) << config->get_peers()->size() << " peers were added";
-    }
+        auto config = std::make_shared<pbft_configuration>();
+        for (auto &p : peers)
+        {
+            config_good &= config->add_peer(p);
+        }
 
-    this->configurations.add(config);
-    this->configurations.set_current(config->get_hash(), this->view);
+        if (!config_good)
+        {
+            LOG(warning) << "One or more peers could not be added to configuration";
+            LOG(warning) << config->get_peers()->size() << " peers were added";
+        }
+
+        this->configurations.add(config);
+        this->configurations.set_current(config->get_hash(), this->view.value());
+    }
 
     return config_good;
 }
@@ -1779,7 +1829,7 @@ pbft_msg
 pbft::make_viewchange(
         uint64_t new_view
         , uint64_t base_sequence_number
-        , const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof
+        , const std::unordered_map<bzn::uuid_t, persistent<std::string>>& stable_checkpoint_proof
         , const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations)
 {
     pbft_msg viewchange;
@@ -1792,7 +1842,7 @@ pbft::make_viewchange(
     for (const auto& msg : stable_checkpoint_proof)
     {
         bzn_envelope envelope;
-        envelope.ParseFromString(msg.second);
+        envelope.ParseFromString(msg.second.value());
         *(viewchange.add_checkpoint_messages()) = envelope;
     }
 
@@ -1892,10 +1942,40 @@ pbft::handle_join_retry_timeout(const boost::system::error_code& ec)
     this->join_swarm();
 }
 
-uint32_t pbft::generate_random_number(uint32_t min, uint32_t max)
+uint32_t
+pbft::generate_random_number(uint32_t min, uint32_t max)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint32_t> dist(min, max);
     return dist(gen);
+}
+
+void
+pbft::initialize_persistent_state()
+{
+    persistent<operation_key_t>::initialize<log_key_t>(this->storage, ACCEPTED_PREPREPARES_KEY, [this](auto value, auto key)
+    {
+        this->accepted_preprepares.emplace(key, value);
+    });
+
+    persistent<std::string>::initialize<uuid_t>(this->storage, STABLE_CHECKPOINT_PROOF_KEY, [this](auto value, auto key)
+    {
+        this->stable_checkpoint_proof.emplace(key, value);
+    });
+
+    persistent<checkpoint_t>::initialize<checkpoint_t>(this->storage, LOCAL_UNSTABLE_CHECKPOINTS_KEY, [this](auto value, auto /*key*/)
+    {
+        this->local_unstable_checkpoints.emplace(value);
+    });
+
+    persistent<std::string>::initialize<uuid_t, checkpoint_t>(this->storage, UNSTABLE_CHECKPOINT_PROOFS_KEY, [this](auto value, auto key1, auto key2)
+    {
+        this->unstable_checkpoint_proofs[key2].emplace(key1, value);
+    });
+
+    persistent<bzn_envelope>::initialize<uuid_t, uint64_t>(this->storage, VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, [this](auto value, auto key1, auto key2)
+    {
+        this->valid_viewchange_messages_for_view[key2].emplace(key1, value);
+    });
 }

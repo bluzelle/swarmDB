@@ -19,8 +19,10 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
+#include <pbft/pbft_persistent_state.hpp>
 #include <pbft/pbft_config_store.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
+#include <storage/storage_base.hpp>
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
 #include <proto/audit.pb.h>
@@ -41,6 +43,18 @@ namespace
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
     const std::string NOOP_REQUEST_HASH = "<no op request hash>";
+
+    std::string VIEW_KEY{"view"};
+    std::string NEXT_ISSUED_SEQUENCE_NUMBER_KEY{"next_issued_sequence_number"};
+    std::string ACCEPTED_PREPREPARES_KEY{"accepted_preprepares"};
+    std::string STABLE_CHECKPOINT_KEY{"stable_checkpoint"};
+    std::string LOCAL_UNSTABLE_CHECKPOINTS_KEY{"local_unstable_checkpoints"};
+    std::string UNSTABLE_CHECKPOINT_PROOFS_KEY{"unstable_checkpoint_proofs"};
+    std::string STABLE_CHECKPOINT_PROOF_KEY{"stable_checkpoint_proof"};
+    std::string VIEW_IS_VALID_KEY{"view_is_valid"};
+    std::string LAST_VIEW_SENT_KEY{"last_view_sent"};
+    std::string VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY{"valid_viewchange_messages_for_view"};
+    std::string SAVED_NEWVIEW_KEY{"saved_newview"};
 }
 
 
@@ -68,6 +82,7 @@ namespace bzn
             , std::shared_ptr<pbft_failure_detector_base> failure_detector
             , std::shared_ptr<bzn::crypto_base> crypto
             , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
+            , std::shared_ptr<bzn::storage_base> storage
             );
 
         void start() override;
@@ -188,6 +203,7 @@ namespace bzn
         void clear_local_checkpoints_until(const checkpoint_t&);
         void clear_checkpoint_messages_until(const checkpoint_t&);
 
+        void initialize_persistent_state();
         bool initialize_configuration(const bzn::peers_list_t& peers);
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
@@ -207,7 +223,7 @@ namespace bzn
 
         // VIEWCHANGE/NEWVIEW Helper methods
         void initiate_viewchange();
-        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
+        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, persistent<std::string>>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         std::pair<pbft_msg, uint64_t> build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
@@ -216,9 +232,11 @@ namespace bzn
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
 
+        std::shared_ptr<bzn::storage_base> storage;
+
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
-        uint64_t view = 1;
-        uint64_t next_issued_sequence_number = 1;
+        persistent<uint64_t> view{storage, uint64_t{1}, VIEW_KEY};
+        persistent<uint64_t> next_issued_sequence_number{storage, 1, NEXT_ISSUED_SEQUENCE_NUMBER_KEY};
 
         uint64_t low_water_mark;
         uint64_t high_water_mark;
@@ -234,7 +252,7 @@ namespace bzn
 
         std::mutex pbft_lock;
 
-        std::map<bzn::log_key_t, bzn::operation_key_t> accepted_preprepares;
+        std::map<bzn::log_key_t, persistent<bzn::operation_key_t>> accepted_preprepares;
 
         std::once_flag start_once;
 
@@ -249,15 +267,14 @@ namespace bzn
         enum class swarm_status {not_joined, joining, waiting, joined};
         swarm_status in_swarm = swarm_status::not_joined;
 
-        checkpoint_t stable_checkpoint{0, INITIAL_CHECKPOINT_HASH};
+        persistent<checkpoint_t> stable_checkpoint{storage, {0, INITIAL_CHECKPOINT_HASH}, STABLE_CHECKPOINT_KEY};
 
-        std::unordered_map<uuid_t, std::string> stable_checkpoint_proof;
+        std::unordered_map<uuid_t, persistent<std::string>> stable_checkpoint_proof;
 
-        std::set<checkpoint_t> local_unstable_checkpoints;
+        std::set<persistent<checkpoint_t>> local_unstable_checkpoints;
 
-        std::map<checkpoint_t, std::unordered_map<uuid_t, std::string>> unstable_checkpoint_proofs;
+        std::map<checkpoint_t, std::unordered_map<uuid_t, persistent<std::string>>> unstable_checkpoint_proofs;
 
-        pbft_config_store configurations;
         bool new_config_in_flight = false;
 
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
@@ -265,13 +282,14 @@ namespace bzn
         std::shared_ptr<crypto_base> crypto;
 
         // VIEWCHANGE/NEWVIEW members
-        bool view_is_valid = true;
-        uint64_t last_view_sent{0};
+        persistent<bool> view_is_valid{storage, true, VIEW_IS_VALID_KEY};
+        persistent<uint64_t> last_view_sent{storage, 0, LAST_VIEW_SENT_KEY};
 
-        std::map<uint64_t,std::map<bzn::uuid_t, bzn_envelope>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
-        std::shared_ptr<bzn_envelope> saved_newview;
+        std::map<uint64_t,std::map<bzn::uuid_t, persistent<bzn_envelope>>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
+        persistent<bzn_envelope> saved_newview{storage, {}, SAVED_NEWVIEW_KEY};
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
+        pbft_config_store configurations;
 
         FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);

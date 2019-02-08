@@ -16,7 +16,7 @@ add_library(pbft STATIC
     pbft_config_store.cpp
     database_pbft_service.cpp
     database_pbft_service.hpp
-    )
+    pbft_persistent_state.cpp)
 
 target_link_libraries(pbft utils pbft_operations proto)
 target_include_directories(pbft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})

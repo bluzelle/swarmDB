@@ -140,6 +140,14 @@ database_pbft_service::process_awaiting_operations()
                 this->crud->handle_request(op_it->second->get_request().sender(), request, nullptr);
             }
 
+            if (this->next_request_sequence == this->next_checkpoint)
+            {
+                if (this->crud->save_state())
+                {
+                    this->last_checkpoint = this->next_request_sequence;
+                }
+            }
+
             this->io_context->post(std::bind(this->execute_handler, (*op_it).second));
         }
 
@@ -147,14 +155,6 @@ database_pbft_service::process_awaiting_operations()
         {
             // these are fatal... something bad is going on.
             throw std::runtime_error("Failed to remove pbft_request from database! (" + std::to_string(uint8_t(result)) + ")");
-        }
-
-        if (this->next_request_sequence == this->next_checkpoint)
-        {
-            if (this->crud->save_state())
-            {
-                this->last_checkpoint = this->next_request_sequence;
-            }
         }
 
         ++this->next_request_sequence;
@@ -166,7 +166,7 @@ database_pbft_service::process_awaiting_operations()
 bzn::hash_t
 database_pbft_service::service_state_hash(uint64_t /*sequence_number*/) const
 {
-    // TODO: not sure how this works...
+    // TODO: not sure how this works... (KEP-1203)
 
     return "";
 }
