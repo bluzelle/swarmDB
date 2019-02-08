@@ -47,6 +47,10 @@ message database_msg
         database_writers        remove_writers = 18;
 
         database_read           quick_read = 19;
+
+        database_expire         expire = 20;
+        database_read           persist = 21;
+        database_read           ttl = 22;
     }
 }
 
@@ -62,6 +66,7 @@ message database_create
 {
     string key = 1;
     bytes value = 2;
+    uint64 expire = 3;
 }
 
 message database_read
@@ -73,6 +78,13 @@ message database_update
 {
     string key = 1;
     bytes value = 2;
+    uint64 expire = 3;
+}
+
+message database_expire
+{
+    string key = 1;
+    uint64 expire = 2;
 }
 
 message database_delete
@@ -164,6 +176,12 @@ message database_writers_response
     repeated string writers = 2;
 }
 
+message database_ttl_response
+{
+    string key = 1;
+    uint64 ttl = 2;
+}
+
 message database_error
 {
     string message = 1;
@@ -184,6 +202,7 @@ message database_response
         database_error                  error = 8;
         database_has_db_response        has_db = 9;
         database_writers_response       writers = 10;
+        database_ttl_response           ttl = 11;
     }
 }
 

@@ -35,7 +35,8 @@ namespace bzn
         key_too_large,
         db_not_found,
         db_exists,
-        access_denied
+        access_denied,
+        delete_pending
     };
 
     const std::unordered_map<storage_result, const std::string> storage_result_msg{
@@ -47,7 +48,8 @@ namespace bzn
         {storage_result::key_too_large,   "KEY_SIZE_TOO_LARGE"},
         {storage_result::db_not_found,    "DATABASE_NOT_FOUND"},
         {storage_result::db_exists,       "DATABASE_EXISTS"},
-        {storage_result::access_denied,   "ACCESS_DENIED"}};
+        {storage_result::access_denied,   "ACCESS_DENIED"},
+        {storage_result::delete_pending,  "DELETE_PENDING"}};
 
 
     class storage_base

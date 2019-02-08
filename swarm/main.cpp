@@ -252,7 +252,6 @@ main(int argc, const char* argv[])
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
-        std::shared_ptr<bzn::status> status;
 
         auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
 
@@ -275,16 +274,15 @@ main(int argc, const char* argv[])
             unstable_storage = std::make_shared<bzn::rocksdb_storage>(options->get_state_dir(), "pbft", options->get_uuid());
         }
 
-        auto crud = std::make_shared<bzn::crud>(stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node);
+        auto crud = std::make_shared<bzn::crud>(io_context, stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node);
         auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(unstable_storage);
 
         auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
-            std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
-            ,failure_detector , crypto, operation_manager);
+            std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid()), failure_detector, crypto, operation_manager);
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
-        status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
+        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
 
         node->start(pbft);
         chaos->start();

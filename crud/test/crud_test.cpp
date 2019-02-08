@@ -17,6 +17,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_subscription_manager_base.hpp>
 #include <mocks/mock_node_base.hpp>
+#include <mocks/mock_boost_asio_beast.hpp>
 #include <algorithm>
 
 using namespace ::testing;
@@ -74,7 +75,8 @@ TEST(crud, test_that_create_sends_proper_response)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        mock_subscription_manager, nullptr);
 
     database_msg msg;
 
@@ -86,7 +88,8 @@ TEST(crud, test_that_create_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
-    expect_signed_response(session, "uuid", 123, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+    expect_signed_response(session, "uuid", 123, std::nullopt,
+        bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
 
     crud.handle_request("caller_id", msg, session);
 
@@ -102,6 +105,7 @@ TEST(crud, test_that_create_sends_proper_response)
     msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(2);
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
@@ -110,22 +114,58 @@ TEST(crud, test_that_create_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // fail to create same key...
-    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::exists));
+    expect_signed_response(session, "uuid", 123, database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::exists));
 
     crud.handle_request("caller_id", msg, session);
 
     // fail because key is too big...
-    msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
-    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::key_too_large));
+    msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE + 1, '*'));
+    expect_signed_response(session, "uuid", 123, database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::key_too_large));
 
     crud.handle_request("caller_id", msg, session);
 
     // fail because value is too big...
-    msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::value_too_large));
+    msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE + 1, '*'));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::value_too_large));
+
+    crud.handle_request("caller_id", msg, session);
+
+    // get ttl for new key
+    msg.release_create();
+    msg.mutable_ttl()->set_key("key");
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kTtl, std::nullopt,
+        [](const database_response& resp)
+        {
+            EXPECT_EQ(resp.ttl().key(), "key");
+            EXPECT_GE(resp.ttl().ttl(), uint64_t(1));
+        });
+
+    crud.handle_request("caller_id", msg, session);
+
+    // expire key...
+    sleep(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
+
+    crud.handle_request("caller_id", msg, session);
+
+    // calling create should return delete pending...
+    msg.release_ttl();
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
 
     crud.handle_request("caller_id", msg, session);
 }
+
 
 TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 {
@@ -133,7 +173,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
 
     database_msg msg;
 
@@ -193,7 +233,25 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     crud.handle_request("caller_id", msg, nullptr);
 
+    // ttl should fail since default is zero...
+    msg.release_create();
+    msg.mutable_ttl()->set_key("key");
+
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
+        [&](const auto&, auto msg)
+        {
+            database_response resp;
+            ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
+        }));
+
+    crud.handle_request("caller_id", msg, nullptr);
+
     // fail to create same key...
+    msg.release_ttl();
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
@@ -244,7 +302,7 @@ TEST(crud, test_that_read_sends_proper_response)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     database_msg msg;
 
@@ -258,6 +316,7 @@ TEST(crud, test_that_read_sends_proper_response)
     msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(2);
 
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
@@ -297,19 +356,33 @@ TEST(crud, test_that_read_sends_proper_response)
     // read invalid key...
     msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 
     // quick read invalid key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 
     // null session nothing should happen...
     crud.handle_request("caller_id", msg, nullptr);
+
+    // expired key should return delete_pending
+    msg.release_quick_read();
+    msg.mutable_read()->set_key("key");
+
+    sleep(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
+
+    crud.handle_request("caller_id", msg, session);
+
 }
 
 TEST(crud, test_that_point_of_contact_read_sends_proper_response)
@@ -318,7 +391,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
 
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
 
     database_msg msg;
     msg.mutable_header()->set_point_of_contact("point_of_contact");
@@ -422,7 +495,7 @@ TEST(crud, test_that_update_sends_proper_response)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     database_msg msg;
 
@@ -454,6 +527,7 @@ TEST(crud, test_that_update_sends_proper_response)
 
     msg.mutable_update()->set_key("key");
     msg.mutable_update()->set_value("updated");
+    msg.mutable_update()->set_expire(2);
     expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, session);
@@ -472,6 +546,18 @@ TEST(crud, test_that_update_sends_proper_response)
             });
 
     crud.handle_request("caller_id", msg, session);
+
+    // expired key should return delete_pending
+    msg.release_read();
+    msg.mutable_update()->set_key("key");
+    msg.mutable_update()->set_value("updated");
+
+    sleep(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
+
+    crud.handle_request("caller_id", msg, session);
 }
 
 TEST(crud, test_that_point_of_contact_update_sends_proper_response)
@@ -480,7 +566,7 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
 
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
 
     database_msg msg;
     msg.mutable_header()->set_point_of_contact("point_of_contact");
@@ -551,7 +637,7 @@ TEST(crud, test_that_delete_sends_proper_response)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     database_msg msg;
 
@@ -598,7 +684,7 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
 
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node);
 
     database_msg msg;
 
@@ -659,7 +745,8 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
 
 TEST(crud, test_that_has_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     database_msg msg;
 
@@ -714,7 +801,8 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     database_msg msg;
 
@@ -779,7 +867,8 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 
 TEST(crud, test_that_keys_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     database_msg msg;
 
@@ -841,7 +930,8 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     database_msg msg;
 
@@ -914,7 +1004,8 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
 
 TEST(crud, test_that_size_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     database_msg msg;
 
@@ -969,7 +1060,8 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     database_msg msg;
 
@@ -1037,11 +1129,18 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
-    crud.start();
+    crud->start();
 
     // subscribe...
     database_msg msg;
@@ -1051,7 +1150,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     msg.mutable_subscribe()->set_key("key");
 
     // nothing should happen...
-    crud.handle_request("caller_id", msg, nullptr);
+    crud->handle_request("caller_id", msg, nullptr);
 
     // try again with a valid session...
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
@@ -1061,7 +1160,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 
     expect_signed_response(mock_session);
 
-    crud.handle_request("caller_id", msg, mock_session);
+    crud->handle_request("caller_id", msg, mock_session);
 }
 
 
@@ -1069,11 +1168,18 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 {
     auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
-    crud.start();
+    crud->start();
 
     // unsubscribe...
     database_msg msg;
@@ -1084,7 +1190,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     msg.mutable_unsubscribe()->set_nonce(321);
 
     // nothing should happen...
-    crud.handle_request("caller_id", msg, nullptr);
+    crud->handle_request("caller_id", msg, nullptr);
     
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
@@ -1093,15 +1199,14 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 
     expect_signed_response(mock_session);
 
-    crud.handle_request("caller_id", msg, mock_session);
+    crud->handle_request("caller_id", msg, mock_session);
 }
 
 
 TEST(crud, test_that_create_db_request_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -1121,13 +1226,13 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 }
 
+
 TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -1166,9 +1271,8 @@ TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 
 TEST(crud, test_that_has_db_request_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     database_msg msg;
 
@@ -1211,9 +1315,8 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     database_msg msg;
 
@@ -1263,9 +1366,8 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 
 TEST(crud, test_that_delete_db_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // delete database...
     database_msg msg;
@@ -1305,9 +1407,8 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     // delete database...
     database_msg msg;
@@ -1369,8 +1470,8 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
 
 TEST(crud, test_that_state_can_be_saved_and_retrieved)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(),
-                   nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     ASSERT_TRUE(crud.save_state());
 
@@ -1384,10 +1485,8 @@ TEST(crud, test_that_state_can_be_saved_and_retrieved)
 
 TEST(crud, test_that_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(),
-                   nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -1420,9 +1519,8 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -1458,9 +1556,8 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
 
 TEST(crud, test_that_add_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -1513,9 +1610,8 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -1587,9 +1683,8 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
 
 TEST(crud, test_that_remove_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -1631,9 +1726,8 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
 {
     auto mock_node = std::make_shared<bzn::Mocknode_base>();
 
-    bzn::crud crud(std::make_shared<bzn::mem_storage>(), std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
-
-    crud.start();
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -1685,3 +1779,74 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
 
     crud.handle_request("other_caller_id", msg, nullptr);
 }
+
+
+TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
+{
+    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+
+    EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
+
+    bzn::asio::wait_handler wh;
+    EXPECT_CALL(*mock_steady_timer, async_wait(_)).WillRepeatedly(Invoke(
+        [&](auto handler)
+        {
+            wh = handler;
+        }));
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::move(mock_steady_timer);
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+
+    EXPECT_CALL(*mock_subscription_manager, start());
+
+    crud->start();
+
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    msg.mutable_create_db();
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // create key with expiration...
+    msg.release_create_db();
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(1);
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    sleep(2); // force expiration
+
+    // call background timer...
+    wh(boost::system::error_code());
+
+    // key should be gone...
+    msg.release_create();
+    msg.mutable_read()->set_key("key");
+
+    expect_signed_response(session, "uuid", 123, database_response::kError);
+    crud->handle_request("caller_id", msg, session);
+
+    // failure does nothing...
+    wh(make_error_code(boost::system::errc::timed_out));
+}
+
+
+//TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
+//{
+//
+//}

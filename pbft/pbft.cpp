@@ -1056,6 +1056,8 @@ pbft::handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<
 {
     database_msg db_msg;
 
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
     if (db_msg.ParseFromString(msg.database_response()))
     {
         if (const auto session_it = this->sessions_waiting_on_forwarded_requests.find(db_msg.header().request_hash());
