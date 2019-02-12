@@ -148,7 +148,10 @@ simple_options::build_options()
                         "check signatures on incoming messages")
                 (CRYPTO_ENABLED_OUTGOING.c_str(),
                          po::value<bool>()->default_value(true),
-                        "attach signatures on outgoing messages");
+                        "attach signatures on outgoing messages")
+                (CRYPTO_SELF_VERIFY.c_str(),
+                         po::value<bool>()->default_value(true),
+                        "verify own signatures as a sanity check");
 
 
     this->options_root.add(crypto);

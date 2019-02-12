@@ -4,7 +4,7 @@ add_library(crypto
         crypto.cpp
         )
 
-target_link_libraries(crypto proto)
+target_link_libraries(crypto proto utils)
 add_dependencies(crypto openssl)
 target_include_directories(crypto PRIVATE ${PROTO_INCLUDE_DIR})
 add_subdirectory(test)
