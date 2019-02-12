@@ -33,10 +33,17 @@ namespace bzn
         virtual ~session_base() = default;
 
         /**
-         * Send a message to the connected node
+         * Send a raw string to whatever's on the other end of this session
          * @param msg message
          */
         virtual void send_message(std::shared_ptr<bzn::encoded_message> msg) = 0;
+
+        /**
+         * Send a message to whatever's on the other end of this session. If the sender field is empty or contains
+         * our uuid, the message will be signed before sending. If the sender field contains something else,
+         * an existing signature will be kept intact.
+         * @param msg           message to send
+         */
         virtual void send_signed_message(std::shared_ptr<bzn_envelope> msg) = 0;
 
         /**

@@ -46,22 +46,22 @@ namespace
 
                     if (db_uuid)
                     {
-                        EXPECT_EQ(resp.header().db_uuid(), db_uuid.value());
+                        EXPECT_EQ(resp.header().db_uuid(), *db_uuid);
                     }
 
                     if (nonce)
                     {
-                        EXPECT_EQ(resp.header().nonce(), nonce.value());
+                        EXPECT_EQ(resp.header().nonce(), *nonce);
                     }
 
                     if (response_case)
                     {
-                        EXPECT_EQ(resp.response_case(), response_case.value());
+                        EXPECT_EQ(resp.response_case(), *response_case);
                     }
 
                     if (error_msg)
                     {
-                        EXPECT_EQ(resp.error().message(), error_msg.value());
+                        EXPECT_EQ(resp.error().message(), *error_msg);
                     }
 
                     additional_checks(resp);
