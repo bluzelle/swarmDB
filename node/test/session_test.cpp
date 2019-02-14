@@ -66,7 +66,7 @@ public:
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, [](){});
+        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, [](){}, nullptr);
     }
 
     void yield()
@@ -93,7 +93,7 @@ namespace bzn
 
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
-        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, [](){});
+        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, [](){}, nullptr);
         session->accept(mock_websocket_stream);
         accept_handler(boost::system::error_code{});
 

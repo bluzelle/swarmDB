@@ -48,6 +48,8 @@ def handle_response(ws):
 
     env = bluzelle_pb2.bzn_envelope()
     env.ParseFromString(ws.recv())
+    print("Response: \n{}".format(env).expandtabs(4))
+    print("-" * 60 + '\n')
 
     resp = database_pb2.database_response()
     resp.ParseFromString(env.database_response)

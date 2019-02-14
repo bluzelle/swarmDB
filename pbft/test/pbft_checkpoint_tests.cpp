@@ -47,7 +47,7 @@ namespace bzn::test
 
     TEST_F(pbft_checkpoint_test, test_checkpoint_messages_sent_on_execute)
     {
-        EXPECT_CALL(*mock_node, send_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->build_pbft();

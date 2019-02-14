@@ -54,7 +54,7 @@ message database_header
 {
     string db_uuid = 1;
     uint64 nonce = 2 [jstype = JS_STRING];
-    bytes  point_of_contact = 3;
+    string  point_of_contact = 3;
     bytes  request_hash = 4;
 }
 
