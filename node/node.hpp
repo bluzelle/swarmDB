@@ -42,11 +42,11 @@ namespace bzn
 
         void start(std::shared_ptr<bzn::pbft_base> pbft) override;
 
-        void send_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) override;
+        void send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) override;
 
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 
-        void send_message(const bzn::uuid_t &uuid, std::shared_ptr<bzn_envelope> msg) override;
+        void send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg) override;
 
     private:
         FRIEND_TEST(node, test_that_registered_message_handler_is_invoked);
@@ -54,12 +54,12 @@ namespace bzn
 
         void do_accept();
 
-
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void priv_session_shutdown_handler(const ep_key_t& ep_key);
 
         std::shared_ptr<bzn::pbft_base>               pbft;
 
+        std::shared_ptr<bzn::session_base> find_session(const boost::asio::ip::tcp::endpoint& ep);
         std::shared_ptr<bzn::session_base> open_session(const boost::asio::ip::tcp::endpoint& ep);
 
         ep_key_t key_from_ep(const boost::asio::ip::tcp::endpoint& ep);

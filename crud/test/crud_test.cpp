@@ -29,6 +29,44 @@ namespace
         bzn_envelope intermediate;
         return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
     }
+
+    void expect_signed_response(const std::shared_ptr<bzn::Mocksession_base>& session,
+            std::optional<bzn::uuid_t> db_uuid = std::nullopt,
+            std::optional<uint64_t> nonce = std::nullopt,
+            std::optional<database_response::ResponseCase> response_case = std::nullopt,
+            std::optional<std::string> error_msg = std::nullopt,
+            std::function<void(const database_response&)> additional_checks = [](auto){})
+    {
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [=](std::shared_ptr<bzn_envelope> env)
+                {
+                    EXPECT_EQ(env->payload_case(), bzn_envelope::kDatabaseResponse);
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+
+                    if (db_uuid)
+                    {
+                        EXPECT_EQ(resp.header().db_uuid(), *db_uuid);
+                    }
+
+                    if (nonce)
+                    {
+                        EXPECT_EQ(resp.header().nonce(), *nonce);
+                    }
+
+                    if (response_case)
+                    {
+                        EXPECT_EQ(resp.response_case(), *response_case);
+                    }
+
+                    if (error_msg)
+                    {
+                        EXPECT_EQ(resp.error().message(), *error_msg);
+                    }
+
+                    additional_checks(resp);
+                }));
+    }
 }
 
 
@@ -48,15 +86,7 @@ TEST(crud, test_that_create_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
-        }));
+    expect_signed_response(session, "uuid", 123, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
 
     crud.handle_request("caller_id", msg, session);
 
@@ -64,15 +94,7 @@ TEST(crud, test_that_create_sends_proper_response)
     msg.release_create();
     msg.mutable_create_db();
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, session);
 
@@ -83,59 +105,24 @@ TEST(crud, test_that_create_sends_proper_response)
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, session);
 
     // fail to create same key...
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::exists));
-        }));
+    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::exists));
 
     crud.handle_request("caller_id", msg, session);
 
     // fail because key is too big...
     msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::key_too_large));
-        }));
+    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::key_too_large));
 
     crud.handle_request("caller_id", msg, session);
 
     // fail because value is too big...
     msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::value_too_large));
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::value_too_large));
 
     crud.handle_request("caller_id", msg, session);
 }
@@ -158,7 +145,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact",_)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact",_)).WillOnce(Invoke(
             [&](const bzn::uuid_t& , auto msg)
             {
                 database_response resp;
@@ -174,8 +161,8 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     msg.release_create();
     msg.mutable_create_db();
 
-    // virtual void send_message(const bzn::uuid_t& , std::shared_ptr<bzn_envelope> msg, bool close_session) = 0;
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    // virtual void send_signed_message(const bzn::uuid_t& , std::shared_ptr<bzn_envelope> msg, bool close_session) = 0;
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
             [&](const auto& , auto msg)
             {
                 database_response resp;
@@ -194,7 +181,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
             [&](const auto& , auto msg)
             {
                 database_response resp;
@@ -207,7 +194,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // fail to create same key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -223,7 +210,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     // fail because key is too big...
     msg.mutable_create()->set_key(std::string(bzn::MAX_KEY_SIZE+1,'*'));
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -238,7 +225,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     // fail because value is too big...
     msg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE+1,'*'));
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -277,7 +264,7 @@ TEST(crud, test_that_read_sends_proper_response)
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(session);
     crud.handle_request("caller_id", msg, session);
 
     // clear msg...
@@ -286,66 +273,38 @@ TEST(crud, test_that_read_sends_proper_response)
 
     // read key...
     msg.mutable_read()->set_key("key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kRead);
-            ASSERT_EQ(resp.read().key(), "key");
-            ASSERT_EQ(resp.read().value(), "value");
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
+            [](const auto& resp)
+            {
+                ASSERT_EQ(resp.read().key(), "key");
+                ASSERT_EQ(resp.read().value(), "value");
+            });
 
     crud.handle_request("caller_id", msg, session);
 
     // quick read key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kRead);
-            ASSERT_EQ(resp.read().key(), "key");
-            ASSERT_EQ(resp.read().value(), "value");
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
+            [](const auto& resp)
+            {
+                ASSERT_EQ(resp.read().key(), "key");
+                ASSERT_EQ(resp.read().value(), "value");
+            });
 
     crud.handle_request("caller_id", msg, session);
 
     // read invalid key...
     msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 
     // quick read invalid key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 
@@ -378,7 +337,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     // add key...
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
     crud.handle_request("caller_id", msg, nullptr);
 
     // clear msg...
@@ -388,7 +347,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     // read key...
     msg.mutable_read()->set_key("key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -406,7 +365,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     msg.release_read();
     msg.mutable_quick_read()->set_key("key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", _)).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -424,7 +383,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -440,7 +399,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     // quick read invalid key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -483,7 +442,7 @@ TEST(crud, test_that_update_sends_proper_response)
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(session);
     crud.handle_request("caller_id", msg, session);
 
     // clear msg...
@@ -495,15 +454,7 @@ TEST(crud, test_that_update_sends_proper_response)
 
     msg.mutable_update()->set_key("key");
     msg.mutable_update()->set_value("updated");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, session);
 
@@ -513,17 +464,12 @@ TEST(crud, test_that_update_sends_proper_response)
 
     // read updated key...
     msg.mutable_read()->set_key("key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kRead);
-            ASSERT_EQ(resp.read().key(), "key");
-            ASSERT_EQ(resp.read().value(), "updated");
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
+            [](const auto& resp)
+            {
+                ASSERT_EQ(resp.read().key(), "key");
+                ASSERT_EQ(resp.read().value(), "updated");
+            });
 
     crud.handle_request("caller_id", msg, session);
 }
@@ -553,7 +499,7 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
     // add key...
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
     crud.handle_request("caller_id", msg, nullptr);
 
     // clear msg...
@@ -566,7 +512,7 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
     msg.mutable_update()->set_key("key");
     msg.mutable_update()->set_value("updated");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -585,7 +531,7 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
     // read updated key...
     msg.mutable_read()->set_key("key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -625,7 +571,7 @@ TEST(crud, test_that_delete_sends_proper_response)
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(session);
     crud.handle_request("caller_id", msg, session);
 
     // clear msg...
@@ -634,31 +580,14 @@ TEST(crud, test_that_delete_sends_proper_response)
 
     // delete key...
     msg.mutable_delete_()->set_key("key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
     crud.handle_request("caller_id", msg, session);
 
     // delete invalid key...
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 }
@@ -688,7 +617,7 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
     // add key...
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
     crud.handle_request("caller_id", msg, nullptr);
 
     // clear msg...
@@ -698,7 +627,7 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
     // delete key...
     msg.mutable_delete_()->set_key("key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -713,7 +642,7 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // delete invalid key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
         {
             database_response resp;
@@ -748,7 +677,7 @@ TEST(crud, test_that_has_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(session);
     crud.handle_request("caller_id", msg, session);
 
     // clear msg...
@@ -757,33 +686,23 @@ TEST(crud, test_that_has_sends_proper_response)
 
     // valid key...
     msg.mutable_has()->set_key("key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kHas);
-            ASSERT_EQ(resp.has().key(), "key");
-            ASSERT_TRUE(resp.has().has());
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kHas, std::nullopt,
+            [](const auto& resp)
+            {
+                ASSERT_EQ(resp.has().key(), "key");
+                ASSERT_TRUE(resp.has().has());
+            });
 
     crud.handle_request("caller_id", msg, session);
 
     // invalid key...
     msg.mutable_has()->set_key("invalid-key");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kHas);
-            ASSERT_EQ(resp.has().key(), "invalid-key");
-            ASSERT_FALSE(resp.has().has());
-        }));
+    expect_signed_response(session, "uuid", 123, database_response::kHas, std::nullopt,
+            [](const auto& resp)
+            {
+                ASSERT_EQ(resp.has().key(), "invalid-key");
+                ASSERT_FALSE(resp.has().has());
+            });
 
     crud.handle_request("caller_id", msg, session);
 
@@ -812,7 +731,7 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
     crud.handle_request("caller_id", msg, nullptr);
 
     // clear msg...
@@ -821,7 +740,7 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 
     // valid key...
     msg.mutable_has()->set_key("key");
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -838,7 +757,7 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
     // invalid key...
     msg.mutable_has()->set_key("invalid-key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -878,7 +797,7 @@ TEST(crud, test_that_keys_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).Times(2);
+    EXPECT_CALL(*session, send_signed_message(_)).Times(2);
     crud.handle_request("caller_id", msg, session);
 
     // add another...
@@ -891,36 +810,26 @@ TEST(crud, test_that_keys_sends_proper_response)
 
     // get keys...
     msg.mutable_keys();
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kKeys);
-            ASSERT_EQ(resp.keys().keys().size(), int(2));
-            // keys are not returned in order created...
-            auto keys = resp.keys().keys();
-            std::sort(keys.begin(), keys.end());
-            ASSERT_EQ(keys[0], "key1");
-            ASSERT_EQ(keys[1], "key2");
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kKeys, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.keys().keys().size(), int(2));
+                // keys are not returned in order created...
+                auto keys = resp.keys().keys();
+                std::sort(keys.begin(), keys.end());
+                ASSERT_EQ(keys[0], "key1");
+                ASSERT_EQ(keys[1], "key2");
+            });
 
     crud.handle_request("caller_id", msg, session);
 
     // invalid uuid returns empty message...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kKeys);
-            ASSERT_EQ(resp.keys().keys().size(), int(0));
-        }));
+    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kKeys, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.keys().keys().size(), int(0));
+            });
 
     crud.handle_request("caller_id", msg, session);
 
@@ -949,7 +858,7 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).Times(2);
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).Times(2);
     crud.handle_request("caller_id", msg, nullptr);
 
     // add another...
@@ -963,7 +872,7 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
     // get keys...
     msg.mutable_keys();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -984,7 +893,7 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
     // invalid uuid returns empty message...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -1023,7 +932,7 @@ TEST(crud, test_that_size_sends_proper_response)
     // add key...
     auto session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(session);
     crud.handle_request("caller_id", msg, session);
 
     // clear msg...
@@ -1032,33 +941,23 @@ TEST(crud, test_that_size_sends_proper_response)
 
     // get size...
     msg.mutable_size();
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kSize);
-            ASSERT_EQ(resp.size().bytes(), int32_t(5));
-            ASSERT_EQ(resp.size().keys(), int32_t(1));
-        }));
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kSize, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.size().bytes(), int32_t(5));
+                ASSERT_EQ(resp.size().keys(), int32_t(1));
+            });
 
     crud.handle_request("caller_id", msg, session);
 
     // invalid uuid returns zero...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
-    EXPECT_CALL(*session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [&](auto msg)
-        {
-            database_response resp;
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
-            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kSize);
-            ASSERT_EQ(resp.size().bytes(), int32_t(0));
-            ASSERT_EQ(resp.size().keys(), int32_t(0));
-        }));
+    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kSize, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.size().bytes(), int32_t(0));
+                ASSERT_EQ(resp.size().keys(), int32_t(0));
+            });
 
     crud.handle_request("caller_id", msg, session);
 
@@ -1087,7 +986,7 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
     crud.handle_request("caller_id", msg, nullptr);
 
     // clear msg...
@@ -1097,7 +996,7 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
     // get size...
     msg.mutable_size();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -1114,7 +1013,7 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
     // invalid uuid returns zero...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [&](const auto&, auto msg)
             {
                 database_response resp;
@@ -1160,7 +1059,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     EXPECT_CALL(*mock_subscription_manager, subscribe(msg.header().db_uuid(), msg.subscribe().key(),
         msg.header().nonce(), _, _));
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1192,7 +1091,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     EXPECT_CALL(*mock_subscription_manager, unsubscribe(msg.header().db_uuid(), msg.unsubscribe().key(),
         msg.unsubscribe().nonce(), _, _));
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1212,27 +1111,11 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, mock_session);
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_exists));
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::db_exists));
 
     // try to create it again...
     crud.handle_request("caller_id", msg, mock_session);
@@ -1254,7 +1137,7 @@ TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1266,7 +1149,7 @@ TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 
     crud.handle_request("caller_id", msg, nullptr);
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1303,32 +1186,23 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
     msg.release_create_db();
     msg.mutable_has_db();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.response_case(), database_response::kHasDb);
-            ASSERT_EQ(resp.has_db().uuid(), "uuid");
-            ASSERT_TRUE(resp.has_db().has());
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::kHasDb, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_TRUE(resp.has_db().has());
+            });
 
     crud.handle_request("caller_id", msg, mock_session);
 
     // request invalid db...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.response_case(), database_response::kHasDb);
-            ASSERT_EQ(resp.has_db().uuid(), "invalid-uuid");
-            ASSERT_FALSE(resp.has_db().has());
-        }));
+    expect_signed_response(mock_session, std::nullopt, std::nullopt, database_response::kHasDb, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_FALSE(resp.has_db().has());
+                ASSERT_EQ(resp.has_db().uuid(), "invalid-uuid");
+            });
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1356,7 +1230,7 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
     msg.release_create_db();
     msg.mutable_has_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1372,7 +1246,7 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
     // request invalid db...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1401,15 +1275,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1417,7 +1283,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     msg.release_delete_db();
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1425,28 +1291,12 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     msg.release_create_db();
     msg.mutable_delete_db();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::access_denied));
 
     // non-owner caller...
     crud.handle_request("bad_caller_id", msg, mock_session);
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1466,7 +1316,7 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_delete_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1482,7 +1332,7 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     msg.release_delete_db();
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
 
     crud.handle_request("caller_id", msg, nullptr);
 
@@ -1490,7 +1340,7 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     msg.release_create_db();
     msg.mutable_delete_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1503,7 +1353,7 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     // non-owner caller...
     crud.handle_request("bad_caller_id", msg, nullptr);
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1547,7 +1397,7 @@ TEST(crud, test_that_writers_sends_proper_response)
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1556,17 +1406,12 @@ TEST(crud, test_that_writers_sends_proper_response)
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::kWriters);
-            ASSERT_EQ(resp.writers().owner(), "caller_id");
-            ASSERT_EQ(resp.writers().writers().size(), 0);
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::kWriters, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.writers().owner(), "caller_id");
+                ASSERT_EQ(resp.writers().writers().size(), 0);
+            });
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1586,7 +1431,7 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
 
     crud.handle_request("caller_id", msg, nullptr);
 
@@ -1595,7 +1440,7 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1625,7 +1470,7 @@ TEST(crud, test_that_add_writers_sends_proper_response)
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1638,28 +1483,12 @@ TEST(crud, test_that_add_writers_sends_proper_response)
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, mock_session);
 
     // access test
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::access_denied));
 
     crud.handle_request("other_caller_id", msg, mock_session);
 
@@ -1668,19 +1497,14 @@ TEST(crud, test_that_add_writers_sends_proper_response)
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::kWriters);
-            ASSERT_EQ(resp.writers().owner(), "caller_id");
-            ASSERT_EQ(resp.writers().writers().size(), 2);
-            ASSERT_EQ(resp.writers().writers()[0], "client_1_key");
-            ASSERT_EQ(resp.writers().writers()[1], "client_2_key");
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::kWriters, std::nullopt,
+            [](auto resp)
+            {
+                ASSERT_EQ(resp.writers().owner(), "caller_id");
+                ASSERT_EQ(resp.writers().writers().size(), 2);
+                ASSERT_EQ(resp.writers().writers()[0], "client_1_key");
+                ASSERT_EQ(resp.writers().writers()[1], "client_2_key");
+            });
 
     crud.handle_request("caller_id", msg, mock_session);
 }
@@ -1700,7 +1524,7 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
 
     crud.handle_request("caller_id", msg, nullptr);
 
@@ -1713,7 +1537,7 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1726,7 +1550,7 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // access test
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1743,7 +1567,7 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1775,7 +1599,7 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
 
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1785,7 +1609,7 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>()));
+    expect_signed_response(mock_session);
 
     crud.handle_request("caller_id", msg, mock_session);
 
@@ -1793,28 +1617,12 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
     msg.release_create_db();
     msg.mutable_remove_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.response_case(), database_response::RESPONSE_NOT_SET);
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, mock_session);
 
     // access test
-    EXPECT_CALL(*mock_session, send_message(An<std::shared_ptr<std::string>>())).WillOnce(Invoke(
-        [](std::shared_ptr<bzn::encoded_message> msg)
-        {
-            database_response resp;
-
-            ASSERT_TRUE(parse_env_to_db_resp(resp, *msg));
-            ASSERT_EQ(resp.header().db_uuid(), "uuid");
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::access_denied));
-        }));
+    expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::access_denied));
 
     crud.handle_request("other_caller_id", msg, mock_session);
 }
@@ -1834,7 +1642,7 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
 
     crud.handle_request("caller_id", msg, nullptr);
 
@@ -1844,7 +1652,7 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
 
     crud.handle_request("caller_id", msg, nullptr);
 
@@ -1852,7 +1660,7 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     msg.release_create_db();
     msg.mutable_remove_writers()->add_writers("client_2_key");
 
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;
@@ -1865,7 +1673,7 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // access test
-    EXPECT_CALL(*mock_node, send_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
+    EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
             [](const auto&, auto msg)
             {
                 database_response resp;

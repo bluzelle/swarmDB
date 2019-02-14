@@ -40,11 +40,13 @@ namespace bzn
                 std::shared_ptr<bzn::chaos_base> chaos,
                 bzn::protobuf_handler proto_handler,
                 std::chrono::milliseconds ws_idle_timeout,
-                bzn::session_shutdown_handler shutdown_handler);
+                bzn::session_shutdown_handler shutdown_handler,
+                std::shared_ptr<bzn::crypto_base> crypto);
 
         ~session();
 
         void send_message(std::shared_ptr<bzn::encoded_message> msg) override;
+        void send_signed_message(std::shared_ptr<bzn_envelope> msg) override;
 
         void close() override;
 
@@ -84,6 +86,8 @@ namespace bzn
         std::atomic<bool> activity = false;
 
         boost::asio::mutable_buffers_1 write_buffer;
+
+        std::shared_ptr<bzn::crypto_base> crypto;
     };
 
 } // blz

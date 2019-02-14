@@ -28,9 +28,9 @@ class Mocknode_base : public node_base {
       bool(const bzn_envelope::PayloadCase msg_type, bzn::protobuf_handler message_handler));
   MOCK_METHOD1(start,
       void(std::shared_ptr<bzn::pbft_base> pbft));
-  MOCK_METHOD2(send_message,
+  MOCK_METHOD2(send_signed_message,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg));
-  MOCK_METHOD2(send_message,
+  MOCK_METHOD2(send_signed_message,
       void(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg));
   MOCK_METHOD2(send_message_str,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg));
