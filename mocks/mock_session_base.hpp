@@ -25,6 +25,8 @@ namespace bzn {
     public:
         MOCK_METHOD1(send_message,
             void(std::shared_ptr<bzn::encoded_message> msg));
+        MOCK_METHOD1(send_signed_message,
+                void(std::shared_ptr<bzn_envelope> msg));
         MOCK_METHOD0(get_session_id,
             bzn::session_id());
         MOCK_METHOD0(close,

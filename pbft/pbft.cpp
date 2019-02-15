@@ -328,7 +328,8 @@ void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
     LOG(info) << "Forwarding request to primary";
-    this->node->send_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
+    this->node
+        ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
 
@@ -583,7 +584,7 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : this->current_peers())
     {
-        this->node->send_message(make_endpoint(peer), msg_ptr);
+        this->node->send_signed_message(make_endpoint(peer), msg_ptr);
     }
 }
 
@@ -963,7 +964,7 @@ pbft::request_checkpoint_state(const checkpoint_t& cp)
     // TODO: fix the race condition here where receiving node may not have had time to
     //  stabilize its checkpoint yet.
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(msg));
-    this->node->send_message(make_endpoint(selected), msg_ptr);
+    this->node->send_signed_message(make_endpoint(selected), msg_ptr);
 }
 
 const peer_address_t&
@@ -1840,7 +1841,7 @@ pbft::join_swarm()
 
     LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
+    this->node->send_signed_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
 
     this->in_swarm = swarm_status::joining;
     this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);

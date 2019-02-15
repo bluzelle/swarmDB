@@ -26,7 +26,8 @@ session::session(
         std::shared_ptr<bzn::chaos_base> chaos,
         bzn::protobuf_handler proto_handler,
         std::chrono::milliseconds ws_idle_timeout,
-        bzn::session_shutdown_handler shutdown_handler
+        bzn::session_shutdown_handler shutdown_handler,
+        std::shared_ptr<bzn::crypto_base> crypto
 )
         : session_id(session_id)
         , ep(std::move(ep))
@@ -37,6 +38,7 @@ session::session(
         , idle_timer(this->io_context->make_unique_steady_timer())
         , ws_idle_timeout(std::move(ws_idle_timeout))
         , write_buffer(nullptr, 0)
+        , crypto(std::move(crypto))
 {
     LOG(debug) << "creating session " << std::to_string(session_id);
 }
@@ -228,6 +230,17 @@ session::do_write()
 
             self->do_write();
         });
+}
+
+void
+session::send_signed_message(std::shared_ptr<bzn_envelope> msg)
+{
+    if (msg->signature().empty())
+    {
+        this->crypto->sign(*msg);
+    }
+
+    this->send_message(std::make_shared<std::string>(msg->SerializeAsString()));
 }
 
 void

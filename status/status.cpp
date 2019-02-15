@@ -106,8 +106,6 @@ status::handle_status_request_message(const bzn_envelope& /*msg*/, std::shared_p
 
     bzn_envelope env;
     env.set_status_response(srm.SerializeAsString());
-    env.set_sender("placeholder for daemon's uuid"); // TODO
-    // TODO: crypto
 
-    session->send_message(std::make_shared<bzn::encoded_message>(env.SerializeAsString()));
+    session->send_signed_message(std::make_shared<bzn_envelope>(env));
 }
