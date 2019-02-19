@@ -18,7 +18,7 @@
 #include <iostream>
 
 std::string
-bzn::bytes_to_debug_string(const std::string& input)
+bzn::bytes_to_debug_string(const std::string& input, bool preserve_full)
 {
     std::stringstream ss;
     ss << std::hex;
@@ -31,7 +31,7 @@ bzn::bytes_to_debug_string(const std::string& input)
     }
 
     auto result = ss.str();
-    if (result.size() > MAX_SHORT_MESSAGE_SIZE)
+    if (result.size() > MAX_SHORT_MESSAGE_SIZE && !preserve_full)
     {
         result.erase(MAX_SHORT_MESSAGE_SIZE/2, result.size() - MAX_SHORT_MESSAGE_SIZE);
         result.insert(MAX_SHORT_MESSAGE_SIZE/2, "...");

@@ -18,7 +18,7 @@
 
 namespace bzn
 {
-    std::string bytes_to_debug_string(const std::string& input);
+    std::string bytes_to_debug_string(const std::string& input, bool preserve_full = false);
 }
 
 

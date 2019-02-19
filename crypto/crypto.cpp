@@ -16,6 +16,7 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/crypto.h>
+#include <utils/bytes_to_debug_string.hpp>
 
 using namespace bzn;
 
@@ -204,6 +205,19 @@ crypto::sign(bzn_envelope& msg)
     }
 
     this->log_openssl_errors();
+
+    if (result && this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_SELF_VERIFY))
+    {
+        if (!this->verify(msg))
+        {
+            LOG(error) << "Failed to verify own signature?";
+            // These messages could be awkwardly long, but it is a severe bug if they are ever printed
+            // and their full contents are useful for debugging
+            LOG(error) << "offending message (deterministic_serialized, hex encoded): " << bzn::bytes_to_debug_string(msg_text, true);
+            LOG(error) << "our bad signature (hex encoded): " << bzn::bytes_to_debug_string(msg.signature(), true);
+        }
+
+    }
 
     return result;
 }
