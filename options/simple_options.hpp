@@ -55,6 +55,7 @@ namespace bzn::option_names
 
     const std::string CRYPTO_ENABLED_OUTGOING = "crypto_enabled_outgoing";
     const std::string CRYPTO_ENABLED_INCOMING = "crypto_enabled_incoming";
+    const std::string CRYPTO_SELF_VERIFY = "crypto_self_verify";
 
 
 }
