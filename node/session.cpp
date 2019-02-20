@@ -283,7 +283,7 @@ session::close()
     LOG(debug) << "closing session " << std::to_string(this->session_id);
     this->io_context->post(this->shutdown_handler);
 
-    if (this->websocket->is_open())
+    if (this->websocket && this->websocket->is_open())
     {
         this->websocket->async_close(boost::beast::websocket::close_code::normal,
             [self = shared_from_this()](auto ec)
