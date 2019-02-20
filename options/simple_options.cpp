@@ -144,7 +144,7 @@ simple_options::build_options()
                         po::value<std::string>()->default_value(".state/private-key.pem"),
                         "private key of this node")
                 (CRYPTO_ENABLED_INCOMING.c_str(),
-                        po::value<bool>()->default_value(false),
+                        po::value<bool>()->default_value(true),
                         "check signatures on incoming messages")
                 (CRYPTO_ENABLED_OUTGOING.c_str(),
                          po::value<bool>()->default_value(true),
