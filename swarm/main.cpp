@@ -176,11 +176,11 @@ print_banner(const bzn::options& options, double eth_balance)
        << "          Used Storage: " << get_state_dir_size(options) << " Bytes" << "\n"
        << '\n';
 
-    std::cout << ss.str();
+    LOG(info) << ss.str();
 
     if (!options.get_log_to_stdout())
     {
-        LOG(info) << ss.str();
+        std::cout << ss.str();
     }
 }
 
