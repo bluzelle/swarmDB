@@ -141,4 +141,19 @@ namespace bzn
         EXPECT_TRUE(this->mock.ws_closed.at(0));
     }
 
+    TEST_F(session_test2, idle_timeout_after_connect_rejected)
+    {
+        bzn::smart_mock_io mock;
+        mock.tcp_connect_works = false;
+
+        auto session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, [](){}, nullptr);
+        session->open(mock.websocket);
+
+        this->yield();
+
+        // we are just testing that this doesn't cause a segfault
+        mock.timer_callbacks.at(0)(boost::system::error_code{});
+        mock.timer_callbacks.at(0)(boost::system::error_code{});
+    }
+
 } // bzn
