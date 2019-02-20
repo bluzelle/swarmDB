@@ -17,6 +17,7 @@
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <boost/asio.hpp>
 #include <gmock/gmock.h>
+#include <boost/asio/error.hpp>
 
 using namespace ::testing;
 
@@ -44,6 +45,8 @@ namespace bzn
         std::map<size_t, bool> socket_is_open;
 
         std::map<boost::asio::ip::tcp::socket::native_handle_type, size_t> socket_id_map;
+
+        bool tcp_connect_works = true;
 
         smart_mock_io()
         {
@@ -85,7 +88,8 @@ namespace bzn
                         EXPECT_CALL(*mock_socket, async_connect(_, _)).Times(AtMost(1)).WillOnce(Invoke(
                                 [&](auto, auto handler)
                                 {
-                                    this->real_io_context->post(std::bind(handler, boost::system::error_code{}));
+                                    this->real_io_context->post(std::bind(handler,
+                                            this->tcp_connect_works ? boost::system::error_code{} : boost::asio::error::connection_refused));
                                 }));
 
                         return mock_socket;
