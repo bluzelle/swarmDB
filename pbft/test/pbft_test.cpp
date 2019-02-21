@@ -251,8 +251,8 @@ namespace bzn::test
         return arg->has_session();
     }
 
-    TEST_F(pbft_test, request_redirect_attaches_session) {
-
+    TEST_F(pbft_test, request_redirect_attaches_session)
+    {
         EXPECT_CALL(*mock_service, apply_operation(operation_ptr_has_session()));
         EXPECT_CALL(*mock_io_context, post(_)).WillRepeatedly(Invoke(
                 [](const auto task)
@@ -275,8 +275,8 @@ namespace bzn::test
         this->send_commits(1, 1, hash);
     }
 
-    TEST_F(pbft_test, late_request_redirect_attaches_session) {
-
+    TEST_F(pbft_test, late_request_redirect_attaches_session)
+    {
         EXPECT_CALL(*mock_service, apply_operation(operation_ptr_has_session()));
         EXPECT_CALL(*mock_io_context, post(_)).WillRepeatedly(Invoke(
                 [](const auto task)

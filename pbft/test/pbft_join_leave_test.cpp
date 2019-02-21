@@ -527,6 +527,7 @@ namespace bzn
                 this->handle_membership_message(test::wrap_pbft_membership_msg(response, ""));
             }));
         EXPECT_CALL(*this->join_retry_timer, async_wait(_));
+        this->options->get_mutable_simple_options().set("listener_port", "9500");
         this->build_pbft();
     }
 
@@ -665,5 +666,43 @@ namespace bzn
 
         EXPECT_CALL(*this->mock_session, close()).Times(Exactly(1));
         this->handle_membership_message(wmsg, this->mock_session);
+    }
+
+    TEST_F(pbft_join_leave_test, pbft_join_swarm_does_not_bail_on_good_peers_list)
+    {
+        this->options->get_mutable_simple_options().set("uuid", "current_uuid");
+        this->pbft = std::make_shared<bzn::pbft>(
+                this->mock_node
+                , this->mock_io_context
+                , GOOD_TEST_PEER_LIST
+                , this->options
+                , this->mock_service
+                , this->mock_failure_detector
+                , this->crypto
+                , this->operation_manager
+                );
+        this->pbft->set_audit_enabled(false);
+        EXPECT_NO_THROW({
+            this->pbft->start();
+            this->pbft_built = true;
+        });
+    }
+
+    TEST_F(pbft_join_leave_test, pbft_join_swarm_bails_on_bad_peers_list_with_127_0_0_1_and_same_listen_port)
+    {
+        this->options->get_mutable_simple_options().set("uuid", "current_uuid");
+        this->pbft = std::make_shared<bzn::pbft>(
+                this->mock_node
+                , this->mock_io_context
+                , BAD_TEST_PEER_LIST_0
+                , this->options
+                , this->mock_service
+                , this->mock_failure_detector
+                , this->crypto
+                , this->operation_manager
+        );
+        this->pbft->set_audit_enabled(false);
+        EXPECT_THROW({this->pbft->start(); }, std::runtime_error);
+        this->pbft_built = true;
     }
 }
