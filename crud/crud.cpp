@@ -327,7 +327,7 @@ crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
         if (ttl)
         {
             response.mutable_ttl()->set_key(request.ttl().key());
-            response.mutable_ttl()->set_ttl(ttl.value());
+            response.mutable_ttl()->set_ttl(*ttl);
         }
         else
         {
@@ -799,7 +799,7 @@ crud::expired(const bzn::uuid_t& uuid, const bzn::key_t& key)
     if (result)
     {
         const uint64_t now = uint64_t(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-        const uint64_t expire = boost::lexical_cast<uint64_t>(result.value());
+        const uint64_t expire = boost::lexical_cast<uint64_t>(*result);
 
         return (expire <= now);
     }
@@ -816,11 +816,11 @@ crud::get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const
     if (result)
     {
         const uint64_t now = uint64_t(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-        const uint64_t expire = boost::lexical_cast<uint64_t>(result.value());
+        const uint64_t expire = boost::lexical_cast<uint64_t>(*result);
 
         if (expire > now)
         {
-            return {boost::lexical_cast<uint64_t>(result.value()) -
+            return {boost::lexical_cast<uint64_t>(*result) -
                 std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count()};
         }
 
@@ -849,7 +849,7 @@ crud::check_key_expiration(const boost::system::error_code& ec)
                 const auto [uuid, key] = extract_uuid_key(generated_key);
 
                 // has entry expired?
-                if (now >= boost::lexical_cast<uint64_t>(result.value()))
+                if (now >= boost::lexical_cast<uint64_t>(*result))
                 {
                     LOG(debug) << "removing expired ttl entry and key for: " << uuid << ":" << key;
 
