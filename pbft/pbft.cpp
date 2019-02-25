@@ -1108,7 +1108,7 @@ pbft::is_peer(const bzn::uuid_t& sender) const
 {
     return std::find_if (std::begin(this->current_peers()), std::end(this->current_peers()), [&](const auto& address)
     {
-        return sender== address.uuid;
+        return sender == address.uuid;
     }) != this->current_peers().end();
 }
 
@@ -1832,6 +1832,20 @@ pbft::join_swarm()
     info->set_host(this->options->get_listener().address().to_string());
     info->set_port(this->options->get_listener().port());
     info->set_uuid(this->uuid);
+
+    // is_peer checks against uuid only, we need to bail if the list contains a node with the same IP and port,
+    // So, check the peers list for node with same ip and port and post error and bail if found.
+    auto bad_peer = std::find_if( std::begin(this->current_peers()), std::end(this->current_peers()),
+                                  [&](const bzn::peer_address_t& address)
+                                  {
+                                        return address.port == info->port() && address.host == info->host();
+                                  });
+
+    if (bad_peer != std::end(this->current_peers()))
+    {
+        LOG (error) << "Bootstrap configuration file validation failure - peer with UUID: " << bad_peer->uuid << " hides local peer";
+        throw std::runtime_error("Bad peer found in Bootstrap Configuration file");
+    }
 
     pbft_membership_msg join_msg;
     join_msg.set_type(PBFT_MMSG_JOIN);
