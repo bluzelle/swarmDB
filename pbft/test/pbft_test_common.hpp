@@ -49,6 +49,17 @@ namespace bzn::test
                                            , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
                                            , {TEST_NODE_ADDR, TEST_NODE_LISTEN_PORT, TEST_NODE_HTTP_PORT, "name4", TEST_NODE_UUID}};
 
+    const std::string TEST_NODE_ADDR_0("127.0.0.1");
+
+    const bzn::peers_list_t BAD_TEST_PEER_LIST_0{{ "127.0.0.1", 8081, 8881, "name1", "uuid0"}
+                                                , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
+                                                , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
+                                                , {TEST_NODE_ADDR_0, TEST_NODE_LISTEN_PORT, TEST_NODE_HTTP_PORT, "name4", "uuid_of_bad_node"}};
+
+    const bzn::peers_list_t GOOD_TEST_PEER_LIST{{ "127.0.0.1", 8081, 8881, "name1", "uuid0"}
+                                                , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
+                                                , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
+                                                , {TEST_NODE_ADDR_0, uint16_t(TEST_NODE_LISTEN_PORT + 73), TEST_NODE_HTTP_PORT, "name4", "uuid_of_good_node"}};
 
     class pbft_test : public Test
     {

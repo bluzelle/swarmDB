@@ -101,14 +101,14 @@ line argument:
 The configuration file is a JSON format file, as seen in the following example:
 
     {
-				"listener_address" : "127.0.0.1",
-				"listener_port" : 50000,
-				"ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-				"ethereum_io_api_token" : "<your API key here>",
-				"bootstrap_file" : "/home/isabel/swarmdb/local/nodes/peers.json",
-				"debug_logging" : true,
-				"log_to_stdout" : true,
-				"use_pbft": true,
+        "listener_address" : "127.0.0.1",
+        "listener_port" : 50000,
+        "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
+        "ethereum_io_api_token" : "<your API key here>",
+        "bootstrap_file" : "/home/isabel/swarmdb/local/nodes/peers.json",
+        "debug_logging" : true,
+        "log_to_stdout" : true,
+        "use_pbft": true,
         "bootstrap_file": "./peers.json",
     }
 
