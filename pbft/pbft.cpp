@@ -172,7 +172,7 @@ pbft::handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_b
 void
 pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
-    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+    LOG(debug) << "Received membership message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     pbft_membership_msg inner_msg;
     if (!inner_msg.ParseFromString(msg.pbft_membership()))
@@ -427,6 +427,7 @@ pbft::handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& m
                 pbft_membership_msg response;
                 response.set_type(PBFT_MMSG_JOIN_RESPONSE);
                 auto env = this->wrap_message(response);
+                LOG(debug) << "Sending JOIN_RESPONSE to " << peer_info.uuid();
                 session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
             }
 
@@ -681,32 +682,41 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         pbft_configuration config;
         if (config.from_string(op->get_config_request().configuration()))
         {
-            this->configurations.set_committed(config.get_hash());
-
-            this->new_config_timer->cancel();
-            this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
-            this->new_config_timer->async_wait(
-                std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
-        }
-
-        // send response to new node
-        auto session_it = this->sessions_waiting_on_forwarded_requests.find(op->get_config_request().join_request_hash());
-        if (session_it != this->sessions_waiting_on_forwarded_requests.end())
-        {
-            if (session_it->second->is_open())
+            if (configurations.current()->get_hash() != config.get_hash())
             {
-                pbft_membership_msg response;
-                response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-                auto env = this->wrap_message(response);
-                session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()));
+                this->configurations.set_committed(config.get_hash());
 
+                this->new_config_timer->cancel();
+                this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
+                this->new_config_timer->async_wait(
+                    std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
+
+                // send response to new node
+                auto session_it = this->sessions_waiting_on_forwarded_requests.find(
+                    op->get_config_request().join_request_hash());
+                if (session_it != this->sessions_waiting_on_forwarded_requests.end())
+                {
+                    if (session_it->second->is_open())
+                    {
+                        pbft_membership_msg response;
+                        response.set_type(PBFT_MMSG_JOIN_RESPONSE);
+                        LOG(debug) << "Sending JOIN_RESPONSE";
+                        auto env = this->wrap_message(response);
+                        session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()));
+
+                    }
+
+                    this->sessions_waiting_on_forwarded_requests.erase(session_it);
+                }
+                else
+                {
+                    LOG(debug) << "Unable to send join response, session is not valid";
+                }
             }
-
-            this->sessions_waiting_on_forwarded_requests.erase(session_it);
-        }
-        else
-        {
-            LOG(debug) << "Unable to send join response, session is not valid";
+            else
+            {
+                LOG(debug) << "Skipping re-applying current configuration";
+            }
         }
 
         // now this config is committed we can accept join requests again
@@ -846,6 +856,7 @@ pbft::initiate_viewchange()
     this->view_is_valid = false;
     pbft_msg view_change{pbft::make_viewchange(this->view + 1, this->latest_stable_checkpoint().first
         , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first))};
+    LOG(debug) << "Sending VIEWCHANGE for view " << this->view + 1;
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1509,6 +1520,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
     auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
     this->next_issued_sequence_number = res.second;
     this->move_to_new_configuration(res.first.config_hash(), this->view + 1);
+    LOG(debug) << "Sending NEWVIEW for view " << this->view + 1;
     this->broadcast(this->wrap_message(res.first));
 }
 

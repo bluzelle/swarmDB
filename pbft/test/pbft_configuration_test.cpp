@@ -104,18 +104,14 @@ namespace
 
     TEST_F(pbft_configuration_test, reject_invalid_peer)
     {
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("", 8081, 8881, "name1", "uuid1")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 0, 8881, "name1", "uuid1")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 0, "name1", "uuid1")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 8881, "", "uuid1")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 8881, "name1", "")));
-        EXPECT_TRUE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 8881, "name1", "uuid1")));
+        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("", 8081, 0, "", "uuid1")));
+        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 0, 0, "", "uuid1")));
+        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 0, "", "")));
+        EXPECT_TRUE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 0, "", "uuid1")));
 
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 8882, "name2", "uuid1")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 8882, "name1", "uuid2")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 8881, "name2", "uuid2")));
-        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 8882, "name2", "uuid2")));
-        EXPECT_TRUE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 8882, "name2", "uuid2")));
+        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 0, "", "uuid1")));
+        EXPECT_FALSE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8081, 0, "", "uuid2")));
+        EXPECT_TRUE(this->cfg.add_peer(bzn::peer_address_t("127.0.0.1", 8082, 0, "", "uuid2")));
     }
 
     TEST_F(pbft_configuration_test, diff_test)
