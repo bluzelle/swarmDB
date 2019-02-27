@@ -135,7 +135,6 @@ TEST(crud, test_that_create_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // now create the db...
-    msg.release_create();
     msg.mutable_create_db();
 
     expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
@@ -143,7 +142,6 @@ TEST(crud, test_that_create_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // now test creates...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
     msg.mutable_create()->set_expire(2);
@@ -175,7 +173,6 @@ TEST(crud, test_that_create_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // get ttl for new key
-    msg.release_create();
     msg.mutable_ttl()->set_key("key");
 
     expect_signed_response(session, "uuid", uint64_t(123), database_response::kTtl, std::nullopt,
@@ -196,7 +193,6 @@ TEST(crud, test_that_create_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // calling create should return delete pending...
-    msg.release_ttl();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
     msg.mutable_create()->set_expire(2);
@@ -239,7 +235,6 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // now create the db...
-    msg.release_create();
     msg.mutable_create_db();
 
     // virtual void send_signed_message(const bzn::uuid_t& , std::shared_ptr<bzn_envelope> msg, bool close_session) = 0;
@@ -256,7 +251,6 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // now test creates...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -275,7 +269,6 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // ttl should fail since default is zero...
-    msg.release_create();
     msg.mutable_ttl()->set_key("key");
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
@@ -289,7 +282,6 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // fail to create same key...
-    msg.release_ttl();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -354,7 +346,6 @@ TEST(crud, test_that_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test reads...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
     msg.mutable_create()->set_expire(2);
@@ -383,7 +374,6 @@ TEST(crud, test_that_read_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // quick read key...
-    msg.release_read();
     msg.mutable_quick_read()->set_key("key");
     expect_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
             [](const auto& resp)
@@ -395,7 +385,6 @@ TEST(crud, test_that_read_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // read invalid key...
-    msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
     expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
         bzn::storage_result_msg.at(bzn::storage_result::not_found));
@@ -403,10 +392,7 @@ TEST(crud, test_that_read_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // quick read invalid key...
-    msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
-        bzn::storage_result_msg.at(bzn::storage_result::not_found));
     expect_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
@@ -415,7 +401,6 @@ TEST(crud, test_that_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // expired key should return delete_pending
-    msg.release_quick_read();
     msg.mutable_read()->set_key("key");
 
     sleep(2);
@@ -445,7 +430,6 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test reads...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -477,7 +461,6 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // quick read key...
-    msg.release_read();
     msg.mutable_quick_read()->set_key("key");
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", _)).WillOnce(Invoke(
@@ -495,7 +478,6 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // read invalid key...
-    msg.release_quick_read();
     msg.mutable_read()->set_key("invalid-key");
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
@@ -512,7 +494,6 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // quick read invalid key...
-    msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
         [&](const auto&, auto msg)
@@ -548,7 +529,6 @@ TEST(crud, test_that_update_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test updates...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -590,7 +570,6 @@ TEST(crud, test_that_update_sends_proper_response)
     crud.handle_request("caller_id", msg, session);
 
     // expired key should return delete_pending
-    msg.release_read();
     msg.mutable_update()->set_key("key");
     msg.mutable_update()->set_value("updated");
 
@@ -620,7 +599,6 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test updates...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -690,7 +668,6 @@ TEST(crud, test_that_delete_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test deletes...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -738,7 +715,6 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test deletes...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -799,7 +775,6 @@ TEST(crud, test_that_has_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test has...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -856,7 +831,6 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test has...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -921,7 +895,6 @@ TEST(crud, test_that_keys_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test keys...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key1");
     msg.mutable_create()->set_value("value");
 
@@ -985,7 +958,6 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test keys...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key1");
     msg.mutable_create()->set_value("value");
 
@@ -1058,7 +1030,6 @@ TEST(crud, test_that_size_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test size...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -1115,7 +1086,6 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // test size...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
 
@@ -1329,7 +1299,6 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
     auto mock_session = std::make_shared<bzn::Mocksession_base>();
 
     // request has db..
-    msg.release_create_db();
     msg.mutable_has_db();
 
     expect_signed_response(mock_session, "uuid", std::nullopt, database_response::kHasDb, std::nullopt,
@@ -1372,7 +1341,6 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // request has db..
-    msg.release_create_db();
     msg.mutable_has_db();
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
@@ -1424,7 +1392,6 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // create a database...
-    msg.release_delete_db();
     msg.mutable_create_db();
 
     expect_signed_response(mock_session);
@@ -1432,7 +1399,6 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // delete database...
-    msg.release_create_db();
     msg.mutable_delete_db();
 
     expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::access_denied));
@@ -1472,7 +1438,6 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // create a database...
-    msg.release_delete_db();
     msg.mutable_create_db();
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>()));
@@ -1480,7 +1445,6 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // delete database...
-    msg.release_create_db();
     msg.mutable_delete_db();
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
@@ -1543,7 +1507,6 @@ TEST(crud, test_that_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // request writers...
-    msg.release_create_db();
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
@@ -1576,7 +1539,6 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // request writers...
-    msg.release_create_db();
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
@@ -1614,7 +1576,6 @@ TEST(crud, test_that_add_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // request writers...
-    msg.release_create_db();
 
     // should not be added to writers as this is the owner
     msg.mutable_add_writers()->add_writers("caller_id");
@@ -1632,7 +1593,6 @@ TEST(crud, test_that_add_writers_sends_proper_response)
     crud.handle_request("other_caller_id", msg, mock_session);
 
     // request writers...
-    msg.release_add_writers();
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
@@ -1667,7 +1627,6 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // request writers...
-    msg.release_create_db();
 
     // should not be added to writers as this is the owner
     msg.mutable_add_writers()->add_writers("caller_id");
@@ -1701,7 +1660,6 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
     crud.handle_request("other_caller_id", msg, nullptr);
 
     // request writers...
-    msg.release_add_writers();
     msg.mutable_writers();
 
     // only the owner should be set at this stage...
@@ -1741,7 +1699,6 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // request writers...
-    msg.release_create_db();
 
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
@@ -1751,7 +1708,6 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, mock_session);
 
     // remove writers...
-    msg.release_create_db();
     msg.mutable_remove_writers()->add_writers("client_2_key");
 
     expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
@@ -1783,7 +1739,6 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // request writers...
-    msg.release_create_db();
 
     msg.mutable_add_writers()->add_writers("client_1_key");
     msg.mutable_add_writers()->add_writers("client_2_key");
@@ -1793,7 +1748,6 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
     crud.handle_request("caller_id", msg, nullptr);
 
     // remove writers...
-    msg.release_create_db();
     msg.mutable_remove_writers()->add_writers("client_2_key");
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
@@ -1862,7 +1816,6 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
     crud->handle_request("caller_id", msg, session);
 
     // create key with expiration...
-    msg.release_create_db();
     msg.mutable_create()->set_key("key");
     msg.mutable_create()->set_value("value");
     msg.mutable_create()->set_expire(1);
@@ -1877,7 +1830,6 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
     wh(boost::system::error_code());
 
     // key should be gone...
-    msg.release_create();
     msg.mutable_read()->set_key("key");
 
     expect_signed_response(session, "uuid", 123, database_response::kError);
@@ -1885,4 +1837,43 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
 
     // failure does nothing...
     wh(make_error_code(boost::system::errc::timed_out));
+}
+
+
+TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    msg.mutable_create_db();
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // create key with expiration...
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(123);
+
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // make key persist
+    msg.mutable_persist()->set_key("key");
+
+    expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // should be gone
+    msg.mutable_ttl()->set_key("key");
+    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    crud->handle_request("caller_id", msg, session);
 }

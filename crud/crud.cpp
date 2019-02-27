@@ -348,9 +348,48 @@ crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
 
 
 void
-crud::handle_persist(const bzn::caller_id_t& /*caller_id*/, const database_msg& /*request*/, std::shared_ptr<bzn::session_base> /*session*/)
+crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    bzn::storage_result result{bzn::storage_result::db_not_found};
 
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            const auto generated_key = generate_expire_key(request.header().db_uuid(), request.persist().key());
+
+            const bool has = this->storage->has(TTL_UUID, generated_key);
+
+            // expired?
+            if (has && this->expired(request.header().db_uuid(), request.persist().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
+            if (has)
+            {
+                this->remove_expiration_entry(generated_key);
+
+                result = bzn::storage_result::ok;
+            }
+            else
+            {
+                result = bzn::storage_result::not_found;
+            }
+        }
+    }
+
+    this->send_response(request, result, database_response(), session);
 }
 
 
