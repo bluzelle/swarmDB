@@ -20,6 +20,7 @@
 #include <proto/bluzelle.pb.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
+#include <monitor/monitor_base.hpp>
 
 namespace bzn
 {
@@ -27,7 +28,7 @@ namespace bzn
     {
     public:
 
-        crypto(std::shared_ptr<bzn::options_base> options);
+        crypto(std::shared_ptr<bzn::options_base> options, std::shared_ptr<bzn::monitor_base> monitor);
 
         bool sign(bzn_envelope& msg) override;
 
@@ -53,6 +54,7 @@ namespace bzn
         const std::string deterministic_serialize(const bzn_envelope& msg);
 
         std::shared_ptr<bzn::options_base> options;
+        std::shared_ptr<bzn::monitor_base> monitor;
 
         EVP_PKEY_ptr_t private_key_EVP = EVP_PKEY_ptr_t(nullptr, &EVP_PKEY_free);
         EC_KEY_ptr_t private_key_EC = EC_KEY_ptr_t(nullptr, &EC_KEY_free);

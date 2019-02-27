@@ -84,6 +84,7 @@ add_subdirectory(audit)
 add_subdirectory(pbft)
 add_subdirectory(chaos)
 add_subdirectory(crypto)
+add_subdirectory(monitor)
 
 include(cmake/static_analysis.cmake)
 

@@ -19,6 +19,7 @@
 #include <include/bluzelle.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_chaos_base.hpp>
+#include <mocks/mock_monitor.hpp>
 
 #include <options/options.hpp>
 #include <chaos/chaos.hpp>
@@ -47,8 +48,9 @@ public:
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
     std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
     std::shared_ptr<bzn::crypto_base> crypto = std::shared_ptr<bzn::crypto>();
+    std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
     bzn::smart_mock_io mock;
-    std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock.io_context, mock.websocket, mock_chaos, TEST_ENDPOINT, crypto, options);
+    std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock.io_context, mock.websocket, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
 
     bzn_envelope db_msg;
     uint callback_invoked = 0;
@@ -75,10 +77,11 @@ namespace  bzn
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto options = std::shared_ptr<bzn::options>();
         auto crypto = std::shared_ptr<bzn::crypto>();
+        std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
 
         EXPECT_THROW(
             bzn::node(io_context, nullptr, mock_chaos,
-                boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string("8.8.8.8"), 8080}, crypto, options),
+                boost::asio::ip::tcp::endpoint{boost::asio::ip::address_v4::from_string("8.8.8.8"), 8080}, crypto, options, monitor),
             std::exception
         );
     }
@@ -163,7 +166,8 @@ namespace  bzn
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
         auto options = std::shared_ptr<bzn::options>();
         auto crypto = std::shared_ptr<bzn::crypto>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, TEST_ENDPOINT, crypto, options);
+        auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
 
         // test that nulls are rejected...
         ASSERT_FALSE(node->register_for_message(bzn_envelope::kDatabaseMsg, nullptr));
@@ -181,9 +185,10 @@ namespace  bzn
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
         auto options = std::make_shared<bzn::options>();
         options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_INCOMING, "true");
-        auto crypto = std::make_shared<bzn::crypto>(options);
+        auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+        auto crypto = std::make_shared<bzn::crypto>(options, monitor);
         auto mock_session = std::make_shared<bzn::Mocksession_base>();
-        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, TEST_ENDPOINT, crypto, options);
+        auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
 
         // Add our test callback...
         unsigned int callback_execute = 0u;

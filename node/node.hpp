@@ -20,6 +20,7 @@
 #include <crypto/crypto_base.hpp>
 #include <options/options_base.hpp>
 #include <pbft/pbft_base.hpp>
+#include <monitor/monitor_base.hpp>
 #include <json/json.h>
 #include <mutex>
 #include <atomic>
@@ -35,7 +36,7 @@ namespace bzn
     {
     public:
         node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<chaos_base> chaos,
-                   const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options);
+                   const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options, std::shared_ptr<monitor_base> monitor);
 
         bool register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler) override;
 
@@ -81,6 +82,7 @@ namespace bzn
 
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::options_base> options;
+        std::shared_ptr<bzn::monitor_base> monitor;
     };
 
 } // bzn

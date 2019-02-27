@@ -41,7 +41,8 @@ namespace bzn
                 bzn::protobuf_handler proto_handler,
                 std::chrono::milliseconds ws_idle_timeout,
                 std::list<bzn::session_shutdown_handler> shutdown_handlers,
-                std::shared_ptr<bzn::crypto_base> crypto);
+                std::shared_ptr<bzn::crypto_base> crypto,
+                std::shared_ptr<bzn::monitor_base> monitor);
 
         ~session();
 
@@ -90,6 +91,7 @@ namespace bzn
         boost::asio::mutable_buffers_1 write_buffer;
 
         std::shared_ptr<bzn::crypto_base> crypto;
+        std::shared_ptr<bzn::monitor_base> monitor;
     };
 
 } // blz

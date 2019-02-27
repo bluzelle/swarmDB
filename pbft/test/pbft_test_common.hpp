@@ -29,6 +29,7 @@
 #include <mocks/mock_pbft_failure_detector.hpp>
 #include <mocks/mock_pbft_service_base.hpp>
 #include <mocks/mock_session_base.hpp>
+#include <mocks/mock_monitor.hpp>
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
 #include <storage/mem_storage.hpp>
@@ -83,7 +84,8 @@ namespace bzn::test
                 std::make_shared<bzn::pbft_operation_manager>(storage);
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
-        std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options);
+        std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+        std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options, monitor);
 
         std::shared_ptr<bzn::pbft> pbft;
 

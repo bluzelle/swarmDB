@@ -353,9 +353,10 @@ namespace bzn
 
         auto storage2 = std::make_shared<bzn::mem_storage>();
         auto manager2 = std::make_shared<bzn::pbft_operation_manager>(storage2);
+        auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
 
         auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2
-            , this->mock_failure_detector, this->crypto, manager2, storage2);
+            , this->mock_failure_detector, this->crypto, manager2, storage2, monitor);
         pbft2->set_audit_enabled(false);
 
         pbft2->start();

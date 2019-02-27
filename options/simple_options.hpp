@@ -57,6 +57,7 @@ namespace bzn::option_names
     const std::string CRYPTO_ENABLED_INCOMING = "crypto_enabled_incoming";
     const std::string CRYPTO_SELF_VERIFY = "crypto_self_verify";
 
+    const std::string MONITOR_MAX_TIMERS = "monitor_max_timers";
 
 }
 

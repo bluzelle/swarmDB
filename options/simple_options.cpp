@@ -122,7 +122,10 @@ simple_options::build_options()
                         "address of stats.d listener for audit module")
                 (MONITOR_PORT.c_str(),
                         po::value<uint16_t>(),
-                        "port of stats.d listener for audit module");
+                        "port of stats.d listener for audit module")
+                (MONITOR_MAX_TIMERS.c_str(),
+                        po::value<uint64_t>(),
+                        "maximum number of outstanding monitor timers");
     this->options_root.add(audit);
 
     po::options_description experimental("Experimental");

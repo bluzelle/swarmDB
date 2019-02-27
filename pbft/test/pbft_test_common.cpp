@@ -138,6 +138,7 @@ namespace bzn::test
                 , this->crypto
                 , this->operation_manager
                 , this->storage
+                , this->monitor
         );
         this->pbft->set_audit_enabled(false);
         this->pbft->start();

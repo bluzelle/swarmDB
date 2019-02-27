@@ -29,6 +29,7 @@
 #include <status/status.hpp>
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
+#include <monitor/monitor.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
@@ -247,10 +248,11 @@ main(int argc, const char* argv[])
             });
 
         // startup...
-        auto crypto = std::make_shared<bzn::crypto>(options);
+        auto monitor = std::make_shared<bzn::monitor>(options, io_context, std::make_shared<bzn::system_clock>());
+        auto crypto = std::make_shared<bzn::crypto>(options, monitor);
         auto chaos = std::make_shared<bzn::chaos>(io_context, options);
         auto websocket = std::make_shared<bzn::beast::websocket>();
-        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options);
+        auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options, monitor);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
         std::shared_ptr<bzn::status> status;
 
@@ -280,7 +282,7 @@ main(int argc, const char* argv[])
 
         auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
             std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
-            ,failure_detector , crypto, operation_manager, unstable_storage);
+            ,failure_detector , crypto, operation_manager, unstable_storage, monitor);
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 

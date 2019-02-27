@@ -26,8 +26,9 @@ namespace
     const std::string PEM_SUFFIX = "\n-----END PUBLIC KEY-----\n";
 }
 
-crypto::crypto(std::shared_ptr<bzn::options_base> options)
+crypto::crypto(std::shared_ptr<bzn::options_base> options, std::shared_ptr<bzn::monitor_base> monitor)
         : options(std::move(options))
+        , monitor(std::move(monitor))
 {
     LOG(info) << "Using " << SSLeay_version(SSLEAY_VERSION);
     if (this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
@@ -154,6 +155,13 @@ crypto::verify(const bzn_envelope& msg)
      */
     ERR_clear_error();
 
+    this->monitor->send_counter(bzn::statistic::signature_verified);
+    this->monitor->send_counter(bzn::statistic::signature_verified_bytes, msg_text.length());
+    if (!result)
+    {
+        this->monitor->send_counter(bzn::statistic::signature_rejected);
+    }
+
     return result;
 }
 
@@ -219,6 +227,9 @@ crypto::sign(bzn_envelope& msg)
 
     }
 
+    this->monitor->send_counter(bzn::statistic::signature_computed);
+    this->monitor->send_counter(bzn::statistic::signature_computed_bytes, msg_text.length());
+
     return result;
 }
 
@@ -265,6 +276,9 @@ crypto::hash(const std::string& msg)
         this->log_openssl_errors();
         throw std::runtime_error(std::string("\nfailed to compute message hash ") + msg);
     }
+
+    this->monitor->send_counter(bzn::statistic::hash_computed);
+    this->monitor->send_counter(bzn::statistic::hash_computed_bytes, msg.length());
 
     return std::string(reinterpret_cast<char*>(hash_buffer.get()), md_size);
 }
