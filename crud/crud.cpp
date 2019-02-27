@@ -532,9 +532,9 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
         {
             result = this->storage->remove(PERMISSION_UUID, request.header().db_uuid());
 
-            // TODO: flush ttl table, but stale entries WILL eventually be removed by the timer callback...
-
             this->storage->remove(request.header().db_uuid());
+
+            this->flush_expiration_entries(request.header().db_uuid());
         }
     }
 
@@ -925,5 +925,22 @@ crud::check_key_expiration(const boost::system::error_code& ec)
 
         this->expire_timer->expires_from_now(TTL_TICK);
         this->expire_timer->async_wait(std::bind(&crud::check_key_expiration, shared_from_this(), std::placeholders::_1));
+    }
+}
+
+
+void
+crud::flush_expiration_entries(const bzn::uuid_t& uuid)
+{
+    for (const auto& generated_key : this->storage->get_keys(TTL_UUID))
+    {
+        const auto [db_uuid, key] = extract_uuid_key(generated_key);
+
+        if (db_uuid == uuid)
+        {
+            this->storage->remove(TTL_UUID, generated_key);
+
+            LOG(debug) << "removing ttl entry for: " << db_uuid << ":" << key;
+        }
     }
 }
