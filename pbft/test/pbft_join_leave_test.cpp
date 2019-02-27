@@ -682,6 +682,7 @@ namespace bzn
                 , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
+                , this->storage
                 );
         this->pbft->set_audit_enabled(false);
         EXPECT_NO_THROW({
@@ -702,6 +703,7 @@ namespace bzn
                 , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
+                , this->storage
         );
         this->pbft->set_audit_enabled(false);
         EXPECT_THROW({this->pbft->start(); }, std::runtime_error);

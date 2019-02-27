@@ -19,15 +19,8 @@ using namespace bzn;
 pbft_config_store::pbft_config_store(std::shared_ptr<bzn::storage_base> storage)
 : storage(storage)
 {
-    persistent<config_info>::initialize<hash_t>(this->storage, CONFIG_STORE_CONFIGS_KEY, [this](const persistent<config_info>& value, auto key)
-    {
-        this->configs.emplace(key, value);
-    });
-
-    persistent<hash_t>::initialize<uint64_t>(this->storage, CONFIG_STORE_VIEW_CONFIGS_KEY, [this](auto value, auto key)
-    {
-        this->view_configs.emplace(key, value);
-    });
+    persistent<config_info>::init_kv_container<hash_t>(this->storage, CONFIG_STORE_CONFIGS_KEY, this->configs);
+    persistent<hash_t>::init_kv_container<uint64_t>(this->storage, CONFIG_STORE_VIEW_CONFIGS_KEY, this->view_configs);
 }
 
 void

@@ -19,6 +19,8 @@
 
 using namespace bzn;
 
+std::set<std::string> persist_base::initialized_containers;
+
 std::string
 persist_base::escape(const std::string& input)
 {
@@ -26,7 +28,7 @@ persist_base::escape(const std::string& input)
 
     for (auto ch : input)
     {
-        output += (ch == SEPARATOR) ? std::string{SEPARATOR} + ch : std::string{ch};
+        output += (ch == ESCAPE_1) ? std::string{ESCAPE_1} + ESCAPE_2 : std::string{ch};
     }
 
     return output;
@@ -40,16 +42,16 @@ persist_base::unescape(const std::string& input)
     auto it = input.begin();
     while (it != input.end())
     {
-        if (*it == SEPARATOR)
+        if (*it == ESCAPE_1)
         {
-            if (it + 1 != input.end() && *(it + 1) == SEPARATOR)
+            if (it + 1 != input.end() && *(it + 1) == ESCAPE_2)
             {
                 output += *it;
                 it += 2;
             }
             else
             {
-                // a bare SEPARATOR character was found, which should never happen.
+                // a bare ESCAPE_1 character was found, which should never happen.
                 // if you hit this you've likely specified a key incorrectly
                 LOG(error) << "illegal character unescaping key for persistent value";
                 throw std::runtime_error("illegal character unescaping key for persistent value");
@@ -109,7 +111,6 @@ persistent<bzn::log_key_t>::from_string(const std::string &value)
 
     LOG(error) << "bad log key from persistent state";
     throw std::runtime_error("bad log key from persistent state");
-//    return log_key_t{0, 0};
 }
 
 template<>
@@ -148,7 +149,6 @@ persistent<bzn::operation_key_t>::from_string(const std::string &value)
 
     LOG(error) << "bad log key from persistent state";
     throw std::runtime_error("bad log key from persistent state");
-    //return operation_key_t{0, 0, "<bad hash>"};
 }
 
 template<>

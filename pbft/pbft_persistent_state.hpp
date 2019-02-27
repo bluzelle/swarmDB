@@ -17,10 +17,14 @@
 #include <storage/storage_base.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <gtest/gtest_prod.h>
 
 namespace
 {
-    const char SEPARATOR = '/';
+    const char ESCAPE_1 = '/';
+    const char ESCAPE_2 = '$';
+    const std::string SEPARATOR = "//";
+    const std::string SEPARATOR_END = "/" + std::string{'/' + 1};
     const std::string STATE_UUID{"pbftstate"};
 }
 
@@ -33,6 +37,8 @@ namespace bzn
     protected:
         static std::string escape(const std::string& input);
         static std::string unescape(const std::string& input);
+
+        static std::set<std::string> initialized_containers;
     };
 
     // A persistent value that is stored with a unique key specified by an object name and a series of
@@ -43,7 +49,7 @@ namespace bzn
     // { storage, default-value, unique-key }. If the variable already exists in storage it will be initialized
     // with its stored state. If not it will use the provided default value.
     //
-    // For collections, at instantiation time (e.g. insert, emplace, etc), insert the value as
+    // For containers, at instantiation time (e.g. insert, emplace, etc), insert the value as
     // { storage, value, unique-object-name, key-name, key-name... }, where the key-names are the
     // keys for each nested map, set, vector, etc.
     // E.g. for map<int, persistent<std::string>> items, you would insert a string mapped to the integer 9 using:
@@ -56,15 +62,21 @@ namespace bzn
     //
     // For consistency, it's recommended that in nested collections the sub-keys be ordered from inner to outer.
     //
-    // To initialize the contents of a collection from persistent storage at startup, use one of the initialize()
-    // methods defined below, providing a lambda function which emplaces each provided key(s)/value into the container.
-    // E.g. to initialize a map<int, persistent<string>> you would do:
-    //   persistent<string>::initialize<int>(storage, "mapname", [&](auto value, auto key){ map.emplace(key, value); });
+    // Containers of persistent values MUST be initialized before use. Use one of the initialize methods below
+    // to load any existing contents of a container from storage before accessing the container, even if empty.
+    // The basic initialize methods take a lambda that should emplace elements into the container. There are also
+    // helper methods for initializing key/value-style containers such as maps.
     //
     // Each type used as a value or a key requires specialized to_string and from_string methods. Implementation are
     // provided for std::string, uint64_t and a couple of types used by pbft. Unfortunately it's not possible to
     // implement a generic *_string methods for tuples, or even for each tuple arity, as C++ doesn't allow
     // specialization for (non-concrete) templated types without specializing the entire class template.
+    //
+    // In order to permanently remove a persistent variable it is necessary to call the destroy() method. This is
+    // because the variable's value is intended to persist after the object representing it is destructed.
+    // In the case of members of a collection (e.g. map, set), each member must be destroy()'d if you wish to erase
+    // it from storage. If you do not do this, it will re-appear with its previous value the next time the collection
+    // is initialized, or if an element with the same key is added later.
     //
     template <typename T>
     class persistent : public persist_base
@@ -78,10 +90,18 @@ namespace bzn
         {
             if (this->storage)
             {
+                if (sizeof...(subkeys))
+                {
+                    if (initialized_containers.find(name) == initialized_containers.end())
+                    {
+                        throw std::runtime_error("Use of uninitialized collection of persistent values: " + name);
+                    }
+                }
+
                 auto val = this->storage->read(STATE_UUID, this->key);
                 if (val)
                 {
-                    t = from_string(val.value());
+                    t = from_string(*val);
                 }
                 else
                 {
@@ -112,6 +132,8 @@ namespace bzn
         // assign a new value to a persistent variable. the new value is immediately placed in storage
         persistent<T>& operator=(const T& value)
         {
+            this->validate();
+
             t = value;
             if (this->storage)
             {
@@ -142,6 +164,7 @@ namespace bzn
         // get the value of the variable
         const T& value() const
         {
+            this->validate();
             return t;
         }
 
@@ -171,18 +194,21 @@ namespace bzn
             return std::string{};
         }
 
-        // initialize values in a collection
+        // initialize values in a container
         template<typename A>
         static void
         initialize(std::shared_ptr<bzn::storage_base> storage, const std::string& basename
             , std::function<void(const persistent<T>&, const A&)> store)
         {
+            // record that this collection has been initialized
+            initialized_containers.insert(basename);
+
             auto escaped_base = escape(basename);
-            auto results = storage->get_keys_if(STATE_UUID, escaped_base + std::string{SEPARATOR}
-                , escaped_base + std::string{SEPARATOR + 1});
+            auto results = storage->get_keys_if(STATE_UUID, escaped_base + SEPARATOR
+                , escaped_base + SEPARATOR_END);
             for (const auto& res : results)
             {
-                std::string key_str = unescape(res.substr(escaped_base.size() + 1));
+                auto key_str = unescape(res.substr(escaped_base.size() + SEPARATOR.size()));
                 A key{persistent<A>::from_string(key_str)};
 
                 LOG(debug) << "initializing state " << res << " from storage";
@@ -192,19 +218,22 @@ namespace bzn
             }
         }
 
-        // initialize values in a nested collection
+        // initialize values in a nested container
         // note - we need a version of this function for each number of sub-keys
         template<typename A, typename B>
         static void
         initialize(std::shared_ptr<bzn::storage_base> storage, const std::string& basename
             , std::function<void(const persistent<T>&, const A&, const B&)> store)
         {
+            // record that this container has been initialized
+            initialized_containers.insert(basename);
+
             auto escaped_base = escape(basename);
-            auto results = storage->get_keys_if(STATE_UUID, escaped_base + std::string{SEPARATOR}
-                , escaped_base + std::string{SEPARATOR + 1});
+            auto results = storage->get_keys_if(STATE_UUID, escaped_base + SEPARATOR
+                , escaped_base + SEPARATOR_END);
             for (const auto& res : results)
             {
-                std::tuple<A, B> subkeys = extract_subkeys<A, B>(res.substr(escaped_base.size() + 1));
+                std::tuple<A, B> subkeys = extract_subkeys<A, B>(res.substr(escaped_base.size() + SEPARATOR.size()));
 
                 LOG(debug) << "initializing state " << res << " from storage";
 
@@ -212,6 +241,29 @@ namespace bzn
                 store(persistent<T>{storage, {}, basename, std::get<0>(subkeys), std::get<1>(subkeys)}
                     , std::get<0>(subkeys), std::get<1>(subkeys));
             }
+        }
+
+        // helper to initialize values in a key-value container
+        template<typename A, typename C>
+        static void
+        init_kv_container(std::shared_ptr<bzn::storage_base> storage, const std::string &basename, C &container)
+        {
+            initialize<A>(storage, basename, [&container](auto value, auto key)
+            {
+                container.emplace(key, value);
+            });
+        }
+
+        // helper to initialize values in a nested key-value container
+        // note - the outer container can be non-kv such as a set
+        template<typename A, typename B, typename C>
+        static void
+        init_kv_container2(std::shared_ptr<bzn::storage_base> storage, const std::string &basename, C &container)
+        {
+            initialize<A, B>(storage, basename, [&container](auto value, auto key1, auto key2)
+            {
+                container[key2].emplace(key1, value);
+            });
         }
 
         // note - this could be expanded into a variadic to support an arbitrary number of sub-keys
@@ -223,8 +275,8 @@ namespace bzn
             size_t offset{0};
             while (offset < key.size())
             {
-                offset = key.find(SEPARATOR, offset);
-                if (offset >= key.size() || key[offset + 1] != SEPARATOR)
+                offset = key.find(ESCAPE_1, offset);
+                if (offset >= key.size() || key[offset + 1] != ESCAPE_2)
                 {
                     break;
                 }
@@ -232,9 +284,10 @@ namespace bzn
                 offset += 2;
             }
 
-            assert(offset < key.size());
+            assert(offset <= key.size() - SEPARATOR.size());
+            assert(key[offset + 1] == ESCAPE_1);
             std::string v0 = key.substr(0, offset);
-            std::string v1 = key.substr(offset + 1);
+            std::string v1 = key.substr(offset + SEPARATOR.size());
             return {persistent<A>::from_string(unescape(v0)), persistent<B>::from_string(unescape(v1))};
         }
 
@@ -243,15 +296,41 @@ namespace bzn
         std::shared_ptr<bzn::storage_base> storage;
         std::string key;
 
-        std::string generate_key()
+        static std::string generate_key()
         {
             return "";
         }
 
         template <typename K, typename... Rest>
-        std::string generate_key(K k, Rest... rest)
+        static std::string generate_key(K k, Rest... rest)
         {
-            return std::string{SEPARATOR} + escape(persistent<K>::to_string(k)) + generate_key(rest...);
+            return SEPARATOR + escape(persistent<K>::to_string(k)) + generate_key(rest...);
         }
+
+        void validate() const
+        {
+#ifndef NDEBUG
+            if (this->storage)
+            {
+                auto val = this->storage->read(STATE_UUID, this->key);
+                if (val)
+                {
+                    if (val != to_string(t))
+                    {
+                        throw std::runtime_error("Persistent value in memory does not match stored value");
+                    }
+                }
+                else
+                {
+                    throw std::runtime_error("Persistent value missing from storage");
+                }
+            }
+            else
+            {
+                throw std::runtime_error("No persistent storage defined");
+            }
+#endif
+        }
+        FRIEND_TEST(persistent_state_test, test_escaping);
     };
 }

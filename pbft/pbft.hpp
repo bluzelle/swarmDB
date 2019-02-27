@@ -44,17 +44,17 @@ namespace
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
     const std::string NOOP_REQUEST_HASH = "<no op request hash>";
 
-    std::string VIEW_KEY{"view"};
-    std::string NEXT_ISSUED_SEQUENCE_NUMBER_KEY{"next_issued_sequence_number"};
-    std::string ACCEPTED_PREPREPARES_KEY{"accepted_preprepares"};
-    std::string STABLE_CHECKPOINT_KEY{"stable_checkpoint"};
-    std::string LOCAL_UNSTABLE_CHECKPOINTS_KEY{"local_unstable_checkpoints"};
-    std::string UNSTABLE_CHECKPOINT_PROOFS_KEY{"unstable_checkpoint_proofs"};
-    std::string STABLE_CHECKPOINT_PROOF_KEY{"stable_checkpoint_proof"};
-    std::string VIEW_IS_VALID_KEY{"view_is_valid"};
-    std::string LAST_VIEW_SENT_KEY{"last_view_sent"};
-    std::string VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY{"valid_viewchange_messages_for_view"};
-    std::string SAVED_NEWVIEW_KEY{"saved_newview"};
+    const std::string VIEW_KEY{"view"};
+    const std::string NEXT_ISSUED_SEQUENCE_NUMBER_KEY{"next_issued_sequence_number"};
+    const std::string ACCEPTED_PREPREPARES_KEY{"accepted_preprepares"};
+    const std::string STABLE_CHECKPOINT_KEY{"stable_checkpoint"};
+    const std::string LOCAL_UNSTABLE_CHECKPOINTS_KEY{"local_unstable_checkpoints"};
+    const std::string UNSTABLE_CHECKPOINT_PROOFS_KEY{"unstable_checkpoint_proofs"};
+    const std::string STABLE_CHECKPOINT_PROOF_KEY{"stable_checkpoint_proof"};
+    const std::string VIEW_IS_VALID_KEY{"view_is_valid"};
+    const std::string LAST_VIEW_SENT_KEY{"last_view_sent"};
+    const std::string VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY{"valid_viewchange_messages_for_view"};
+    const std::string SAVED_NEWVIEW_KEY{"saved_newview"};
 }
 
 

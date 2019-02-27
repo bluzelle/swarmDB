@@ -865,7 +865,7 @@ pbft::initiate_viewchange()
     this->view_is_valid = false;
     pbft_msg view_change{pbft::make_viewchange(this->view.value() + 1, this->latest_stable_checkpoint().first
         , this->stable_checkpoint_proof, this->operation_manager->prepared_operations_since(this->latest_stable_checkpoint().first))};
-    LOG(debug) << "Sending VIEWCHANGE for view " << this->view + 1;
+    LOG(debug) << "Sending VIEWCHANGE for view " << this->view.value() + 1;
     this->broadcast(this->wrap_message(view_change));
 }
 
@@ -1954,28 +1954,19 @@ pbft::generate_random_number(uint32_t min, uint32_t max)
 void
 pbft::initialize_persistent_state()
 {
-    persistent<operation_key_t>::initialize<log_key_t>(this->storage, ACCEPTED_PREPREPARES_KEY, [this](auto value, auto key)
-    {
-        this->accepted_preprepares.emplace(key, value);
-    });
+    persistent<operation_key_t>::init_kv_container<log_key_t>(this->storage, ACCEPTED_PREPREPARES_KEY,
+        this->accepted_preprepares);
+    persistent<std::string>::init_kv_container<uuid_t>(this->storage, STABLE_CHECKPOINT_PROOF_KEY,
+        this->stable_checkpoint_proof);
+    persistent<std::string>::init_kv_container2<uuid_t, checkpoint_t>(this->storage, UNSTABLE_CHECKPOINT_PROOFS_KEY,
+        this->unstable_checkpoint_proofs);
+    persistent<bzn_envelope>::init_kv_container2<uuid_t, uint64_t>(this->storage,
+        VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, this->valid_viewchange_messages_for_view);
 
-    persistent<std::string>::initialize<uuid_t>(this->storage, STABLE_CHECKPOINT_PROOF_KEY, [this](auto value, auto key)
-    {
-        this->stable_checkpoint_proof.emplace(key, value);
-    });
-
-    persistent<checkpoint_t>::initialize<checkpoint_t>(this->storage, LOCAL_UNSTABLE_CHECKPOINTS_KEY, [this](auto value, auto /*key*/)
-    {
-        this->local_unstable_checkpoints.emplace(value);
-    });
-
-    persistent<std::string>::initialize<uuid_t, checkpoint_t>(this->storage, UNSTABLE_CHECKPOINT_PROOFS_KEY, [this](auto value, auto key1, auto key2)
-    {
-        this->unstable_checkpoint_proofs[key2].emplace(key1, value);
-    });
-
-    persistent<bzn_envelope>::initialize<uuid_t, uint64_t>(this->storage, VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, [this](auto value, auto key1, auto key2)
-    {
-        this->valid_viewchange_messages_for_view[key2].emplace(key1, value);
-    });
+    // sets need a custom initialize callback
+    persistent<checkpoint_t>::initialize<checkpoint_t>(this->storage, LOCAL_UNSTABLE_CHECKPOINTS_KEY
+        , [&](auto value, auto /*key*/)
+        {
+            this->local_unstable_checkpoints.emplace(value);
+        });
 }
