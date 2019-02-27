@@ -25,6 +25,8 @@ using namespace ::testing;
 
 namespace
 {
+    const std::string TTL_UUID{"TTL"};
+
     bool parse_env_to_db_resp(database_response& target, const std::string& source)
     {
         bzn_envelope intermediate;
@@ -1336,7 +1338,9 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 
 TEST(crud, test_that_delete_db_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
+    auto storage = std::make_shared<bzn::mem_storage>();
+
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), storage,
         std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
 
     // delete database...
@@ -1358,6 +1362,13 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
     crud.handle_request("caller_id", msg, mock_session);
 
+    // add a key with a ttl
+    msg.mutable_create()->set_key("key1");
+    msg.mutable_create()->set_value("value");
+    msg.mutable_create()->set_expire(123);
+
+    crud.handle_request("caller_id", msg, nullptr);
+
     // delete database...
     msg.mutable_delete_db();
 
@@ -1369,6 +1380,14 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
     crud.handle_request("caller_id", msg, mock_session);
+
+    // test storage for ttl entry
+    Json::Value ttl_key;
+    ttl_key["uuid"] = "uuid";
+    ttl_key["key"] = "key1";
+
+    ASSERT_FALSE(storage->has(TTL_UUID, ttl_key.toStyledString()));
+
 }
 
 TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
