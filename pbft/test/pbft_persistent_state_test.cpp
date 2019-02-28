@@ -39,6 +39,24 @@ namespace bzn
         EXPECT_EQ(value2.value(), 10u);
     }
 
+    TEST_F(persistent_state_test, test_no_storage_generates_exception)
+    {
+        EXPECT_THROW(persistent<uint64_t> value(nullptr, 0, "value"), std::runtime_error);
+        persistent<uint64_t> v2;
+        EXPECT_THROW(v2 = 10, std::runtime_error);
+        EXPECT_THROW(v2.destroy(), std::runtime_error);
+    }
+
+    TEST_F(persistent_state_test, no_conversion_generates_exception)
+    {
+        struct test_struct
+        {
+            int a = 0;
+            int b = 0;
+        };
+        EXPECT_THROW(persistent<test_struct> t(this->storage, {}, "test"), std::runtime_error);
+    }
+
     TEST_F(persistent_state_test, uninitialized_map_generates_exception)
     {
         std::map<uint64_t, persistent<std::string>> m;
@@ -160,6 +178,18 @@ namespace bzn
         std::string checkpoint_1{persistent<bzn::checkpoint_t>::to_string(checkpoint)};
         bzn::checkpoint_t checkpoint_2{persistent<bzn::checkpoint_t>::from_string(checkpoint_1)};
         EXPECT_EQ(checkpoint, checkpoint_2);
+
+        bzn_envelope envelope;
+        std::string envelope_1{persistent<bzn_envelope>::to_string(envelope)};
+        bzn_envelope envelope_2{persistent<bzn_envelope>::from_string(envelope_1)};
+        EXPECT_EQ(envelope.SerializeAsString(), envelope_2.SerializeAsString());
+
+        EXPECT_THROW(persistent<log_key_t>::from_string({"00000abc_0000001"}), std::runtime_error);
+        EXPECT_THROW(persistent<log_key_t>::from_string({"00000001_000x001"}), std::runtime_error);
+        EXPECT_THROW(persistent<operation_key_t>::from_string({"00000abc_0000001_hash"}), std::runtime_error);
+        EXPECT_THROW(persistent<operation_key_t>::from_string({"00000001_000x001_hash"}), std::runtime_error);
+        EXPECT_THROW(persistent<checkpoint_t>::from_string({"00000abc_hash"}), std::runtime_error);
+        EXPECT_THROW(persistent<bzn_envelope>::from_string({"garbage_string"}), std::runtime_error);
     }
 
     TEST_F(persistent_state_test, test_forked_alias_generates_exception)

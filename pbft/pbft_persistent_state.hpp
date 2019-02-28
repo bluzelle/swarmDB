@@ -183,15 +183,13 @@ namespace bzn
         static T from_string(const std::string& /*value*/)
         {
             // this method needs to be specialized for each type used
-            assert(0);
-            return T{};
+            throw std::runtime_error("no conversion available for this type from string");
         }
 
         static std::string to_string(const T& /*value*/)
         {
             // this method needs to be specialized for each type used
-            assert(0);
-            return std::string{};
+            throw std::runtime_error("no conversion available for this type to string");
         }
 
         // initialize values in a container
