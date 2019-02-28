@@ -286,7 +286,7 @@ main(int argc, const char* argv[])
 
         node->start(pbft);
         chaos->start();
-        crud->start();
+        crud->start(pbft);
         pbft->start();
         status->start();
         chaos->start();

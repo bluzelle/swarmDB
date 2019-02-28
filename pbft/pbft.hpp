@@ -133,6 +133,8 @@ namespace bzn
 
         static uint32_t generate_random_number(uint32_t min, uint32_t max);
 
+        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
+
     private:
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -189,7 +191,6 @@ namespace bzn
         void clear_checkpoint_messages_until(const checkpoint_t&);
 
         bool initialize_configuration(const bzn::peers_list_t& peers);
-        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
         const std::vector<bzn::peer_address_t>& current_peers() const;
 
         void broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash);

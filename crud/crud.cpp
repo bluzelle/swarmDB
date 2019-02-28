@@ -87,11 +87,13 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
 
 
 void
-crud::start()
+crud::start(std::shared_ptr<bzn::pbft_base> pbft)
 {
     std::call_once(this->start_once,
-        [this]()
+        [this, pbft]()
         {
+            this->pbft = std::move(pbft);
+
             this->subscription_manager->start();
 
             this->expire_timer->expires_from_now(TTL_TICK);
@@ -694,9 +696,18 @@ crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perm
 bool
 crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
 {
-    for(const auto& writer_id : perms[WRITERS_KEY])
+    for (const auto& writer_id : perms[WRITERS_KEY])
     {
         if (writer_id == boost::trim_copy(caller_id))
+        {
+            return true;
+        }
+    }
+
+    // A node may be issuing an operation such as delete for key expiration...
+    for (const auto& peer_uuid : *this->pbft->current_peers_ptr())
+    {
+        if (peer_uuid.uuid == boost::trim_copy(caller_id))
         {
             return true;
         }
@@ -713,7 +724,7 @@ crud::add_writers(const database_msg& request, Json::Value& perms)
 
     std::set<std::string> current_writers;
 
-    for (auto& writer : perms[WRITERS_KEY])
+    for (const auto& writer : perms[WRITERS_KEY])
     {
         current_writers.emplace(writer.asString());
     }
@@ -892,11 +903,16 @@ crud::check_key_expiration(const boost::system::error_code& ec)
                 {
                     LOG(debug) << "removing expired ttl entry and key for: " << uuid << ":" << key;
 
-                    // remove this entry and delete the key...
-                    this->storage->remove(TTL_UUID, generated_key);
+                    // Issue delete using pbft...
+                    database_msg request;
+                    request.mutable_header()->set_db_uuid(uuid);
+                    request.mutable_delete_()->set_key(key);
 
-                    // TODO: issue pbft database delete if it's still around...
-                    this->storage->remove(uuid, key);
+                    bzn_envelope msg;
+                    msg.set_sender(this->pbft->get_uuid());
+                    msg.set_database_msg(request.SerializeAsString());
+
+                    this->pbft->handle_database_message(msg, nullptr);
                 }
                 else
                 {
