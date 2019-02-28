@@ -19,6 +19,7 @@
 #include <include/bluzelle.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <node/node_base.hpp>
+#include <pbft/pbft_base.hpp>
 #include <storage/storage_base.hpp>
 #include <shared_mutex>
 
@@ -33,7 +34,7 @@ namespace bzn
 
         void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) override;
 
-        void start() override;
+        void start(std::shared_ptr<bzn::pbft_base> pbft) override;
 
         bool save_state() override;
 
@@ -82,6 +83,7 @@ namespace bzn
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
         std::shared_ptr<bzn::node_base> node;
+        std::shared_ptr<bzn::pbft_base> pbft; // required for expiration
         std::unique_ptr<bzn::asio::steady_timer_base> expire_timer;
 
         using message_handler_t = std::function<void(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)>;
