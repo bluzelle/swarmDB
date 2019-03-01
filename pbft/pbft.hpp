@@ -92,7 +92,7 @@ namespace bzn
 
         void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) override;
 
-        void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+        void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) override;
 
         void handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
 
@@ -151,7 +151,7 @@ namespace bzn
 
         static uint32_t generate_random_number(uint32_t min, uint32_t max);
 
-        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const;
+        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const override;
 
     private:
         bool preliminary_filter_msg(const pbft_msg& msg);
