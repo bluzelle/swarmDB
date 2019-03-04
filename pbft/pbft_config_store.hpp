@@ -17,6 +17,16 @@
 #include <pbft/pbft_configuration.hpp>
 #include <map>
 #include <gtest/gtest_prod.h>
+#include <pbft/pbft_persistent_state.hpp>
+#include <storage/storage_base.hpp>
+
+namespace
+{
+    std::string CONFIG_STORE_CONFIGS_KEY{"config_store_configs"};
+    std::string CONFIG_STORE_VIEW_CONFIGS_KEY{"config_store_view_configs"};
+    std::string CONFIG_STORE_CURRENT_CONFIG_KEY{"config_store_current_config"};
+    std::string CONFIG_STORE_INDEX_KEY{"config_store_index"};
+}
 
 namespace bzn
 {
@@ -25,6 +35,8 @@ namespace bzn
     class pbft_config_store
     {
     public:
+        pbft_config_store(std::shared_ptr<bzn::storage_base> storage);
+
         // add a new accepted configuration to storage
         void add(pbft_configuration::shared_const_ptr config);
 
@@ -55,7 +67,6 @@ namespace bzn
         // is the given configuration in a state that can be accepted?
         bool is_acceptable(const hash_t& hash) const;
 
-    private:
         enum class pbft_config_state {unknown, accepted, prepared, committed, current, deprecated};
 
         struct config_info
@@ -66,14 +77,16 @@ namespace bzn
             std::set<uint64_t> views{};
         };
 
+    private:
+        std::shared_ptr<bzn::storage_base> storage;
         pbft_config_state get_state(const hash_t& hash) const;
         bool set_state(const hash_t& hash, pbft_config_state state);
         hash_t newest(const std::list<pbft_config_state>& states) const;
 
-        std::map<hash_t, config_info> configs;
-        std::map<uint64_t, hash_t> view_configs;
-        hash_t current_config;
-        uint64_t index = 0;
+        std::map<hash_t, persistent<config_info>> configs;
+        std::map<uint64_t, persistent<hash_t>> view_configs;
+        persistent<hash_t> current_config{storage, "", CONFIG_STORE_CURRENT_CONFIG_KEY};
+        persistent<uint64_t> index {storage, 0, CONFIG_STORE_INDEX_KEY};
 
         FRIEND_TEST(pbft_config_store_test, state_test);
     };

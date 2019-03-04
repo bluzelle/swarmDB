@@ -137,6 +137,7 @@ namespace bzn::test
                 , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
+                , this->storage
         );
         this->pbft->set_audit_enabled(false);
         this->pbft->start();
