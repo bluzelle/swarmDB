@@ -237,8 +237,6 @@ namespace bzn
 
         std::shared_ptr<bzn::storage_base> storage;
 
-        std::shared_ptr<bzn::storage_base> storage;
-
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         persistent<uint64_t> view{storage, uint64_t{1}, VIEW_KEY};
         persistent<uint64_t> next_issued_sequence_number{storage, 1, NEXT_ISSUED_SEQUENCE_NUMBER_KEY};

@@ -1952,25 +1952,6 @@ pbft::generate_random_number(uint32_t min, uint32_t max)
     return dist(gen);
 }
 
-void
-pbft::initialize_persistent_state()
-{
-    persistent<operation_key_t>::init_kv_container<log_key_t>(this->storage, ACCEPTED_PREPREPARES_KEY,
-        this->accepted_preprepares);
-    persistent<std::string>::init_kv_container<uuid_t>(this->storage, STABLE_CHECKPOINT_PROOF_KEY,
-        this->stable_checkpoint_proof);
-    persistent<std::string>::init_kv_container2<uuid_t, checkpoint_t>(this->storage, UNSTABLE_CHECKPOINT_PROOFS_KEY,
-        this->unstable_checkpoint_proofs);
-    persistent<bzn_envelope>::init_kv_container2<uuid_t, uint64_t>(this->storage,
-        VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, this->valid_viewchange_messages_for_view);
-
-    // sets need a custom initialize callback
-    persistent<checkpoint_t>::initialize<checkpoint_t>(this->storage, LOCAL_UNSTABLE_CHECKPOINTS_KEY
-        , [&](auto value, auto /*key*/)
-        {
-            this->local_unstable_checkpoints.emplace(value);
-        });
-}
 void pbft::add_session_to_sessions_waiting(const std::string &msg_hash, std::shared_ptr<bzn::session_base> session)
 {
     if (session)
