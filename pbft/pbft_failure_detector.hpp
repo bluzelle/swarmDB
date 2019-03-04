@@ -17,9 +17,12 @@
 #include <pbft/pbft_failure_detector_base.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <pbft/operations/pbft_operation.hpp>
+#include <queue>
+#include <gtest/gtest_prod.h>
 
 namespace bzn
 {
+    const uint32_t    max_completed_requests_memory {10000}; // TODO - consider making this a configurable option
 
     class pbft_failure_detector : public std::enable_shared_from_this<pbft_failure_detector>, public bzn::pbft_failure_detector_base
     {
@@ -32,10 +35,15 @@ namespace bzn
 
         void register_failure_handler(std::function<void()> handler) override;
 
+        FRIEND_TEST(pbft_failure_detector_test, add_completed_request_hash_must_update_completed_requests_and_completed_request_queue);
+        FRIEND_TEST(pbft_failure_detector_test, add_completed_request_hash_must_garbage_collect);
+
     private:
 
         void start_timer();
         void handle_timeout(boost::system::error_code ec);
+
+        void add_completed_request_hash(const bzn::hash_t& request_hash);
 
         std::shared_ptr<bzn::asio::io_context_base> io_context;
 
@@ -44,6 +52,7 @@ namespace bzn
         std::list<bzn::hash_t> ordered_requests;
         std::unordered_set<bzn::hash_t> outstanding_requests;
         std::unordered_set<bzn::hash_t> completed_requests;
+        std::queue<bzn::hash_t> completed_request_queue;
 
         std::function<void()> failure_handler;
 
