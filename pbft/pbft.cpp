@@ -190,6 +190,8 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 
     const auto hash = this->crypto->hash(msg);
 
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
     switch (inner_msg.type())
     {
         case PBFT_MMSG_JOIN:
@@ -214,7 +216,6 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 void
 pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     if (!this->preliminary_filter_msg(msg))
@@ -269,13 +270,15 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << boost::format("Dropping message because sequence number %1% less than %2%") % msg.sequence()
+                % this->low_water_mark;
             return false;
         }
 
         if (msg.sequence() > this->high_water_mark)
         {
-            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << boost::format("Dropping message because sequence number %1% greater than %2%") % msg.sequence()
+                % this->high_water_mark;
             return false;
         }
     }
@@ -938,7 +941,7 @@ pbft::unstable_checkpoints_count() const
 }
 
 void
-pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
+pbft::maybe_stabilize_checkpoint(checkpoint_t cp)
 {
     if (this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
     {
