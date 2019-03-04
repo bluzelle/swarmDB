@@ -24,6 +24,7 @@ namespace bzn
     // forward declare...
     class session_base;
 
+    using session_shutdown_handler = std::function<void()>;
     using message_handler = std::function<void(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)>;
     using protobuf_handler = std::function<void(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)>;
 
@@ -71,6 +72,12 @@ namespace bzn
          * Accept an incoming connection on some websocket
          */
         virtual void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) = 0;
+
+        /**
+         * Add additional shutdown handlers to the session
+         * @param handler
+         */
+        virtual void add_shutdown_handler(bzn::session_shutdown_handler handler) = 0;
     };
 
 } // bzn
