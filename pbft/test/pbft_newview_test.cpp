@@ -100,7 +100,7 @@ namespace bzn
 
         EXPECT_EQ(PBFT_MSG_NEWVIEW, newview.type());
         EXPECT_EQ(new_view_index, newview.view());
-        EXPECT_EQ(this->pbft->next_issued_sequence_number, current_sequence + 1);
+        EXPECT_EQ(this->pbft->next_issued_sequence_number.value(), current_sequence + 1);
     }
 
     TEST_F(pbft_newview_test, test_get_primary)
@@ -110,7 +110,7 @@ namespace bzn
         // the pbft sut must be the current view's primay
         EXPECT_EQ(this->uuid, this->pbft->get_primary().uuid);
 
-        this->pbft->view++;
+        this->pbft->view = this->pbft->view.value() + 1;
         EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
 
         // given a view, get_primary must provide the address of a primary

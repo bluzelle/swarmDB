@@ -14,6 +14,8 @@
 #include <gtest/gtest.h>
 #include <include/bluzelle.hpp>
 #include <pbft/pbft_config_store.hpp>
+#include <storage/mem_storage.hpp>
+#include <pbft/pbft.hpp>
 
 using namespace ::testing;
 
@@ -29,6 +31,12 @@ namespace bzn
     class pbft_config_store_test : public Test
     {
     public:
+        pbft_config_store_test()
+        : storage(std::make_shared<bzn::mem_storage>())
+        , store(storage)
+        {}
+
+        std::shared_ptr<bzn::storage_base> storage;
         bzn::pbft_config_store store;
     };
 

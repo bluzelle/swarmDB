@@ -351,8 +351,11 @@ namespace bzn
 
         EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Invoke([](){return "uuid2";}));
 
-        auto manager2 = std::make_shared<bzn::pbft_operation_manager>();
-        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2, this->mock_failure_detector, this->crypto, manager2);
+        auto storage2 = std::make_shared<bzn::mem_storage>();
+        auto manager2 = std::make_shared<bzn::pbft_operation_manager>(storage2);
+
+        auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2
+            , this->mock_failure_detector, this->crypto, manager2, storage2);
         pbft2->set_audit_enabled(false);
 
         pbft2->start();
@@ -416,8 +419,8 @@ namespace bzn
         // get sut1 to generate viewchange message
         this->pbft->handle_failure();
 
-        EXPECT_EQ(this->pbft->view, 2U);
-        EXPECT_EQ(pbft2->next_issued_sequence_number, 103U);
+        EXPECT_EQ(this->pbft->view.value(), 2U);
+        EXPECT_EQ(pbft2->next_issued_sequence_number.value(), 103U);
     }
 
     TEST_F(pbft_viewchange_test, is_valid_viewchange_does_not_throw_if_no_checkpoint_yet)

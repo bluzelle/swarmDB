@@ -307,13 +307,6 @@ rocksdb_storage::get_snapshot()
 bool
 rocksdb_storage::load_snapshot(const std::string& data)
 {
-    if (!boost::filesystem::exists(this->snapshot_file))
-    {
-        LOG(error) << "no snapshot found";
-
-        return false;
-    }
-
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     const std::string tmp_snapshot(this->snapshot_file + ".tmp");

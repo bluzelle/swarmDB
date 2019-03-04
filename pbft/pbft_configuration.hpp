@@ -40,6 +40,12 @@ namespace bzn
         // serialize to string
         std::string to_string() const;
 
+        // de-serialize from json - returns true for success
+        bool from_json(const Json::Value& json);
+
+        // serialize to json
+        Json::Value to_json() const;
+
         // returns the hash of this configuration
         hash_t get_hash() const;
 
