@@ -64,6 +64,7 @@ namespace bzn
     {
         // fwd declare test as it's not in the same namespace...
         class pbft_test_database_response_is_forwarded_to_session_Test;
+        class pbft_test_add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting_Test;
     }
 
     using request_hash_t = std::string;
@@ -232,6 +233,10 @@ namespace bzn
         bool is_peer(const bzn::uuid_t& peer) const;
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
 
+        void add_session_to_sessions_waiting(const std::string &msg_hash, std::shared_ptr<bzn::session_base> session);
+
+        std::shared_ptr<bzn::storage_base> storage;
+
         std::shared_ptr<bzn::storage_base> storage;
 
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
@@ -314,6 +319,7 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, get_sequences_and_request_hashes_from_proofs);
         FRIEND_TEST(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs);
         FRIEND_TEST(bzn::test::pbft_test, database_response_is_forwarded_to_session);
+        FRIEND_TEST(bzn::test::pbft_test, add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting);
 
         friend class pbft_proto_test;
         friend class pbft_join_leave_test;

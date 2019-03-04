@@ -98,12 +98,12 @@ node::do_accept()
                         , self->chaos
                         , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
                         , self->options->get_ws_idle_timeout()
-                        , [](){}
+                        , std::list<bzn::session_shutdown_handler>{[](){}}
                         , self->crypto);
 
                 session->accept(std::move(ws));
 
-                LOG(info) << "accepting new incomming connection with " << key;
+                LOG(info) << "accepting new incoming connection with " << key;
                 // Do not attempt to identify the incoming session; one ip address could be running multiple daemons
                 // and we can't identify them based on the outgoing ports they choose
             }
@@ -163,7 +163,7 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , this->chaos
                 , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
                 , this->options->get_ws_idle_timeout()
-                , std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)
+                , std::list<bzn::session_shutdown_handler>{std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)}
                 , this->crypto);
         session->open(this->websocket);
         sessions.insert_or_assign(key, session);
