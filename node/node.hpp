@@ -30,7 +30,6 @@
 namespace bzn
 {
     using ep_key_t = std::string;
-    using session_shutdown_handler = std::function<void()>;
 
     class node final : public bzn::node_base, public std::enable_shared_from_this<node>
     {

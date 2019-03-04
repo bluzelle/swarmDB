@@ -200,6 +200,31 @@ namespace bzn::test
         this->database_response_handler(this->request_msg, mock_session);
     }
 
+    TEST_F(pbft_test, add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting)
+    {
+        this->build_pbft();
+
+        EXPECT_EQ(size_t(0), this->pbft->sessions_waiting_on_forwarded_requests.size());
+
+        bzn::session_shutdown_handler shutdown_handler{0};
+
+        EXPECT_CALL(*mock_session, add_shutdown_handler(_))
+            .Times(Exactly(1))
+            .WillRepeatedly(Invoke([&](auto handler) {
+                shutdown_handler = handler;
+            }));
+
+        pbft->handle_database_message(this->request_msg, this->mock_session);
+
+        EXPECT_EQ(size_t(1), this->pbft->sessions_waiting_on_forwarded_requests.size());
+
+        EXPECT_TRUE(shutdown_handler != nullptr);
+
+        shutdown_handler();
+
+        EXPECT_EQ(size_t(0), this->pbft->sessions_waiting_on_forwarded_requests.size());
+    }
+
 
     TEST_F(pbft_test, client_request_executed_results_in_message_response)
     {

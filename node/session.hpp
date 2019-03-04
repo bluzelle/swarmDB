@@ -40,7 +40,7 @@ namespace bzn
                 std::shared_ptr<bzn::chaos_base> chaos,
                 bzn::protobuf_handler proto_handler,
                 std::chrono::milliseconds ws_idle_timeout,
-                bzn::session_shutdown_handler shutdown_handler,
+                std::list<bzn::session_shutdown_handler> shutdown_handlers,
                 std::shared_ptr<bzn::crypto_base> crypto);
 
         ~session();
@@ -56,6 +56,8 @@ namespace bzn
 
         void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) override;
         void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
+
+        void add_shutdown_handler(const bzn::session_shutdown_handler handler) override;
 
     private:
         void do_read();
@@ -73,7 +75,7 @@ namespace bzn
         std::list<std::shared_ptr<bzn::encoded_message>> write_queue;
 
         bzn::protobuf_handler proto_handler;
-        bzn::session_shutdown_handler shutdown_handler;
+        std::list<bzn::session_shutdown_handler> shutdown_handlers;
 
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;

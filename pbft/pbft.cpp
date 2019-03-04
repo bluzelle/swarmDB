@@ -301,7 +301,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     {
         if (this->sessions_waiting_on_forwarded_requests.find(hash) == this->sessions_waiting_on_forwarded_requests.end())
         {
-            this->sessions_waiting_on_forwarded_requests[hash] = session;
+            this->add_session_to_sessions_waiting(hash, session);
         }
     }
 
@@ -452,7 +452,8 @@ pbft::handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& m
             return;
         }
 
-        this->sessions_waiting_on_forwarded_requests[msg_hash] = session;
+        this->add_session_to_sessions_waiting(msg_hash, session);
+
         if (!this->is_primary())
         {
             this->forward_request_to_primary(env);
@@ -1949,6 +1950,24 @@ pbft::generate_random_number(uint32_t min, uint32_t max)
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint32_t> dist(min, max);
     return dist(gen);
+}
+
+void pbft::add_session_to_sessions_waiting(const std::string &msg_hash, std::shared_ptr<bzn::session_base> session)
+{
+    if (session)
+    {
+        this->sessions_waiting_on_forwarded_requests[msg_hash] = session;
+        session->add_shutdown_handler([msg_hash, this, session]()
+                                        {
+                                            std::lock_guard<std::mutex> lock(this->pbft_lock);
+                                            auto it = this->sessions_waiting_on_forwarded_requests.find(msg_hash);
+                                            if (it != this->sessions_waiting_on_forwarded_requests.end()
+                                            && (it->second->get_session_id() == session->get_session_id()))
+                                            {
+                                                this->sessions_waiting_on_forwarded_requests.erase(it);
+                                            }
+                                        });
+    }
 }
 
 void

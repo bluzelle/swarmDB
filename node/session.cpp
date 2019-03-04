@@ -26,7 +26,7 @@ session::session(
         std::shared_ptr<bzn::chaos_base> chaos,
         bzn::protobuf_handler proto_handler,
         std::chrono::milliseconds ws_idle_timeout,
-        bzn::session_shutdown_handler shutdown_handler,
+        std::list<bzn::session_shutdown_handler> shutdown_handlers,
         std::shared_ptr<bzn::crypto_base> crypto
 )
         : session_id(session_id)
@@ -34,7 +34,7 @@ session::session(
         , io_context(std::move(io_context))
         , chaos(std::move(chaos))
         , proto_handler(std::move(proto_handler))
-        , shutdown_handler(std::move(shutdown_handler))
+        , shutdown_handlers(std::move(shutdown_handlers))
         , idle_timer(this->io_context->make_unique_steady_timer())
         , ws_idle_timeout(std::move(ws_idle_timeout))
         , write_buffer(nullptr, 0)
@@ -125,6 +125,12 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
             self->do_write();
         }
     );
+}
+
+void
+session::add_shutdown_handler(const bzn::session_shutdown_handler handler)
+{
+    this->shutdown_handlers.push_back(handler);
 }
 
 void
@@ -281,7 +287,11 @@ session::close()
 
     this->closing = true;
     LOG(debug) << "closing session " << std::to_string(this->session_id);
-    this->io_context->post(this->shutdown_handler);
+
+    for(const auto& handler : this->shutdown_handlers)
+    {
+        this->io_context->post(handler);
+    }
 
     if (this->websocket && this->websocket->is_open())
     {
