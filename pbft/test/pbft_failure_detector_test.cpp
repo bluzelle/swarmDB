@@ -19,7 +19,7 @@
 
 using namespace ::testing;
 
-namespace
+namespace bzn
 {
 
     class pbft_failure_detector_test : public Test
@@ -132,6 +132,59 @@ namespace
 
         this->failure_detector->request_seen(req_a);
         this->request_timer_callback(boost::system::error_code());
+    }
+
+    TEST_F(pbft_failure_detector_test, add_completed_request_hash_must_update_completed_requests_and_completed_request_queue)
+    {
+        this->build_failure_detector();
+
+        EXPECT_TRUE( this->failure_detector->completed_requests.empty());
+        EXPECT_TRUE( this->failure_detector->completed_request_queue.empty());
+
+        this->failure_detector->add_completed_request_hash("request_hash_000");
+
+        EXPECT_EQ( size_t(1), this->failure_detector->completed_requests.size());
+        EXPECT_EQ( size_t(1), this->failure_detector->completed_request_queue.size());
+    }
+
+    TEST_F(pbft_failure_detector_test, add_completed_request_hash_must_garbage_collect)
+    {
+        this->build_failure_detector();
+
+        EXPECT_TRUE( this->failure_detector->completed_requests.empty());
+        EXPECT_TRUE( this->failure_detector->completed_request_queue.empty());
+
+        // load up the completed request hash containers
+        std::stringstream hash;
+        for(size_t i=0; i<bzn::max_completed_requests_memory; ++i)
+        {
+            hash.str("");
+            hash << "hash_" << i;
+            this->failure_detector->add_completed_request_hash(hash.str());
+        }
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_requests.size());
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_request_queue.size());
+
+        EXPECT_FALSE(this->failure_detector->completed_requests.end() == this->failure_detector->completed_requests.find("hash_0"));
+        EXPECT_EQ("hash_0", this->failure_detector->completed_request_queue.front());
+
+        // Garbage collection should start to take effect
+        this->failure_detector->add_completed_request_hash("extra_hash_000");
+
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_requests.size());
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_request_queue.size());
+        EXPECT_TRUE(this->failure_detector->completed_requests.end() == this->failure_detector->completed_requests.find("hash_0"));
+        EXPECT_EQ("hash_1", this->failure_detector->completed_request_queue.front());
+
+        this->failure_detector->add_completed_request_hash("extra_hash_001");
+        this->failure_detector->add_completed_request_hash("extra_hash_002");
+        this->failure_detector->add_completed_request_hash("extra_hash_003");
+        this->failure_detector->add_completed_request_hash("extra_hash_004");
+
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_requests.size());
+        EXPECT_EQ( size_t(bzn::max_completed_requests_memory), this->failure_detector->completed_request_queue.size());
+        EXPECT_TRUE(this->failure_detector->completed_requests.end() == this->failure_detector->completed_requests.find("hash_4"));
+        EXPECT_EQ("hash_5", this->failure_detector->completed_request_queue.front());
     }
 
 }

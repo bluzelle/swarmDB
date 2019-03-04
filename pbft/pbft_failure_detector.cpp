@@ -88,8 +88,7 @@ pbft_failure_detector::request_executed(const bzn::hash_t& req_hash)
     std::lock_guard<std::mutex> lock(this->lock);
 
     this->outstanding_requests.erase(req_hash);
-    this->completed_requests.emplace(req_hash);
-    // TODO KEP-538: Need to garbage collect completed_requests eventually
+    this->add_completed_request_hash(req_hash);
 }
 
 void
@@ -98,4 +97,18 @@ pbft_failure_detector::register_failure_handler(std::function<void()> handler)
     std::lock_guard<std::mutex> lock(this->lock);
 
     this->failure_handler = handler;
+}
+
+void
+pbft_failure_detector::add_completed_request_hash(const bzn::hash_t& request_hash)
+{
+    this->completed_requests.emplace(request_hash);
+    this->completed_request_queue.push(request_hash);
+
+    if (max_completed_requests_memory < this->completed_requests.size())
+    {
+        auto old_hash = this->completed_request_queue.front();
+        this->completed_request_queue.pop();
+        this->completed_requests.erase(old_hash);
+    }
 }
