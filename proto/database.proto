@@ -64,7 +64,14 @@ message database_header
 
 message database_create_db
 {
+    enum eviction_policy_type
+    {
+        NONE = 0;
+        RANDOM = 1;
+    }
+
     uint64 max_size = 1;
+    eviction_policy_type eviction_policy = 2;
 }
 
 message database_create

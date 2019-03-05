@@ -26,6 +26,8 @@ namespace
     const std::string PERMISSION_UUID{"PERMS"};
     const std::string OWNER_KEY{"OWNER"};
     const std::string WRITERS_KEY{"WRITERS"};
+    const std::string MAX_SIZE_KEY{"MAX_SIZE"};
+    const std::string EVICTION_POLICY_KEY{"EVICTION_POLICY"};
     const std::string MAX_SIZE{"MAX_SIZE"};
     const std::string TTL_UUID{"TTL"};
     const std::chrono::seconds TTL_TICK{5}; // not too aggressive
@@ -542,7 +544,7 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
     }
     else
     {
-        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id, request.create_db().max_size()));
+        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id, request.create_db()));
     }
 
     this->send_response(request, result, database_response(), session);
@@ -715,13 +717,14 @@ crud::get_database_permissions(const bzn::uuid_t& uuid) const
 
 
 bzn::value_t
-crud::create_permission_data(const bzn::caller_id_t& caller_id, uint64_t max_size) const
+crud::create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const
 {
     Json::Value json;
 
     json[OWNER_KEY] = boost::trim_copy(caller_id);
     json[WRITERS_KEY] = Json::Value(Json::arrayValue);
-    json[MAX_SIZE] = max_size;
+    json[MAX_SIZE_KEY] = request.max_size();
+    json[EVICTION_POLICY_KEY] = uint16_t(request.eviction_policy());
 
     LOG(debug) << "created db perms: " << json.toStyledString();
 
