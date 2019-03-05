@@ -103,7 +103,15 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
 
     if (session)
     {
-        session->send_signed_message(std::make_shared<bzn_envelope>(env));
+        // special response case that does not require signing...
+        if (request.msg_case() == database_msg::kQuickRead)
+        {
+            session->send_message(std::make_shared<bzn::encoded_message >(env.SerializeAsString()));
+        }
+        else
+        {
+            session->send_signed_message(std::make_shared<bzn_envelope>(env));
+        }
     }
     else
     {
