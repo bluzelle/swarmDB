@@ -38,7 +38,7 @@ message database_msg
 
         database_nullmsg        nullmsg = 11;
 
-        database_request        create_db = 12;
+        database_create_db      create_db = 12;
         database_request        delete_db = 13;
         database_has_db         has_db = 14;
 
@@ -60,6 +60,11 @@ message database_header
     uint64 nonce = 2 [jstype = JS_STRING];
     string  point_of_contact = 3;
     bytes  request_hash = 4;
+}
+
+message database_create_db
+{
+    uint64 max_size = 1;
 }
 
 message database_create

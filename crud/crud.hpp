@@ -66,7 +66,7 @@ namespace bzn
 
         // permission...
         std::pair<bool, Json::Value> get_database_permissions(const bzn::uuid_t& uuid) const;
-        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id) const;
+        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id, uint64_t max_size) const;
         bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
