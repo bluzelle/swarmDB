@@ -67,6 +67,47 @@ namespace
                     additional_checks(resp);
                 }));
     }
+
+    void expect_response(const std::shared_ptr<bzn::Mocksession_base>& session,
+        std::optional<bzn::uuid_t> db_uuid = std::nullopt,
+        std::optional<uint64_t> nonce = std::nullopt,
+        std::optional<database_response::ResponseCase> response_case = std::nullopt,
+        std::optional<std::string> error_msg = std::nullopt,
+        std::function<void(const database_response&)> additional_checks = [](auto){})
+    {
+        EXPECT_CALL(*session, send_message(_)).WillOnce(Invoke(
+            [=](std::shared_ptr<std::string> msg)
+            {
+                bzn_envelope env;
+                env.ParseFromString(*msg);
+
+                EXPECT_EQ(env.payload_case(), bzn_envelope::kDatabaseResponse);
+                database_response resp;
+                resp.ParseFromString(env.database_response());
+
+                if (db_uuid)
+                {
+                    EXPECT_EQ(resp.header().db_uuid(), *db_uuid);
+                }
+
+                if (nonce)
+                {
+                    EXPECT_EQ(resp.header().nonce(), *nonce);
+                }
+
+                if (response_case)
+                {
+                    EXPECT_EQ(resp.response_case(), *response_case);
+                }
+
+                if (error_msg)
+                {
+                    EXPECT_EQ(resp.error().message(), *error_msg);
+                }
+
+                additional_checks(resp);
+            }));
+    }
 }
 
 
@@ -285,7 +326,7 @@ TEST(crud, test_that_read_sends_proper_response)
     // quick read key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("key");
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
+    expect_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
             [](const auto& resp)
             {
                 ASSERT_EQ(resp.read().key(), "key");
@@ -304,7 +345,7 @@ TEST(crud, test_that_read_sends_proper_response)
     // quick read invalid key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("invalid-key");
-    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    expect_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
 
     crud.handle_request("caller_id", msg, session);
 
