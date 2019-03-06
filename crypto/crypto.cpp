@@ -145,7 +145,7 @@ crypto::verify(const bzn_envelope& msg)
             && (1 == EVP_PKEY_set1_EC_KEY(key.get(), pubkey.get()))
 
             // Perform the signature validation
-            && (1 == EVP_DigestVerifyInit(context.get(), NULL, EVP_sha512(), NULL, key.get()))
+            && (1 == EVP_DigestVerifyInit(context.get(), NULL, EVP_sha256(), NULL, key.get()))
             && (1 == EVP_DigestVerifyUpdate(context.get(), msg_text.c_str(), msg_text.length()))
             && (1 == EVP_DigestVerifyFinal(context.get(), reinterpret_cast<unsigned char*>(sig_ptr), msg.signature().length()));
 
@@ -183,7 +183,7 @@ crypto::sign(bzn_envelope& msg)
 
     bool result =
             (bool) (context)
-            && (1 == EVP_DigestSignInit(context.get(), NULL, EVP_sha512(), NULL, this->private_key_EVP.get()))
+            && (1 == EVP_DigestSignInit(context.get(), NULL, EVP_sha256(), NULL, this->private_key_EVP.get()))
             && (1 == EVP_DigestSignUpdate(context.get(), msg_text.c_str(), msg_text.length()))
             && (1 == EVP_DigestSignFinal(context.get(), NULL, &signature_length));
 
@@ -249,14 +249,14 @@ std::string
 crypto::hash(const std::string& msg)
 {
     EVP_MD_CTX_ptr_t context(EVP_MD_CTX_create(), &EVP_MD_CTX_free);
-    size_t md_size = EVP_MD_size(EVP_sha512());
+    size_t md_size = EVP_MD_size(EVP_sha256());
 
     auto deleter = [](unsigned char* ptr){OPENSSL_free(ptr);};
     std::unique_ptr<unsigned char, decltype(deleter)> hash_buffer((unsigned char*) OPENSSL_malloc(sizeof(unsigned char) * md_size), deleter);
 
     bool success =
             (bool) (context)
-            && (1 == EVP_DigestInit_ex(context.get(), EVP_sha512(), NULL))
+            && (1 == EVP_DigestInit_ex(context.get(), EVP_sha256(), NULL))
             && (1 == EVP_DigestUpdate(context.get(), msg.c_str(), msg.size()))
             && (1 == EVP_DigestFinal_ex(context.get(), hash_buffer.get(), NULL));
 
