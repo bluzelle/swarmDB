@@ -14,6 +14,7 @@
 
 #include <crypto/crypto.hpp>
 #include <mocks/mock_options_base.hpp>
+#include <mocks/mock_monitor.hpp>
 #include <options/options.hpp>
 #include <gtest/gtest.h>
 #include <proto/bluzelle.pb.h>
@@ -26,6 +27,7 @@ class crypto_test : public Test
 {
 public:
     std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+    std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
     std::shared_ptr<bzn::crypto> crypto;
 
     const std::string private_key_file = "test_private_key.pem";
@@ -63,7 +65,7 @@ public:
         this->options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_INCOMING, std::to_string(true));
         this->options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_OUTGOING, std::to_string(true));
 
-        this->crypto = std::make_shared<bzn::crypto>(this->options);
+        this->crypto = std::make_shared<bzn::crypto>(this->options, this->monitor);
 
     }
 

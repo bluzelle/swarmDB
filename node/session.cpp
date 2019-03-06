@@ -27,7 +27,8 @@ session::session(
         bzn::protobuf_handler proto_handler,
         std::chrono::milliseconds ws_idle_timeout,
         std::list<bzn::session_shutdown_handler> shutdown_handlers,
-        std::shared_ptr<bzn::crypto_base> crypto
+        std::shared_ptr<bzn::crypto_base> crypto,
+        std::shared_ptr<bzn::monitor_base> monitor
 )
         : session_id(session_id)
         , ep(std::move(ep))
@@ -39,6 +40,7 @@ session::session(
         , ws_idle_timeout(std::move(ws_idle_timeout))
         , write_buffer(nullptr, 0)
         , crypto(std::move(crypto))
+        , monitor(std::move(monitor))
 {
     LOG(debug) << "creating session " << std::to_string(session_id);
 }
@@ -97,6 +99,7 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                         return;
                     }
 
+                    self->monitor->send_counter(statistic::session_opened);
                     self->do_read();
                     self->do_write();
                 });
@@ -121,6 +124,7 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
                 return;
             }
 
+            self->monitor->send_counter(statistic::session_opened);
             self->do_read();
             self->do_write();
         }
@@ -205,9 +209,15 @@ session::do_write()
     this->websocket->binary(true);
     this->write_buffer = boost::asio::buffer(*msg);
     this->websocket->async_write(this->write_buffer,
-        [self = shared_from_this(), msg](boost::system::error_code ec, auto /*bytes_transferred*/)
+        [self = shared_from_this(), msg](boost::system::error_code ec, auto bytes_transferred)
         {
             self->activity = true;
+
+            if (!ec)
+            {
+                self->monitor->send_counter(statistic::message_sent);
+            }
+            self->monitor->send_counter(statistic::message_sent_bytes, bytes_transferred);
 
             if(ec)
             {

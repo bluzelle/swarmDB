@@ -27,13 +27,14 @@ namespace
 
 
 node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::beast::websocket_base> websocket, std::shared_ptr<chaos_base> chaos,
-    const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options)
+    const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::crypto_base> crypto, std::shared_ptr<bzn::options_base> options, std::shared_ptr<bzn::monitor_base> monitor)
     : tcp_acceptor(io_context->make_unique_tcp_acceptor(ep))
     , io_context(std::move(io_context))
     , websocket(std::move(websocket))
     , chaos(std::move(chaos))
     , crypto(std::move(crypto))
     , options(std::move(options))
+    , monitor(std::move(monitor))
 {
 }
 
@@ -99,7 +100,8 @@ node::do_accept()
                         , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
                         , self->options->get_ws_idle_timeout()
                         , std::list<bzn::session_shutdown_handler>{[](){}}
-                        , self->crypto);
+                        , self->crypto
+                        , self->monitor);
 
                 session->accept(std::move(ws));
 
@@ -164,7 +166,8 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , std::bind(&node::priv_protobuf_handler, shared_from_this(), std::placeholders::_1, std::placeholders::_2)
                 , this->options->get_ws_idle_timeout()
                 , std::list<bzn::session_shutdown_handler>{std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)}
-                , this->crypto);
+                , this->crypto
+                , this->monitor);
         session->open(this->websocket);
         sessions.insert_or_assign(key, session);
     }

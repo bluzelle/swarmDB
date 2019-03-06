@@ -17,6 +17,7 @@
 #include <boost/asio/buffer.hpp>
 #include <mocks/mock_chaos_base.hpp>
 #include <node/test/node_test_common.hpp>
+#include <mocks/mock_monitor.hpp>
 
 #include <gmock/gmock.h>
 #include <proto/bluzelle.pb.h>
@@ -38,6 +39,7 @@ class session_test : public Test
 public:
     std::shared_ptr<bzn::asio::Mockio_context_base> io_context = std::make_shared<bzn::asio::Mockio_context_base>();
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+    std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
 
     bzn::asio::wait_handler timer_expiry;
 
@@ -63,12 +65,13 @@ class session_test2 : public Test
 public:
     bzn::smart_mock_io mock;
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+    std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
     uint handler_called = 0;
     std::shared_ptr<bzn::session> session;
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr);
+        session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor);
     }
 
     void yield()
@@ -95,7 +98,7 @@ namespace bzn
 
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
-        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr);
+        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor);
         session->accept(mock_websocket_stream);
         accept_handler(boost::system::error_code{});
 
@@ -148,7 +151,7 @@ namespace bzn
         bzn::smart_mock_io mock;
         mock.tcp_connect_works = false;
 
-        auto session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr);
+        auto session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor);
         session->open(mock.websocket);
 
         this->yield();
@@ -170,7 +173,7 @@ namespace bzn
                     , 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT
                     , std::list<bzn::session_shutdown_handler>{[&handler_counters]() {
                         ++handler_counters[0];
-                    }}, nullptr);
+                    }}, nullptr, this->monitor);
 
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});

@@ -26,6 +26,7 @@
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
 #include <proto/audit.pb.h>
+#include <monitor/monitor_base.hpp>
 #include <mutex>
 #include <gtest/gtest_prod.h>
 #include <options/options_base.hpp>
@@ -84,6 +85,7 @@ namespace bzn
             , std::shared_ptr<bzn::crypto_base> crypto
             , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
             , std::shared_ptr<bzn::storage_base> storage
+            , std::shared_ptr<bzn::monitor_base> monitor
             );
 
         void start() override;
@@ -293,6 +295,7 @@ namespace bzn
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
         pbft_config_store configurations;
+        std::shared_ptr<bzn::monitor_base> monitor;
 
         FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
         FRIEND_TEST(pbft_viewchange_test, test_make_signed_envelope);

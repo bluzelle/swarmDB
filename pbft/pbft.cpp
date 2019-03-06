@@ -43,6 +43,7 @@ pbft::pbft(
     , std::shared_ptr<bzn::crypto_base> crypto
     , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
     , std::shared_ptr<bzn::storage_base> storage
+    , std::shared_ptr<bzn::monitor_base> monitor
     )
     : storage(storage)
     , node(std::move(node))
@@ -57,6 +58,7 @@ pbft::pbft(
     , crypto(std::move(crypto))
     , operation_manager(std::move(operation_manager))
     , configurations(storage)
+    , monitor(std::move(monitor))
 {
     if (peers.empty())
     {
@@ -304,6 +306,8 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
             this->add_session_to_sessions_waiting(hash, session);
         }
     }
+
+    this->monitor->start_timer(hash);
 
     if (!this->is_primary())
     {
@@ -1116,6 +1120,7 @@ pbft::handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<
             session_it != this->sessions_waiting_on_forwarded_requests.end())
         {
             session_it->second->send_message(std::make_shared<bzn::encoded_message>(msg.SerializeAsString()));
+            this->monitor->finish_timer(bzn::statistic::request_latency, db_msg.header().request_hash());
             return;
         }
 
