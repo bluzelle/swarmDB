@@ -173,7 +173,7 @@ namespace bzn
                     , 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT
                     , std::list<bzn::session_shutdown_handler>{[&handler_counters]() {
                         ++handler_counters[0];
-                    }}, nullptr);
+                    }}, nullptr, this->monitor);
 
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});

@@ -1,4 +1,27 @@
-  {
+// Copyright (C) 2018 Bluzelle
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License, version 3,
+// as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+#include <include/bluzelle.hpp>
+#include <node/node.hpp>
+#include <node/session.hpp>
+#include <utils/make_endpoint.hpp>
+#include <pbft/pbft.hpp>
+
+using namespace bzn;
+
+namespace
+{
     const std::string BZN_API_KEY = "bzn-api";
 }
 
