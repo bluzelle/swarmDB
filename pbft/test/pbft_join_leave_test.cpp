@@ -169,6 +169,16 @@ namespace bzn
             return this->pbft->move_to_new_configuration(config_hash, view);
         }
 
+        void handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
+        {
+            return this->pbft->handle_preprepare(msg, original_msg);
+        }
+
+        void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg)
+        {
+            return this->pbft->handle_prepare(msg, original_msg);
+        }
+
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
         {
             return this->pbft->handle_commit(msg, original_msg);
@@ -565,7 +575,7 @@ namespace bzn
                             .Times(Exactly(TEST_PEER_LIST.size()));
 
                         // reflect the pre-prepare back
-                        pbft->handle_message(msg, *envelope);
+                        this->handle_preprepare(msg, *envelope);
                     }
 
                     pbft_msg prepare;
@@ -576,7 +586,7 @@ namespace bzn
 
                     auto wmsg2 = wrap_pbft_msg(prepare);
                     wmsg2.set_sender(p.uuid);
-                    pbft->handle_message(prepare, wmsg2);
+                    this->handle_prepare(prepare, wmsg2);
                 }));
         }
 
