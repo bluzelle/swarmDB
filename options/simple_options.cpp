@@ -123,6 +123,12 @@ simple_options::build_options()
                 (MONITOR_PORT.c_str(),
                         po::value<uint16_t>(),
                         "port of stats.d listener for audit module")
+                (MONITOR_COLLATE.c_str(),
+                        po::value<bool>()->default_value(true),
+                        "send monitor packets at an interval to reduce packet count (and log spam)")
+                (MONITOR_COLLATE_INTERVAL_SECONDS.c_str(),
+                        po::value<uint64_t>()->default_value(5),
+                        "interval at which to send monitor packets (if collation is enabled)")
                 (MONITOR_MAX_TIMERS.c_str(),
                         po::value<uint64_t>(),
                         "maximum number of outstanding monitor timers");

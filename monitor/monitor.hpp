@@ -40,9 +40,17 @@ namespace bzn
 
         void send(const std::string& stat);
 
+        std::string format_counter(statistic stat, uint64_t amount);
+
+        void maybe_send();
+
+        uint64_t time_last_sent;
+        std::unordered_map<statistic, uint64_t> accumulated_stats;
+
         std::list<std::string> ordered_timers;
         std::unordered_map<std::string, uint64_t> start_times;
-        std::mutex timers_lock;
+
+        std::mutex lock;
 
         std::shared_ptr<bzn::options_base> options;
         std::shared_ptr<bzn::asio::io_context_base> context;

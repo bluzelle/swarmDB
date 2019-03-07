@@ -47,6 +47,7 @@ public:
         EXPECT_CALL(*(this->options), get_uuid()).WillRepeatedly(Return("uuid"));
         EXPECT_CALL(*(this->options), get_monitor_endpoint(_)).WillRepeatedly(Invoke([&](auto){return this->ep;}));
         this->soptions.set(bzn::option_names::MONITOR_MAX_TIMERS, "100");
+        this->soptions.set(bzn::option_names::MONITOR_COLLATE, "false");
         EXPECT_CALL(*(this->options), get_simple_options()).WillRepeatedly(Invoke(
                 [&]() -> const bzn::simple_options&
                 {
@@ -167,6 +168,7 @@ TEST_F(monitor_test, test_no_endpoint)
     EXPECT_CALL(*options2, get_monitor_endpoint(_)).WillRepeatedly(Return(std::nullopt));
     auto monitor2 = std::make_shared<bzn::monitor>(options2, io_context, clock);
 
+    
     monitor2->send_counter(bzn::statistic::message_sent);
     monitor2->start_timer("a");
     monitor2->finish_timer(bzn::statistic::request_latency, "a");
@@ -194,4 +196,53 @@ TEST_F(monitor_test, test_send_fails)
     monitor->finish_timer(bzn::statistic::request_latency, "a");
 
     // just testing for no crash
+}
+
+TEST_F(monitor_test, test_collate_no_messages_sent_before_time_passes)
+{
+    this->soptions.set(bzn::option_names::MONITOR_COLLATE, "true");
+    this->soptions.set(bzn::option_names::MONITOR_COLLATE_INTERVAL_SECONDS, "1");
+
+    monitor->send_counter(bzn::statistic::message_sent);
+
+    EXPECT_EQ(this->sent_messages.size(), 0u);
+}
+
+TEST_F(monitor_test, test_collate_all_messages_sent)
+{
+    this->soptions.set(bzn::option_names::MONITOR_COLLATE, "true");
+    this->soptions.set(bzn::option_names::MONITOR_COLLATE_INTERVAL_SECONDS, "1");
+
+    // note that these quantities are chosen such that the sums of any two distinct subsets are distinct; this
+    // is required to make the way we're examining the results work correctly.
+    monitor->send_counter(bzn::statistic::message_sent, 3);
+    monitor->send_counter(bzn::statistic::message_sent, 20);
+    monitor->send_counter(bzn::statistic::message_sent_bytes, 100);
+
+    EXPECT_EQ(this->sent_messages.size(), 0u);
+
+    this->current_time = 2000000;
+    monitor->send_counter(bzn::statistic::hash_computed, 4000);
+
+    std::unordered_map<uint64_t, std::string> result;
+    for(const auto& msg : this->sent_messages)
+    {
+        auto pair = this->parse_counter(msg);
+        result.insert(std::make_pair(pair.second, pair.first));
+    }
+
+    EXPECT_EQ(this->sent_messages.size(), 3u);
+    EXPECT_EQ(result.size(), 3u);
+
+    EXPECT_NE(result.find(23), result.end());
+    EXPECT_NE(result.at(23).find("sent"), std::string::npos);
+    EXPECT_EQ(result.at(23).find("bytes"), std::string::npos);
+
+    EXPECT_NE(result.find(100), result.end());
+    EXPECT_NE(result.at(100).find("sent"), std::string::npos);
+    EXPECT_NE(result.at(100).find("bytes"), std::string::npos);
+
+    EXPECT_NE(result.find(4000), result.end());
+    EXPECT_NE(result.at(4000).find("hash"), std::string::npos);
+
 }
