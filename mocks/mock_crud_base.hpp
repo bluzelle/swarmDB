@@ -23,8 +23,8 @@ namespace bzn {
     public:
         MOCK_METHOD3(handle_request,
             void(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session));
-        MOCK_METHOD0(start,
-            void());
+        MOCK_METHOD1(start,
+            void(std::shared_ptr<bzn::pbft_base> pbft));
         MOCK_METHOD0(save_state,
             bool());
         MOCK_METHOD0(get_saved_state,
