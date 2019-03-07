@@ -191,7 +191,7 @@ namespace bzn
         void notify_audit_failure_detected();
 
         void checkpoint_reached_locally(uint64_t sequence);
-        void maybe_stabilize_checkpoint(const checkpoint_t& cp);
+        void maybe_stabilize_checkpoint(checkpoint_t cp);
         void stabilize_checkpoint(const checkpoint_t& cp);
         const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
         void request_checkpoint_state(const checkpoint_t& cp);
