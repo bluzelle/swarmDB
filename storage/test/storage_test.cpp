@@ -75,7 +75,7 @@ public:
     storageTest()
     {
         // just to be safe...
-        system(std::string("rm -r -f " + NODE_UUID).c_str());
+        if (system(std::string("rm -r -f " + NODE_UUID).c_str())) {}
         this->storage = create_storage<T>();
     }
 
@@ -83,7 +83,7 @@ public:
     {
         // For each run, the database has to be cleared out...
         this->storage.reset();
-        system(std::string("rm -r -f " + NODE_UUID).c_str());
+        if (system(std::string("rm -r -f " + NODE_UUID).c_str())) {}
     }
 
     std::shared_ptr<bzn::storage_base> storage;
