@@ -157,10 +157,11 @@ def remove_writer_request(writer):
     return msg
 
 
-def create_request(key, value):
+def create_request(key, value, expire):
     msg = database_pb2.database_msg()
     msg.create.key = key
     msg.create.value = value
+    msg.create.expire = expire
     return msg
 
 
@@ -176,10 +177,11 @@ def quick_read_request(key):
     return msg
 
 
-def update_request(key, value):
+def update_request(key, value, expire):
     msg = database_pb2.database_msg()
     msg.update.key = key
     msg.update.value = value
+    msg.update.expire = expire;
     return msg
 
 
@@ -192,6 +194,18 @@ def delete_request(key):
 def has_request(key):
     msg = database_pb2.database_msg()
     msg.has.key = key
+    return msg
+
+
+def ttl_request(key):
+    msg = database_pb2.database_msg()
+    msg.ttl.key = key
+    return msg
+
+
+def persist_request(key):
+    msg = database_pb2.database_msg()
+    msg.persist.key = key
     return msg
 
 
@@ -250,11 +264,11 @@ def remove_writer_handler(args):
 
 
 def create_handler(args):
-    return send_request(args.node, args.uuid, create_request(args.key, args.value))
+    return send_request(args.node, args.uuid, create_request(args.key, args.value, args.expire))
 
 
 def update_handler(args):
-    return send_request(args.node, args.uuid, update_request(args.key, args.value))
+    return send_request(args.node, args.uuid, update_request(args.key, args.value, args.expire))
 
 
 def read_handler(args):
@@ -271,6 +285,14 @@ def delete_handler(args):
 
 def has_handler(args):
     return send_request(args.node, args.uuid, has_request(args.key))
+
+
+def ttl_handler(args):
+    return send_request(args.node, args.uuid, ttl_request(args.key))
+
+
+def persist_handler(args):
+    return send_request(args.node, args.uuid, persist_request(args.key))
 
 
 def keys_handler(args):
@@ -347,6 +369,7 @@ if __name__ == "__main__":
     create_group = create_parser.add_argument_group('required arguments')
     create_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     create_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    create_group.add_argument("-ex", "--expire", type=int, default=0, help="key", required=False)
     group = create_group.add_mutually_exclusive_group()
     group.add_argument("-v", "--value", type=str, default="", help="value")
     group.add_argument("-f", "--file",  type=str, default=None, help="file to upload")
@@ -373,6 +396,7 @@ if __name__ == "__main__":
     update_group = update_parser.add_argument_group('required arguments')
     update_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
     update_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    update_group.add_argument("-ex", "--expire", type=int, default=0, help="expire in seconds")
     update = update_group.add_mutually_exclusive_group()
     update.add_argument("-v", "--value", type=str, default=None, help="value")
     update.add_argument("-f", "--file",  type=str, default=None,  help="file to upload")
@@ -391,6 +415,20 @@ if __name__ == "__main__":
     has_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
     has_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     has_parser.set_defaults(func=has_handler)
+
+    # ttl
+    ttl_parser = subparsers.add_parser('ttl', help="Get ttl for a key within a DB by UUID")
+    ttl_group = ttl_parser.add_argument_group('required arguments')
+    ttl_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    ttl_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    ttl_parser.set_defaults(func=ttl_handler)
+
+    # persist
+    ttl_parser = subparsers.add_parser('persist', help="Remove expiration for a key within a DB by UUID")
+    ttl_group = ttl_parser.add_argument_group('required arguments')
+    ttl_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    ttl_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    ttl_parser.set_defaults(func=persist_handler)
 
     # keys
     keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")

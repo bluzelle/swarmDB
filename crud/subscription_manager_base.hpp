@@ -15,8 +15,8 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <proto/bluzelle.pb.h>
 #include <node/session_base.hpp>
+#include <proto/database.pb.h>
 
 
 namespace bzn

@@ -2,7 +2,7 @@ add_library(audit
         audit_base.hpp
         audit.hpp
         audit.cpp
-        )
+    ../mocks/mock_pbft_base.hpp)
 
 target_link_libraries(audit utils proto)
 add_dependencies(audit jsoncpp)

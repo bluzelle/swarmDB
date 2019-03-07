@@ -13,8 +13,9 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <crud/crud.hpp>
-#include <boost/algorithm/string/trim_all.hpp>
 #include <utils/make_endpoint.hpp>
+#include <boost/algorithm/string/trim_all.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace bzn;
 using namespace std::placeholders;
@@ -25,13 +26,43 @@ namespace
     const std::string PERMISSION_UUID{"PERMS"};
     const std::string OWNER_KEY{"OWNER"};
     const std::string WRITERS_KEY{"WRITERS"};
+
+    const std::string TTL_UUID{"TTL"};
+    const std::chrono::seconds TTL_TICK{5}; // not too aggressive
+
+    inline bzn::key_t generate_expire_key(const bzn::uuid_t& uuid, const bzn::key_t& key)
+    {
+        Json::Value value;
+
+        value["uuid"] = uuid;
+        value["key"] = key;
+
+        return value.toStyledString();
+    }
+
+    inline std::pair<bzn::uuid_t, bzn::key_t> extract_uuid_key(const bzn::key_t& key)
+    {
+        Json::Reader reader;
+        Json::Value json;
+
+        if (!reader.parse(key, json))
+        {
+            throw std::runtime_error("Failed to parse database json ttl data: " + reader.getFormattedErrorMessages());
+        }
+
+        return std::make_pair(json["uuid"].asString(), json["key"].asString());
+    }
 }
 
 
-crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager, std::shared_ptr<bzn::node_base> node)
+crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
+           std::shared_ptr<bzn::storage_base> storage,
+           std::shared_ptr<bzn::subscription_manager_base> subscription_manager,
+           std::shared_ptr<bzn::node_base> node)
            : storage(std::move(storage))
            , subscription_manager(std::move(subscription_manager))
            , node(std::move(node))
+           , expire_timer(io_context->make_unique_steady_timer())
            , message_handlers{
                  {database_msg::kCreate,        std::bind(&crud::handle_create,         this, _1, _2, _3)},
                  {database_msg::kRead,          std::bind(&crud::handle_read,           this, _1, _2, _3)},
@@ -48,18 +79,25 @@ crud::crud(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subs
                  {database_msg::kWriters,       std::bind(&crud::handle_writers,        this, _1, _2, _3)},
                  {database_msg::kAddWriters,    std::bind(&crud::handle_add_writers,    this, _1, _2, _3)},
                  {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)},
-                 {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)}}
+                 {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)},
+                 {database_msg::kTtl,           std::bind(&crud::handle_ttl,            this, _1, _2, _3)},
+                 {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)}}
 {
 }
 
 
 void
-crud::start()
+crud::start(std::shared_ptr<bzn::pbft_base> pbft)
 {
     std::call_once(this->start_once,
-        [this]()
+        [this, pbft]()
         {
+            this->pbft = std::move(pbft);
+
             this->subscription_manager->start();
+
+            this->expire_timer->expires_from_now(TTL_TICK);
+            this->expire_timer->async_wait(std::bind(&crud::check_key_expiration, shared_from_this(), std::placeholders::_1));
         });
 }
 
@@ -152,10 +190,19 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
         else
         {
+            if (this->expired(request.header().db_uuid(), request.create().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
             result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
 
             if (result == bzn::storage_result::ok)
             {
+                this->update_expiration_entry(request.header().db_uuid(), request.create().key(), request.create().expire());
+
                 this->subscription_manager->inspect_commit(request);
             }
         }
@@ -171,6 +218,14 @@ crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
     const bzn::key_t key = (request.msg_case() == database_msg::kRead) ? request.read().key() : request.quick_read().key();
+
+    // expired?
+    if (this->expired(request.header().db_uuid(), key))
+    {
+        this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+        return;
+    }
 
     const auto result = this->storage->read(request.header().db_uuid(), key);
 
@@ -203,10 +258,20 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
         else
         {
+            // expired?
+            if (this->expired(request.header().db_uuid(), request.update().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
             result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
 
             if (result == bzn::storage_result::ok)
             {
+                this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+
                 this->subscription_manager->inspect_commit(request);
             }
         }
@@ -238,6 +303,90 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
             if (result == bzn::storage_result::ok)
             {
                 this->subscription_manager->inspect_commit(request);
+
+                this->remove_expiration_entry(generate_expire_key(request.header().db_uuid(), request.delete_().key()));
+            }
+        }
+    }
+
+    this->send_response(request, result, database_response(), session);
+}
+
+
+void
+crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    bool has = this->storage->has(request.header().db_uuid(), request.ttl().key());
+
+    // exists and expired?
+    if (has && this->expired(request.header().db_uuid(), request.ttl().key()))
+    {
+        this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+        return;
+    }
+
+    database_response response;
+
+    if (has)
+    {
+        const auto ttl = this->get_ttl(request.header().db_uuid(), request.ttl().key());
+
+        if (ttl)
+        {
+            response.mutable_ttl()->set_key(request.ttl().key());
+            response.mutable_ttl()->set_ttl(*ttl);
+        }
+        else
+        {
+            has = false; // we don't have a ttl value for this key
+        }
+    }
+
+    this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::not_found, std::move(response), session);
+}
+
+
+void
+crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            const auto generated_key = generate_expire_key(request.header().db_uuid(), request.persist().key());
+
+            const bool has = this->storage->has(TTL_UUID, generated_key);
+
+            // expired?
+            if (has && this->expired(request.header().db_uuid(), request.persist().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
+            if (has)
+            {
+                this->remove_expiration_entry(generated_key);
+
+                result = bzn::storage_result::ok;
+            }
+            else
+            {
+                result = bzn::storage_result::not_found;
             }
         }
     }
@@ -254,7 +403,16 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
     database_response response;
 
     response.mutable_has()->set_key(request.has().key());
-    response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+
+    if (this->expired(request.header().db_uuid(), request.has().key()))
+    {
+        response.mutable_has()->set_has(false);
+    }
+    else
+    {
+        response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+    }
+
 
     this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }
@@ -272,7 +430,10 @@ crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 
     for (const auto& key : keys)
     {
-        response.mutable_keys()->add_keys(key);
+        if (!this->expired(request.header().db_uuid(), key))
+        {
+            response.mutable_keys()->add_keys(key);
+        }
     }
 
     this->send_response(request, bzn::storage_result::ok, std::move(response), session);
@@ -374,6 +535,8 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
             result = this->storage->remove(PERMISSION_UUID, request.header().db_uuid());
 
             this->storage->remove(request.header().db_uuid());
+
+            this->flush_expiration_entries(request.header().db_uuid());
         }
     }
 
@@ -541,9 +704,18 @@ crud::is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perm
 bool
 crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
 {
-    for(const auto& writer_id : perms[WRITERS_KEY])
+    for (const auto& writer_id : perms[WRITERS_KEY])
     {
         if (writer_id == boost::trim_copy(caller_id))
+        {
+            return true;
+        }
+    }
+
+    // A node may be issuing an operation such as delete for key expiration...
+    for (const auto& peer_uuid : *this->pbft->current_peers_ptr())
+    {
+        if (peer_uuid.uuid == boost::trim_copy(caller_id))
         {
             return true;
         }
@@ -560,7 +732,7 @@ crud::add_writers(const database_msg& request, Json::Value& perms)
 
     std::set<std::string> current_writers;
 
-    for (auto& writer : perms[WRITERS_KEY])
+    for (const auto& writer : perms[WRITERS_KEY])
     {
         current_writers.emplace(writer.asString());
     }
@@ -631,4 +803,160 @@ crud::load_state(const std::string& state)
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
     return this->storage->load_snapshot(state);
+}
+
+
+void
+crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t expire)
+{
+    const auto generated_key = generate_expire_key(uuid, key);
+
+    if (expire)
+    {
+        // now + expire seconds...
+        const auto expires = boost::lexical_cast<std::string>(
+            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() + expire);
+
+        auto result = this->storage->create(TTL_UUID, generated_key, expires);
+
+        if (result == bzn::storage_result::ok)
+        {
+            LOG(debug) << "created ttl entry for: " << uuid << ":" << key;
+
+            return;
+        }
+
+        result = this->storage->update(TTL_UUID, generated_key, expires);
+
+        if (result != bzn::storage_result::ok)
+        {
+            throw std::runtime_error("Failed to update ttl entry for: " + uuid + ":" + key);
+        }
+
+        return;
+    }
+
+    LOG(debug) << "removing old entry for: " << uuid << ":" << key;
+
+    this->remove_expiration_entry(generated_key);
+}
+
+
+void
+crud::remove_expiration_entry(const bzn::key_t& generated_key)
+{
+    this->storage->remove(TTL_UUID, generated_key);
+}
+
+
+bool
+crud::expired(const bzn::uuid_t& uuid, const bzn::key_t& key)
+{
+    auto result = this->storage->read(TTL_UUID, generate_expire_key(uuid, key));
+
+    if (result)
+    {
+        const uint64_t now = uint64_t(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+        const uint64_t expire = boost::lexical_cast<uint64_t>(*result);
+
+        return (expire <= now);
+    }
+
+    return false;
+}
+
+
+std::optional<uint64_t>
+crud::get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const
+{
+    const auto result = this->storage->read(TTL_UUID, generate_expire_key(uuid, key));
+
+    if (result)
+    {
+        const uint64_t now = uint64_t(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+        const uint64_t expire = boost::lexical_cast<uint64_t>(*result);
+
+        if (expire > now)
+        {
+            return {boost::lexical_cast<uint64_t>(*result) -
+                std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count()};
+        }
+
+        return {0};
+    }
+
+    return {};
+}
+
+
+void
+crud::check_key_expiration(const boost::system::error_code& ec)
+{
+    if (!ec)
+    {
+        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+        const uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        for (const auto& generated_key : this->storage->get_keys(TTL_UUID))
+        {
+            auto result = this->storage->read(TTL_UUID, generated_key);
+
+            if (result)
+            {
+                const auto [uuid, key] = extract_uuid_key(generated_key);
+
+                // has entry expired?
+                if (now >= boost::lexical_cast<uint64_t>(*result))
+                {
+                    LOG(debug) << "removing expired ttl entry and key for: " << uuid << ":" << key;
+
+                    // Issue delete using pbft...
+                    database_msg request;
+                    request.mutable_header()->set_db_uuid(uuid);
+                    request.mutable_delete_()->set_key(key);
+
+                    bzn_envelope msg;
+                    msg.set_sender(this->pbft->get_uuid());
+                    msg.set_database_msg(request.SerializeAsString());
+
+                    this->pbft->handle_database_message(msg, nullptr);
+                }
+                else
+                {
+                    // if key no longer exists, then remove the entry...
+                    if (!this->storage->has(uuid, key))
+                    {
+                        LOG(debug) << "removing stale ttl entry for: " << uuid << ":" << key;
+
+                        this->storage->remove(TTL_UUID, generated_key);
+                    }
+                }
+            }
+            else
+            {
+                std::runtime_error("Failed to read TTL value for: " + generated_key);
+            }
+        }
+
+        this->expire_timer->expires_from_now(TTL_TICK);
+        this->expire_timer->async_wait(std::bind(&crud::check_key_expiration, shared_from_this(), std::placeholders::_1));
+    }
+}
+
+
+void
+crud::flush_expiration_entries(const bzn::uuid_t& uuid)
+{
+    for (const auto& generated_key : this->storage->get_keys(TTL_UUID))
+    {
+        const auto [db_uuid, key] = extract_uuid_key(generated_key);
+
+        if (db_uuid == uuid)
+        {
+            this->storage->remove(TTL_UUID, generated_key);
+
+            LOG(debug) << "removing ttl entry for: " << db_uuid << ":" << key;
+        }
+    }
 }
