@@ -14,15 +14,14 @@
 
 #pragma once
 
-#include <string>
-#include <optional>
-
-#include <node/node_base.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <bootstrap/peer_address.hpp>
+#include <node/node_base.hpp>
 #include <pbft/operations/pbft_operation.hpp>
-
 #include <proto/pbft.pb.h>
+#include <optional>
+#include <string>
+
 
 namespace bzn
 {
@@ -35,6 +34,8 @@ namespace bzn
 
         virtual void handle_message(const pbft_msg& msg, const bzn_envelope& original_msg) = 0;
 
+        virtual void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) = 0;
+
         virtual bool is_primary() const = 0;
 
         virtual const peer_address_t& get_primary(std::optional<uint64_t> view) const = 0;
@@ -44,6 +45,8 @@ namespace bzn
         virtual void handle_failure() = 0;
 
         virtual const peer_address_t& get_peer_by_uuid(const std::string& uuid) const = 0;
+
+        virtual std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const = 0;
 
         virtual ~pbft_base() = default;
 

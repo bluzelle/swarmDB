@@ -124,7 +124,7 @@ namespace bzn
 
     TEST_F(persistent_state_test, test_physical_storage)
     {
-        system(std::string("rm -r -f " + NODE_UUID).c_str());
+        if (system(std::string("rm -r -f " + NODE_UUID).c_str())) {}
 
         {
             auto phys_storage = std::make_shared<bzn::rocksdb_storage>("./", "utest", NODE_UUID);
@@ -153,7 +153,7 @@ namespace bzn
 
         }
 
-        system(std::string("rm -r -f " + NODE_UUID).c_str());
+        if (system(std::string("rm -r -f " + NODE_UUID).c_str())) {}
     }
 
     TEST_F(persistent_state_test, test_conversions)
@@ -198,6 +198,8 @@ namespace bzn
         persistent<std::string> str2{this->storage, "test2", "test_key"};
         EXPECT_EQ(str2.value(), "test");
         str2 = "test2";
+#ifndef NDEBUG
         EXPECT_THROW(str = "test", std::runtime_error);
+#endif
     }
 }

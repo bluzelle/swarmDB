@@ -12,9 +12,10 @@
 
 #pragma once
 
-#include <proto/pbft.pb.h>
-#include <node/session_base.hpp>
 #include <include/bluzelle.hpp>
+#include <node/session_base.hpp>
+#include <proto/database.pb.h>
+#include <proto/pbft.pb.h>
 #include <cstdint>
 
 namespace bzn
