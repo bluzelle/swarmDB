@@ -38,8 +38,8 @@ namespace bzn::option_names
     const std::string MEM_STORAGE = "mem_storage";
     const std::string MONITOR_ADDRESS = "monitor_address";
     const std::string MONITOR_PORT = "monitor_port";
-    const std::string MONITOR_COLLATE = "MONITOR_COLLATE";
-    const std::string MONITOR_COLLATE_INTERVAL_SECONDS = "MONITOR_COLLATE_INTERVAL_SECONDS";
+    const std::string MONITOR_COLLATE = "monitor_collate";
+    const std::string MONITOR_COLLATE_INTERVAL_SECONDS = "monitor_collate_interval_seconds";
     const std::string NODE_UUID = "uuid";
     const std::string NODE_PUBKEY_FILE = "public_key_file";
     const std::string NODE_PRIVATEKEY_FILE = "private_key_file";
