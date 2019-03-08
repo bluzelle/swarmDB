@@ -1354,8 +1354,8 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         viewchange_envelopes_from_senders[viewchange_env.sender()] = viewchange_env;
     }
 
-    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders).first;
-    if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size() )
+    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders);
+    if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size())
     {
         LOG(error) << "is_valid_newview_message - expected " << ours.pre_prepare_messages_size()
             << " preprepares in new view, found " << theirs.pre_prepare_messages_size();
@@ -1452,7 +1452,7 @@ pbft::make_newview(
     return newview;
 }
 
-std::pair<pbft_msg, uint64_t>
+pbft_msg
 pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const
 {
     //  Computing O (set of new preprepares for new-view message)
@@ -1465,7 +1465,6 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
         viewchange.ParseFromString(sender_viewchange_envelope.second.pbft());
         max_checkpoint_sequence = std::max(max_checkpoint_sequence, viewchange.sequence());
     }
-    uint64_t next_seq = max_checkpoint_sequence + 1;
 
     //  - for each of the 2f+1 viewchange messages
     for (const auto& sender_viewchange_envelope : viewchange_envelopes_from_senders)
@@ -1497,12 +1496,11 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
                 continue;
             }
             pre_prepares[pre_prepare.sequence()] = this->wrap_message(pre_prepare);
-            next_seq = std::max(next_seq, pre_prepare.sequence() + 1);
         }
     }
     this->fill_in_missing_pre_prepares(max_checkpoint_sequence, new_view, pre_prepares);
 
-    return std::make_pair(this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares), next_seq);
+    return this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares);
 }
 
 void
@@ -1567,11 +1565,10 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-    auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
-    this->next_issued_sequence_number = res.second;
-    this->move_to_new_configuration(res.first.config_hash(), this->view.value() + 1);
+    auto newview_msg = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
+    this->move_to_new_configuration(newview_msg.config_hash(), this->view.value() + 1);
     LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
-    this->broadcast(this->wrap_message(res.first));
+    this->broadcast(this->wrap_message(newview_msg));
 }
 
 void
@@ -1603,11 +1600,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
             LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message while waiting to join swarm";
             return;
         }
-
-        // adopt checkpoint in newview message
-        pbft_msg viewchange;
-        viewchange.ParseFromString(msg.viewchange_messages(0).pbft());
-        this->save_checkpoint(viewchange);
         this->in_swarm = swarm_status::joined;
     }
     else if (!this->is_valid_newview_message(msg, original_msg))
@@ -1616,7 +1608,16 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    LOG(debug) << "handle_newview - recieved valid NEWVIEW message";
+    pbft_msg viewchange;
+    viewchange.ParseFromString(msg.viewchange_messages(0).pbft());
+
+    // this is redundant (but harmless) unless it's a new node
+    this->save_checkpoint(viewchange);
+
+    // initially set next sequence from viewchange then update from preprepares later
+    this->next_issued_sequence_number = viewchange.sequence() + 1;
+
+    LOG(debug) << "handle_newview - received valid NEWVIEW message";
 
     // validate requested configuration and switch to it
     if (!this->is_configuration_acceptable_in_new_view(msg.config_hash()) ||
@@ -1638,6 +1639,8 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         if (msg2.ParseFromString(original_msg2.pbft()))
         {
             this->handle_preprepare(msg2, original_msg2);
+
+            this->next_issued_sequence_number = msg2.sequence() + 1;
         }
     }
 
