@@ -18,6 +18,8 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gtest/gtest_prod.h>
+#include <include/bluzelle.hpp>
+#include <pbft/operations/pbft_operation.hpp>
 
 namespace
 {
@@ -331,4 +333,25 @@ namespace bzn
         }
         FRIEND_TEST(persistent_state_test, test_escaping);
     };
+
+    template<> std::string persistent<std::string>::to_string(const std::string &value);
+    template<> std::string persistent<std::string>::from_string(const std::string &value);
+
+    template<> std::string persistent<bzn::log_key_t>::to_string(const bzn::log_key_t &key);
+    template<> bzn::log_key_t persistent<bzn::log_key_t>::from_string(const std::string &value);
+
+    template<> std::string persistent<bzn::operation_key_t>::to_string(const bzn::operation_key_t &key);
+    template<> bzn::operation_key_t persistent<bzn::operation_key_t>::from_string(const std::string &value);
+
+    template<> std::string persistent<bzn::checkpoint_t>::to_string(const bzn::checkpoint_t &cp);
+    template<> bzn::checkpoint_t persistent<bzn::checkpoint_t>::from_string(const std::string &value);
+
+    template <> std::string persistent<uint64_t>::to_string(const uint64_t& val);
+    template <> uint64_t persistent<uint64_t>::from_string(const std::string& value);
+
+    template<> std::string persistent<bool>::to_string(const bool &val);
+    template<> bool persistent<bool>::from_string(const std::string &value);
+
+    template<> std::string persistent<bzn_envelope>::to_string(const bzn_envelope &val);
+    template<> bzn_envelope persistent<bzn_envelope>::from_string(const std::string &value);
 }
