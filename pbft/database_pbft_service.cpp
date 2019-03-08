@@ -185,6 +185,14 @@ database_pbft_service::get_service_state(uint64_t sequence_number) const
 bool
 database_pbft_service::set_service_state(uint64_t sequence_number, const bzn::service_state_t& data)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
+
+    if (this->next_request_sequence >= sequence_number)
+    {
+        LOG(debug) << "No need to apply service state";
+        return true;
+    }
+
     // initialize database state from checkpoint data
     if (!this->crud->load_state(data))
     {
