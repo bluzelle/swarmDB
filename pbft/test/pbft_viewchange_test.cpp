@@ -420,7 +420,6 @@ namespace bzn
         this->pbft->handle_failure();
 
         EXPECT_EQ(this->pbft->view.value(), 2U);
-        EXPECT_EQ(pbft2->next_issued_sequence_number.value(), 103U);
     }
 
     TEST_F(pbft_viewchange_test, is_valid_viewchange_does_not_throw_if_no_checkpoint_yet)
