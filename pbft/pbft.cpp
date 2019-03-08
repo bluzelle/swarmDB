@@ -336,11 +336,11 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
-    LOG(info) << "Forwarding request to primary";
     this->node
         ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
+    LOG(info) << "Forwarded request to primary, " << req_hash;
 
     this->failure_detector->request_seen(req_hash);
 }
@@ -509,7 +509,7 @@ pbft::handle_join_response(const pbft_membership_msg& /*msg*/)
     }
     else
     {
-        LOG(error) << "Received JOIN response when not waiting to join swarm";
+        LOG(debug) << "Received JOIN response, ignoring";
     }
 }
 
@@ -702,6 +702,9 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
                 this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
                 this->new_config_timer->async_wait(
                     std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
+
+                // the hash registered with the failure detector was the internal request
+                this->failure_detector->request_executed(op->get_config_request().join_request_hash());
 
                 // send response to new node
                 auto session_it = this->sessions_waiting_on_forwarded_requests.find(
