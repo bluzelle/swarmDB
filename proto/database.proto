@@ -40,7 +40,8 @@ message database_msg
 
         database_create_db      create_db = 12;
         database_request        delete_db = 13;
-        database_has_db         has_db = 14;
+        database_create_db      update_db = 14;
+        database_has_db         has_db = 15;
 
         database_request        writers = 16;
         database_writers        add_writers = 17;
