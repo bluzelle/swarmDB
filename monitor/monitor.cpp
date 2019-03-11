@@ -44,7 +44,8 @@ namespace
 }
 
 monitor::monitor(std::shared_ptr<bzn::options_base> options, std::shared_ptr<bzn::asio::io_context_base> context, std::shared_ptr<bzn::system_clock_base> clock)
-        : options(std::move(options))
+        : time_last_sent(clock->microseconds_since_epoch())
+        , options(std::move(options))
         , context(std::move(context))
         , clock(std::move(clock))
         , socket(this->context->make_unique_udp_socket())
@@ -72,7 +73,7 @@ monitor::start_timer(std::string timer_id)
         return;
     }
 
-    std::lock_guard<std::mutex> lock(this->timers_lock);
+    std::lock_guard<std::mutex> lock(this->lock);
     if (this->start_times.find(timer_id) != this->start_times.end())
     {
         return;
@@ -97,20 +98,17 @@ monitor::finish_timer(bzn::statistic stat, std::string timer_id)
     }
 
     uint64_t result;
+    std::lock_guard<std::mutex> lock(this->lock);
 
+    if (this->start_times.find(timer_id) == this->start_times.end())
     {
-        std::lock_guard<std::mutex> lock(this->timers_lock);
-        if (this->start_times.find(timer_id) == this->start_times.end())
-        {
-            return;
-        }
-
-        result = this->clock->microseconds_since_epoch() - start_times.at(timer_id);
-        this->start_times.erase(timer_id);
+        return;
     }
 
+    result = this->clock->microseconds_since_epoch() - start_times.at(timer_id);
+    this->start_times.erase(timer_id);
+
     auto stat_string = this->scope_prefix + "." + statistic_names.at(stat) + ":" + std::to_string(result) + "|us";
-    LOG(debug) << stat_string;
     this->send(stat_string);
 }
 
@@ -122,15 +120,29 @@ monitor::send_counter(bzn::statistic stat, uint64_t amount)
         return;
     }
 
-    auto stat_string = this->scope_prefix + "." + statistic_names.at(stat) + ":" + std::to_string(amount) + "|c";
-    LOG(debug) << stat_string;
+    std::lock_guard<std::mutex> lock(this->lock);
+    if (this->options->get_simple_options().get<bool>(option_names::MONITOR_COLLATE))
+    {
+        this->accumulated_stats.insert(std::make_pair(stat, 0)); // silently fails if key exists
+        this->accumulated_stats.insert_or_assign(stat, this->accumulated_stats.at(stat) + amount);
+        this->maybe_send();
+    }
+    else
+    {
+        this->send(this->format_counter(stat, amount));
+    }
+}
 
-    this->send(stat_string);
+std::string
+monitor::format_counter(bzn::statistic stat, uint64_t amount)
+{
+    return this->scope_prefix + "." + statistic_names.at(stat) + ":" + std::to_string(amount) + "|c";
 }
 
 void
 monitor::send(const std::string& stat)
 {
+    LOG(debug) << "..." << (stat.length() <= 30 ? stat : stat.substr(stat.length() - 30));
     std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
     this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
             [buffer](const boost::system::error_code& ec, std::size_t /*bytes*/)
@@ -140,4 +152,20 @@ monitor::send(const std::string& stat)
                     LOG(error) << "UDP send failed";
                 }
             });
+}
+
+void
+monitor::maybe_send()
+{
+    auto threshold = this->time_last_sent + this->options->get_simple_options().get<uint64_t>(option_names::MONITOR_COLLATE_INTERVAL_SECONDS)*1000000;
+    if (this->clock->microseconds_since_epoch() >= threshold)
+    {
+        LOG(debug) << "Sending batched statistics:";
+        for (const auto& pair : this->accumulated_stats)
+        {
+            this->send(this->format_counter(pair.first, pair.second));
+        }
+        this->accumulated_stats.clear();
+        this->time_last_sent = this->clock->microseconds_since_epoch();
+    }
 }
