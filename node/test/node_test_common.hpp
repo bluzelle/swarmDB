@@ -50,6 +50,16 @@ namespace bzn
 
         smart_mock_io()
         {
+            EXPECT_CALL(*(this->io_context), make_unique_strand()).WillRepeatedly(Invoke(
+                    []()
+                    {
+                        auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+                        EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
+                        EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
+                        EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
+                        return strand;
+                    }));
+
             EXPECT_CALL(*(this->io_context), post(_)).WillRepeatedly(Invoke(
                     [&](auto func)
                     {
