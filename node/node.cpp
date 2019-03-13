@@ -88,6 +88,14 @@ node::do_accept()
                 auto ep = self->acceptor_socket->remote_endpoint();
                 auto key = self->key_from_ep(ep);
 
+                // set tcp_nodelay option...
+                boost::system::error_code option_ec;
+                self->acceptor_socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
+                if (option_ec)
+                {
+                    LOG(error) << "failed to set socket option: " << option_ec.message();
+                }
+
                 std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
