@@ -84,6 +84,15 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
             // we've completed the handshake...
 
             std::lock_guard<std::mutex> lock(self->socket_lock);
+
+            // set tcp_nodelay option
+            boost::system::error_code option_ec;
+            socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
+            if (option_ec)
+            {
+                LOG(error) << "failed to set socket option: " << option_ec.message();
+            }
+
             self->websocket = ws_factory->make_unique_websocket_stream(socket->get_tcp_socket());
             self->websocket->async_handshake(self->ep.address().to_string(), "/",
                 [self, ws_factory](const boost::system::error_code& ec)
