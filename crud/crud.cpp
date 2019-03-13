@@ -398,6 +398,8 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
 void
 crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    bzn::storage_result result{bzn::storage_result::ok};
+
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
     database_response response;
@@ -410,11 +412,17 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
     }
     else
     {
-        response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+        if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+        {
+            response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
+        }
+        else
+        {
+            result = bzn::storage_result::db_not_found;
+        }
     }
 
-
-    this->send_response(request, bzn::storage_result::ok, std::move(response), session);
+    this->send_response(request, result, std::move(response), session);
 }
 
 

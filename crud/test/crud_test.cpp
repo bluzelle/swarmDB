@@ -951,6 +951,18 @@ TEST(crud, test_that_has_sends_proper_response)
 
     crud->handle_request("caller_id", msg, session);
 
+    // invalid database
+    msg.mutable_header()->set_db_uuid("invalid-uuid");
+    msg.mutable_has()->set_key("key");
+    expect_signed_response(session, "invalid-uuid", 123, database_response::kError, std::nullopt,
+        [](const auto& resp)
+        {
+            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+        });
+
+    crud->handle_request("caller_id", msg, session);
+
     // null session nothing should happen...
     crud->handle_request("caller_id", msg, nullptr);
 }
