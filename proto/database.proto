@@ -196,13 +196,14 @@ message database_response
         database_redirect_response      redirect = 2;
         database_subscription_update    subscription_update = 3;
         database_read_response          read = 4;
-        database_has_response           has = 5;
-        database_keys_response          keys = 6;
-        database_size_response          size = 7;
-        database_error                  error = 8;
-        database_has_db_response        has_db = 9;
-        database_writers_response       writers = 10;
-        database_ttl_response           ttl = 11;
+        database_read_response          quick_read = 5;
+        database_has_response           has = 6;
+        database_keys_response          keys = 7;
+        database_size_response          size = 8;
+        database_error                  error = 9;
+        database_has_db_response        has_db = 10;
+        database_writers_response       writers = 11;
+        database_ttl_response           ttl = 12;
     }
 }
 
