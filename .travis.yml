@@ -36,13 +36,13 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Linux-x86_64.tar.gz"
-        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh ${CMAKE_OPTIONS}"
 
     - os: osx
       osx_image: xcode10
       env:
         - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4"
-        - CMAKE_COMMAND="cmake"
+        - CMAKE_COMMAND="cmake ${CMAKE_OPTIONS}"
 
 cache:
   directories:
@@ -83,10 +83,11 @@ before_script:
   - mkdir build
   - cd build
   - >
-    ${CMAKE_COMMAND}
-    -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-    -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR}
-    -DPROJECT_VERSION_PATCH=${PROJECT_VERSION_PATCH} ..
+    if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
+        ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR} -DPROJECT_VERSION_PATCH=${PROJECT_VERSION_PATCH} ..
+      else
+        ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug -DENABLE_GCOV=ON -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR} -DPROJECT_VERSION_PATCH=${PROJECT_VERSION_PATCH} ..
+    fi
 
 script:
   - ${CXX} --version
@@ -107,7 +108,7 @@ after_success:
   - echo ${TRAVIS_BRANCH}
   - if [ "$TRAVIS_BRANCH" = "master" ] ; then PACKAGE_COMPONENT="stable" ; else PACKAGE_COMPONENT="unstable" ; fi
   - |
-    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "devel" ]; then
+    if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "devel" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
       if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
         travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=all;deb.component=${PACKAGE_COMPONENT};deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
       fi

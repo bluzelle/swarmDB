@@ -160,11 +160,6 @@ crypto::verify(const bzn_envelope& msg)
 bool
 crypto::sign(bzn_envelope& msg)
 {
-    if (!this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
-    {
-        return true;
-    }
-
     if (msg.sender().empty())
     {
         msg.set_sender(this->options->get_uuid());
@@ -174,6 +169,11 @@ crypto::sign(bzn_envelope& msg)
     {
         LOG(error) << "Cannot sign message purportedly sent by " << msg.sender();
         return false;
+    }
+
+    if (!this->options->get_simple_options().get<bool>(bzn::option_names::CRYPTO_ENABLED_OUTGOING))
+    {
+        return true;
     }
 
     const auto msg_text = this->deterministic_serialize(msg);

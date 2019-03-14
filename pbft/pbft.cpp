@@ -188,6 +188,8 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 
     const auto hash = this->crypto->hash(msg);
 
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
     switch (inner_msg.type())
     {
         case PBFT_MMSG_JOIN:
@@ -212,7 +214,6 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 void
 pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     if (!this->preliminary_filter_msg(msg))
@@ -267,13 +268,15 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << boost::format("Dropping message because sequence number %1% less than %2%") % msg.sequence()
+                % this->low_water_mark;
             return false;
         }
 
         if (msg.sequence() > this->high_water_mark)
         {
-            LOG(debug) << "Dropping message because it has an unreasonable sequence number " << msg.sequence();
+            LOG(debug) << boost::format("Dropping message because sequence number %1% greater than %2%") % msg.sequence()
+                % this->high_water_mark;
             return false;
         }
     }
@@ -333,11 +336,11 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
-    LOG(info) << "Forwarding request to primary";
     this->node
         ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
+    LOG(info) << "Forwarded request to primary, " << req_hash;
 
     this->failure_detector->request_seen(req_hash);
 }
@@ -506,7 +509,7 @@ pbft::handle_join_response(const pbft_membership_msg& /*msg*/)
     }
     else
     {
-        LOG(error) << "Received JOIN response when not waiting to join swarm";
+        LOG(debug) << "Received JOIN response, ignoring";
     }
 }
 
@@ -699,6 +702,9 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
                 this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
                 this->new_config_timer->async_wait(
                     std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
+
+                // the hash registered with the failure detector was the internal request
+                this->failure_detector->request_executed(op->get_config_request().join_request_hash());
 
                 // send response to new node
                 auto session_it = this->sessions_waiting_on_forwarded_requests.find(
@@ -934,7 +940,7 @@ pbft::unstable_checkpoints_count() const
 }
 
 void
-pbft::maybe_stabilize_checkpoint(const checkpoint_t& cp)
+pbft::maybe_stabilize_checkpoint(checkpoint_t cp)
 {
     if (this->unstable_checkpoint_proofs[cp].size() < this->quorum_size())
     {
@@ -1348,8 +1354,8 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         viewchange_envelopes_from_senders[viewchange_env.sender()] = viewchange_env;
     }
 
-    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders).first;
-    if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size() )
+    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders);
+    if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size())
     {
         LOG(error) << "is_valid_newview_message - expected " << ours.pre_prepare_messages_size()
             << " preprepares in new view, found " << theirs.pre_prepare_messages_size();
@@ -1446,7 +1452,7 @@ pbft::make_newview(
     return newview;
 }
 
-std::pair<pbft_msg, uint64_t>
+pbft_msg
 pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const
 {
     //  Computing O (set of new preprepares for new-view message)
@@ -1459,7 +1465,6 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
         viewchange.ParseFromString(sender_viewchange_envelope.second.pbft());
         max_checkpoint_sequence = std::max(max_checkpoint_sequence, viewchange.sequence());
     }
-    uint64_t next_seq = max_checkpoint_sequence + 1;
 
     //  - for each of the 2f+1 viewchange messages
     for (const auto& sender_viewchange_envelope : viewchange_envelopes_from_senders)
@@ -1491,12 +1496,11 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
                 continue;
             }
             pre_prepares[pre_prepare.sequence()] = this->wrap_message(pre_prepare);
-            next_seq = std::max(next_seq, pre_prepare.sequence() + 1);
         }
     }
     this->fill_in_missing_pre_prepares(max_checkpoint_sequence, new_view, pre_prepares);
 
-    return std::make_pair(this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares), next_seq);
+    return this->make_newview(new_view, viewchange_envelopes_from_senders, pre_prepares);
 }
 
 void
@@ -1561,11 +1565,10 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
     }
 
-    auto res = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
-    this->next_issued_sequence_number = res.second;
-    this->move_to_new_configuration(res.first.config_hash(), this->view.value() + 1);
+    auto newview_msg = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
+    this->move_to_new_configuration(newview_msg.config_hash(), this->view.value() + 1);
     LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
-    this->broadcast(this->wrap_message(res.first));
+    this->broadcast(this->wrap_message(newview_msg));
 }
 
 void
@@ -1597,11 +1600,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
             LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message while waiting to join swarm";
             return;
         }
-
-        // adopt checkpoint in newview message
-        pbft_msg viewchange;
-        viewchange.ParseFromString(msg.viewchange_messages(0).pbft());
-        this->save_checkpoint(viewchange);
         this->in_swarm = swarm_status::joined;
     }
     else if (!this->is_valid_newview_message(msg, original_msg))
@@ -1610,7 +1608,16 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    LOG(debug) << "handle_newview - recieved valid NEWVIEW message";
+    pbft_msg viewchange;
+    viewchange.ParseFromString(msg.viewchange_messages(0).pbft());
+
+    // this is redundant (but harmless) unless it's a new node
+    this->save_checkpoint(viewchange);
+
+    // initially set next sequence from viewchange then update from preprepares later
+    this->next_issued_sequence_number = viewchange.sequence() + 1;
+
+    LOG(debug) << "handle_newview - received valid NEWVIEW message";
 
     // validate requested configuration and switch to it
     if (!this->is_configuration_acceptable_in_new_view(msg.config_hash()) ||
@@ -1632,6 +1639,8 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
         if (msg2.ParseFromString(original_msg2.pbft()))
         {
             this->handle_preprepare(msg2, original_msg2);
+
+            this->next_issued_sequence_number = msg2.sequence() + 1;
         }
     }
 
