@@ -178,8 +178,16 @@ crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 
     if (result)
     {
-        response.mutable_read()->set_key(key);
-        response.mutable_read()->set_value(*result);
+        if (request.msg_case() == database_msg::kRead)
+        {
+            response.mutable_read()->set_key(key);
+            response.mutable_read()->set_value(*result);
+        }
+        else
+        {
+            response.mutable_quick_read()->set_key(key);
+            response.mutable_quick_read()->set_value(*result);
+        }
     }
 
     this->send_response(request, (result) ? bzn::storage_result::ok : bzn::storage_result::not_found, std::move(response), session);
