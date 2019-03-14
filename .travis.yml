@@ -86,7 +86,7 @@ before_script:
 
   -
   - >
-    - if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
+    if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
         CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" ;
       else
         CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Debug -DENABLE_GCOV=ON" ;
