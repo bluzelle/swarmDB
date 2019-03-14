@@ -326,11 +326,11 @@ TEST(crud, test_that_read_sends_proper_response)
     // quick read key...
     msg.release_read();
     msg.mutable_quick_read()->set_key("key");
-    expect_response(session, "uuid", uint64_t(123), database_response::kRead, std::nullopt,
+    expect_response(session, "uuid", uint64_t(123), database_response::kQuickRead, std::nullopt,
             [](const auto& resp)
             {
-                ASSERT_EQ(resp.read().key(), "key");
-                ASSERT_EQ(resp.read().value(), "value");
+                ASSERT_EQ(resp.quick_read().key(), "key");
+                ASSERT_EQ(resp.quick_read().value(), "value");
             });
 
     crud.handle_request("caller_id", msg, session);
@@ -413,9 +413,9 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kRead);
-            ASSERT_EQ(resp.read().key(), "key");
-            ASSERT_EQ(resp.read().value(), "value");
+            ASSERT_EQ(resp.response_case(), database_response::kQuickRead);
+            ASSERT_EQ(resp.quick_read().key(), "key");
+            ASSERT_EQ(resp.quick_read().value(), "value");
         }));
 
     crud.handle_request("caller_id", msg, nullptr);
