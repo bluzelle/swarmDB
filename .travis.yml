@@ -83,13 +83,15 @@ before_script:
   - mkdir build
   - cd build
   - >
-    if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
-      CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" ;
-    else
-      CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Debug -DENABLE_GCOV=ON" ;
-    fi
-  - echo ${CMAKE_COMMAND}
+
+  -
   - >
+    - if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
+        CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" ;
+      else
+        CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=Debug -DENABLE_GCOV=ON" ;
+    fi
+    echo ${CMAKE_COMMAND}
     ${CMAKE_COMMAND}
     -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     -DPROJECT_VERSION_MINOR=${PROJECT_VERSION_MINOR}
