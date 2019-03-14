@@ -866,11 +866,12 @@ TEST(crud, test_that_keys_sends_proper_response)
 
     // invalid uuid returns empty message...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
-    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kKeys, std::nullopt,
-            [](auto resp)
-            {
-                ASSERT_EQ(resp.keys().keys().size(), int(0));
-            });
+    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kError, std::nullopt,
+        [](const auto& resp)
+        {
+            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+        });
 
     crud.handle_request("caller_id", msg, session);
 
@@ -935,15 +936,15 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
     msg.mutable_header()->set_db_uuid("invalid-uuid");
 
     EXPECT_CALL(*mock_node, send_signed_message("point_of_contact", An<std::shared_ptr<bzn_envelope>>())).WillOnce(Invoke(
-            [&](const auto&, auto msg)
-            {
-                database_response resp;
-                ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
-                ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
-                ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-                ASSERT_EQ(resp.response_case(), database_response::kKeys);
-                ASSERT_EQ(resp.keys().keys().size(), int(0));
-            }));
+        [&](const auto&, auto msg)
+        {
+            database_response resp;
+            ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
+            ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
+            ASSERT_EQ(resp.header().nonce(), uint64_t(123));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+        }));
 
     crud.handle_request("caller_id", msg, nullptr);
 
