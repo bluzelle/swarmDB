@@ -82,7 +82,7 @@ before_script:
   - cd ${TRAVIS_BUILD_DIR}
   - mkdir build
   - cd build
-  - if [ "$TRAVIS_BRANCH" = "master" ] ; then BUILD_TYPE="release" ; else BUILD_TYPE="debug" ; fi
+  - if [ "$TRAVIS_BRANCH" = "master" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then BUILD_TYPE="RelWithDebInfo" ; else BUILD_TYPE="Debug" ; fi
   - echo ${CMAKE_COMMAND}
   - >
     ${CMAKE_COMMAND}
