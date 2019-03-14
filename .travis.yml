@@ -36,13 +36,13 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Linux-x86_64.tar.gz"
-        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
+        - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - os: osx
       osx_image: xcode10
       env:
         - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4"
-        - CMAKE_COMMAND="cmake"
+        - CMAKE_COMMAND="cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
 
 cache:
   directories:
@@ -82,6 +82,8 @@ before_script:
   - cd ${TRAVIS_BUILD_DIR}
   - mkdir build
   - cd build
+  - if [ "$TRAVIS_BRANCH" = "master" ] ; then BUILD_TYPE="release" ; else BUILD_TYPE="debug" ; fi
+  - echo ${CMAKE_COMMAND}
   - >
     ${CMAKE_COMMAND}
     -DPROJECT_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
