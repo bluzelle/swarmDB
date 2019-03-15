@@ -17,6 +17,7 @@
 #include <boost/asio/buffer.hpp>
 #include <mocks/mock_chaos_base.hpp>
 #include <node/test/node_test_common.hpp>
+#include <functional>
 
 #include <gmock/gmock.h>
 #include <proto/bluzelle.pb.h>
@@ -54,6 +55,16 @@ public:
                             }));
                     EXPECT_CALL(*timer, expires_from_now(_)).Times(AnyNumber());
                     return timer;
+                }));
+
+        EXPECT_CALL(*(this->io_context), make_unique_strand()).WillRepeatedly(Invoke(
+                []()
+                {
+                    auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+                    EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
+                    EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
+                    EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
+                    return strand;
                 }));
     }
 };
@@ -143,7 +154,7 @@ namespace bzn
         EXPECT_TRUE(this->mock.ws_closed.at(0));
     }
 
-    TEST_F(session_test2, idle_timeout_after_connect_rejected)
+    TEST_F(session_test2, no_idle_timeout_when_connect_rejected)
     {
         bzn::smart_mock_io mock;
         mock.tcp_connect_works = false;
@@ -153,16 +164,13 @@ namespace bzn
 
         this->yield();
 
-        // we are just testing that this doesn't cause a segfault
-        mock.timer_callbacks.at(0)(boost::system::error_code{});
-        mock.timer_callbacks.at(0)(boost::system::error_code{});
+        EXPECT_EQ(mock.timer_callbacks.size(), 0u);
     }
 
     TEST_F(session_test2, additional_shutdown_handlers_can_be_added_to_session)
     {
 
         bzn::smart_mock_io mock;
-        mock.tcp_connect_works = false;
 
         std::vector<uint8_t> handler_counters { 0,0,0 };
         {

@@ -65,6 +65,8 @@ namespace bzn
 
         void start_idle_timeout();
 
+        void private_close();
+
         const bzn::session_id session_id;
         const boost::asio::ip::tcp::endpoint ep;
 
@@ -80,7 +82,7 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;
 
-        std::mutex socket_lock;
+        std::unique_ptr<bzn::asio::strand_base> strand;
 
         std::atomic<bool> writing = false;
         std::atomic<bool> reading = false;
