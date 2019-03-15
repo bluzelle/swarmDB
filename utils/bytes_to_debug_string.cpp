@@ -16,6 +16,7 @@
 #include <include/bluzelle.hpp>
 
 #include <iostream>
+#include <sstream>
 
 std::string
 bzn::bytes_to_debug_string(const std::string& input, bool preserve_full)
