@@ -90,7 +90,15 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     {
         if (bzn::storage_result_msg.count(result))
         {
-            response.mutable_error()->set_message(bzn::storage_result_msg.at(result));
+			// special response error case...
+			if (request.msg_case() == database_msg::kQuickRead)
+			{
+				response.mutable_quick_read()->set_error(bzn::storage_result_msg.at(result));
+			}
+        	else
+			{
+				response.mutable_error()->set_message(bzn::storage_result_msg.at(result));
+			}
         }
         else
         {

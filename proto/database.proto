@@ -150,6 +150,13 @@ message database_read_response
     bytes value = 2;
 }
 
+message database_quick_read_response
+{
+    string key = 1;
+    bytes value = 2;
+    string error = 3;
+}
+
 message database_size_response
 {
     int32 bytes = 1;
@@ -178,7 +185,7 @@ message database_response
         database_redirect_response      redirect = 2;
         database_subscription_update    subscription_update = 3;
         database_read_response          read = 4;
-        database_read_response          quick_read = 5;
+        database_quick_read_response    quick_read = 5;
         database_has_response           has = 6;
         database_keys_response          keys = 7;
         database_size_response          size = 8;
