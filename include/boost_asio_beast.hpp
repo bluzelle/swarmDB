@@ -94,6 +94,8 @@ namespace bzn::asio
 
         virtual bzn::asio::close_handler wrap(close_handler handler) = 0;
 
+        virtual bzn::asio::task wrap(bzn::asio::task action) = 0;
+
         virtual boost::asio::io_context::strand& get_strand() = 0;
     };
 
@@ -250,6 +252,11 @@ namespace bzn::asio
         bzn::asio::close_handler wrap(close_handler handler) override
         {
             return this->s.wrap(std::move(handler));
+        }
+
+        bzn::asio::task wrap(bzn::asio::task action) override
+        {
+            return this->s.wrap(std::move(action));
         }
 
         boost::asio::io_context::strand& get_strand() override
