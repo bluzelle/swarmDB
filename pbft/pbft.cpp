@@ -1099,11 +1099,22 @@ pbft::max_faulty_nodes() const
 void
 pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
+    // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
+
     LOG(debug) << "got database message";
 
     if (!this->service->apply_operation_now(msg, session))
     {
-        this->handle_request(mutable_msg, session);
+        if (msg.timestamp() == 0)
+        {
+            bzn_envelope mutable_msg(msg);
+            mutable_msg.set_timestamp(this->now());
+            this->handle_request(mutable_msg, session);
+        }
+        else
+        {
+            this->handle_request(msg, session);
+        }
     }
 }
 
