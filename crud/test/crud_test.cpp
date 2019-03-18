@@ -436,7 +436,11 @@ TEST(crud, test_that_read_sends_proper_response)
 
     // quick read invalid key...
     msg.mutable_quick_read()->set_key("invalid-key");
-    expect_response(session, "uuid", uint64_t(123), database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    expect_response(session, "uuid", uint64_t(123), database_response::kQuickRead, std::nullopt,
+        [](const auto& resp)
+        {
+            ASSERT_EQ(resp.quick_read().error(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
+        });
 
     crud->handle_request("caller_id", msg, session);
 
@@ -561,8 +565,8 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kError);
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
+            ASSERT_EQ(resp.response_case(), database_response::kQuickRead);
+			ASSERT_EQ(resp.quick_read().error(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
         }));
 
     crud->handle_request("caller_id", msg, nullptr);
