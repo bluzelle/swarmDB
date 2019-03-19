@@ -45,6 +45,7 @@ namespace bzn
     private:
 
         void handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_update_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_has_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_create(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
@@ -66,7 +67,8 @@ namespace bzn
 
         // permission...
         std::pair<bool, Json::Value> get_database_permissions(const bzn::uuid_t& uuid) const;
-        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id) const;
+        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const;
+        bzn::value_t update_permission_data(Json::Value& perms, const database_create_db& request) const;
         bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
