@@ -119,9 +119,10 @@ def send_status_request(node):
     return resp
 
 
-def create_db_request():
+def create_db_request(max_size):
     msg = database_pb2.database_msg()
     msg.create_db.SetInParent()
+    msg.create_db.max_size = max_size
     return msg
 
 
@@ -240,7 +241,7 @@ def status_handler(args):
 
 
 def create_db_handler(args):
-    return send_request(args.node, args.uuid, create_db_request())
+    return send_request(args.node, args.uuid, create_db_request(args.max_size))
 
 
 def delete_db_handler(args):
@@ -330,6 +331,7 @@ if __name__ == "__main__":
     create_db_parser = subparsers.add_parser('create-db', help="Create database")
     create_db_group = create_db_parser.add_argument_group('required arguments')
     create_db_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    create_db_group.add_argument("-s", "--max-size",  type=int, default=0, help="max-size", required=False)
     create_db_parser.set_defaults(func=create_db_handler)
 
     # Delete db

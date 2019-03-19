@@ -94,7 +94,7 @@ node::do_accept()
                 self->acceptor_socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
                 if (option_ec)
                 {
-                    LOG(error) << "failed to set socket option: " << option_ec.message();
+                    LOG(warning) << "failed to set socket option: " << option_ec.message();
                 }
 
                 std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(

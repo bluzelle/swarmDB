@@ -26,6 +26,8 @@ namespace
     const std::string PERMISSION_UUID{"PERMS"};
     const std::string OWNER_KEY{"OWNER"};
     const std::string WRITERS_KEY{"WRITERS"};
+    const std::string MAX_SIZE_KEY{"MAX_SIZE"};
+    const std::string EVICTION_POLICY_KEY{"EVICTION_POLICY"};
 
     const std::string TTL_UUID{"TTL"};
     const std::chrono::seconds TTL_TICK{5}; // not too aggressive
@@ -74,6 +76,7 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
                  {database_msg::kSubscribe,     std::bind(&crud::handle_subscribe,      this, _1, _2, _3)},
                  {database_msg::kUnsubscribe,   std::bind(&crud::handle_unsubscribe,    this, _1, _2, _3)},
                  {database_msg::kCreateDb,      std::bind(&crud::handle_create_db,      this, _1, _2, _3)},
+                 {database_msg::kUpdateDb,      std::bind(&crud::handle_update_db,      this, _1, _2, _3)},
                  {database_msg::kDeleteDb,      std::bind(&crud::handle_delete_db,      this, _1, _2, _3)},
                  {database_msg::kHasDb,         std::bind(&crud::handle_has_db,         this, _1, _2, _3)},
                  {database_msg::kWriters,       std::bind(&crud::handle_writers,        this, _1, _2, _3)},
@@ -542,7 +545,34 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
     }
     else
     {
-        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id));
+        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id, request.create_db()));
+    }
+
+    this->send_response(request, result, database_response(), session);
+}
+
+
+void
+crud::handle_update_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_owner(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            result = this->storage->update(PERMISSION_UUID, request.header().db_uuid(), this->update_permission_data(perms, request.update_db()));
+
+            // todo: enforce new policy, max size etc.
+        }
     }
 
     this->send_response(request, result, database_response(), session);
@@ -715,16 +745,30 @@ crud::get_database_permissions(const bzn::uuid_t& uuid) const
 
 
 bzn::value_t
-crud::create_permission_data(const bzn::caller_id_t& caller_id) const
+crud::create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const
 {
     Json::Value json;
 
     json[OWNER_KEY] = boost::trim_copy(caller_id);
     json[WRITERS_KEY] = Json::Value(Json::arrayValue);
+    json[MAX_SIZE_KEY] = request.max_size();
+    json[EVICTION_POLICY_KEY] = uint16_t(request.eviction_policy());
 
     LOG(debug) << "created db perms: " << json.toStyledString();
 
     return json.toStyledString();
+}
+
+
+bzn::value_t
+crud::update_permission_data(Json::Value& perms, const database_create_db& request) const
+{
+    perms[MAX_SIZE_KEY] = request.max_size();
+    perms[EVICTION_POLICY_KEY] = uint16_t(request.eviction_policy());
+
+    LOG(debug) << "update db perms: " << perms.toStyledString();
+
+    return perms.toStyledString();
 }
 
 
