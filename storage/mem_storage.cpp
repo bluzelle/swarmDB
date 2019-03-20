@@ -39,7 +39,7 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     if (auto search = this->kv_store.find(uuid); search != this->kv_store.end())
     {
-        if (search->second.find(key)!= search->second.end() )
+        if (search->second.second.find(key)!= search->second.second.end() )
         {
             return bzn::storage_result::exists;
         }
@@ -47,10 +47,10 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     auto& inner_db =  this->kv_store[uuid];
 
-    if (inner_db.find(key) == inner_db.end())
+    if (inner_db.second.find(key) == inner_db.second.end())
     {
-        // todo: test if insert failed?
-        inner_db.insert(std::make_pair(key,value));
+        inner_db.first += value.size();
+        inner_db.second.insert(std::make_pair(key,value));
     }
     else
     {
@@ -75,8 +75,8 @@ mem_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 
     // we have the db, let's see if the key exists
     auto& inner_db = search->second;
-    auto inner_search = inner_db.find(key);
-    if (inner_search == inner_db.end())
+    auto inner_search = inner_db.second.find(key);
+    if (inner_search == inner_db.second.end())
     {
         return std::nullopt;
     }
@@ -101,17 +101,19 @@ mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::
         return bzn::storage_result::not_found;
     }
 
-
     // we have the db, let's see if the key exists
     auto& inner_db = search->second;
-    auto inner_search = inner_db.find(key);
+    auto inner_search = inner_db.second.find(key);
 
-    if (inner_search == inner_db.end())
+    if (inner_search == inner_db.second.end())
     {
         return bzn::storage_result::not_found;
     }
 
+    inner_db.first -= inner_search->second.size();
     inner_search->second = value;
+    inner_db.first += inner_search->second.size();
+
     return bzn::storage_result::ok;
 }
 
@@ -128,14 +130,15 @@ mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
         return bzn::storage_result::not_found;
     }
 
-    auto record = search->second.find(key);
+    auto record = search->second.second.find(key);
 
-    if (record == search->second.end())
+    if (record == search->second.second.end())
     {
         return bzn::storage_result::not_found;
     }
 
-    search->second.erase(record);
+    search->second.first -= record->second.size();
+    search->second.second.erase(record);
     return bzn::storage_result::ok;
 }
 
@@ -153,7 +156,7 @@ mem_storage::get_keys(const bzn::uuid_t& uuid)
     }
 
     std::vector<std::string> keys;
-    for (const auto& p : inner_db->second)
+    for (const auto& p : inner_db->second.second)
     {
         keys.emplace_back(p.first);
     }
@@ -170,7 +173,6 @@ mem_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 }
 
 
-// todo: optimize! Track size as it grows and not iterate over every value!
 std::pair<std::size_t, std::size_t>
 mem_storage::get_size(const bzn::uuid_t& uuid)
 {
@@ -184,16 +186,7 @@ mem_storage::get_size(const bzn::uuid_t& uuid)
         return std::make_pair(0,0);
     }
 
-    std::size_t size{};
-    std::size_t keys{};
-
-    for (const auto& record : it->second)
-    {
-        ++keys;
-        size += record.second.size();
-    }
-
-    return std::make_pair(keys, size);
+    return std::make_pair(it->second.second.size(), it->second.first);
 }
 
 
@@ -266,6 +259,7 @@ mem_storage::load_snapshot(const std::string& data)
     return false;
 }
 
+
 void
 mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
 {
@@ -274,19 +268,21 @@ mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, con
     auto inner_db = this->kv_store.find(uuid);
     if (inner_db != this->kv_store.end())
     {
-        auto match = inner_db->second.lower_bound(first);
-        auto end = inner_db->second.lower_bound(last);
+        auto match = inner_db->second.second.lower_bound(first);
+        auto end = inner_db->second.second.lower_bound(last);
         while (match != end)
         {
-            match = inner_db->second.erase(match);
+            inner_db->second.first -= match->second.size();
+            match = inner_db->second.second.erase(match);
         }
     }
 }
 
+
 void
-mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate
-    , std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
+mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+    std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
+    std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
 {
     if (!last.empty() && last <= first)
     {
@@ -298,8 +294,8 @@ mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std:
     auto inner_db = this->kv_store.find(uuid);
     if (inner_db != this->kv_store.end())
     {
-        auto end_it = last.empty() ? inner_db->second.end() : inner_db->second.lower_bound(last);
-        for (auto it = inner_db->second.lower_bound(first); it != inner_db->second.end() && it != end_it; it++)
+        auto end_it = last.empty() ? inner_db->second.second.end() : inner_db->second.second.lower_bound(last);
+        for (auto it = inner_db->second.second.lower_bound(first); it != inner_db->second.second.end() && it != end_it; it++)
         {
             if (!predicate || (*predicate)(it->first, it->second))
             {
@@ -309,9 +305,10 @@ mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std:
     }
 }
 
+
 std::vector<std::pair<bzn::key_t, bzn::value_t>>
-mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
+mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+    std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
     std::vector<std::pair<bzn::key_t, bzn::value_t>> matches;
 
@@ -322,6 +319,7 @@ mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const st
 
     return matches;
 }
+
 
 std::vector<bzn::key_t>
 mem_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
