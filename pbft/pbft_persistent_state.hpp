@@ -108,9 +108,14 @@ namespace bzn
                 else
                 {
                     t = default_value;
-                    auto result = this->storage->create(STATE_UUID, this->key, to_string(t));
+                    auto val = to_string(t);
+                    auto result = this->storage->create(STATE_UUID, this->key, val);
                     if (result != storage_result::ok)
                     {
+                        LOG(error) << "Failed to initialize value in storage - result: " << static_cast<uint64_t>(result)
+                            << " key: " << this->key
+                            << " value size: " << val.size()
+                            << " value: " << val.substr(0, MAX_MESSAGE_SIZE);
                         throw std::runtime_error("Error initializing value in storage");
                     }
                 }
