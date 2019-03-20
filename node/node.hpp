@@ -22,6 +22,7 @@
 #include <pbft/pbft_base.hpp>
 #include <json/json.h>
 #include <mutex>
+#include <shared_mutex>
 #include <atomic>
 
 #include <gtest/gtest_prod.h>
@@ -73,7 +74,7 @@ namespace bzn
         std::shared_ptr<bzn::chaos_base>              chaos;
 
         std::unordered_map<bzn_envelope::PayloadCase, bzn::protobuf_handler> protobuf_map;
-        std::mutex message_map_mutex;
+        std::shared_mutex message_map_mutex;
 
         std::once_flag start_once;
 

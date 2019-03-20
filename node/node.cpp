@@ -50,7 +50,7 @@ node::start(std::shared_ptr<bzn::pbft_base> pbft)
 bool
 node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler)
 {
-    std::lock_guard<std::mutex> lock(this->message_map_mutex);
+    std::lock_guard<std::shared_mutex> lock(this->message_map_mutex);
 
     // never allow!
     if (!msg_handler)
@@ -123,7 +123,7 @@ node::do_accept()
 void
 node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
-    std::lock_guard<std::mutex> lock(this->message_map_mutex);
+    std::shared_lock<std::shared_mutex> lock(this->message_map_mutex); // lock for read access
 
     if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
     {
@@ -174,7 +174,7 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , std::list<bzn::session_shutdown_handler>{std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)}
                 , this->crypto);
         session->open(this->websocket);
-        sessions.insert_or_assign(key, session);
+        this->sessions.insert_or_assign(key, session);
     }
     return session;
 }
