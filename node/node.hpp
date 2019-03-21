@@ -14,16 +14,17 @@
 
 #pragma once
 
-#include <include/boost_asio_beast.hpp>
-#include <node/node_base.hpp>
 #include <chaos/chaos_base.hpp>
 #include <crypto/crypto_base.hpp>
+#include <include/boost_asio_beast.hpp>
+#include <monitor/monitor_base.hpp>
+#include <node/node_base.hpp>
 #include <options/options_base.hpp>
 #include <pbft/pbft_base.hpp>
-#include <monitor/monitor_base.hpp>
-#include <json/json.h>
-#include <mutex>
 #include <atomic>
+#include <json/json.h>
+#include <shared_mutex>
+
 
 #include <gtest/gtest_prod.h>
 
@@ -57,10 +58,9 @@ namespace bzn
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void priv_session_shutdown_handler(const ep_key_t& ep_key);
 
-        std::shared_ptr<bzn::pbft_base>               pbft;
+        std::shared_ptr<bzn::pbft_base> pbft;
 
         std::shared_ptr<bzn::session_base> find_session(const boost::asio::ip::tcp::endpoint& ep);
-        std::shared_ptr<bzn::session_base> open_session(const boost::asio::ip::tcp::endpoint& ep);
 
         ep_key_t key_from_ep(const boost::asio::ip::tcp::endpoint& ep);
 
@@ -74,7 +74,7 @@ namespace bzn
         std::shared_ptr<bzn::chaos_base>              chaos;
 
         std::unordered_map<bzn_envelope::PayloadCase, bzn::protobuf_handler> protobuf_map;
-        std::mutex message_map_mutex;
+        std::shared_mutex message_map_mutex;
 
         std::once_flag start_once;
 
