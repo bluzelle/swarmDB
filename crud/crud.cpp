@@ -85,7 +85,7 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
                  {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)},
                  {database_msg::kTtl,           std::bind(&crud::handle_ttl,            this, _1, _2, _3)},
                  {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)}}
-                 , owner_public_key(std::move(owner_public_key))
+           , owner_public_key(std::move(owner_public_key))
 {
 }
 
