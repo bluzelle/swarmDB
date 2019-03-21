@@ -60,7 +60,7 @@ namespace
 crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
            std::shared_ptr<bzn::storage_base> storage,
            std::shared_ptr<bzn::subscription_manager_base> subscription_manager,
-           std::shared_ptr<bzn::node_base> node)
+           std::shared_ptr<bzn::node_base> node, bzn::key_t owner_public_key)
            : storage(std::move(storage))
            , subscription_manager(std::move(subscription_manager))
            , node(std::move(node))
@@ -85,6 +85,7 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
                  {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)},
                  {database_msg::kTtl,           std::bind(&crud::handle_ttl,            this, _1, _2, _3)},
                  {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)}}
+                 , owner_public_key(std::move(owner_public_key))
 {
 }
 
@@ -535,11 +536,15 @@ crud::handle_unsubscribe(const bzn::caller_id_t& /*caller_id*/, const database_m
 void
 crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    bzn::storage_result result;
+    bzn::storage_result result{bzn::storage_result::ok};
 
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    if (!this->owner_public_key.empty() && (this->owner_public_key != caller_id))
+    {
+        result = bzn::storage_result::access_denied;
+    }
+    else if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
     {
         result = bzn::storage_result::db_exists;
     }
@@ -588,7 +593,11 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
-    if (db_exists)
+    if (!this->owner_public_key.empty() && (this->owner_public_key != caller_id))
+    {
+        result = bzn::storage_result::access_denied;
+    }
+    else if (db_exists)
     {
         if (!this->is_caller_owner(caller_id, perms))
         {

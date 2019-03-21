@@ -141,7 +141,11 @@ simple_options::build_options()
                         "require signed key for new peers to join swarm")
                 (SIGNED_KEY.c_str(),
                         po::value<std::string>(),
-                        "signed key for node's uuid");
+                        "signed key for node's uuid")
+                (OWNER_PUBLIC_KEY.c_str(),
+                        po::value<std::string>(),
+                        "swarm owner's public key");
+
     this->options_root.add(experimental);
 
     po::options_description crypto("Cryptography");
