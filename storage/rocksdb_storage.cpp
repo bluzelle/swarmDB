@@ -21,6 +21,10 @@ using namespace bzn;
 
 namespace
 {
+    const bzn::key_t METADATA_UUID{"METADATA"};
+    const bzn::key_t NAMESPACE_KEY{"NAMESPACE"};
+    const bzn::key_t SIZE_KEY{"SIZE"};
+
     inline bzn::key_t generate_key(const bzn::uuid_t& uuid, const bzn::key_t& key)
     {
         return uuid+key;
@@ -51,7 +55,7 @@ rocksdb_storage::open()
 
     LOG(info) << "database path: " << db_path;
 
-    rocksdb::Status s = rocksdb::DB::Open(options, db_path,& rocksdb);
+    rocksdb::Status s = rocksdb::DB::Open(options, db_path, &rocksdb);
 
     if (!s.ok())
     {
@@ -82,6 +86,8 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
 
     if (!this->has_priv(uuid, key))
     {
+        const uint32_t ns_prev_size = this->get_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY);
+
         auto s = this->db->Put(write_options, generate_key(uuid, key), value);
 
         if (!s.ok())
@@ -91,6 +97,10 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
 
             return bzn::storage_result::not_saved;
         }
+
+        // update metadata...
+        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size + value.size());
+        this->update_metadata_size(uuid, SIZE_KEY, key, value.size());
 
         return bzn::storage_result::ok;
     }
@@ -128,6 +138,9 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
 
     if (this->has_priv(uuid, key))
     {
+        const uint32_t prev_size = this->get_metadata_size(uuid, SIZE_KEY, key);
+        const uint32_t ns_prev_size = this->get_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY);
+
         rocksdb::WriteOptions write_options;
         write_options.sync = true;
 
@@ -140,6 +153,10 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
 
             return bzn::storage_result::not_saved;
         }
+
+        // update metadata...
+        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size - prev_size + value.size());
+        this->update_metadata_size(uuid, SIZE_KEY, key, value.size());
 
         return bzn::storage_result::ok;
     }
@@ -158,12 +175,19 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 
     if (this->has_priv(uuid, key))
     {
+        const uint32_t prev_size = this->get_metadata_size(uuid, SIZE_KEY, key);
+        const uint32_t ns_prev_size = this->get_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY);
+
         auto s = this->db->Delete(write_options, generate_key(uuid, key));
 
         if (!s.ok())
         {
             return bzn::storage_result::not_found;
         }
+
+        // update metadata...
+        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size - prev_size);
+        this->delete_metadata_size(uuid, SIZE_KEY, key);
 
         return bzn::storage_result::ok;
     }
@@ -203,7 +227,6 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
 {
     std::unique_ptr<rocksdb::Iterator> iter(this->db->NewIterator(rocksdb::ReadOptions()));
 
-    std::size_t size{};
     std::size_t keys{};
 
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
@@ -211,10 +234,9 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
     for (iter->Seek(uuid); iter->Valid() && iter->key().starts_with(uuid); iter->Next())
     {
         ++keys;
-        size += iter->value().size();
     }
 
-    return std::make_pair(keys, size);
+    return std::make_pair(keys, this->get_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY));
 }
 
 
@@ -240,6 +262,16 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid)
         }
 
         ++keys_removed;
+    }
+
+    for (iter->Seek(METADATA_UUID+uuid); iter->Valid() && iter->key().starts_with(METADATA_UUID+uuid); iter->Next())
+    {
+        auto s = this->db->Delete(write_options, iter->key());
+
+        if (!s.ok())
+        {
+            LOG(error) << "metadata delete failed: " << uuid << ":" <<  s.ToString();
+        }
     }
 
     return (keys_removed) ? bzn::storage_result::ok : bzn::storage_result::not_found;
@@ -396,14 +428,18 @@ rocksdb_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first,
     rocksdb::WriteOptions write_options;
     write_options.sync = true;
 
+    // TODO: Normal db usage does not use delete range.
+    // If it ever does then namespace metadata will need to know each key
+    // removed so that it can account for it.
+
     this->db->DeleteRange(write_options, nullptr, begin, end);
 }
 
 
 void
-rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate
-    , std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
+rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+    std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
+    std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
 {
     const auto start_key = uuid + first;
     const auto end_key = last.empty() ? "" : uuid + last;
@@ -423,8 +459,8 @@ rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const 
 
 
 std::vector<std::pair<bzn::key_t, bzn::value_t>>
-rocksdb_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
+rocksdb_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+    std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
     std::vector<std::pair<bzn::key_t, bzn::value_t>> matches;
 
@@ -438,8 +474,8 @@ rocksdb_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, cons
 
 
 std::vector<bzn::key_t>
-rocksdb_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-    , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
+rocksdb_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+    std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
     std::vector<std::string> keys;
     this->do_if(uuid, first, last, predicate, [&](auto key, auto /*value*/)
@@ -448,4 +484,47 @@ rocksdb_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, 
     });
 
     return keys;
+}
+
+
+void
+rocksdb_storage::update_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& metadata_key, const bzn::key_t& key,
+    uint32_t size)
+{
+    rocksdb::WriteOptions write_options;
+    write_options.sync = true;
+
+    if (!this->db->Put(write_options, generate_key(METADATA_UUID + uuid + metadata_key, key), std::to_string(size)).ok())
+    {
+        LOG(error) << "update namespace metadata key size failed: " << uuid << ":" << key.substr(0, MAX_MESSAGE_SIZE);
+    }
+}
+
+
+void
+rocksdb_storage::delete_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& metadata_key, const bzn::key_t& key)
+{
+    rocksdb::WriteOptions write_options;
+    write_options.sync = true;
+
+    if (!this->db->Delete(write_options, generate_key(METADATA_UUID + uuid + metadata_key, key)).ok())
+    {
+        LOG(error) << "delete namespace metadata key size failed: " << uuid << ":" << key.substr(0, MAX_MESSAGE_SIZE);
+    }
+}
+
+
+uint32_t
+rocksdb_storage::get_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& metadata_key, const bzn::key_t& key)
+{
+    bzn::value_t value;
+
+    if (!this->db->Get(rocksdb::ReadOptions(), generate_key(METADATA_UUID + uuid + metadata_key, key), &value).ok())
+    {
+        LOG(error) << "reading of namespace metadata key size failed: " << uuid << ":" << key.substr(0, MAX_MESSAGE_SIZE);
+
+        return 0;
+    }
+
+    return boost::lexical_cast<uint32_t>(value);
 }

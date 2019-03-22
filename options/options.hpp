@@ -67,6 +67,8 @@ namespace bzn
 
         std::string get_signed_key() const override;
 
+        std::string get_owner_public_key() const override;
+
     private:
         size_t parse_size(const std::string& key) const;
 

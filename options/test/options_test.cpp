@@ -44,6 +44,7 @@ namespace
         "  \"logfile_rotation_size\" : \"2M\","
         "  \"logfile_dir\" : \".\","
         "  \"signed_key\" : \"Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=\","
+        "  \"owner_public_key\" : \"MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==\","
         "  \"mem_storage\" : false";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
@@ -149,6 +150,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_FALSE(options.peer_validation_enabled());
     EXPECT_FALSE(options.get_mem_storage());
     EXPECT_EQ("Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=",options.get_signed_key());
+    EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
 
     // defaults..
     {
@@ -255,6 +257,7 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_FALSE(options.peer_validation_enabled());
+    EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
 }
 
 TEST_F(options_file_test, test_that_no_monitor_endpoint_when_not_specified)
