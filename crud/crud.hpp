@@ -30,7 +30,7 @@ namespace bzn
     {
     public:
         crud(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager,
-            std::shared_ptr<bzn::node_base> node);
+            std::shared_ptr<bzn::node_base> node, bzn::key_t owner_public_key = "");
 
         void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) override;
 
@@ -93,6 +93,7 @@ namespace bzn
 
         std::once_flag start_once;
         std::shared_mutex lock; // for multi-reader and single writer access
+        const bzn::key_t  owner_public_key;
     };
 
 } // namespace bzn

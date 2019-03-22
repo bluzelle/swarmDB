@@ -347,9 +347,3 @@ TEST(util_test, test_that_verifying_a_signature_with_empty_inputs_will_fail_grac
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, "", valid_uuid));
     EXPECT_FALSE(bzn::utils::crypto::verify_signature( public_pem, signature, ""));
 }
-
-
-TEST(util_test, test_that_ethereum_will_provide_bluzelle_public_key)
-{
-    EXPECT_EQ(temporary_public_pem, bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract());
-}
