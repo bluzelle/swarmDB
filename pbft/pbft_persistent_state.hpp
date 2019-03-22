@@ -87,7 +87,7 @@ namespace bzn
         // construct a persistent variable, retrieving its value from storage if it exists, otherwise
         // initializing it with the provided default.
         template <typename... K>
-        persistent(std::shared_ptr<bzn::storage_base> persist_storage, const T &default_value, const std::string& name, K... subkeys)
+        persistent(std::shared_ptr<bzn::storage_base> persist_storage, const T& default_value, const std::string& name, K... subkeys)
             : storage(persist_storage), key(escape(name) + generate_key(subkeys...))
         {
             if (this->storage)
@@ -123,7 +123,7 @@ namespace bzn
 
         // conversion constructor for comparison in maps etc. without placing in storage
         // made explicit to avoid unintentionally assign a raw type to a persistent
-        explicit persistent(const T &value)
+        explicit persistent(const T& value)
         : t(value)
         {}
 
@@ -246,7 +246,7 @@ namespace bzn
         // helper to initialize values in a key-value container
         template<typename A, typename C>
         static void
-        init_kv_container(std::shared_ptr<bzn::storage_base> storage, const std::string &basename, C &container)
+        init_kv_container(std::shared_ptr<bzn::storage_base> storage, const std::string& basename, C& container)
         {
             initialize<A>(storage, basename, [&container](auto value, auto key)
             {
@@ -258,7 +258,7 @@ namespace bzn
         // note - the outer container can be non-kv such as a set
         template<typename A, typename B, typename C>
         static void
-        init_kv_container2(std::shared_ptr<bzn::storage_base> storage, const std::string &basename, C &container)
+        init_kv_container2(std::shared_ptr<bzn::storage_base> storage, const std::string& basename, C& container)
         {
             initialize<A, B>(storage, basename, [&container](auto value, auto key1, auto key2)
             {
@@ -334,24 +334,24 @@ namespace bzn
         FRIEND_TEST(persistent_state_test, test_escaping);
     };
 
-    template<> std::string persistent<std::string>::to_string(const std::string &value);
-    template<> std::string persistent<std::string>::from_string(const std::string &value);
+    template<> std::string persistent<std::string>::to_string(const std::string& value);
+    template<> std::string persistent<std::string>::from_string(const std::string& value);
 
-    template<> std::string persistent<bzn::log_key_t>::to_string(const bzn::log_key_t &key);
-    template<> bzn::log_key_t persistent<bzn::log_key_t>::from_string(const std::string &value);
+    template<> std::string persistent<bzn::log_key_t>::to_string(const bzn::log_key_t& key);
+    template<> bzn::log_key_t persistent<bzn::log_key_t>::from_string(const std::string& value);
 
-    template<> std::string persistent<bzn::operation_key_t>::to_string(const bzn::operation_key_t &key);
-    template<> bzn::operation_key_t persistent<bzn::operation_key_t>::from_string(const std::string &value);
+    template<> std::string persistent<bzn::operation_key_t>::to_string(const bzn::operation_key_t& key);
+    template<> bzn::operation_key_t persistent<bzn::operation_key_t>::from_string(const std::string& value);
 
-    template<> std::string persistent<bzn::checkpoint_t>::to_string(const bzn::checkpoint_t &cp);
-    template<> bzn::checkpoint_t persistent<bzn::checkpoint_t>::from_string(const std::string &value);
+    template<> std::string persistent<bzn::checkpoint_t>::to_string(const bzn::checkpoint_t& cp);
+    template<> bzn::checkpoint_t persistent<bzn::checkpoint_t>::from_string(const std::string& value);
 
     template <> std::string persistent<uint64_t>::to_string(const uint64_t& val);
     template <> uint64_t persistent<uint64_t>::from_string(const std::string& value);
 
-    template<> std::string persistent<bool>::to_string(const bool &val);
-    template<> bool persistent<bool>::from_string(const std::string &value);
+    template<> std::string persistent<bool>::to_string(const bool& val);
+    template<> bool persistent<bool>::from_string(const std::string& value);
 
-    template<> std::string persistent<bzn_envelope>::to_string(const bzn_envelope &val);
-    template<> bzn_envelope persistent<bzn_envelope>::from_string(const std::string &value);
+    template<> std::string persistent<bzn_envelope>::to_string(const bzn_envelope& val);
+    template<> bzn_envelope persistent<bzn_envelope>::from_string(const std::string& value);
 }

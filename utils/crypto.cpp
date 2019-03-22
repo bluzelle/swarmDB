@@ -41,11 +41,8 @@
 
 namespace
 {
-    const std::string ROPSTEN_URL{"https://ropsten.infura.io"};
-    const std::string REQUEST_BASE              {R"({"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x492CCD1eAeCDA0262e3AAeF8445F3F731a30AfbB","data": "%s" },"latest"],"id":1})"};
-    const std::string GET_KEY_SIZE              {"0xcf5d53f1"};
-    const std::string GET_KEY_CHUNK             {"0x96ce93e2"};
-    const std::string MSG_ERROR_CURL            {"curl_easy_perform() failed: "};
+    const std::string ROPSTEN_URL       {"https://ropsten.infura.io"};
+    const std::string MSG_ERROR_CURL    {"curl_easy_perform() failed: "};
 
     /**
      * This function is used by base_64_decode to determine the amount of memory required
@@ -156,143 +153,11 @@ namespace
             return false;
         }
     }
-
-
-    size_t
-    write_function(void* contents,size_t size, size_t buffer_size, void* userp)
-    {
-        reinterpret_cast<std::string*>(userp)->append(reinterpret_cast<char*>(contents), size * buffer_size);
-        return size * buffer_size;
-    }
-
-
-    bzn::json_message
-    get_curl_response(const std::string& function_call, const std::string& url = ROPSTEN_URL)
-    {
-        std::unique_ptr<CURL, std::function<void(CURL*)>> curl(curl_easy_init(),
-                                                               std::bind(curl_easy_cleanup, std::placeholders::_1));
-        std::string readBuffer;
-
-        curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &readBuffer);
-
-        const std::string post_fields{boost::str(boost::format(REQUEST_BASE) % function_call)};
-
-        curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_fields.c_str());
-
-        curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDSIZE, -1L);
-        curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, reinterpret_cast<void*>(write_function));
-
-        Json::Reader reader;
-
-        CURLcode res = curl_easy_perform(curl.get());
-        if (res != CURLE_OK)
-        {
-            LOG(error) << MSG_ERROR_CURL << " - " << curl_easy_strerror(res);
-        }
-
-        bzn::json_message response;
-
-        if (!reader.parse(readBuffer, response))
-        {
-            LOG(error) << "Unable to parse response from Ropsten - could not get key size";
-        }
-        return response;
-    }
-
-
-    // curl --data '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x492CCD1eAeCDA0262e3AAeF8445F3F731a30AfbB","data": "0xcf5d53f1" },"latest"],"id":1}' https://ropsten.infura.io
-    size_t
-    get_public_pem_size(const std::string& url = ROPSTEN_URL)
-    {
-        try
-        {
-            const auto response = get_curl_response(GET_KEY_SIZE, url);
-            // result will look like "0x0000000000000000000000000000000000000000000000000000000000000012"
-            return std::stoul(response["result"].asString().c_str(), nullptr, 16) ;
-        }
-        catch(std::exception& ex)
-        {
-            LOG(error) << "Invalid PEM size response from Bluzelle public key request: " << ex.what();
-        }
-        return 0;
-    }
-
-
-
-    std::string
-    integer_to_32_byte_hex(const size_t index)
-    {
-        std::stringstream stream;
-        stream << std::setfill ('0') << std::setw(32*2) << std::hex << index;
-        return stream.str();
-    }
-
-
-    //get_key_part(uint256)
-    //curl --data '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0x492CCD1eAeCDA0262e3AAeF8445F3F731a30AfbB","data": "0x96ce93e2+_INDEX" },"latest"],"id":1}' https://ropsten.infura.io
-    std::string
-    get_public_pem_chunk(size_t index, const std::string& url = ROPSTEN_URL)
-    {
-        std::string function_call{GET_KEY_CHUNK};
-        function_call.append(integer_to_32_byte_hex(index));
-        const auto response = get_curl_response(function_call, url);
-        // need to clean up the response a bit, remove the prepended "0x"
-        return response["result"].asString().substr(2);
-    }
-
-
-    std::string
-    insert_line_breaks(const std::string& in_string, const size_t line_length=64)
-    {
-        std::stringstream ss;
-        for(size_t i=0 ; i < in_string.size(); ++i)
-        {
-            if ( 0==i % line_length)
-            {
-                ss << '\n';
-            }
-            ss << in_string[i];
-        }
-        return ss.str();
-    }
-
-
-    // TODO rename hex_string_to_string
-    std::string
-    hex_string_to_string(const std::string& hex_string)
-    {
-        std::string public_key;
-        for(size_t i=0 ; i < hex_string.size(); i+=2)
-        {
-            public_key += static_cast<unsigned char>(std::strtoul(hex_string.substr(i,2).c_str(), nullptr, 16));
-        }
-        return insert_line_breaks(public_key);
-    }
 }
 
 
 namespace bzn::utils::crypto
 {
-    std::string
-    retrieve_bluzelle_public_key_from_contract()
-    {
-        std::string public_key_hex;
-        // TODO retrieve the public key from the contract
-
-        for (size_t index=0; index < get_public_pem_size(); ++index)
-        {
-            const auto line = get_public_pem_chunk(index);
-            public_key_hex += line;
-        }
-
-        std::string public_key{"-----BEGIN PUBLIC KEY-----"};
-        public_key.append(hex_string_to_string(public_key_hex));
-        public_key.append("\n-----END PUBLIC KEY-----");
-        return public_key;
-    }
-
-
     int
     base64_decode(const std::string& base64_message, std::vector<unsigned char>& decoded_message)
     {

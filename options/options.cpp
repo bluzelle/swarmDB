@@ -235,3 +235,10 @@ options::get_signed_key() const
 {
     return this->raw_opts.get<std::string>(SIGNED_KEY);
 }
+
+
+std::string
+options::get_owner_public_key() const
+{
+    return this->raw_opts.has(OWNER_PUBLIC_KEY) ? this->raw_opts.get<std::string>(OWNER_PUBLIC_KEY) : "";
+}

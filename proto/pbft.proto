@@ -90,7 +90,7 @@ message pbft_membership_msg
     string state_hash = 4;
 
     // for set_state
-    string state_data = 5;
+    bytes state_data = 5;
     bzn_envelope newview_msg = 6;
 }
 

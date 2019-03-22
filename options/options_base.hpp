@@ -175,5 +175,12 @@ namespace bzn
          * @return string containing the signature
          */
         virtual std::string get_signed_key() const = 0;
+
+
+        /**
+         * Retrieve the path to the Bluzelle public key pem file
+         * @return string containing the path to the Bluzelle publi key pem file
+         */
+        virtual std::string get_owner_public_key() const = 0;
     };
 } // bzn
