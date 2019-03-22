@@ -2244,3 +2244,186 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
     expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
     crud->handle_request("caller_id", msg, session);
 }
+
+
+TEST(crud, test_that_create_db_uses_bluzelle_key_to_validate)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+                                            mock_subscription_manager, nullptr, "caller_id");
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    database_msg msg;
+    msg.mutable_create_db();
+
+    EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+            [=](std::shared_ptr<bzn_envelope> env)
+            {
+                database_response resp;
+                resp.ParseFromString(env->database_response());
+                EXPECT_EQ(database_response::ResponseCase::RESPONSE_NOT_SET,resp.response_case());
+                EXPECT_EQ("", resp.error().message());
+            }));
+    crud->handle_request("caller_id", msg, session);
+}
+
+
+TEST(crud, test_that_create_db_with_incorrect_bluzelle_key_fails_to_validate)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    database_msg msg;
+    msg.mutable_create_db();
+
+    EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+            [=](std::shared_ptr<bzn_envelope> env)
+            {
+                database_response resp;
+                resp.ParseFromString(env->database_response());
+                EXPECT_EQ(database_response::ResponseCase::kError,resp.response_case());
+                EXPECT_EQ(bzn::storage_result_msg.at(bzn::storage_result::access_denied), resp.error().message());
+            }));
+    crud->handle_request("not_the_caller_id", msg, session);
+}
+
+
+TEST(crud, test_that_delete_db_uses_bluzelle_key_to_validate)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid("uuid");
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_create_db();
+
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [=](std::shared_ptr<bzn_envelope> env)
+                {
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+                    EXPECT_EQ(database_response::ResponseCase::RESPONSE_NOT_SET,resp.response_case());
+                    EXPECT_EQ("", resp.error().message());
+                }));
+        crud->handle_request("caller_id", msg, session);
+    }
+
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid("uuid");
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_delete_db();
+
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [=](std::shared_ptr<bzn_envelope> env)
+                {
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+                    EXPECT_EQ(database_response::ResponseCase::RESPONSE_NOT_SET,resp.response_case());
+                    EXPECT_EQ("", resp.error().message());
+                }));
+        crud->handle_request("caller_id", msg, session);
+    }
+}
+
+
+TEST(crud, test_that_delete_db_with_incorrect_bluzelle_key_fails_to_validate)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+            [&]()
+            {
+                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid("uuid");
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_create_db();
+
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [=](std::shared_ptr<bzn_envelope> env)
+                {
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+                    EXPECT_EQ(database_response::ResponseCase::RESPONSE_NOT_SET, resp.response_case());
+                    EXPECT_EQ("", resp.error().message());
+                }));
+        crud->handle_request("caller_id", msg, session);
+    }
+
+    {
+        database_msg msg;
+        msg.mutable_header()->set_db_uuid("uuid");
+        msg.mutable_header()->set_nonce(uint64_t(123));
+        msg.mutable_delete_db();
+
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [=](std::shared_ptr<bzn_envelope> env)
+                {
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+                    EXPECT_EQ(database_response::ResponseCase::kError, resp.response_case());
+                    EXPECT_EQ(bzn::storage_result_msg.at(bzn::storage_result::access_denied), resp.error().message());
+                }));
+        crud->handle_request("NOT_caller_id", msg, session);
+    }
+}
