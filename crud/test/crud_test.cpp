@@ -427,7 +427,25 @@ TEST(crud, test_that_read_sends_proper_response)
 
     crud->handle_request("caller_id", msg, session);
 
+    // invalid db...
+    msg.mutable_header()->set_db_uuid("invalid");
+    msg.mutable_read()->set_key("key");
+    expect_signed_response(session, "invalid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+
+    crud->handle_request("caller_id", msg, session);
+
+    msg.mutable_quick_read()->set_key("key");
+    expect_response(session, "invalid", uint64_t(123), database_response::kQuickRead, std::nullopt,
+        [](const auto& resp)
+        {
+            ASSERT_EQ(resp.quick_read().error(), bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
+        });
+
+    crud->handle_request("caller_id", msg, session);
+
     // read invalid key...
+    msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_read()->set_key("invalid-key");
     expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
         bzn::storage_result_msg.at(bzn::storage_result::not_found));

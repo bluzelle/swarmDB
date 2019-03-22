@@ -229,6 +229,13 @@ crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 {
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
+    if (!this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    {
+        this->send_response(request, bzn::storage_result::db_not_found, database_response(), session);
+
+        return;
+    }
+
     const bzn::key_t key = (request.msg_case() == database_msg::kRead) ? request.read().key() : request.quick_read().key();
 
     // expired?
