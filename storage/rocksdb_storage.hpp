@@ -52,15 +52,20 @@ namespace bzn
 
         void remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last) override;
 
-        std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid
-            , const std::string& first, const std::string& last
-            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
+        std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid,
+            const std::string& first, const std::string& last,
+            std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
 
-        std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
+        std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+            std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
 
     private:
         void open();
+
+        // metadata....
+        void update_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& metadata_key, const bzn::key_t& key,uint32_t size);
+        void delete_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& meta_key, const bzn::key_t& key);
+        uint32_t get_metadata_size(const bzn::uuid_t& uuid, const bzn::key_t& meta_key, const bzn::key_t& key);
 
         const std::string db_path;
         const std::string snapshot_file;
@@ -71,9 +76,9 @@ namespace bzn
 
         std::shared_mutex lock; // for multi-reader and single writer access
 
-        void do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
-            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate
-            , std::function<void(const bzn::key_t&, const bzn::value_t&)> action);
+        void do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+            std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
+            std::function<void(const bzn::key_t&, const bzn::value_t&)> action);
     };
 
 } // bzn
