@@ -16,8 +16,9 @@
 #include <json/json.h>
 #include <iostream>
 #include <fstream>
-#include <swarm_version.hpp>
+#include <swarm_git_commit.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/predef.h>
 
 using namespace bzn;
 using namespace bzn::option_names;
@@ -329,7 +330,30 @@ simple_options::handle_command_line_options(int argc, const char* argv[])
 
         if (vm.count("version"))
         {
-            std::cout << "Bluzelle" << ": v" << SWARM_VERSION << std::endl;
+            std::cout << "swarmdb" << ": " << SWARM_GIT_COMMIT << std::endl;
+
+            std::string compiler_name = "unknown";
+            if (BOOST_COMP_CLANG)
+            {
+                compiler_name = "clang";
+            }
+
+            if (BOOST_COMP_GNUC){
+                compiler_name = "gcc";
+            }
+
+            if (BOOST_COMP_LLVM){
+                compiler_name = "llvm";
+            }
+
+#ifdef __OPTIMIZE__
+            bool opt = true;
+#else
+            bool opt = false;
+#endif
+
+            std::cout << "compiled by " << compiler_name <<  __VERSION__ << "; optimize=" << opt << std::endl;
+
             return false;
         }
 
@@ -381,3 +405,4 @@ simple_options::set(const std::string& option_name, const std::string& option_va
     this->vm.erase(option_name);
     po::store(parsed, this->vm);
 }
+
