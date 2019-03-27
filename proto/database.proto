@@ -59,7 +59,7 @@ message database_header
 {
     string db_uuid = 1;
     uint64 nonce = 2 [jstype = JS_STRING];
-    string  point_of_contact = 3;
+    string point_of_contact = 3;
     bytes  request_hash = 4;
 }
 
@@ -184,8 +184,9 @@ message database_quick_read_response
 
 message database_size_response
 {
-    int32 bytes = 1;
-    int32 keys = 2;
+    uint64 bytes = 1;
+    uint32 keys = 2;
+    uint64 remaining_bytes = 3;
 }
 
 message database_request {}

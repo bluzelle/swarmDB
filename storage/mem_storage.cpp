@@ -49,7 +49,7 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     if (inner_db.second.find(key) == inner_db.second.end())
     {
-        inner_db.first += value.size();
+        inner_db.first += value.size() + key.size();
         inner_db.second.insert(std::make_pair(key,value));
     }
     else
@@ -112,7 +112,7 @@ mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     inner_db.first -= inner_search->second.size();
     inner_search->second = value;
-    inner_db.first += inner_search->second.size();
+    inner_db.first += inner_search->second.size() + key.size();
 
     return bzn::storage_result::ok;
 }
@@ -137,7 +137,7 @@ mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
         return bzn::storage_result::not_found;
     }
 
-    search->second.first -= record->second.size();
+    search->second.first -= (record->second.size() + key.size());
     search->second.second.erase(record);
     return bzn::storage_result::ok;
 }
@@ -272,7 +272,7 @@ mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, con
         auto end = inner_db->second.second.lower_bound(last);
         while (match != end)
         {
-            inner_db->second.first -= match->second.size();
+            inner_db->second.first -= (match->second.size() + match->first.size());
             match = inner_db->second.second.erase(match);
         }
     }
