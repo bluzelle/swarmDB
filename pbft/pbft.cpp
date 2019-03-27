@@ -1101,12 +1101,12 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
 {
     // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
 
-    std::lock_guard<std::mutex> lock(this->pbft_lock);
-
     LOG(debug) << "got database message";
 
     if (!this->service->apply_operation_now(msg, session))
     {
+        std::lock_guard<std::mutex> lock(this->pbft_lock);
+
         if (msg.timestamp() == 0)
         {
             bzn_envelope mutable_msg(msg);
