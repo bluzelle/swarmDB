@@ -344,7 +344,7 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
         ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
-    LOG(info) << "Forwarded request to primary, " << req_hash;
+    LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
 
     this->failure_detector->request_seen(req_hash);
 }
