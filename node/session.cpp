@@ -17,7 +17,6 @@
 #include <sstream>
 #include <boost/beast/websocket/error.hpp>
 
-
 using namespace bzn;
 
 session::session(
@@ -95,9 +94,15 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                 socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
                 if (option_ec)
                 {
-                    LOG(error) << "failed to set socket option: " << option_ec.message();
+                    LOG(warning) << "failed to set socket option TCP_NODELAY: " << option_ec.message();
                 }
-
+#ifndef __APPLE__
+                int flags = 1;
+                if (setsockopt(socket->get_tcp_socket().native_handle(), SOL_TCP, TCP_QUICKACK, &flags, sizeof(flags)))
+                {
+                    LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
+                }
+#endif
                 self->websocket = ws_factory->make_unique_websocket_stream(socket->get_tcp_socket());
                 self->websocket->async_handshake(self->ep.address().to_string(), "/",
                     self->strand->wrap([self, ws_factory](const boost::system::error_code& ec)
