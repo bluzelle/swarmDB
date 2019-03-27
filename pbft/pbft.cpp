@@ -1102,12 +1102,11 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
         mutable_msg.set_timestamp(this->now());
     }
 
-    std::lock_guard<std::mutex> lock(this->pbft_lock);
-
     LOG(debug) << "got database message";
 
     if (!this->service->apply_operation_now(msg, session))
     {
+        std::lock_guard<std::mutex> lock(this->pbft_lock);
         this->handle_request(mutable_msg, session);
     }
 }
