@@ -94,9 +94,15 @@ node::do_accept()
                 self->acceptor_socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
                 if (option_ec)
                 {
-                    LOG(warning) << "failed to set socket option: " << option_ec.message();
+                    LOG(warning) << "failed to set socket option TCP_NODELAY: " << option_ec.message();
                 }
-
+#ifndef __APPLE__
+                int flags = 1;
+                if (setsockopt(self->acceptor_socket->get_tcp_socket().native_handle(), SOL_TCP, TCP_QUICKACK, &flags, sizeof(flags)))
+                {
+                    LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
+                }
+#endif
                 std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
                     self->acceptor_socket->get_tcp_socket());
 
