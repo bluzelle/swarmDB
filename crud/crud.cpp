@@ -490,12 +490,26 @@ crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 {
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (!db_exists)
+    {
+        this->send_response(request, bzn::storage_result::db_not_found, database_response(), session);
+
+        return;
+    }
+
     const auto [keys, size] = this->storage->get_size(request.header().db_uuid());
 
     database_response response;
 
     response.mutable_size()->set_keys(keys);
     response.mutable_size()->set_bytes(size);
+
+    if (const auto max_size = boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]); max_size)
+    {
+        response.mutable_size()->set_remaining_bytes((size < max_size) ? (max_size - size) : (0));
+    }
 
     this->send_response(request, bzn::storage_result::ok, std::move(response), session);
 }

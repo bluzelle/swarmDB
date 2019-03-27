@@ -1284,20 +1284,15 @@ TEST(crud, test_that_size_sends_proper_response)
     expect_signed_response(session, "uuid", uint64_t(123), database_response::kSize, std::nullopt,
         [](auto resp)
         {
-            ASSERT_EQ(resp.size().bytes(), int32_t(5));
-            ASSERT_EQ(resp.size().keys(), int32_t(1));
+            ASSERT_EQ(resp.size().bytes(), uint64_t(8));
+            ASSERT_EQ(resp.size().keys(), uint32_t(1));
         });
 
     crud->handle_request("caller_id", msg, session);
 
     // invalid uuid returns zero...
     msg.mutable_header()->set_db_uuid("invalid-uuid");
-    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kSize, std::nullopt,
-        [](auto resp)
-        {
-            ASSERT_EQ(resp.size().bytes(), int32_t(0));
-            ASSERT_EQ(resp.size().keys(), int32_t(0));
-        });
+    expect_signed_response(session, "invalid-uuid", uint64_t(123), database_response::kError);
 
     crud->handle_request("caller_id", msg, session);
 
@@ -1359,8 +1354,8 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
             ASSERT_EQ(resp.header().db_uuid(), "uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
             ASSERT_EQ(resp.response_case(), database_response::kSize);
-            ASSERT_EQ(resp.size().bytes(), int32_t(5));
-            ASSERT_EQ(resp.size().keys(), int32_t(1));
+            ASSERT_EQ(resp.size().bytes(), uint64_t(8));
+            ASSERT_EQ(resp.size().keys(), uint32_t(1));
         }));
 
     crud->handle_request("caller_id", msg, nullptr);
@@ -1375,9 +1370,7 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
             ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
             ASSERT_EQ(resp.header().db_uuid(), "invalid-uuid");
             ASSERT_EQ(resp.header().nonce(), uint64_t(123));
-            ASSERT_EQ(resp.response_case(), database_response::kSize);
-            ASSERT_EQ(resp.size().bytes(), int32_t(0));
-            ASSERT_EQ(resp.size().keys(), int32_t(0));
+            ASSERT_EQ(resp.response_case(), database_response::kError);
         }));
 
     crud->handle_request("caller_id", msg, nullptr);
