@@ -270,7 +270,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << boost::format("Dropping message because sequence number %1% less than %2%") % msg.sequence()
+            LOG(debug) << boost::format("Dropping message because sequence number %1% <= %2%") % msg.sequence()
                 % this->low_water_mark;
             return false;
         }
@@ -329,7 +329,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString();
+        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
     this->saw_request(request_env, hash);
@@ -1100,6 +1100,8 @@ void
 pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
     // TODO: timestamp should be set by the client. setting it here breaks the signature (which is correct).
+
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
 
     LOG(debug) << "got database message";
 

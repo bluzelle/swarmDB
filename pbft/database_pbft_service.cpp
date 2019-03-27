@@ -58,11 +58,13 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
             // KEP-899 - We do not want to throw a runtime error for duplicates, as it is possible that
             // during a view change we may try to perform duplicate operatiosn that have already been
             // done in previous views.
-            LOG(warning) << "failed to store pbft request, possible duplicate? : " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
+            LOG(warning) << "failed to store pbft request, possible duplicate? : "
+                << op->get_database_msg().DebugString().substr(0, MAX_MESSAGE_SIZE) << ", " << uint32_t(result);
             return;
         }
 
-        LOG(fatal) << "failed to store pbft request: " << op->get_database_msg().DebugString() << ", " << uint32_t(result);
+        LOG(fatal) << "failed to store pbft request: "
+            << op->get_database_msg().DebugString().substr(0, MAX_MESSAGE_SIZE) << ", " << uint32_t(result);
 
         // these are fatal... something bad is going on.
         throw std::runtime_error("Failed to store pbft request! (" + std::to_string(uint8_t(result)) + ")");
@@ -121,7 +123,7 @@ database_pbft_service::process_awaiting_operations()
             throw std::runtime_error("Failed to create pbft_request from database read!");
         }
 
-        LOG(info) << "Executing request " << request.DebugString() << "..., sequence: " << key;
+        LOG(info) << "Executing request " << request.DebugString().substr(0, MAX_MESSAGE_SIZE) << "..., sequence: " << key;
 
         if (auto op_it = this->operations_awaiting_result.find(this->next_request_sequence); op_it != this->operations_awaiting_result.end())
         {
