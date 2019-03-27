@@ -128,6 +128,8 @@ namespace bzn
 
         bool is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const;
 
+        bool is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkpoint_sequence) const;
+
         std::shared_ptr<bzn::node_base> get_node();
 
         const peer_address_t& get_peer_by_uuid(const std::string& uuid) const override;
