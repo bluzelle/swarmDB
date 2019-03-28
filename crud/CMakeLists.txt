@@ -8,7 +8,7 @@ add_library(crud STATIC
     )
 
 target_link_libraries(crud proto)
-add_dependencies(crud jsoncpp openssl)
+add_dependencies(crud boost jsoncpp openssl)
 target_include_directories(crud PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
 
 add_subdirectory(test)
