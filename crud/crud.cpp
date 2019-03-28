@@ -372,7 +372,7 @@ crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
         }
     }
 
-    this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::not_found, std::move(response), session);
+    this->send_response(request, (has) ? bzn::storage_result::ok : bzn::storage_result::ttl_not_found, std::move(response), session);
 }
 
 
@@ -413,7 +413,7 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
             }
             else
             {
-                result = bzn::storage_result::not_found;
+                result = bzn::storage_result::ttl_not_found;
             }
         }
     }
