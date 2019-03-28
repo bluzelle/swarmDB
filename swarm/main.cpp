@@ -253,7 +253,7 @@ main(int argc, const char* argv[])
         auto chaos = std::make_shared<bzn::chaos>(io_context, options);
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options, monitor);
-        auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_monitor_endpoint(io_context), options->get_uuid(), options->get_audit_mem_size());
+        auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_audit_mem_size(), monitor);
 
         auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
 
