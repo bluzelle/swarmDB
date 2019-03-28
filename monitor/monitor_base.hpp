@@ -34,9 +34,12 @@ namespace bzn
         message_sent_bytes,
 
         pbft_no_primary,
+        pbft_primary_alive,
         pbft_failure_detected,
         pbft_commit_conflict,
         pbft_primary_conflict,
+
+        pbft_commit,
 
         request_latency
     };

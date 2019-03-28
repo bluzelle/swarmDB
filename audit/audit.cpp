@@ -23,33 +23,16 @@ using namespace bzn;
 
 audit::audit(std::shared_ptr<bzn::asio::io_context_base> io_context
         , std::shared_ptr<bzn::node_base> node
-        , std::optional<boost::asio::ip::udp::endpoint> monitor_endpoint
-        , bzn::uuid_t uuid
         , size_t mem_size
+        , std::shared_ptr<bzn::monitor_base> monitor
 )
 
-        : uuid(std::move(uuid))
-        , node(std::move(node))
+        : node(std::move(node))
         , io_context(std::move(io_context))
         , primary_alive_timer(this->io_context->make_unique_steady_timer())
-        , monitor_endpoint(std::move(monitor_endpoint))
-        , socket(this->io_context->make_unique_udp_socket())
-        , statsd_namespace_prefix("com.bluzelle.swarm.singleton.node." + this->uuid + ".")
         , mem_size(mem_size)
+        , monitor(std::move(monitor))
 {
-
-}
-
-const std::list<std::string>&
-audit::error_strings() const
-{
-    return this->recorded_errors;
-}
-
-size_t
-audit::error_count() const
-{
-    return this->recorded_errors.size() + this->forgotten_error_count;
 }
 
 void
@@ -59,17 +42,6 @@ audit::start()
     {
         this->node->register_for_message(bzn_envelope::kAudit,
             std::bind(&audit::handle, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
-
-        if (this->monitor_endpoint)
-        {
-            LOG(info) << boost::format("audit module running, will send stats to %1%:%2%")
-                % this->monitor_endpoint->address().to_string()
-                % this->monitor_endpoint->port();
-        }
-        else
-        {
-            LOG(info) "audit module running, but not sending stats anywhere because no monitor configured";
-        }
 
         LOG(debug) << "starting primary alive timer";
         this->reset_primary_alive_timer();
@@ -100,51 +72,10 @@ audit::handle_primary_alive_timeout(const boost::system::error_code& ec)
         return;
     }
 
+    this->monitor->send_counter(bzn::statistic::pbft_no_primary);
 
-    this->report_error(bzn::NO_PRIMARY_METRIC_NAME, str(boost::format("No primary alive [%1%]") % ++(this->primary_dead_count)));
     this->primary_alive_timer->expires_from_now(this->primary_timeout);
     this->primary_alive_timer->async_wait(std::bind(&audit::handle_primary_alive_timeout, shared_from_this(), std::placeholders::_1));
-}
-
-void
-audit::report_error(const std::string& metric_name, const std::string& description)
-{
-    this->recorded_errors.push_back(description);
-
-    std::string metric = this->statsd_namespace_prefix + metric_name;
-
-    LOG(fatal) << boost::format("[%1%]: %2%") % metric % description;
-    this->send_to_monitor(metric + bzn::STATSD_COUNTER_FORMAT);
-
-    this->trim();
-}
-
-void
-audit::send_to_monitor(const std::string& stat)
-{
-    if (!this->monitor_endpoint)
-    {
-        return;
-    }
-
-    LOG(trace) << boost::format("sending stat '%1%' to monitor at %2%:%3%")
-                  % stat
-                  % this->monitor_endpoint->address().to_string()
-                  % this->monitor_endpoint->port();
-
-    std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
-
-    this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
-        [buffer](const boost::system::error_code& ec, std::size_t bytes)
-        {
-            if (ec)
-            {
-                LOG(error) << boost::format("UDP send failed, sent %1% bytes, '%2%'") %
-                              ec.message() % bytes;
-            }
-        }
-    );
-
 }
 
 void
@@ -183,7 +114,7 @@ void audit::handle_primary_status(const primary_status& primary_status)
     if (this->recorded_primaries.count(primary_status.view()) == 0)
     {
         LOG(info) << "observed primary of view " << primary_status.view() << " to be '" << primary_status.primary() << "'";
-        this->send_to_monitor(bzn::PRIMARY_HEARD_METRIC_NAME+bzn::STATSD_COUNTER_FORMAT);
+        this->monitor->send_counter(bzn::statistic::pbft_primary_alive);
         this->recorded_primaries[primary_status.view()] = primary_status.primary();
         this->trim();
     }
@@ -194,7 +125,7 @@ void audit::handle_primary_status(const primary_status& primary_status)
                               % this->recorded_primaries[primary_status.view()]
                               % primary_status.view()
                               % primary_status.primary());
-        this->report_error(bzn::PRIMARY_CONFLICT_METRIC_NAME, err);
+        this->monitor->send_counter(bzn::statistic::pbft_primary_conflict);
     }
 
     this->reset_primary_alive_timer();
@@ -205,7 +136,7 @@ audit::handle_pbft_commit(const pbft_commit_notification& commit)
 {
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    this->send_to_monitor(bzn::PBFT_COMMIT_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+    this->monitor->send_counter(bzn::statistic::pbft_commit);
 
     if (this->recorded_pbft_commits.count(commit.sequence_number()) == 0)
     {
@@ -220,34 +151,27 @@ audit::handle_pbft_commit(const pbft_commit_notification& commit)
                               % this->recorded_pbft_commits[commit.sequence_number()]
                               % commit.sequence_number()
                               % commit.operation());
-        this->report_error(bzn::PBFT_COMMIT_CONFLICT_METRIC_NAME, err);
+        this->monitor->send_counter(bzn::statistic::pbft_commit_conflict);
     }
 }
 
 void
 audit::handle_failure_detected(const failure_detected& /*failure*/)
 {
-    // TODO KEP-539: more info in this message
     std::lock_guard<std::mutex> lock(this->audit_lock);
 
-    this->send_to_monitor(bzn::FAILURE_DETECTED_METRIC_NAME + bzn::STATSD_COUNTER_FORMAT);
+    this->monitor->send_counter(bzn::statistic::pbft_failure_detected);
 }
 
 size_t
 audit::current_memory_size()
 {
-    return this->recorded_pbft_commits.size() + this->recorded_errors.size() + this->recorded_primaries.size();
+    return this->recorded_pbft_commits.size() + this->recorded_primaries.size();
 }
 
 void
 audit::trim()
 {
-    while(this->recorded_errors.size() > this->mem_size)
-    {
-        this->recorded_errors.pop_front();
-        this->forgotten_error_count++;
-    }
-
     // Here we're removing the lowest term/log index entries, which is sort of like the oldest entries. I'd rather
     // remove entries at random, but that's not straightforward to do with STL containers without making some onerous
     // performance compromise.

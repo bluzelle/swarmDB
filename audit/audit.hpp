@@ -16,10 +16,12 @@
 
 #include <audit/audit_base.hpp>
 #include <node/node_base.hpp>
+#include <monitor/monitor_base.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <mutex>
 #include <optional>
+
 
 
 namespace bzn
@@ -30,15 +32,9 @@ namespace bzn
     public:
         audit(std::shared_ptr<bzn::asio::io_context_base>
                 , std::shared_ptr<bzn::node_base> node
-                , std::optional<boost::asio::ip::udp::endpoint>
-                , bzn::uuid_t uuid
 		        , size_t mem_size
+                , std::shared_ptr<bzn::monitor_base> monitor
         );
-
-        size_t error_count() const override;
-
-        const std::list<std::string>& error_strings() const override;
-
 
         void handle(const bzn_envelope& message, std::shared_ptr<bzn::session_base> session) override;
 
@@ -61,7 +57,6 @@ namespace bzn
         void handle_leader_made_progress(const leader_status&);
 
         void trim();
-        const bzn::uuid_t uuid;
 
         std::list<std::string> recorded_errors;
         const std::shared_ptr<bzn::node_base> node;
@@ -80,12 +75,10 @@ namespace bzn
         std::chrono::milliseconds primary_timeout{std::chrono::milliseconds(30000)};
 
         size_t forgotten_error_count = 0;
-        std::optional<boost::asio::ip::udp::endpoint> monitor_endpoint;
-        std::unique_ptr<bzn::asio::udp_socket_base> socket;
-
-        const std::string statsd_namespace_prefix;
 
         size_t mem_size;
+
+        std::shared_ptr<bzn::monitor_base> monitor;
     };
 
 }

@@ -34,6 +34,8 @@ namespace
                     {statistic::message_sent_bytes, "node.bytes_sent"},
 
                     {statistic::pbft_no_primary, "pbft.liveness.no_primary"},
+                    {statistic::pbft_primary_alive, "pbft.liveness.primary_alive"},
+                    {statistic::pbft_commit, "pbft.liveness.commit"},
                     {statistic::pbft_failure_detected, "pbft.liveness.failure_detected"},
                     {statistic::pbft_commit_conflict, "pbft.safety.commit_conflict"},
                     {statistic::pbft_primary_conflict, "pbft.safety.primary_conflict"},
