@@ -349,7 +349,7 @@ TEST(util_test, test_that_verifying_a_signature_with_empty_inputs_will_fail_grac
 }
 
 
-TEST(util_test, test_that_ethereum_will_provide_bluzelle_public_key)
+TEST(util_test, DISABLED_test_that_ethereum_will_provide_bluzelle_public_key)
 {
     EXPECT_EQ(temporary_public_pem, bzn::utils::crypto::retrieve_bluzelle_public_key_from_contract());
 }
