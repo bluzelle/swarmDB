@@ -270,7 +270,7 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
 
         if (msg.sequence() <= this->low_water_mark)
         {
-            LOG(debug) << boost::format("Dropping message because sequence number %1% less than %2%") % msg.sequence()
+            LOG(debug) << boost::format("Dropping message because sequence number %1% <= %2%") % msg.sequence()
                 % this->low_water_mark;
             return false;
         }
@@ -329,7 +329,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString();
+        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
     this->saw_request(request_env, hash);
@@ -344,7 +344,7 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
         ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
-    LOG(info) << "Forwarded request to primary, " << req_hash;
+    LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
 
     this->failure_detector->request_seen(req_hash);
 }
@@ -1105,6 +1105,8 @@ pbft::handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::sess
 
     if (!this->service->apply_operation_now(msg, session))
     {
+        std::lock_guard<std::mutex> lock(this->pbft_lock);
+
         if (msg.timestamp() == 0)
         {
             bzn_envelope mutable_msg(msg);
@@ -1209,6 +1211,63 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
 }
 
 bool
+pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkpoint_sequence) const
+{
+    const bzn_envelope& pre_prepare_envelope{proof.pre_prepare()};
+
+    if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
+    {
+        LOG(error) << "is_valid_prepared_proof - a pre prepare message has a bad envelope, or the sender is not in the peers list";
+        return false;
+    }
+
+    pbft_msg preprepare_message;
+    if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint_sequence)
+        || preprepare_message.type() != PBFT_MSG_PREPREPARE)
+    {
+        LOG(error) << "is_valid_prepared_proof - a pre prepare message has an invalid sequence number, or is malformed";
+        return false;
+    }
+
+    std::set<uuid_t> senders;
+    for (int j{0}; j < proof.prepare_size(); ++j)
+    {
+        bzn_envelope prepare_envelope{proof.prepare(j)};
+        if (!this->is_peer(prepare_envelope.sender()) || !this->crypto->verify(prepare_envelope))
+        {
+            LOG(error) << "is_valid_prepared_proof - a prepare message has a bad envelope, "
+                          "the sender may not be in the peer list, or the envelope failed cryptographic verification";
+            return false;
+        }
+
+        // does the sequence number, view number and hash match those of the pre prepare
+        pbft_msg prepare_msg;
+        if (!prepare_msg.ParseFromString(prepare_envelope.pbft()) || prepare_msg.type() != PBFT_MSG_PREPARE)
+        {
+            LOG(error) << "is_valid_prepared_proof - a prepare message is invalid";
+            return false;
+        }
+
+        if (preprepare_message.sequence() != prepare_msg.sequence() || preprepare_message.view() != prepare_msg.view()
+            || preprepare_message.request_hash() != prepare_msg.request_hash())
+        {
+            LOG(error) << "is_valid_prepared_proof - a pre prepare message has mismatched sequence, view or request hash";
+            return false;
+        }
+
+        senders.insert(prepare_envelope.sender());
+    }
+
+    if (senders.size() < 2 * this->max_faulty_nodes() + 1)
+    {
+        LOG(error) << "is_valid_prepared_proof - not enough prepares in a prepared_proof";
+        return false;
+    }
+
+    return true;
+}
+
+bool
 pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_envelope& original_msg) const
 {
     if (!this->is_peer(original_msg.sender()))// TODO: Rich - If redundant, keep this check, remove the other
@@ -1243,58 +1302,11 @@ pbft::is_valid_viewchange_message(const pbft_msg& viewchange_message, const bzn_
         return false;
     }
 
-    // TODO: (see KEP-882) Refactor this block into a new method - Isabel: should extract a validate_prepared_proof method
     // all the the prepared proofs are valid  (contains a pre prepare and 2f+1 mathcin prepares)
     for (int i{0}; i < viewchange_message.prepared_proofs_size(); ++i)
     {
-        const bzn_envelope& pre_prepare_envelope{viewchange_message.prepared_proofs(i).pre_prepare()};
-
-        if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
-        {
-            LOG(error) << "is_valid_viewchange_message - a pre prepare message has a bad envelope, or the sender is not in the peers list";
-            return false;
-        }
-
-        pbft_msg preprepare_message;
-        if (!preprepare_message.ParseFromString(pre_prepare_envelope.pbft()) || (preprepare_message.sequence() <= valid_checkpoint_sequence)
-            || preprepare_message.type() != PBFT_MSG_PREPREPARE)
-        {
-            LOG(error) << "is_valid_viewchange_message - a pre prepare message has an invalid sequence number, or is malformed";
-            return false;
-        }
-
-        std::set<uuid_t> senders;
-        for (int j{0}; j < viewchange_message.prepared_proofs(i).prepare_size(); ++j)
-        {
-            bzn_envelope prepare_envelope{viewchange_message.prepared_proofs(i).prepare(j)};
-            if (!this->is_peer(prepare_envelope.sender()) || !this->crypto->verify(prepare_envelope))
-            {
-                LOG(error) << "is_valid_viewchange_message - a prepare message has a bad envelope, "
-                      "the sender may not be in the peer list, or the envelope failed cryptographic verification";
-                return false;
-            }
-
-            // does the sequence number, view number and hash match those of the pre prepare
-            pbft_msg prepare_msg;
-            if (!prepare_msg.ParseFromString(prepare_envelope.pbft()) || prepare_msg.type() != PBFT_MSG_PREPARE)
-            {
-                LOG(error) << "is_valid_viewchange_message - a prepare message is invalid";
-                return false;
-            }
-
-            if (preprepare_message.sequence() != prepare_msg.sequence() || preprepare_message.view() != prepare_msg.view()
-                || preprepare_message.request_hash() != prepare_msg.request_hash())
-            {
-                LOG(error) << "is_valid_viewchange_message - a pre prepare message has mismatched sequence, view or request hash";
-                return false;
-            }
-
-            senders.insert(prepare_envelope.sender());
-        }
-
-        if (senders.size() < 2 * this->max_faulty_nodes() + 1)
-        {
-            LOG(error) << "is_valid_viewchange_message - not enough prepares in a prepared_proof";
+        if (!this->is_valid_prepared_proof(viewchange_message.prepared_proofs(i), valid_checkpoint_sequence)){
+            LOG(error) << "is_valid_viewchange_message - prepared proof is invalid";
             return false;
         }
     }

@@ -15,6 +15,7 @@
 #include <pbft/operations/pbft_persistent_operation.hpp>
 #include <boost/format.hpp>
 #include <include/bluzelle.hpp>
+#include <utils/bytes_to_debug_string.hpp>
 #include <pbft/pbft.hpp>
 #include <regex>
 #include <limits>
@@ -83,10 +84,10 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
     switch (response)
     {
         case storage_result::ok:
-            LOG(info) << "created persistent operation with prefix " <<this->prefix << "; this is our first record of it";
+            LOG(info) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; this is our first record of it";
             break;
         case storage_result::exists:
-            LOG(info) << "created persistent operation with prefix " <<this->prefix << "; using existing records";
+            LOG(info) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; using existing records";
             break;
         default:
             throw std::runtime_error("failed to write stage of new persistent operation " + storage_result_msg.at(response));
@@ -101,7 +102,7 @@ pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storag
     , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
     assert(this->storage->read(get_uuid(), generate_key(this->prefix, STAGE_KEY)));
-    LOG(info) << "re-hydrated operation with prefix " <<this->prefix;
+    LOG(info) << "re-hydrated operation with prefix " << bzn::bytes_to_debug_string(this->prefix);
 }
 
 void
@@ -121,10 +122,10 @@ pbft_persistent_operation::record_pbft_msg(const pbft_msg& msg, const bzn_envelo
     switch (response)
     {
         case storage_result::ok:
-            LOG(debug) << "saved " << pbft_msg_type_Name(msg.type()) << " from " << encoded_msg.sender() << " for operation " << this->prefix;
+            LOG(debug) << "saved " << pbft_msg_type_Name(msg.type()) << " from " << encoded_msg.sender() << " for operation " << bzn::bytes_to_debug_string(this->prefix);
             break;
         case storage_result::exists:
-            LOG(debug) << "ignored duplicate " << pbft_msg_type_Name(msg.type()) << " from " << encoded_msg.sender() << " for operation " << this->prefix;
+            LOG(debug) << "ignored duplicate " << pbft_msg_type_Name(msg.type()) << " from " << encoded_msg.sender() << " for operation " << bzn::bytes_to_debug_string(this->prefix);
             break;
         default:
             throw std::runtime_error("failed to write pbft_msg " + storage_result_msg.at(response));
@@ -137,7 +138,7 @@ pbft_persistent_operation::get_stage() const
     const auto response = this->storage->read(get_uuid(), generate_key(this->prefix, STAGE_KEY));
     if (!response)
     {
-        throw std::runtime_error("failed to read stage of pbft_operation " + this->prefix + " from storage");
+        throw std::runtime_error("failed to read stage of pbft_operation " + bzn::bytes_to_debug_string(this->prefix) + " from storage");
     }
     return static_cast<pbft_operation_stage>(std::stoi(*response));
 }
@@ -201,7 +202,7 @@ pbft_persistent_operation::record_request(const bzn_envelope& encoded_request)
 {
     if (this->transient_request_available)
     {
-        LOG(debug) << "ignoring record of request for operation " << this->prefix << " because we already have one";
+        LOG(debug) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
         return;
     }
 
@@ -210,13 +211,13 @@ pbft_persistent_operation::record_request(const bzn_envelope& encoded_request)
     switch (response)
     {
         case storage_result::ok:
-            LOG(debug) << "recorded request for operation " << this->prefix;
+            LOG(debug) << "recorded request for operation " << bzn::bytes_to_debug_string(this->prefix);
             break;
         case storage_result::exists:
-            LOG(debug) << "ignoring record of request for operation " << this->prefix << " because we already have one";
+            LOG(debug) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
             break;
         default:
-            throw std::runtime_error("failed to write request for operation " + this->prefix);
+            throw std::runtime_error("failed to write request for operation " + bzn::bytes_to_debug_string(this->prefix));
     }
 
     // this will allow future calls to record_request to short circuit
@@ -274,7 +275,7 @@ pbft_persistent_operation::get_request() const
 {
     if (!this->has_request())
     {
-        throw std::runtime_error("tried to get request of operation " + this->prefix + "; we have no such request");
+        throw std::runtime_error("tried to get request of operation " + bzn::bytes_to_debug_string(this->prefix) + "; we have no such request");
     }
 
     return this->transient_request;
@@ -285,7 +286,7 @@ pbft_persistent_operation::get_config_request() const
 {
     if (!this->has_config_request())
     {
-        throw std::runtime_error("tried to get config request of operation " + this->prefix + "; we have no such request");
+        throw std::runtime_error("tried to get config request of operation " + bzn::bytes_to_debug_string(this->prefix) + "; we have no such request");
     }
 
     return this->transient_config_request;
@@ -297,7 +298,7 @@ pbft_persistent_operation::get_database_msg() const
 {
     if (!this->has_db_request())
     {
-        throw std::runtime_error("tried to get database request of operation " + this->prefix + "; we have no such request");
+        throw std::runtime_error("tried to get database request of operation " + bzn::bytes_to_debug_string(this->prefix) + "; we have no such request");
     }
 
     return this->transient_database_request;
@@ -316,13 +317,13 @@ pbft_persistent_operation::get_preprepare() const
         , this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE));
     if (keys.size() == 0)
     {
-        throw std::runtime_error("tried to fetch a preprepare that we don't have for operation " + this->prefix);
+        throw std::runtime_error("tried to fetch a preprepare that we don't have for operation " + bzn::bytes_to_debug_string(this->prefix));
     }
 
     bzn_envelope env;
     if (!env.ParseFromString(this->storage->read(get_uuid(), keys.at(0)).value_or("")))
     {
-        throw std::runtime_error("failed to parse or fetch preprepare that we supposedly have? " + this->prefix);
+        throw std::runtime_error("failed to parse or fetch preprepare that we supposedly have? " + bzn::bytes_to_debug_string(this->prefix));
     }
 
     return env;
@@ -339,7 +340,7 @@ pbft_persistent_operation::get_prepares() const
     {
         if (!result[key].ParseFromString(this->storage->read(get_uuid(), key).value_or("")))
         {
-            throw std::runtime_error("failed to parse or fetch prepare that we supposedly have? " + this->prefix);
+            throw std::runtime_error("failed to parse or fetch prepare that we supposedly have? " + bzn::bytes_to_debug_string(this->prefix));
         }
     }
 

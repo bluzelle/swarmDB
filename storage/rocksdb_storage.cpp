@@ -99,8 +99,8 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
         }
 
         // update metadata...
-        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size + value.size());
-        this->update_metadata_size(uuid, SIZE_KEY, key, value.size());
+        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size + value.size() + key.size());
+        this->update_metadata_size(uuid, SIZE_KEY, key, value.size() + key.size());
 
         return bzn::storage_result::ok;
     }
@@ -155,8 +155,8 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
         }
 
         // update metadata...
-        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size - prev_size + value.size());
-        this->update_metadata_size(uuid, SIZE_KEY, key, value.size());
+        this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size - prev_size + value.size() + key.size());
+        this->update_metadata_size(uuid, SIZE_KEY, key, value.size() + key.size());
 
         return bzn::storage_result::ok;
     }
