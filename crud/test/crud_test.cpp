@@ -305,7 +305,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
         {
             database_response resp;
             ASSERT_TRUE(parse_env_to_db_resp(resp, msg->SerializeAsString()));
-            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::not_found));
+            ASSERT_EQ(resp.error().message(), bzn::storage_result_msg.at(bzn::storage_result::ttl_not_found));
         }));
 
     crud->handle_request("caller_id", msg, nullptr);
@@ -2252,7 +2252,12 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
 
     // should be gone
     msg.mutable_ttl()->set_key("key");
-    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::not_found));
+    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::ttl_not_found));
+    crud->handle_request("caller_id", msg, session);
+
+    // make key persist that no longer exists
+    msg.mutable_persist()->set_key("key");
+    expect_signed_response(session, "uuid", 123, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::ttl_not_found));
     crud->handle_request("caller_id", msg, session);
 }
 
