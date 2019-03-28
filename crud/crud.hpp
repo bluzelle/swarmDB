@@ -22,6 +22,7 @@
 #include <pbft/pbft_base.hpp>
 #include <storage/storage_base.hpp>
 #include <shared_mutex>
+#include <gtest/gtest_prod.h>
 
 
 namespace bzn
@@ -73,6 +74,8 @@ namespace bzn
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
         void remove_writers(const database_msg& request, Json::Value& perms);
+        bool uses_random_eviction_policy(const Json::Value& perms) const;
+        uint64_t max_database_size(const Json::Value& perms) const;
         bool operation_exceeds_available_space(const database_msg& request, const Json::Value& perms);
 
         // expiration...
@@ -82,6 +85,10 @@ namespace bzn
         void remove_expiration_entry(const bzn::key_t& generated_key);
         void flush_expiration_entries(const bzn::uuid_t& uuid);
         std::optional<uint64_t> get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const;
+
+        // cache replacement policy
+        size_t evict_key(const bzn::uuid_t& db_uuid, const bzn::key_t&  key);
+        void random_cache_replacement(const database_msg& request, size_t key_value_size, size_t max_size, const bzn::key_t& key_exception = "");
 
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;
@@ -93,7 +100,7 @@ namespace bzn
         std::unordered_map<database_msg::MsgCase, message_handler_t> message_handlers;
 
         std::once_flag start_once;
-        std::shared_mutex lock; // for multi-reader and single writer access
+        std::shared_mutex crud_lock; // for multi-reader and single writer access
         const bzn::key_t  owner_public_key;
     };
 

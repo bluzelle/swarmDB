@@ -14,8 +14,11 @@
 
 #include <crud/crud.hpp>
 #include <utils/make_endpoint.hpp>
+#include <functional>
 #include <boost/algorithm/string/trim_all.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
 
 using namespace bzn;
 using namespace std::placeholders;
@@ -91,12 +94,12 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
 
 
 void
-crud::start(std::shared_ptr<bzn::pbft_base> pbft)
+crud::start(std::shared_ptr<bzn::pbft_base> pbft_to_move)
 {
     std::call_once(this->start_once,
-        [this, pbft]()
+        [this, pbft_to_move]()
         {
-            this->pbft = std::move(pbft);
+            this->pbft = std::move(pbft_to_move);
 
             this->subscription_manager->start();
 
@@ -185,12 +188,13 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     }
 }
 
+
 void
 crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -211,19 +215,31 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (this->operation_exceeds_available_space(request, perms))
             {
-                result = bzn::storage_result::db_full;
-            }
-            else
-            {
-                result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+                const auto key_value_size{request.create().key().length() + request.create().value().length()};
 
-                if (result == bzn::storage_result::ok)
+                // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
+                // replacement policy
+                if (key_value_size < this->max_database_size(perms) && this->uses_random_eviction_policy(perms))
                 {
-                    this->update_expiration_entry(request.header().db_uuid(), request.create().key(),
+                    // TODO: at present there is only one policy, later refactor this to use the strategy pattern
+                    this->random_cache_replacement(request, key_value_size, this->max_database_size(perms));
+                }
+                else
+                {
+                    this->send_response(request, bzn::storage_result::db_full, database_response(), session);
+
+                    return ;
+                }
+            }
+
+            result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
+
+            if (result == bzn::storage_result::ok)
+            {
+                this->update_expiration_entry(request.header().db_uuid(), request.create().key(),
                         request.create().expire());
 
-                    this->subscription_manager->inspect_commit(request);
-                }
+                this->subscription_manager->inspect_commit(request);
             }
         }
     }
@@ -235,7 +251,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 void
 crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     if (!this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
     {
@@ -281,7 +297,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -303,18 +319,33 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (this->operation_exceeds_available_space(request, perms))
             {
-                result = bzn::storage_result::db_full;
-            }
-            else
-            {
-                result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
+                // since this is an update, we do not change the key, so it's length can be ignored.
+                const auto key_value_size{request.update().value().length()};
 
-                if (result == bzn::storage_result::ok)
+                // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
+                // replacement policy
+                if (key_value_size < this->max_database_size(perms) && this->uses_random_eviction_policy(perms))
                 {
-                    this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
-
-                    this->subscription_manager->inspect_commit(request);
+                    // TODO: at present there is only one policy, later refactor this to use the strategy pattern
+                    // Since this is an update, we need to ensure that the key we are updating does not get randomly
+                    // selected for eviction, so we need to tell the policy what key that is.
+                    this->random_cache_replacement(request, key_value_size, this->max_database_size(perms), request.update().key());
                 }
+                else
+                {
+                    this->send_response(request, bzn::storage_result::db_full, database_response(), session);
+
+                    return ;
+                }
+            }
+
+            result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
+
+            if (result == bzn::storage_result::ok)
+            {
+                this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+
+                this->subscription_manager->inspect_commit(request);
             }
         }
     }
@@ -328,7 +359,7 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -358,7 +389,7 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
 void
 crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     bool has = this->storage->has(request.header().db_uuid(), request.ttl().key());
 
@@ -396,7 +427,7 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -442,7 +473,7 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
 {
     bzn::storage_result result{bzn::storage_result::ok};
 
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     database_response response;
 
@@ -473,7 +504,7 @@ crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 {
     bzn::storage_result result{bzn::storage_result::ok};
 
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     database_response response;
 
@@ -503,7 +534,7 @@ crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 void
 crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -521,7 +552,7 @@ crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
     response.mutable_size()->set_keys(keys);
     response.mutable_size()->set_bytes(size);
 
-    if (const auto max_size = boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]); max_size)
+    if (const auto max_size = this->max_database_size(perms); max_size)
     {
         response.mutable_size()->set_remaining_bytes((size < max_size) ? (max_size - size) : (0));
     }
@@ -574,7 +605,7 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
 {
     bzn::storage_result result{bzn::storage_result::ok};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     if (!this->owner_public_key.empty() && (this->owner_public_key != caller_id))
     {
@@ -598,7 +629,7 @@ crud::handle_update_db(const bzn::caller_id_t& caller_id, const database_msg& re
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -625,7 +656,7 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -656,7 +687,7 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
 void
 crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     database_response response;
 
@@ -671,7 +702,7 @@ void
 crud::handle_writers(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
      bzn::storage_result result{bzn::storage_result::not_found};
-     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
      const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -702,7 +733,7 @@ crud::handle_add_writers(const bzn::caller_id_t& caller_id, const database_msg& 
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -734,7 +765,7 @@ crud::handle_remove_writers(const bzn::caller_id_t& caller_id, const database_ms
 {
     bzn::storage_result result{bzn::storage_result::db_not_found};
 
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
@@ -848,6 +879,20 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
 }
 
 
+bool
+crud::uses_random_eviction_policy(const Json::Value& perms) const
+{
+    return perms[EVICTION_POLICY_KEY] == database_create_db_eviction_policy_type_RANDOM;
+}
+
+
+uint64_t
+crud::max_database_size(const Json::Value& perms) const
+{
+    return boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]);
+}
+
+
 void
 crud::add_writers(const database_msg& request, Json::Value& perms)
 {
@@ -905,7 +950,7 @@ crud::remove_writers(const database_msg& request, Json::Value& perms)
 bool
 crud::save_state()
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     return this->storage->create_snapshot();
 }
@@ -914,7 +959,7 @@ crud::save_state()
 std::shared_ptr<std::string>
 crud::get_saved_state()
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     return this->storage->get_snapshot();
 }
@@ -923,7 +968,7 @@ crud::get_saved_state()
 bool
 crud::load_state(const std::string& state)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     return this->storage->load_snapshot(state);
 }
@@ -1017,7 +1062,7 @@ crud::check_key_expiration(const boost::system::error_code& ec)
 {
     if (!ec)
     {
-        std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+        std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
         const uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1088,7 +1133,7 @@ crud::flush_expiration_entries(const bzn::uuid_t& uuid)
 bool
 crud::operation_exceeds_available_space(const database_msg& request, const Json::Value& perms)
 {
-    const auto max_size = boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]);
+    const auto max_size = this->max_database_size(perms);
 
     // any max size set?
     if (max_size)
@@ -1116,4 +1161,47 @@ crud::operation_exceeds_available_space(const database_msg& request, const Json:
     }
 
     return false;
+}
+
+
+size_t
+crud::evict_key(const bzn::uuid_t& db_uuid, const bzn::key_t&  key)
+{
+    const auto pair_size = this->storage->get_key_size(db_uuid, key);
+    if (pair_size)
+    {
+        return this->storage->remove(db_uuid, key) == bzn::storage_result::ok ? *pair_size : 0;
+    }
+    return 0;
+}
+
+
+void
+crud::random_cache_replacement(const database_msg& request, size_t key_value_size, size_t max_size, const bzn::key_t& key_exception)
+{
+    const auto [keys, size]{this->storage->get_size(request.header().db_uuid())};
+
+    // How much space needs to be freed? Note the type, is *signed* 64 going to be large enough?
+    int64_t storage_to_free = key_value_size - (max_size - size);
+
+    // We may need to remove one or more key/value pairs to make room for the new one
+    std::hash<std::string> hasher;
+    size_t random_seed = hasher(request.header().request_hash());
+
+    boost::random::mt19937 mt(random_seed);
+    const boost::random::uniform_int_distribution<> dist(0, keys - 1);
+
+    std::vector<bzn::key_t> keys_to_evict{};
+
+    const auto available_keys = this->storage->get_keys(request.header().db_uuid());
+    while (0 <= storage_to_free)
+    {
+        const auto key_index = dist(mt);
+        const auto key_to_evict = this->storage->get_keys(request.header().db_uuid())[key_index];
+        if ((key_to_evict != key_exception) && (keys_to_evict.end() == std::find(keys_to_evict.begin(), keys_to_evict.end(), key_to_evict)))
+        {
+            storage_to_free -= evict_key(request.header().db_uuid(), key_to_evict);
+            keys_to_evict.emplace_back(key_to_evict);
+        }
+    }
 }
