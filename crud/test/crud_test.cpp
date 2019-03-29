@@ -2443,3 +2443,66 @@ TEST(crud, test_that_delete_db_with_incorrect_bluzelle_key_fails_to_validate)
         crud->handle_request("NOT_caller_id", msg, session);
     }
 }
+
+
+TEST(crud, test_that_create_and_updates_which_exceed_db_limit_send_proper_responses)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        }));
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+
+    // create db
+    msg.mutable_create_db();
+    msg.mutable_create_db()->set_max_size(10);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // create a key that exceeds db limit..
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("00000000"); // 1 too many (key+value size)
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::db_full));
+
+    crud->handle_request("caller_id", msg, session);
+
+    // create key...
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("0000000"); // exactly db limit
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // update but not exceed db limit...
+    msg.mutable_update()->set_key("key");
+    msg.mutable_update()->set_value("1111111"); // exactly db limit
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+    crud->handle_request("caller_id", msg, session);
+
+    // update but exceed db limit...
+    msg.mutable_update()->set_key("key");
+    msg.mutable_update()->set_value("11111110"); // exactly db limit
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError);
+    crud->handle_request("caller_id", msg, session);
+}

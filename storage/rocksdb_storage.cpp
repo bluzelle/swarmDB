@@ -67,7 +67,7 @@ rocksdb_storage::open()
 
 
 bzn::storage_result
-rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
+rocksdb_storage::create(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value)
 {
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
@@ -110,7 +110,7 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const std::string& key, const s
 
 
 std::optional<bzn::value_t>
-rocksdb_storage::read(const bzn::uuid_t& uuid, const std::string& key)
+rocksdb_storage::read(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
@@ -127,7 +127,7 @@ rocksdb_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 
 
 bzn::storage_result
-rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
+rocksdb_storage::update(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value)
 {
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
@@ -166,7 +166,7 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const std::string& key, const s
 
 
 bzn::storage_result
-rocksdb_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
+rocksdb_storage::remove(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
     rocksdb::WriteOptions write_options;
     write_options.sync = true;
@@ -214,7 +214,7 @@ rocksdb_storage::get_keys(const bzn::uuid_t& uuid)
 
 
 bool
-rocksdb_storage::has(const bzn::uuid_t& uuid, const std::string& key)
+rocksdb_storage::has(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
     std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
 
@@ -237,6 +237,20 @@ rocksdb_storage::get_size(const bzn::uuid_t& uuid)
     }
 
     return std::make_pair(keys, this->get_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY));
+}
+
+
+std::optional<std::size_t>
+rocksdb_storage::get_key_size(const bzn::uuid_t& uuid, const bzn::key_t& key)
+{
+    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+
+    if (this->has_priv(uuid, key))
+    {
+        return this->get_metadata_size(uuid, SIZE_KEY, key);
+    }
+
+    return std::nullopt;
 }
 
 
@@ -279,7 +293,7 @@ rocksdb_storage::remove(const bzn::uuid_t& uuid)
 
 
 bool
-rocksdb_storage::has_priv(const bzn::uuid_t& uuid, const  std::string& key)
+rocksdb_storage::has_priv(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
     const bzn::key_t has_key = generate_key(uuid, key);
 
@@ -413,7 +427,7 @@ rocksdb_storage::load_snapshot(const std::string& data)
 
 
 void
-rocksdb_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
+rocksdb_storage::remove_range(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last)
 {
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
@@ -437,7 +451,7 @@ rocksdb_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first,
 
 
 void
-rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+rocksdb_storage::do_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
     std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
     std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
 {
@@ -459,7 +473,7 @@ rocksdb_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const 
 
 
 std::vector<std::pair<bzn::key_t, bzn::value_t>>
-rocksdb_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+rocksdb_storage::read_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
     std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
     std::vector<std::pair<bzn::key_t, bzn::value_t>> matches;
@@ -474,10 +488,10 @@ rocksdb_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, cons
 
 
 std::vector<bzn::key_t>
-rocksdb_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+rocksdb_storage::get_keys_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
     std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
-    std::vector<std::string> keys;
+    std::vector<bzn::key_t> keys;
     this->do_if(uuid, first, last, predicate, [&](auto key, auto /*value*/)
     {
         keys.emplace_back(key);

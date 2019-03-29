@@ -117,6 +117,16 @@ TYPED_TEST(storageTest, test_that_storage_can_create_a_record_and_read_the_same_
 }
 
 
+TYPED_TEST(storageTest, test_that_storage_can_retieve_a_key_size)
+{
+    EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));
+
+    const auto key_size = this->storage->get_key_size(USER_UUID, KEY);
+
+    EXPECT_EQ(key_size, KEY.size() + value.size());
+}
+
+
 TYPED_TEST(storageTest, test_that_storage_fails_to_create_a_record_that_already_exists)
 {
     EXPECT_EQ(bzn::storage_result::ok, this->storage->create(USER_UUID, KEY, value));

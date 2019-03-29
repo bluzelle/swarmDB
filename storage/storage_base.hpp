@@ -36,6 +36,7 @@ namespace bzn
         key_too_large,
         db_not_found,
         db_exists,
+        db_full,
         access_denied,
         delete_pending
     };
@@ -50,6 +51,7 @@ namespace bzn
         {storage_result::key_too_large,   "KEY_SIZE_TOO_LARGE"},
         {storage_result::db_not_found,    "DATABASE_NOT_FOUND"},
         {storage_result::db_exists,       "DATABASE_EXISTS"},
+        {storage_result::db_full,         "INSUFFICIENT_SPACE"},
         {storage_result::access_denied,   "ACCESS_DENIED"},
         {storage_result::delete_pending,  "DELETE_PENDING"}};
 
@@ -59,19 +61,21 @@ namespace bzn
     public:
         virtual ~storage_base() = default;
 
-        virtual bzn::storage_result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
+        virtual bzn::storage_result create(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value) = 0;
 
-        virtual std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const std::string& key) = 0;
+        virtual std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const bzn::key_t& key) = 0;
 
-        virtual bzn::storage_result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) = 0;
+        virtual bzn::storage_result update(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value) = 0;
 
-        virtual bzn::storage_result remove(const bzn::uuid_t& uuid, const std::string& key) = 0;
+        virtual bzn::storage_result remove(const bzn::uuid_t& uuid, const bzn::key_t& key) = 0;
 
         virtual std::vector<bzn::key_t> get_keys(const bzn::uuid_t& uuid) = 0;
 
-        virtual bool has(const bzn::uuid_t& uuid, const std::string& key) = 0;
+        virtual bool has(const bzn::uuid_t& uuid, const bzn::key_t& key) = 0;
 
         virtual std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) = 0;
+
+        virtual std::optional<std::size_t> get_key_size(const bzn::uuid_t& uuid, const bzn::key_t& key) = 0;
 
         virtual bzn::storage_result remove(const bzn::uuid_t& uuid) = 0;
 
@@ -81,15 +85,15 @@ namespace bzn
 
         virtual bool load_snapshot(const std::string& data) = 0;
 
-        virtual void remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last) = 0;
+        virtual void remove_range(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last) = 0;
 
-        virtual std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid
-            , const std::string& first, const std::string& last
-            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
+        virtual std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid,
+            const bzn::key_t& first, const bzn::key_t& last,
+            std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
 
-        virtual std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid
-            , const std::string& first, const std::string& last
-            , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
+        virtual std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid,
+            const bzn::key_t& first, const bzn::key_t& last,
+            std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) = 0;
 
     };
 

@@ -23,9 +23,9 @@ using namespace bzn;
 
 
 bzn::storage_result
-mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
+mem_storage::create(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
@@ -62,9 +62,9 @@ mem_storage::create(const bzn::uuid_t& uuid, const std::string& key, const std::
 
 
 std::optional<bzn::value_t>
-mem_storage::read(const bzn::uuid_t& uuid, const std::string& key)
+mem_storage::read(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
 
     auto search = this->kv_store.find(uuid);
 
@@ -85,9 +85,9 @@ mem_storage::read(const bzn::uuid_t& uuid, const std::string& key)
 
 
 bzn::storage_result
-mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value)
+mem_storage::update(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     if (value.size() > bzn::MAX_VALUE_SIZE)
     {
@@ -112,16 +112,16 @@ mem_storage::update(const bzn::uuid_t& uuid, const std::string& key, const std::
 
     inner_db.first -= inner_search->second.size();
     inner_search->second = value;
-    inner_db.first += inner_search->second.size() + key.size();
+    inner_db.first += inner_search->second.size();
 
     return bzn::storage_result::ok;
 }
 
 
 bzn::storage_result
-mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
+mem_storage::remove(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     auto search = this->kv_store.find(uuid);
 
@@ -143,10 +143,10 @@ mem_storage::remove(const bzn::uuid_t& uuid, const std::string& key)
 }
 
 
-std::vector<std::string>
+std::vector<bzn::key_t>
 mem_storage::get_keys(const bzn::uuid_t& uuid)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
 
     auto inner_db = this->kv_store.find(uuid);
 
@@ -155,7 +155,7 @@ mem_storage::get_keys(const bzn::uuid_t& uuid)
         return {};
     }
 
-    std::vector<std::string> keys;
+    std::vector<bzn::key_t> keys;
     for (const auto& p : inner_db->second.second)
     {
         keys.emplace_back(p.first);
@@ -166,7 +166,7 @@ mem_storage::get_keys(const bzn::uuid_t& uuid)
 
 
 bool
-mem_storage::has(const bzn::uuid_t& uuid, const std::string& key)
+mem_storage::has(const bzn::uuid_t& uuid, const bzn::key_t& key)
 {
     const auto v = this->get_keys(uuid);
     return std::find(v.begin(), v.end(), key) != v.end();
@@ -176,7 +176,7 @@ mem_storage::has(const bzn::uuid_t& uuid, const std::string& key)
 std::pair<std::size_t, std::size_t>
 mem_storage::get_size(const bzn::uuid_t& uuid)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
 
     auto it = this->kv_store.find(uuid);
 
@@ -190,10 +190,34 @@ mem_storage::get_size(const bzn::uuid_t& uuid)
 }
 
 
+std::optional<std::size_t>
+mem_storage::get_key_size(const bzn::uuid_t& uuid, const bzn::key_t& key)
+{
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
+
+    auto search = this->kv_store.find(uuid);
+
+    if (search == this->kv_store.end())
+    {
+        return std::nullopt;
+    }
+
+    // we have the db, let's see if the key exists
+    auto& inner_db = search->second;
+    auto inner_search = inner_db.second.find(key);
+    if (inner_search == inner_db.second.end())
+    {
+        return std::nullopt;
+    }
+
+    return inner_search->first.size() + inner_search->second.size();
+}
+
+
 bzn::storage_result
 mem_storage::remove(const bzn::uuid_t& uuid)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     if (auto it = this->kv_store.find(uuid); it != this->kv_store.end())
     {
@@ -209,7 +233,7 @@ mem_storage::remove(const bzn::uuid_t& uuid)
 bool
 mem_storage::create_snapshot()
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
 
     try
     {
@@ -232,7 +256,7 @@ mem_storage::create_snapshot()
 std::shared_ptr<std::string>
 mem_storage::get_snapshot()
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
     return this->latest_snapshot;
 }
 
@@ -240,7 +264,7 @@ mem_storage::get_snapshot()
 bool
 mem_storage::load_snapshot(const std::string& data)
 {
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for write access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     try
     {
@@ -261,9 +285,9 @@ mem_storage::load_snapshot(const std::string& data)
 
 
 void
-mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last)
+mem_storage::remove_range(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last)
 {
-    std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
+    std::lock_guard<std::shared_mutex> lock(this->kv_store_lock); // lock for write access
 
     auto inner_db = this->kv_store.find(uuid);
     if (inner_db != this->kv_store.end())
@@ -280,7 +304,7 @@ mem_storage::remove_range(const bzn::uuid_t& uuid, const std::string& first, con
 
 
 void
-mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+mem_storage::do_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
     std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
     std::function<void(const bzn::key_t&, const bzn::value_t&)> action)
 {
@@ -289,7 +313,7 @@ mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std:
         return;
     }
 
-    std::shared_lock<std::shared_mutex> lock(this->lock); // lock for read access
+    std::shared_lock<std::shared_mutex> lock(this->kv_store_lock); // lock for read access
 
     auto inner_db = this->kv_store.find(uuid);
     if (inner_db != this->kv_store.end())
@@ -307,7 +331,7 @@ mem_storage::do_if(const bzn::uuid_t& uuid, const std::string& first, const std:
 
 
 std::vector<std::pair<bzn::key_t, bzn::value_t>>
-mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+mem_storage::read_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
     std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
     std::vector<std::pair<bzn::key_t, bzn::value_t>> matches;
@@ -322,10 +346,10 @@ mem_storage::read_if(const bzn::uuid_t& uuid, const std::string& first, const st
 
 
 std::vector<bzn::key_t>
-mem_storage::get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last
+mem_storage::get_keys_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last
     , std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate)
 {
-    std::vector<std::string> keys;
+    std::vector<bzn::key_t> keys;
     this->do_if(uuid, first, last, predicate, [&](auto key, auto /*value*/)
     {
         keys.emplace_back(key);
