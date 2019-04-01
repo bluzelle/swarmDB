@@ -283,7 +283,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    auto const [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
     if (db_exists)
     {
@@ -1086,7 +1086,7 @@ crud::flush_expiration_entries(const bzn::uuid_t& uuid)
 
 
 bool
-crud::operation_exceeds_available_space(const database_msg& request, Json::Value& perms)
+crud::operation_exceeds_available_space(const database_msg& request, const Json::Value& perms)
 {
     const auto max_size = boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]);
 
