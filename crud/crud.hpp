@@ -73,6 +73,7 @@ namespace bzn
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
         void remove_writers(const database_msg& request, Json::Value& perms);
+        bool operation_exceeds_available_space(const database_msg& request, const Json::Value& perms);
 
         // expiration...
         void check_key_expiration(const boost::system::error_code& ec);

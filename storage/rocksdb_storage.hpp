@@ -28,19 +28,21 @@ namespace bzn
     public:
         rocksdb_storage(const std::string& state_dir, const std::string& db_name, const bzn::uuid_t& uuid);
 
-        bzn::storage_result create(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result create(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value) override;
 
-        std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const std::string& key) override;
+        std::optional<bzn::value_t> read(const bzn::uuid_t& uuid, const bzn::key_t& key) override;
 
-        bzn::storage_result update(const bzn::uuid_t& uuid, const std::string& key, const std::string& value) override;
+        bzn::storage_result update(const bzn::uuid_t& uuid, const bzn::key_t& key, const bzn::value_t& value) override;
 
-        bzn::storage_result remove(const bzn::uuid_t& uuid, const std::string& key) override;
+        bzn::storage_result remove(const bzn::uuid_t& uuid, const bzn::key_t& key) override;
 
         std::vector<bzn::key_t> get_keys(const bzn::uuid_t& uuid) override;
 
-        bool has(const bzn::uuid_t& uuid, const  std::string& key) override;
+        bool has(const bzn::uuid_t& uuid, const  bzn::key_t& key) override;
 
         std::pair<std::size_t, std::size_t> get_size(const bzn::uuid_t& uuid) override;
+
+        std::optional<std::size_t> get_key_size(const bzn::uuid_t& uuid, const bzn::key_t& key) override;
 
         bzn::storage_result remove(const bzn::uuid_t& uuid) override;
 
@@ -50,13 +52,14 @@ namespace bzn
 
         bool load_snapshot(const std::string& data) override;
 
-        void remove_range(const bzn::uuid_t& uuid, const std::string& first, const std::string& last) override;
+        void remove_range(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last) override;
 
         std::vector<std::pair<bzn::key_t, bzn::value_t>> read_if(const bzn::uuid_t& uuid,
-            const std::string& first, const std::string& last,
+            const bzn::key_t& first, const bzn::key_t& last,
             std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
 
-        std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+        std::vector<bzn::key_t> get_keys_if(const bzn::uuid_t& uuid,
+            const bzn::key_t& first, const bzn::key_t& last,
             std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate = std::nullopt) override;
 
     private:
@@ -72,11 +75,11 @@ namespace bzn
 
         std::unique_ptr<rocksdb::DB> db;
 
-        bool has_priv(const bzn::uuid_t& uuid, const  std::string& key);
+        bool has_priv(const bzn::uuid_t& uuid, const bzn::key_t& key);
 
         std::shared_mutex lock; // for multi-reader and single writer access
 
-        void do_if(const bzn::uuid_t& uuid, const std::string& first, const std::string& last,
+        void do_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
             std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
             std::function<void(const bzn::key_t&, const bzn::value_t&)> action);
     };

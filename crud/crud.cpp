@@ -181,7 +181,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
     }
     else
     {
-        LOG(error) << "Unable to send response for the " << uint32_t(request.msg_case()) << " operation to point of contact - node not set in crud module";
+        LOG(warning) << "Unable to send response for the " << uint32_t(request.msg_case()) << " operation to point of contact - node not set in crud module";
     }
 }
 
@@ -209,13 +209,21 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
                 return;
             }
 
-            result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
-
-            if (result == bzn::storage_result::ok)
+            if (this->operation_exceeds_available_space(request, perms))
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.create().key(), request.create().expire());
+                result = bzn::storage_result::db_full;
+            }
+            else
+            {
+                result = this->storage->create(request.header().db_uuid(), request.create().key(), request.create().value());
 
-                this->subscription_manager->inspect_commit(request);
+                if (result == bzn::storage_result::ok)
+                {
+                    this->update_expiration_entry(request.header().db_uuid(), request.create().key(),
+                        request.create().expire());
+
+                    this->subscription_manager->inspect_commit(request);
+                }
             }
         }
     }
@@ -293,13 +301,20 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
                 return;
             }
 
-            result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
-
-            if (result == bzn::storage_result::ok)
+            if (this->operation_exceeds_available_space(request, perms))
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+                result = bzn::storage_result::db_full;
+            }
+            else
+            {
+                result = this->storage->update(request.header().db_uuid(), request.update().key(), request.update().value());
 
-                this->subscription_manager->inspect_commit(request);
+                if (result == bzn::storage_result::ok)
+                {
+                    this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+
+                    this->subscription_manager->inspect_commit(request);
+                }
             }
         }
     }
@@ -1067,4 +1082,38 @@ crud::flush_expiration_entries(const bzn::uuid_t& uuid)
             LOG(debug) << "removing ttl entry for: " << db_uuid << ":" << key;
         }
     }
+}
+
+
+bool
+crud::operation_exceeds_available_space(const database_msg& request, const Json::Value& perms)
+{
+    const auto max_size = boost::lexical_cast<uint64_t>(perms[MAX_SIZE_KEY]);
+
+    // any max size set?
+    if (max_size)
+    {
+        uint64_t size;
+        std::tie(std::ignore, size) = this->storage->get_size(request.header().db_uuid());
+
+        // test create
+        if (request.msg_case() == database_msg::kCreate)
+        {
+            return (size + request.create().key().size() + request.create().value().size() > max_size);
+        }
+
+        // test update
+        if (request.msg_case() == database_msg::kUpdate)
+        {
+            const auto prev_kv_size = this->storage->get_key_size(request.header().db_uuid(),
+                request.update().key());
+
+            if (prev_kv_size)
+            {
+                return (size - *prev_kv_size + request.update().key().size() + request.update().value().size() > max_size);
+            }
+        }
+    }
+
+    return false;
 }
