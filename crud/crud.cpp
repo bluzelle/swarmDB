@@ -283,7 +283,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
     std::lock_guard<std::shared_mutex> lock(this->lock); // lock for write access
 
-    auto const [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
 
     if (db_exists)
     {
