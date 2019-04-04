@@ -139,6 +139,7 @@ message database_subscription_update
     string key = 1;
     bytes value = 2;
     operation_type operation = 3;
+    uint64 seq = 4;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
