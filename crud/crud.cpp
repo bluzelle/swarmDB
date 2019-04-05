@@ -1181,8 +1181,7 @@ crud::random_cache_replacement(const database_msg& request, size_t key_value_siz
 {
     const auto [keys, size]{this->storage->get_size(request.header().db_uuid())};
 
-    // How much space needs to be freed? Note the type, is *signed* 64 going to be large enough?
-    int64_t storage_to_free = key_value_size - (max_size - size);
+    uint64_t storage_to_free = key_value_size - (max_size - size);
 
     // We may need to remove one or more key/value pairs to make room for the new one
     std::hash<std::string> hasher;
@@ -1194,13 +1193,14 @@ crud::random_cache_replacement(const database_msg& request, size_t key_value_siz
     std::vector<bzn::key_t> keys_to_evict{};
 
     const auto available_keys = this->storage->get_keys(request.header().db_uuid());
-    while (0 <= storage_to_free)
+    while (0 < storage_to_free)
     {
         const auto key_index = dist(mt);
         const auto key_to_evict = this->storage->get_keys(request.header().db_uuid())[key_index];
         if ((key_to_evict != key_exception) && (keys_to_evict.end() == std::find(keys_to_evict.begin(), keys_to_evict.end(), key_to_evict)))
         {
-            storage_to_free -= evict_key(request.header().db_uuid(), key_to_evict);
+            const size_t evicted_size = evict_key(request.header().db_uuid(), key_to_evict);
+            storage_to_free -= evicted_size < storage_to_free ? evicted_size : storage_to_free;
             keys_to_evict.emplace_back(key_to_evict);
         }
     }
