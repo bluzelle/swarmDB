@@ -80,15 +80,16 @@ database_pbft_service::apply_operation(const std::shared_ptr<bzn::pbft_operation
 bool
 database_pbft_service::apply_operation_now(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
-    if (msg.payload_case() == bzn_envelope::kDatabaseMsg)
+    database_msg db_msg;
+
+    if (db_msg.ParseFromString(msg.database_msg()))
     {
-        database_msg db_msg;
-
-        db_msg.ParseFromString(msg.database_msg());
-
-        if (db_msg.msg_case() == database_msg::kQuickRead)
+        if (const auto msg_case = db_msg.msg_case();
+            msg_case == database_msg::kQuickRead ||
+            msg_case == database_msg::kSubscribe ||
+            msg_case == database_msg::kUnsubscribe)
         {
-            LOG(debug) << "handling quick read";
+            LOG(debug) << "handling: " << msg_case;
 
             this->crud->handle_request(msg.sender(), db_msg, session);
 
