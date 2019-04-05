@@ -94,12 +94,12 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
 
 
 void
-crud::start(std::shared_ptr<bzn::pbft_base> pbft_to_move)
+crud::start(std::shared_ptr<bzn::pbft_base> pbft)
 {
     std::call_once(this->start_once,
-        [this, pbft_to_move]()
+        [this, pbft]()
         {
-            this->pbft = std::move(pbft_to_move);
+            this->pbft = std::move(pbft);
 
             this->subscription_manager->start();
 
@@ -219,7 +219,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
                 // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
                 // replacement policy
-                if (key_value_size < this->max_database_size(perms) && this->uses_random_eviction_policy(perms))
+                if (this->uses_random_eviction_policy(perms) && key_value_size < this->max_database_size(perms))
                 {
                     // TODO: at present there is only one policy, later refactor this to use the strategy pattern
                     this->random_cache_replacement(request, key_value_size, this->max_database_size(perms));
@@ -324,7 +324,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
                 // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
                 // replacement policy
-                if (key_value_size < this->max_database_size(perms) && this->uses_random_eviction_policy(perms))
+                if (this->uses_random_eviction_policy(perms) && key_value_size < this->max_database_size(perms))
                 {
                     // TODO: at present there is only one policy, later refactor this to use the strategy pattern
                     // Since this is an update, we need to ensure that the key we are updating does not get randomly
@@ -882,7 +882,7 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
 bool
 crud::uses_random_eviction_policy(const Json::Value& perms) const
 {
-    return perms[EVICTION_POLICY_KEY] == database_create_db_eviction_policy_type_RANDOM;
+    return perms[EVICTION_POLICY_KEY] == database_create_db::RANDOM;
 }
 
 
@@ -1190,10 +1190,10 @@ crud::random_cache_replacement(const database_msg& request, size_t key_value_siz
     boost::random::mt19937 mt(random_seed);
     const boost::random::uniform_int_distribution<> dist(0, keys - 1);
 
-    std::vector<bzn::key_t> keys_to_evict{};
+    std::vector<bzn::key_t> keys_to_evict;
 
     const auto available_keys = this->storage->get_keys(request.header().db_uuid());
-    while (0 < storage_to_free)
+    while (storage_to_free)
     {
         const auto key_index = dist(mt);
         const auto key_to_evict = this->storage->get_keys(request.header().db_uuid())[key_index];
