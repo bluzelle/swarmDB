@@ -228,7 +228,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
                 {
                     this->send_response(request, bzn::storage_result::db_full, database_response(), session);
 
-                    return ;
+                    return;
                 }
             }
 
@@ -335,7 +335,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
                 {
                     this->send_response(request, bzn::storage_result::db_full, database_response(), session);
 
-                    return ;
+                    return;
                 }
             }
 
