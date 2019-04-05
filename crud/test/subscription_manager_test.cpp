@@ -199,6 +199,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
@@ -212,6 +213,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "0");
                 ASSERT_EQ(resp.subscription_update().value(), "0");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
@@ -237,6 +239,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
@@ -250,6 +253,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "1");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
             }));
 
@@ -274,6 +278,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(2));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::DELETE);
             }));
 
@@ -287,6 +292,7 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
                 ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
                 ASSERT_EQ(resp.subscription_update().key(), "1");
                 ASSERT_EQ(resp.subscription_update().value(), "");
+                ASSERT_EQ(resp.subscription_update().seq(), uint64_t(2));
                 ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::DELETE);
             }));
 
@@ -348,6 +354,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
             ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
@@ -361,6 +368,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().seq(), uint64_t(1));
             ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 
@@ -383,6 +391,7 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
             ASSERT_EQ(resp.response_case(), database_response::kSubscriptionUpdate);
             ASSERT_EQ(resp.subscription_update().key(), "0");
             ASSERT_EQ(resp.subscription_update().value(), "0");
+            ASSERT_EQ(resp.subscription_update().seq(), uint64_t(2));
             ASSERT_EQ(resp.subscription_update().operation(), database_subscription_update::UPDATE);
         }));
 

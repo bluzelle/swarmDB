@@ -56,6 +56,7 @@ subscription_manager::subscribe(const bzn::uuid_t& uuid, const bzn::key_t& key, 
             // add new key and subscriber...
             database_it->second[key][session->get_session_id()][transaction_id] = std::move(session);
 
+            this->key_seq_number[uuid][key] = 0;
             return;
         }
         else
@@ -148,8 +149,12 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update
     {
         if (auto key_it = database_it->second.find(key); key_it != database_it->second.end())
         {
+            std::once_flag once;
+
             for (const auto& sessions : key_it->second)
             {
+                std::call_once(once, [&]{++this->key_seq_number[uuid][key];});
+
                 for (const auto& subscription : sessions.second)
                 {
                     if (auto session_shared_ptr = subscription.second.lock())
@@ -159,6 +164,7 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update
                         resp.mutable_header()->set_db_uuid(uuid);
                         resp.mutable_header()->set_nonce(subscription.first);
                         resp.mutable_subscription_update()->set_key(key);
+                        resp.mutable_subscription_update()->set_seq(this->key_seq_number[uuid][key]);
 
                         if (!value.empty())
                         {
@@ -175,7 +181,8 @@ subscription_manager::notify_sessions(const bzn::uuid_t& uuid, const bool update
                         }
 
                         LOG(debug) << "notifying session [" << session_shared_ptr->get_session_id() << "] : " << uuid
-                                   << ":" << key << ":" << subscription.first << ":" << value.substr(0, MAX_MESSAGE_SIZE);
+                                   << ":" << key << ":" << subscription.first << ":" << this->key_seq_number[uuid][key] << ":"
+                                   << value.substr(0, MAX_MESSAGE_SIZE);
 
                         session_shared_ptr->send_message(std::make_shared<std::string>(resp.SerializeAsString()));
                     }
