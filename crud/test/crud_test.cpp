@@ -2890,7 +2890,8 @@ TEST(crud, test_random_eviction_policy_with_large_value_requiring_many_evictions
     std::set<std::string> post_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
 
     {
-        const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+        size_t size;
+        std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
         ASSERT_LE(size, MAX_SIZE);
     }
 
@@ -2953,14 +2954,16 @@ TEST(crud, test_random_eviction_policy_randomly_removes_a_single_key_value_pair_
     const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
 
     // the database is now less than one VALUE_SIZE + key size from over flowing. Trigger a single replacement
-    const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+    size_t size{0};
+    std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
     const size_t STORAGE_FREE{MAX_SIZE - size};
 
     update_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, make_key(0), make_value(VALUE_SIZE + STORAGE_FREE + 1));
 
     {
         // The size of the database must be less than MAX_SIZE after the update
-        const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+        size_t db_size;
+        std::tie(std::ignore, db_size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
         ASSERT_LE(size, MAX_SIZE);
     }
 
@@ -3001,14 +3004,16 @@ TEST(crud, test_random_eviction_policy_randomly_removes_many_key_value_pairs_for
     const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
 
     // the database is now less than one VALUE_SIZE + key size from over flowing. Trigger a single replacement
-    const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+    size_t size{0};
+    std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
     const size_t STORAGE_FREE{MAX_SIZE - size};
 
     update_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, make_key(0), make_value(LARGE_VALUE_SIZE + STORAGE_FREE));
 
     {
         // The size of the database must be less than MAX_SIZE after the update
-        const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
         ASSERT_LE(size, MAX_SIZE);
     }
 
@@ -3082,12 +3087,13 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
     // create a number of keys larger than the max size of the database
     for(size_t index{KEY_COUNT}; index < KEY_COUNT + 100; ++index)
     {
-        const auto [keys, size]{get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
         const auto KEY = make_key(index);
-        const auto REQUEST_HASH{generate_random_hash()};
+        const auto INNER_REQUEST_HASH{generate_random_hash()};
 
-        create_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - size));
-        create_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - size));
+        create_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, INNER_REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - db_size));
+        create_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, INNER_REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - db_size));
     }
 
     const auto select_key_from_set = [](const auto& keys, uint64_t index)
@@ -3105,9 +3111,10 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
         const boost::random::uniform_int_distribution<> dist(0, active_keys.size() - 1);
         const bzn::key_t KEY{select_key_from_set(active_keys, dist(mt))};
 
-        const auto [keys, size]{get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
         const auto VALUE{do_quickread(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID, KEY)};
-        const auto NEW_VALUE_SIZE{MAX_SIZE - size + VALUE.length() + 1};
+        const auto NEW_VALUE_SIZE{MAX_SIZE - db_size + VALUE.length() + 1};
 
         update_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(NEW_VALUE_SIZE));
         update_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(NEW_VALUE_SIZE));
