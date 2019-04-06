@@ -20,6 +20,13 @@
 #include <mocks/mock_pbft_base.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <algorithm>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/format.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace ::testing;
 
@@ -28,7 +35,8 @@ namespace
 {
     const std::string TTL_UUID{"TTL"};
 
-    bool parse_env_to_db_resp(database_response& target, const std::string& source)
+    bool
+    parse_env_to_db_resp(database_response& target, const std::string& source)
     {
         bzn_envelope intermediate;
         return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
@@ -111,6 +119,280 @@ namespace
 
                 additional_checks(resp);
             }));
+    }
+
+    std::shared_ptr<bzn::crud>
+    initialize_crud(
+            std::shared_ptr<bzn::Mocksession_base>& session
+            , std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , bzn::uuid_t caller_id)
+    {
+        mock_node = std::make_shared<bzn::Mocknode_base>();
+        auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+        auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+        session = std::make_shared<bzn::Mocksession_base>();
+
+        EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+                [&]()
+                {
+                    return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                }));
+
+        auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node, caller_id);
+
+        auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+        EXPECT_CALL(*mock_pbft,
+                    current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+        crud->start(mock_pbft);
+        return crud;
+    }
+
+    std::string
+    generate_random_hash()
+    {
+        boost::uuids::random_generator gen;
+        return boost::lexical_cast<std::string>(boost::uuids::to_string(gen()));
+    }
+
+    database_msg
+    build_header_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, const std::string& request_hash)
+    {
+        database_msg msg;
+        msg.mutable_header()->set_point_of_contact(caller_uuid);
+        msg.mutable_header()->set_db_uuid(db_uuid);
+        msg.mutable_header()->set_nonce(nonce);
+        msg.mutable_header()->set_request_hash(request_hash);
+        return msg;
+    }
+
+    database_msg
+    build_create_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, const std::string& request_hash, const bzn::key_t &key, const bzn::value_t &value)
+    {
+        database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, request_hash)};
+        msg.mutable_create()->set_key(key);
+        msg.mutable_create()->set_value(value);
+        return msg;
+    }
+
+    database_msg
+    build_update_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, const std::string& request_hash, const bzn::key_t &key, const bzn::value_t &value)
+    {
+        database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, request_hash)};
+        msg.mutable_header()->set_nonce(nonce);
+        msg.mutable_update()->set_key(key);
+        msg.mutable_update()->set_value(value);
+        return msg;
+    }
+
+    database_msg
+    build_create_db_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, size_t max_size, database_create_db_eviction_policy_type eviction_policy)
+    {
+        database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, generate_random_hash())};
+        msg.mutable_create_db()->set_max_size(max_size);
+        msg.mutable_create_db()->set_eviction_policy(eviction_policy);
+        return msg;
+    }
+
+    database_msg
+    build_quick_read_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, const bzn::key_t &key)
+    {
+        database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, generate_random_hash())};
+        msg.mutable_quick_read()->set_key(key);
+        return msg;
+    }
+
+    void
+    create_test_database(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller_uuid
+            , const bzn::uuid_t& db_uuid
+            , uint64_t max_size = 0
+            , database_create_db_eviction_policy_type eviction_policy = database_create_db_eviction_policy_type_NONE)
+    {
+        database_msg msg{build_create_db_msg(caller_uuid, db_uuid, 0, max_size, eviction_policy)};
+
+        // We are not testing create database, so we can suppress the send_signed_message calls.
+        EXPECT_CALL(*session, send_signed_message(_));
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        crud->handle_request(caller_uuid, msg, session);
+    }
+
+    void
+    remove_test_database(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller_uuid
+            , const bzn::uuid_t& db_uuid)
+    {
+        database_msg msg{build_header_msg(caller_uuid, db_uuid, 0, generate_random_hash())};
+        msg.mutable_delete_db();
+
+        // We are not testing remove database, so hide these messsages.
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+        EXPECT_CALL(*session, send_signed_message(_));
+
+        crud->handle_request(caller_uuid, msg, session);
+    }
+
+    void
+    create_key_value(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller
+            , const std::string& request_hash
+            , const bzn::uuid_t& db
+            , const std::string& key
+            , const std::string& value )
+    {
+        database_msg msg{build_create_msg(caller, db, 123, request_hash, key, value)};
+
+        // We are not testing create, so we can suppress the send_signed_message calls.
+        EXPECT_CALL(*session, send_signed_message(_));
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        crud->handle_request(caller, msg, session);
+    }
+
+    void
+    update_key_value(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller
+            , const std::string& request_hash
+            , const bzn::uuid_t& db
+            , const std::string& key
+            , const std::string& value )
+    {
+        database_msg msg{build_update_msg(caller, db, 123, request_hash, key, value)};
+
+        // We are not testing update, so we can suppress the send_signed_message calls.
+        EXPECT_CALL(*session, send_signed_message(_));
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        crud->handle_request(caller, msg, session);
+    }
+
+    std::pair<std::size_t, std::size_t>
+    get_database_size(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller, const bzn::uuid_t& db)
+    {
+        std::promise<std::pair<std::size_t, std::size_t>> db_size_promise;
+        database_msg msg{build_header_msg(caller, db, 123, generate_random_hash())};
+        msg.mutable_size();
+
+        EXPECT_CALL(*session, send_signed_message(_)).WillOnce(Invoke(
+                [&](const std::shared_ptr<bzn_envelope>& env)
+                {
+                    database_response resp;
+                    resp.ParseFromString(env->database_response());
+                    db_size_promise.set_value(std::pair<std::size_t, std::size_t>{resp.size().keys(), resp.size().bytes()});
+                }));
+
+        // We are not testing get database size, so we can suppress the mock_node send_signed_message call.
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        std::future<std::pair<std::size_t, std::size_t>> future = db_size_promise.get_future();
+        crud->handle_request(caller, msg, session);
+
+        return future.get();
+    }
+
+
+    std::set<std::string>
+    get_database_keys(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller_id
+            , const bzn::uuid_t& db_uuid)
+    {
+        std::promise<std::set<std::string>> keys_promise;
+        database_msg msg{build_header_msg(caller_id, db_uuid, 123, generate_random_hash())};
+        msg.mutable_keys();
+
+        expect_signed_response(session, db_uuid, uint64_t(123), database_response::kKeys, std::nullopt,
+                               [&](const auto& resp)
+                               {
+                                   std::set<std::string> tmp_set(resp.keys().keys().begin(), resp.keys().keys().end());
+                                   keys_promise.set_value(tmp_set);
+                               });
+
+        // We are not testing get database keys, so we can suppress the mock_node send_signed_message call.
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        std::future<std::set<std::string>> future = keys_promise.get_future();
+        crud->handle_request(db_uuid, msg, session);
+        return future.get();
+    }
+
+    std::string
+    do_quickread(const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller_id
+            , const bzn::uuid_t& db_uuid
+            , const bzn::key_t& key)
+    {
+        const uint64_t NONCE{123};
+        std::promise<std::string> value_promise;
+        database_msg msg{build_quick_read_msg(caller_id, db_uuid, NONCE, key)};
+
+        expect_response(session, db_uuid, NONCE, database_response::kQuickRead, std::nullopt,
+                               [&](const auto& msg)
+                               {
+                                    value_promise.set_value( msg.quick_read().value());
+                               });
+
+        // We are not testing quickread, so we can suppress the mock_node send_signed_message call.
+        EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+        std::future<std::string> future = value_promise.get_future();
+        crud->handle_request(db_uuid, msg, session);
+        return future.get();
+    }
+
+    std::string
+    make_key(size_t index)
+    {
+        return str(boost::format("key%04d") % index);
+    }
+
+    std::string
+    make_value(size_t size)
+    {
+        return std::string(size,'X');
+    }
+
+    size_t
+    fill_database(
+            const std::shared_ptr<bzn::crud>& crud
+            , const std::shared_ptr<bzn::Mocksession_base>& session
+            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const bzn::uuid_t& caller_id
+            , const std::string request_hash
+            , const bzn::uuid_t& db_uuid
+            , size_t value_size
+            , size_t max_size)
+    {
+        // We have a cache with random eviction and max size MAX_SIZE bytes, fill up the database to just under the
+        // limit
+        const size_t ITEMS{max_size / (make_key(0).length() + value_size)};
+        const bzn::value_t VALUE{make_value(value_size)};
+        for (size_t index{0} ; index < ITEMS; ++index)
+        {
+            create_key_value(crud, session, mock_node, caller_id, request_hash.empty() ? generate_random_hash() : request_hash, db_uuid, make_key(index), VALUE);
+        }
+        return ITEMS;
     }
 }
 
@@ -2445,6 +2727,22 @@ TEST(crud, test_that_delete_db_with_incorrect_bluzelle_key_fails_to_validate)
 }
 
 
+TEST(crud, test_assumption_that_boost_random_mt19937_produces_the_same_values_for_a_given_seed)
+{
+    // This test is only to validate the assumption that mt19937 behaves the same on multiple operating systems. The
+    // actual values were created on macOS Mojave with boost 1.68.0. If this test ever fails the developers need to be
+    // told immediately
+    const uint64_t KEY_COUNT{422};
+    const uint64_t seed{2615920895};
+    boost::random::uniform_int_distribution<> dist(0, KEY_COUNT - 1);
+    std::vector<size_t> accepted_random_integers{308, 88, 77, 377, 58, 109, 101, 369, 14, 269};
+    std::vector<size_t> actual_random_integers(10,0);
+    boost::random::mt19937 mt(seed); // mt19937 chosen because it is fast
+    std::for_each(actual_random_integers.begin(), actual_random_integers.end(), [&](auto& val){ val = dist(mt); });
+    ASSERT_EQ(actual_random_integers, accepted_random_integers);
+}
+
+
 TEST(crud, test_that_create_and_updates_which_exceed_db_limit_send_proper_responses)
 {
     auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
@@ -2505,4 +2803,343 @@ TEST(crud, test_that_create_and_updates_which_exceed_db_limit_send_proper_respon
 
     expect_signed_response(session, "uuid", uint64_t(123), database_response::kError);
     crud->handle_request("caller_id", msg, session);
+}
+
+
+TEST(crud, test_random_eviction_policy_randomly_removes_a_key_value_pair_for_create)
+{
+    const size_t TEST_VALUE_SIZE{20};
+    const uint64_t MAX_SIZE{512};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const uint64_t NONCE{123};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    // We have a cache with random eviction and max size MAX_SIZE bytes, fill up the database to just under the limit
+    // Fill up our database to almost the MAX_SIZE, such that doubling the size of one value via an update will cause
+    // a potential overflow
+    size_t key_count{fill_database(crud, session, mock_node, CALLER_UUID, REQUEST_HASH, DB_UUID, TEST_VALUE_SIZE, MAX_SIZE)};
+
+    const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    // Add one more key, to push the storage over the top, this is a cache, so there will be no error, simply an
+    // eviction of an existing key
+    database_msg msg{build_create_msg(CALLER_UUID, DB_UUID, NONCE, generate_random_hash(), make_key(key_count + 1), make_value(TEST_VALUE_SIZE))};
+
+    // In this case we expect a db_full error as the key/value pair is larger than the storage limit.
+    expect_signed_response(session, DB_UUID, NONCE, database_response::RESPONSE_NOT_SET);
+    EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+    crud->handle_request(CALLER_UUID, msg, session);
+
+    // After 1 replacement the number of keys must be the same, and, in this case, the size of the database must be the
+    // same.
+    {
+        const auto [keys, size]{get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+        ASSERT_EQ( uint32_t(key_count), keys);
+        ASSERT_EQ( keys * (make_key(0).length() + TEST_VALUE_SIZE), size);
+    }
+
+    // Compare the post eviction set of keys to the pre eviction set of keys, there should be a difference of one key
+    std::set<std::string> post_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    std::set<std::string> difference;
+    std::set_difference(pre_eviction_keys.begin(), pre_eviction_keys.end(), post_eviction_keys.begin(), post_eviction_keys.end(), std::inserter(difference, difference.begin()));
+
+    ASSERT_EQ(size_t(1), difference.size());
+
+    // Clean up by removing the test database
+    remove_test_database(crud, session, mock_node, DB_UUID, CALLER_UUID);
+}
+
+
+TEST(crud, test_random_eviction_policy_with_large_value_requiring_many_evictions_for_create)
+{
+    const bzn::value_t TEST_VALUE{"This is a very long string to use as a test value..."};
+    const u_int64_t MAX_SIZE{8096};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const size_t VALUE_SIZE{42};
+    const bzn::value_t LARGE_TEST_VALUE{make_value(3 * VALUE_SIZE)};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    // We have a cache with random eviction and max size MAX_SIZE bytes, fill up the database to just under the limit
+    size_t key_count = fill_database(crud, session, mock_node, CALLER_UUID, REQUEST_HASH, DB_UUID, VALUE_SIZE, MAX_SIZE);
+
+    const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    // The cache is now less than one TEST_VALUE from its max storage limit. Add a very large value to ensure that
+    // enough key/value pairs are removed to make room for the new key/value pair
+    create_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, make_key(key_count), LARGE_TEST_VALUE);
+
+    // Compare the actual set of keys, there must be a difference of more than one key
+    std::set<std::string> post_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    {
+        size_t size;
+        std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
+        ASSERT_LE(size, MAX_SIZE);
+    }
+
+    std::set<std::string> difference;
+    std::set_difference(pre_eviction_keys.begin(), pre_eviction_keys.end(), post_eviction_keys.begin(), post_eviction_keys.end(), std::inserter(difference, difference.begin()));
+
+    ASSERT_TRUE(difference.size() > 1);
+}
+
+
+TEST(crud, test_random_eviction_policy_edge_case_of_create_with_value_larger_than_max_storage)
+{
+    const uint64_t MAX_SIZE{8096};
+    const bzn::value_t TOO_LARGE_TEST_VALUE{make_value(MAX_SIZE)};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const uint64_t NONCE{123};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    database_msg msg{build_create_msg(CALLER_UUID, DB_UUID, NONCE, REQUEST_HASH, make_key(0), make_value(MAX_SIZE))};
+
+    // In this case we expect a db_full error as the key/value pair is larger than the storage limit.
+    expect_signed_response(session, DB_UUID, NONCE, database_response::kError, bzn::storage_result_msg.at(bzn::storage_result::db_full));
+    EXPECT_CALL(*mock_node, send_signed_message(A<const std::string&>(),_));
+
+    crud->handle_request(CALLER_UUID, msg, session);
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+}
+
+
+TEST(crud, test_random_eviction_policy_randomly_removes_a_single_key_value_pair_for_update_that_exceeds_max_storage_by_small_amount)
+{
+    const uint64_t MAX_SIZE{8096};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const size_t VALUE_SIZE{45};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    // Fill up our database to almost the MAX_SIZE, such that doubling the size of one value via an update will cause
+    // a potential overflow
+    fill_database(crud, session, mock_node, CALLER_UUID, REQUEST_HASH, DB_UUID, VALUE_SIZE, MAX_SIZE);
+
+    const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    // the database is now less than one VALUE_SIZE + key size from over flowing. Trigger a single replacement
+    size_t size{0};
+    std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    const size_t STORAGE_FREE{MAX_SIZE - size};
+
+    update_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, make_key(0), make_value(VALUE_SIZE + STORAGE_FREE + 1));
+
+    {
+        // The size of the database must be less than MAX_SIZE after the update
+        size_t db_size;
+        std::tie(std::ignore, db_size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
+        ASSERT_LE(size, MAX_SIZE);
+    }
+
+    // Compare the post eviction set of keys to the pre eviction set of keys, there should be a difference of one key
+    std::set<std::string> post_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    std::set<std::string> difference;
+    std::set_difference(pre_eviction_keys.begin(), pre_eviction_keys.end(), post_eviction_keys.begin(), post_eviction_keys.end(), std::inserter(difference, difference.begin()));
+
+    ASSERT_EQ(size_t(1), difference.size());
+
+    // Clean up by removing the test database
+    remove_test_database(crud, session, mock_node, DB_UUID, CALLER_UUID);
+}
+
+
+TEST(crud, test_random_eviction_policy_randomly_removes_many_key_value_pairs_for_update_that_exceeds_max_storage_by_large_amount)
+{
+    const uint64_t MAX_SIZE{8096};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const size_t VALUE_SIZE{45};
+    const size_t LARGE_VALUE_SIZE{5 * VALUE_SIZE};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    // Fill up our database to almost the MAX_SIZE, such that doubling the size of one value via an update will cause
+    // a potential overflow
+    fill_database(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, VALUE_SIZE, MAX_SIZE);
+
+    const std::set<std::string> pre_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    // the database is now less than one VALUE_SIZE + key size from over flowing. Trigger a single replacement
+    size_t size{0};
+    std::tie(std::ignore, size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    const size_t STORAGE_FREE{MAX_SIZE - size};
+
+    update_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, make_key(0), make_value(LARGE_VALUE_SIZE + STORAGE_FREE));
+
+    {
+        // The size of the database must be less than MAX_SIZE after the update
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud, session, mock_node, CALLER_UUID, DB_UUID);
+        ASSERT_LE(size, MAX_SIZE);
+    }
+
+    // Compare the post eviction set of keys to the pre eviction set of keys, there should be a difference of one key
+    std::set<std::string> post_eviction_keys{get_database_keys(crud, session, mock_node, CALLER_UUID, DB_UUID)};
+
+    std::set<std::string> difference;
+    std::set_difference(pre_eviction_keys.begin(), pre_eviction_keys.end(), post_eviction_keys.begin(), post_eviction_keys.end(), std::inserter(difference, difference.begin()));
+    ASSERT_GT(difference.size(), size_t(1));
+
+    // Clean up by removing the test database
+    remove_test_database(crud, session, mock_node, DB_UUID, CALLER_UUID);
+}
+
+
+TEST(crud, test_random_eviction_policy_edge_case_of_update_with_value_larger_than_max_storage)
+{
+    const size_t MAX_SIZE{8096};
+    const bzn::key_t TEST_KEY{"test_key"};
+    const bzn::value_t TOO_LARGE_TEST_VALUE{make_value(MAX_SIZE)};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+
+    std::shared_ptr<bzn::Mocksession_base> session;
+    std::shared_ptr<bzn::Mocknode_base> mock_node;
+
+    auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+    create_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    create_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, TEST_KEY, make_value(42));
+
+    update_key_value(crud, session, mock_node, CALLER_UUID, generate_random_hash(), DB_UUID, TEST_KEY, TOO_LARGE_TEST_VALUE);
+
+    remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
+}
+
+
+TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
+{
+    const size_t MAX_SIZE{8096};
+    const bzn::uuid_t DB_UUID{"sut_uuid"};
+    const bzn::uuid_t CALLER_UUID{"caller_id"};
+    const size_t VALUE_SIZE{27};
+    const std::string REQUEST_HASH{generate_random_hash()};
+
+    std::shared_ptr<bzn::Mocksession_base> session_0;
+    std::shared_ptr<bzn::Mocknode_base> mock_node_0;
+    auto crud_0{initialize_crud(session_0, mock_node_0, CALLER_UUID)};
+
+    std::shared_ptr<bzn::Mocksession_base> session_1;
+    std::shared_ptr<bzn::Mocknode_base> mock_node_1;
+    auto crud_1{initialize_crud(session_1, mock_node_1, CALLER_UUID)};
+
+    remove_test_database(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
+    create_test_database(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    remove_test_database(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID);
+    create_test_database(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID, MAX_SIZE, database_create_db_eviction_policy_type_RANDOM);
+
+    // create a lot of keys to fill the database
+    const auto KEY_COUNT = fill_database(crud_0, session_0, mock_node_0, CALLER_UUID, REQUEST_HASH, DB_UUID, VALUE_SIZE, MAX_SIZE);
+    ASSERT_EQ(KEY_COUNT, fill_database(crud_1, session_1, mock_node_1, CALLER_UUID, REQUEST_HASH, DB_UUID, VALUE_SIZE, MAX_SIZE));
+
+    const std::set<std::string> pre_eviction_keys_0{get_database_keys(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+    const std::set<std::string> pre_eviction_keys_1{get_database_keys(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID)};
+
+    EXPECT_EQ(pre_eviction_keys_0,pre_eviction_keys_1);
+
+    // create a number of keys larger than the max size of the database
+    for(size_t index{KEY_COUNT}; index < KEY_COUNT + 100; ++index)
+    {
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
+        const auto KEY = make_key(index);
+        const auto INNER_REQUEST_HASH{generate_random_hash()};
+
+        create_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, INNER_REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - db_size));
+        create_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, INNER_REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE - db_size));
+    }
+
+    const auto select_key_from_set = [](const auto& keys, uint64_t index)
+            {
+                std::set<std::string>::const_iterator c_it(keys.begin());
+                std::advance(c_it, index);
+                return *c_it;
+            };
+
+    // update a lot of keys with values that will exceed the database max storage
+    boost::random::mt19937 mt;
+    for(size_t i{0}; i < 20; ++i)
+    {
+        const std::set<std::string> active_keys{get_database_keys(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+        const boost::random::uniform_int_distribution<> dist(0, active_keys.size() - 1);
+        const bzn::key_t KEY{select_key_from_set(active_keys, dist(mt))};
+
+        size_t db_size{0};
+        std::tie(std::ignore, db_size) = get_database_size(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
+        const auto VALUE{do_quickread(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID, KEY)};
+        const auto NEW_VALUE_SIZE{MAX_SIZE - db_size + VALUE.length() + 1};
+
+        update_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(NEW_VALUE_SIZE));
+        update_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(NEW_VALUE_SIZE));
+    }
+
+    // update a key with a value larger than the value of MAX_SIZE
+    {
+        const std::set<std::string> active_keys{get_database_keys(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+        const boost::random::uniform_int_distribution<> dist(0, active_keys.size() - 1);
+        const bzn::key_t KEY{select_key_from_set(active_keys, dist(mt))};
+        update_key_value(crud_0, session_0, mock_node_0, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE));
+        update_key_value(crud_1, session_1, mock_node_1, CALLER_UUID, REQUEST_HASH, DB_UUID, KEY, make_value(MAX_SIZE));
+    }
+
+
+    // Are the databases in each crud the same?
+    const std::set<std::string> post_eviction_keys_0{get_database_keys(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
+    const std::set<std::string> post_eviction_keys_1{get_database_keys(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID)};
+
+    std::set<std::string> difference;
+    std::set_difference(pre_eviction_keys_0.begin(), pre_eviction_keys_0.end(), post_eviction_keys_0.begin(), post_eviction_keys_0.end(), std::inserter(difference, difference.begin()));
+    ASSERT_GT(difference.size(), size_t(0));
+
+    ASSERT_EQ(post_eviction_keys_0, post_eviction_keys_1);
+
+    remove_test_database(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
+    remove_test_database(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID);
 }
