@@ -150,7 +150,7 @@ namespace bzn
             return this->pbft->handle_membership_message(msg, session);
         }
 
-        pbft_config_store &configurations(std::shared_ptr<bzn::pbft> the_pbft)
+        std::shared_ptr<pbft_config_store> configurations(std::shared_ptr<bzn::pbft> the_pbft)
         {
             return the_pbft->configurations;
         }
@@ -316,8 +316,8 @@ namespace bzn
         send_new_config_preprepare(pbft, this->mock_node, config);
 
         // the config should now be stored by this node, but not marked current
-        ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
-        EXPECT_NE(*(this->configurations(this->pbft).current()), config);
+        ASSERT_NE(this->configurations(this->pbft)->get(config.get_hash()), nullptr);
+        EXPECT_NE(*(this->configurations(this->pbft)->current()), config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
 
@@ -358,9 +358,9 @@ namespace bzn
         send_new_config_prepare(pbft, node, op);
 
         // and now the config should be enabled and acceptable, but not current
-        ASSERT_NE(this->configurations(this->pbft).get(config.get_hash()), nullptr);
-        EXPECT_EQ(this->configurations(this->pbft).newest_prepared(), config.get_hash());
-        EXPECT_NE(*(this->configurations(this->pbft).current()), config);
+        ASSERT_NE(this->configurations(this->pbft)->get(config.get_hash()), nullptr);
+        EXPECT_EQ(this->configurations(this->pbft)->newest_prepared(), config.get_hash());
+        EXPECT_NE(*(this->configurations(this->pbft)->current()), config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config.get_hash()));
     }
 
@@ -393,15 +393,15 @@ namespace bzn
         // insert and enable a dummy configuration prior to the new one to be proposed
         auto dummy_config = std::make_shared<pbft_configuration>();
         dummy_config->add_peer(new_peer2);
-        this->configurations(this->pbft).add(dummy_config);
+        this->configurations(this->pbft)->add(dummy_config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
-        EXPECT_TRUE(this->configurations(this->pbft).set_prepared(dummy_config->get_hash()));
+        EXPECT_TRUE(this->configurations(this->pbft)->set_prepared(dummy_config->get_hash()));
 
         // PREPREPARE step
-        auto config = std::make_shared<pbft_configuration>(*(this->configurations(this->pbft).current()));
+        auto config = std::make_shared<pbft_configuration>(*(this->configurations(this->pbft)->current()));
         config->add_peer(new_peer);
-        this->configurations(pbft2).add(config);
-        this->configurations(pbft2).set_prepared(config->get_hash());
+        this->configurations(pbft2)->add(config);
+        this->configurations(pbft2)->set_prepared(config->get_hash());
         auto msg = send_new_config_preprepare(pbft, this->mock_node, *config);
 
         auto op = this->find_operation(msg);
@@ -439,9 +439,9 @@ namespace bzn
         send_new_config_commit(pbft, node, op);
 
         // and now the config should be committed
-        ASSERT_NE(this->configurations(this->pbft).get(config->get_hash()), nullptr);
-        EXPECT_EQ(this->configurations(this->pbft).newest_committed(), config->get_hash());
-        EXPECT_NE(*(this->configurations(this->pbft).current()), *config);
+        ASSERT_NE(this->configurations(this->pbft)->get(config->get_hash()), nullptr);
+        EXPECT_EQ(this->configurations(this->pbft)->newest_committed(), config->get_hash());
+        EXPECT_NE(*(this->configurations(this->pbft)->current()), *config);
         EXPECT_TRUE(this->is_configuration_acceptable_in_new_view(config->get_hash()));
         EXPECT_FALSE(this->is_configuration_acceptable_in_new_view(dummy_config->get_hash()));
 
@@ -520,13 +520,13 @@ namespace bzn
     {
         this->build_pbft();
 
-        auto current_config = this->configurations(this->pbft).current();
+        auto current_config = this->configurations(this->pbft)->current();
         auto config = std::make_shared<pbft_configuration>();
         config->add_peer(new_peer);
-        this->configurations(this->pbft).add(config);
+        this->configurations(this->pbft)->add(config);
         EXPECT_TRUE(this->move_to_new_configuration(config->get_hash(), 2));
         EXPECT_TRUE(this->move_to_new_configuration(config->get_hash(), 3));
-        EXPECT_EQ(this->configurations(this->pbft).current(), config);
+        EXPECT_EQ(this->configurations(this->pbft)->current(), config);
     }
 
     TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)

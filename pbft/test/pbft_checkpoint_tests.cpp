@@ -11,200 +11,134 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 
-#include <pbft/test/pbft_test_common.hpp>
+#include <mocks/smart_mock_node.hpp>
+#include <mocks/smart_mock_io.hpp>
 #include <boost/range/irange.hpp>
 #include <pbft/operations/pbft_memory_operation.hpp>
+#include <storage/mem_storage.hpp>
+#include <pbft/pbft_config_store.hpp>
+#include <pbft/pbft_checkpoint_manager.hpp>
+#include <pbft/test/pbft_test_common.hpp>
+#include <utils/make_endpoint.hpp>
+
+using namespace ::testing;
 
 namespace bzn::test
 {
-
-    const bzn::hash_t cp0_hash = "db state hash initial_state";
-    const bzn::hash_t cp1_hash = "db state hash cp 1";
-    const bzn::hash_t cp2_hash = "db state hash cp 2";
-
-    pbft_msg cp1_msg;
-
-    class pbft_checkpoint_test : public pbft_test
+    class pbft_checkpoint_test : public Test
     {
     public:
+        std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
+        std::shared_ptr<bzn::mem_storage> storage = std::make_shared<bzn::mem_storage>();
+        std::shared_ptr<bzn::pbft_config_store> configs = std::make_shared<bzn::pbft_config_store>(storage);
+        std::shared_ptr<bzn::smart_mock_node> node = std::make_shared<bzn::smart_mock_node>();
+        std::shared_ptr<bzn::pbft_checkpoint_manager> cp_manager = std::make_shared<bzn::pbft_checkpoint_manager>(mock_io, storage, configs, node);
+
+        checkpoint_t cp{100, "100"};
+        checkpoint_t cp2{200, "200"};
+
         pbft_checkpoint_test()
         {
-            EXPECT_CALL(*mock_service, service_state_hash(0))
-                .Times(AnyNumber()).WillRepeatedly(Return(cp0_hash));
+            auto config = std::make_shared<pbft_configuration>();
+            for (auto &p : TEST_PEER_LIST)
+            {
+                config->add_peer(p);
+            }
 
-            EXPECT_CALL(*mock_service, service_state_hash(CHECKPOINT_INTERVAL))
-                    .Times(AnyNumber()).WillRepeatedly(Return(cp1_hash));
+            this->configs->add(config);
+            this->configs->set_current(config->get_hash(), 0);
+        }
 
-            EXPECT_CALL(*mock_service, service_state_hash(CHECKPOINT_INTERVAL*2))
-                    .Times(AnyNumber()).WillRepeatedly(Return(cp2_hash));
+        void send_checkpoint_messages(const checkpoint_t& cp, size_t count = INT_MAX)
+        {
+            checkpoint_msg cp_msg;
+            cp_msg.set_state_hash(cp.second);
+            cp_msg.set_sequence(cp.first);
+            for (const auto& peer : TEST_PEER_LIST)
+            {
+                if (count-- <= 0)
+                {
+                    break;
+                }
 
-            cp1_msg.set_type(PBFT_MSG_CHECKPOINT);
-            cp1_msg.set_sequence(CHECKPOINT_INTERVAL);
-            cp1_msg.set_state_hash(cp1_hash);
+                bzn_envelope env;
+                env.set_checkpoint_msg(cp_msg.SerializeAsString());
+                env.set_sender(peer.uuid);
+                this->cp_manager->handle_checkpoint_message(env);
+            }
         }
 
     };
 
     TEST_F(pbft_checkpoint_test, test_checkpoint_messages_sent_on_execute)
     {
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true))))
-                .Times(Exactly(TEST_PEER_LIST.size()));
+        for (const auto& peer : TEST_PEER_LIST)
+        {
+            EXPECT_CALL(*node, send_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
+        }
 
-        this->build_pbft();
-        auto op = std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr);
-        this->service_execute_handler(op);
+        this->cp_manager->local_checkpoint_reached(this->cp);
     }
 
     TEST_F(pbft_checkpoint_test, no_checkpoint_on_message_before_local_state)
     {
-        this->build_pbft();
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
+        this->send_checkpoint_messages(this->cp);
 
-        EXPECT_EQ(0u, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
+        EXPECT_EQ(0u, this->cp_manager->get_latest_local_checkpoint().first);
+        EXPECT_EQ(100u, this->cp_manager->get_latest_stable_checkpoint().first);
     }
 
     TEST_F(pbft_checkpoint_test, unstable_checkpoint_on_local_state_before_message)
     {
-        this->build_pbft();
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
+        for (const auto& peer : TEST_PEER_LIST)
+        {
+            EXPECT_CALL(*node, send_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
+        }
 
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(1u, this->pbft->unstable_checkpoints_count());
+        this->cp_manager->local_checkpoint_reached(this->cp);
+        EXPECT_EQ(100u, this->cp_manager->get_latest_local_checkpoint().first);
     }
 
     TEST_F(pbft_checkpoint_test, stable_checkpoint_on_message_after_local_state)
     {
-        this->build_pbft();
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
+        this->cp_manager->local_checkpoint_reached(this->cp);
+        this->send_checkpoint_messages(this->cp);
 
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
+        EXPECT_EQ(this->cp_manager->get_latest_stable_checkpoint(), this->cp);
+        EXPECT_EQ(this->cp_manager->get_latest_local_checkpoint(), this->cp);
     }
 
     TEST_F(pbft_checkpoint_test, stable_checkpoint_on_local_state_after_message)
     {
-        this->build_pbft();
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
+        this->send_checkpoint_messages(this->cp);
+        this->cp_manager->local_checkpoint_reached(this->cp);
 
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
+        EXPECT_EQ(this->cp_manager->get_latest_stable_checkpoint(), this->cp);
+        EXPECT_EQ(this->cp_manager->get_latest_local_checkpoint(), this->cp);
     }
 
     TEST_F(pbft_checkpoint_test, unstable_checkpoint_does_not_discard_stable_checkpoint)
     {
-        this->build_pbft();
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL*2, "somehash", nullptr));
-
-        EXPECT_EQ(CHECKPOINT_INTERVAL*2, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(1u, this->pbft->unstable_checkpoints_count());
+        this->send_checkpoint_messages(this->cp);
+        this->send_checkpoint_messages(this->cp2, 1); // 4 node swarm; this will not be enough
+        this->cp_manager->local_checkpoint_reached(this->cp);
+        this->cp_manager->local_checkpoint_reached(this->cp2);
+        EXPECT_EQ(this->cp_manager->get_latest_stable_checkpoint(), this->cp);
+        EXPECT_EQ(this->cp_manager->get_latest_local_checkpoint(), this->cp2);
+        EXPECT_EQ(this->cp_manager->partial_checkpoint_proofs_count(), 1u);
     }
 
     TEST_F(pbft_checkpoint_test, stable_checkpoint_discards_old_stable_checkpoint)
     {
-        this->build_pbft();
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL*2, "somehash", nullptr));
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            msg.set_sequence(CHECKPOINT_INTERVAL*2);
-            msg.set_state_hash(cp2_hash);
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-
-        EXPECT_EQ(CHECKPOINT_INTERVAL*2, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(CHECKPOINT_INTERVAL*2, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
-    }
-
-    TEST_F(pbft_checkpoint_test, stable_checkpoint_discards_old_state)
-    {
-        this->build_pbft();
-        for (auto i : boost::irange(1, 10))
-        {
-            pbft_msg msg;
-            msg.set_type(PBFT_MSG_PREPREPARE);
-            msg.set_view(1);
-            msg.set_sequence(i);
-            msg.set_request_hash("somehash");
-
-            this->pbft->handle_message(msg, default_original_msg);
-        }
-
-        EXPECT_EQ(9u, this->operation_manager->held_operations_count());
-
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-
-        EXPECT_EQ(0u, this->operation_manager->held_operations_count());
+        this->send_checkpoint_messages(this->cp);
+        this->send_checkpoint_messages(this->cp2);
+        EXPECT_EQ(this->cp_manager->get_latest_stable_checkpoint(), this->cp2);
+        EXPECT_EQ(this->cp_manager->partial_checkpoint_proofs_count(), 0u);
     }
 
     TEST_F(pbft_checkpoint_test, initial_checkpoint_matches)
     {
-        this->build_pbft();
-        auto expected_cp = checkpoint_t(0, INITIAL_CHECKPOINT_HASH);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
-        EXPECT_EQ(expected_cp, this->pbft->latest_stable_checkpoint());
-        EXPECT_EQ(expected_cp, this->pbft->latest_checkpoint());
-    }
-
-    TEST_F(pbft_checkpoint_test, stable_checkpoint_advances_high_low_water_marks)
-    {
-        this->build_pbft();
-
-        uint64_t initial_low = this->pbft->get_low_water_mark();
-        uint64_t initial_high = this->pbft->get_high_water_mark();
-
-        this->service_execute_handler(std::make_shared<bzn::pbft_memory_operation>(1, CHECKPOINT_INTERVAL, "somehash", nullptr));
-
-        EXPECT_EQ(this->pbft->get_high_water_mark(), initial_high);
-        EXPECT_EQ(this->pbft->get_low_water_mark(), initial_low);
-
-        for (const auto& peer : TEST_PEER_LIST)
-        {
-            pbft_msg msg = cp1_msg;
-            this->pbft->handle_message(msg, from(peer.uuid));
-        }
-
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_checkpoint().first);
-        EXPECT_EQ(CHECKPOINT_INTERVAL, this->pbft->latest_stable_checkpoint().first);
-        EXPECT_EQ(0u, this->pbft->unstable_checkpoints_count());
-
-        EXPECT_GT(this->pbft->get_high_water_mark(), initial_high);
-        EXPECT_GT(this->pbft->get_low_water_mark(), initial_low);
+        EXPECT_EQ(this->cp_manager->get_latest_stable_checkpoint(), checkpoint_t(0, INITIAL_CHECKPOINT_HASH));
+        EXPECT_EQ(this->cp_manager->get_latest_local_checkpoint(), checkpoint_t(0, INITIAL_CHECKPOINT_HASH));
     }
 }

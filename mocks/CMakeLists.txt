@@ -1,0 +1,10 @@
+add_library(smart_mocks STATIC
+        smart_mock_node.hpp
+        smart_mock_node.cpp
+        smart_mock_io.hpp
+        smart_mock_io.cpp
+        )
+
+add_dependencies(smart_mocks boost proto googletest)
+
+target_include_directories(smart_mocks PRIVATE ${PROTO_INCLUDE_DIR})

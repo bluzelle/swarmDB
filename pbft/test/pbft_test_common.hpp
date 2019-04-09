@@ -98,14 +98,21 @@ namespace bzn::test
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> join_retry_timer =
             std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
 
+        std::unique_ptr<bzn::asio::Mocksteady_timer_base> cp_manager_timer1 =
+                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
         bzn::asio::wait_handler new_config_timer_callback;
+
+        size_t cp_manager_timer_callback_count = 0;
+        std::unordered_map<size_t, bzn::asio::wait_handler> cp_manager_timer_callbacks;
 
         bzn::execute_handler_t service_execute_handler;
         bzn::protobuf_handler message_handler;
         bzn::protobuf_handler database_handler;
         bzn::protobuf_handler database_response_handler;
         bzn::protobuf_handler membership_handler;
+        bzn::protobuf_handler checkpoint_msg_handler;
 
         bzn::uuid_t uuid = TEST_NODE_UUID;
 

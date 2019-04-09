@@ -20,6 +20,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_chaos_base.hpp>
 #include <mocks/mock_monitor.hpp>
+#include <mocks/smart_mock_io.hpp>
 
 #include <options/options.hpp>
 #include <chaos/chaos.hpp>
@@ -27,7 +28,6 @@
 
 #include <proto/bluzelle.pb.h>
 #include <proto/pbft.pb.h>
-#include <node/test/node_test_common.hpp>
 
 #include <thread>
 #include <chrono>
@@ -49,8 +49,8 @@ public:
     std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
     std::shared_ptr<bzn::crypto_base> crypto = std::shared_ptr<bzn::crypto>();
     std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
-    bzn::smart_mock_io mock;
-    std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock.io_context, mock.websocket, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
+    std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
+    std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock_io, mock_io->websocket, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
 
     bzn_envelope db_msg;
     uint callback_invoked = 0;
@@ -65,6 +65,11 @@ public:
     {
         // For making sure that async callbacks get a chance to be executed before we assert their result
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    ~node_test2()
+    {
+        this->mock_io->shutdown();
     }
 };
 
@@ -91,10 +96,10 @@ namespace  bzn
         this->node->start(nullptr);
 
         this->yield();
-        EXPECT_EQ(mock.socket_count, 1u);
+        EXPECT_EQ(mock_io->socket_count, 1u);
 
-        mock.do_incoming_connection(0);
-        mock.ws_read_closures.at(0)(this->db_msg.SerializeAsString());
+        mock_io->do_incoming_connection(0);
+        mock_io->ws_read_closures.at(0)(this->db_msg.SerializeAsString());
         this->yield();
         EXPECT_EQ(callback_invoked, 1u);
     }
@@ -106,7 +111,7 @@ namespace  bzn
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
 
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(1)(), "test string");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(1)(), "test string");
     }
 
     TEST_F(node_test2, test_reuse_connection)
@@ -115,14 +120,14 @@ namespace  bzn
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(1)(), "test string");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(1)(), "test string");
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string2"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(1)(), "test string2");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(1)(), "test string2");
 
         this->yield();
-        EXPECT_EQ(mock.socket_count, 2u);
+        EXPECT_EQ(mock_io->socket_count, 2u);
     }
 
     TEST_F(node_test2, new_session_for_new_ep)
@@ -131,14 +136,14 @@ namespace  bzn
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test A"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(1)(), "test A");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(1)(), "test A");
 
         this->node->send_message_str(TEST_ENDPOINT_2, std::make_shared<std::string>("test B"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(2)(), "test B");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(2)(), "test B");
 
         this->yield();
-        EXPECT_EQ(mock.socket_count, 3u);
+        EXPECT_EQ(mock_io->socket_count, 3u);
     }
 
     TEST_F(node_test2, test_replace_dead_session)
@@ -147,17 +152,17 @@ namespace  bzn
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(1)(), "test string");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(1)(), "test string");
 
         // kill connection
-        this->mock.socket_is_open[1] = false;
+        this->mock_io->socket_is_open[1] = false;
 
         this->node->send_message_str(TEST_ENDPOINT, std::make_shared<std::string>("test string2"));
         this->yield();
-        EXPECT_EQ(this->mock.ws_write_closures.at(2)(), "test string2");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(2)(), "test string2");
 
         this->yield();
-        EXPECT_EQ(mock.socket_count, 3u);
+        EXPECT_EQ(mock_io->socket_count, 3u);
     }
 
     TEST(node, test_that_registering_message_handler_can_only_be_done_once)

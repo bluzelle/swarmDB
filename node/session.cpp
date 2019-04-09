@@ -76,7 +76,6 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 {
     this->strand->wrap([self = shared_from_this(), ws_factory]()
     {
-
         std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket();
         socket->async_connect(self->ep,
             self->strand->wrap([self, socket, ws_factory](const boost::system::error_code& ec)

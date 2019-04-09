@@ -26,6 +26,7 @@ pbft_config_store::pbft_config_store(std::shared_ptr<bzn::storage_base> storage)
 void
 pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     this->index = this->index.value() + 1;
     auto res = this->configs.insert({config->get_hash()
         , {this->storage, {this->index.value(), config}, CONFIG_STORE_CONFIGS_KEY, config->get_hash()}});
@@ -39,6 +40,13 @@ pbft_config_store::add(pbft_configuration::shared_const_ptr config)
 pbft_configuration::shared_const_ptr
 pbft_config_store::get(const hash_t& hash) const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
+    return this->private_get(hash);
+}
+
+pbft_configuration::shared_const_ptr
+pbft_config_store::private_get(const hash_t& hash) const
+{
     auto it = this->configs.find(hash);
     return it == this->configs.end() ? nullptr : it->second.value().config;
 }
@@ -46,19 +54,22 @@ pbft_config_store::get(const hash_t& hash) const
 pbft_configuration::shared_const_ptr
 pbft_config_store::get(uint64_t view) const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     auto it = this->view_configs.find(view);
-    return it == this->view_configs.end() ? nullptr : this->get(it->second.value());
+    return it == this->view_configs.end() ? nullptr : this->private_get(it->second.value());
 }
 
 bool
 pbft_config_store::set_prepared(const hash_t& hash)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     return this->set_state(hash, pbft_config_state::prepared);
 }
 
 bool
 pbft_config_store::set_committed(const hash_t& hash)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     if (this->set_state(hash, pbft_config_state::committed))
     {
         // when a configuration is committed, we won't accept new_view with any earlier config
@@ -83,6 +94,7 @@ pbft_config_store::set_committed(const hash_t& hash)
 bool
 pbft_config_store::set_current(const hash_t& hash, uint64_t view)
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     if (this->view_configs.find(view) != this->view_configs.end())
     {
         LOG(error) << "Attempt to set configuration for a view that already has one: " << view;
@@ -108,6 +120,7 @@ pbft_config_store::set_current(const hash_t& hash, uint64_t view)
 pbft_configuration::shared_const_ptr
 pbft_config_store::current() const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     auto it = this->configs.find(this->current_config.value());
     return it == this->configs.end() ? nullptr : it->second.value().config;
 }
@@ -115,12 +128,14 @@ pbft_config_store::current() const
 hash_t
 pbft_config_store::newest_prepared() const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     return this->newest({pbft_config_state::prepared, pbft_config_state::committed, pbft_config_state::current});
 }
 
 hash_t
 pbft_config_store::newest_committed() const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     return this->newest({pbft_config_state::committed, pbft_config_state::current});
 }
 
@@ -133,6 +148,7 @@ pbft_config_store::get_state(const hash_t& hash) const
 
 bool pbft_config_store::is_acceptable(const hash_t& hash) const
 {
+    std::lock_guard<std::mutex> lock(this->lock);
     return this->get_state(hash) != pbft_config_state::unknown && this->get_state(hash) != pbft_config_state::deprecated;
 }
 

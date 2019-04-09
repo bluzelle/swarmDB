@@ -132,7 +132,7 @@ namespace bzn
     pbft_proto_test::prepare_for_checkpoint(size_t seq)
     {
         // pbft needs a hash for this checkpoint
-        EXPECT_CALL(*this->mock_service, service_state_hash(seq)).Times(Exactly(1))
+        EXPECT_CALL(*this->mock_service, service_state_hash(seq)).Times(AnyNumber())
             .WillRepeatedly(Invoke([&](auto s)
             {
                 return std::to_string(s);
@@ -146,26 +146,27 @@ namespace bzn
     void
     pbft_proto_test::force_checkpoint(size_t seq)
     {
-        this->pbft->checkpoint_reached_locally(seq);
+        this->pbft->checkpoint_manager->local_checkpoint_reached(checkpoint_t{seq, "dummy checkpoint state"});
     }
 
-    pbft_msg
-    pbft_proto_test::build_checkpoint_msg(uint64_t sequence, uint64_t view)
+    checkpoint_msg
+    pbft_proto_test::build_checkpoint_msg(uint64_t sequence)
     {
-        pbft_msg cp;
+        checkpoint_msg cp;
         cp.set_sequence(sequence);
-        cp.set_type(PBFT_MSG_CHECKPOINT);
         cp.set_state_hash(std::to_string(sequence));
-        cp.set_view(view);
 
         return cp;
     }
 
     void
-    pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence, uint64_t view)
+    pbft_proto_test::send_checkpoint(bzn::peer_address_t node, uint64_t sequence)
     {
-        auto msg = build_checkpoint_msg(sequence, view);
-        this->pbft->handle_message(msg, wrap_pbft_msg(msg, node.uuid));
+        auto msg = build_checkpoint_msg(sequence);
+        bzn_envelope wrapper;
+        wrapper.set_checkpoint_msg(msg.SerializeAsString());
+        wrapper.set_sender(node.uuid);
+        this->pbft->checkpoint_manager->handle_checkpoint_message(wrapper);
     }
 
     void

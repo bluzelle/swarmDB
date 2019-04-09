@@ -17,7 +17,7 @@
 #include <mocks/mock_boost_asio_beast.hpp>
 #include <boost/asio/buffer.hpp>
 #include <mocks/mock_chaos_base.hpp>
-#include <node/test/node_test_common.hpp>
+#include <mocks/smart_mock_io.hpp>
 #include <mocks/mock_monitor.hpp>
 #include <mocks/mock_crypto_base.hpp>
 #include <functional>
@@ -76,7 +76,7 @@ public:
 class session_test2 : public Test
 {
 public:
-    bzn::smart_mock_io mock;
+    std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
     std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
     std::shared_ptr<bzn::Mockcrypto_base> mock_crypto = std::make_shared<NiceMock<bzn::Mockcrypto_base>>();
@@ -87,13 +87,18 @@ public:
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>( mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, this->mock_crypto, this->monitor, this->options);
+        session = std::make_shared<bzn::session>(this->mock_io, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, this->options);
     }
 
     void yield()
     {
         // For making sure that async callbacks get a chance to be executed before we assert their result
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    ~session_test2()
+    {
+        this->mock_io->shutdown();
     }
 };
 
@@ -137,64 +142,50 @@ namespace bzn
     {
         this->session->send_message(std::make_shared<std::string>("hihi"));
 
-        this->session
-            ->accept(
-                    this->mock
-                        .websocket
-                        ->make_unique_websocket_stream(
-                                this->mock
-                                    .io_context
-                                    ->make_unique_tcp_socket()
-                                    ->get_tcp_socket()));
-        this->mock.ws_accept_handlers.at(0)(boost::system::error_code{});
+        this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
+                                this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
+        this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->yield();
 
-        EXPECT_EQ(this->mock.ws_write_closures.at(0)(), "hihi");
+        EXPECT_EQ(this->mock_io->ws_write_closures.at(0)(), "hihi");
     }
 
     TEST_F(session_test2, idle_timeout_closes_session)
     {
-        this->session
-            ->accept(
-                    this->mock
-                        .websocket
-                        ->make_unique_websocket_stream(
-                                this->mock
-                                    .io_context
-                                    ->make_unique_tcp_socket()
-                                    ->get_tcp_socket()));
-        this->mock.ws_accept_handlers.at(0)(boost::system::error_code{});
+        this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
+                                this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
+        this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
 
-        this->mock.timer_callbacks.at(0)(boost::system::error_code{});
+        this->mock_io->timer_callbacks.at(0)(boost::system::error_code{});
         this->yield();
-        this->mock.timer_callbacks.at(0)(boost::system::error_code{});
+        this->mock_io->timer_callbacks.at(0)(boost::system::error_code{});
         this->yield();
 
-        EXPECT_TRUE(this->mock.ws_closed.at(0));
+        EXPECT_TRUE(this->mock_io->ws_closed.at(0));
     }
 
     TEST_F(session_test2, no_idle_timeout_when_connect_rejected)
     {
-        bzn::smart_mock_io mock;
-        mock.tcp_connect_works = false;
+        auto io2 = std::make_shared<bzn::asio::smart_mock_io>();
+        io2->tcp_connect_works = false;
 
-        auto session = std::make_shared<bzn::session>(mock.io_context, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr);
-        session->open(mock.websocket);
+        auto session = std::make_shared<bzn::session>(io2, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr);
+        session->open(io2->websocket);
 
         this->yield();
 
-        EXPECT_EQ(mock.timer_callbacks.size(), 0u);
+        EXPECT_EQ(io2->timer_callbacks.size(), 0u);
+        io2->shutdown();
     }
 
     TEST_F(session_test2, additional_shutdown_handlers_can_be_added_to_session)
     {
-
-        bzn::smart_mock_io mock;
+        auto io2 = std::make_shared<bzn::asio::smart_mock_io>();
 
         std::vector<uint8_t> handler_counters { 0,0,0 };
         {
-            auto session = std::make_shared<bzn::session>(mock.io_context
+            auto session = std::make_shared<bzn::session>(io2
                     , 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT
                     , std::list<bzn::session_shutdown_handler>{[&handler_counters]() {
                         ++handler_counters[0];
@@ -203,13 +194,13 @@ namespace bzn
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});
 
-            session->open(mock.websocket);
+            session->open(io2->websocket);
 
             this->yield();
 
             // we are just testing that this doesn't cause a segfault
-            mock.timer_callbacks.at(0)(boost::system::error_code{});
-            mock.timer_callbacks.at(0)(boost::system::error_code{});
+            io2->timer_callbacks.at(0)(boost::system::error_code{});
+            io2->timer_callbacks.at(0)(boost::system::error_code{});
 
         }
         this->yield();
@@ -219,6 +210,7 @@ namespace bzn
         {
             EXPECT_EQ(handler_counter, 1);
         }
+        io2->shutdown();
     }
 
 } // bzn

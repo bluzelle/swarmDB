@@ -38,10 +38,10 @@ namespace bzn
         void prepare_for_checkpoint(size_t seq);
 
         // build a checkpoint message
-        pbft_msg build_checkpoint_msg(uint64_t sequence, uint64_t view);
+        checkpoint_msg build_checkpoint_msg(uint64_t sequence);
 
         // send a checkpoint message on behalf of a node
-        void send_checkpoint(bzn::peer_address_t node, uint64_t sequence, uint64_t view = 1);
+        void send_checkpoint(bzn::peer_address_t node, uint64_t sequence);
 
         // send checkpoints from all nodes
         void stabilize_checkpoint(size_t seq);

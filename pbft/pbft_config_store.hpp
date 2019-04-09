@@ -19,6 +19,7 @@
 #include <gtest/gtest_prod.h>
 #include <pbft/pbft_persistent_state.hpp>
 #include <storage/storage_base.hpp>
+#include <mutex>
 
 namespace
 {
@@ -82,11 +83,14 @@ namespace bzn
         pbft_config_state get_state(const hash_t& hash) const;
         bool set_state(const hash_t& hash, pbft_config_state state);
         hash_t newest(const std::list<pbft_config_state>& states) const;
+        pbft_configuration::shared_const_ptr private_get(const hash_t& hash) const;
 
         std::map<hash_t, persistent<config_info>> configs;
         std::map<uint64_t, persistent<hash_t>> view_configs;
         persistent<hash_t> current_config{storage, "", CONFIG_STORE_CURRENT_CONFIG_KEY};
         persistent<uint64_t> index {storage, 0, CONFIG_STORE_INDEX_KEY};
+
+        mutable std::mutex lock;
 
         FRIEND_TEST(pbft_config_store_test, state_test);
     };

@@ -14,6 +14,8 @@ add_library(pbft STATIC
     pbft_configuration.cpp
     pbft_config_store.hpp
     pbft_config_store.cpp
+    pbft_checkpoint_manager.cpp
+    pbft_checkpoint_manager.hpp
     database_pbft_service.cpp
     database_pbft_service.hpp
     pbft_persistent_state.cpp)
