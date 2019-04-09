@@ -83,49 +83,50 @@ node::do_accept()
             if (ec)
             {
                 LOG(error) << "accept failed: " << ec.message();
+                return;
             }
-            else
+
+
+            auto ep = self->acceptor_socket->remote_endpoint();
+            auto key = self->key_from_ep(ep);
+
+            // set tcp_nodelay option...
+            boost::system::error_code option_ec;
+            self->acceptor_socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
+            if (option_ec)
             {
-                auto ep = self->acceptor_socket->remote_endpoint();
-                auto key = self->key_from_ep(ep);
-
-                // set tcp_nodelay option...
-                boost::system::error_code option_ec;
-                self->acceptor_socket->get_tcp_socket().set_option(boost::asio::ip::tcp::no_delay(true), option_ec);
-                if (option_ec)
-                {
-                    LOG(warning) << "failed to set socket option TCP_NODELAY: " << option_ec.message();
-                }
-#ifndef __APPLE__
-                int flags = 1;
-                if (setsockopt(self->acceptor_socket->get_tcp_socket().native_handle(), SOL_TCP, TCP_QUICKACK, &flags, sizeof(flags)))
-                {
-                    LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
-                }
-#endif
-                std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
-                    self->acceptor_socket->get_tcp_socket());
-
-                auto session = std::make_shared<bzn::session>(
-                        self->io_context
-                        , ++self->session_id_counter
-                        , ep
-                        , self->chaos
-                        , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
-                        , self->options->get_ws_idle_timeout()
-                        , std::list<bzn::session_shutdown_handler>{[](){}}
-                        , self->crypto
-                        , self->monitor
-                        , self->options);
-
-                session->accept(std::move(ws));
-
-                LOG(info) << "accepting new incoming connection with " << key;
-                // Do not attempt to identify the incoming session; one ip address could be running multiple daemons
-                // and we can't identify them based on the outgoing ports they choose
+                LOG(warning) << "failed to set socket option TCP_NODELAY: " << option_ec.message();
             }
 
+#ifndef __APPLE__
+            int flags = 1;
+            if (setsockopt(self->acceptor_socket->get_tcp_socket().native_handle(), SOL_TCP, TCP_QUICKACK, &flags, sizeof(flags)))
+            {
+                LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
+            }
+#endif
+            std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
+                self->acceptor_socket->get_tcp_socket());
+
+            auto session = std::make_shared<bzn::session>(
+                    self->io_context
+                    , ++self->session_id_counter
+                    , ep
+                    , self->chaos
+                    , std::bind(&node::priv_protobuf_handler, self, std::placeholders::_1, std::placeholders::_2)
+                    , self->options->get_ws_idle_timeout()
+                    , std::list<bzn::session_shutdown_handler>{[](){}}
+                    , self->crypto
+                    , self->monitor
+                    , self->options);
+
+            LOG(info) << "accepting new incoming connection with " << key;
+            // Do not attempt to identify the incoming session; one ip address could be running multiple daemons
+            // and we can't identify them based on the outgoing ports they choose
+
+            session->accept(std::move(ws));
             self->do_accept();
+
         });
 }
 
@@ -148,7 +149,7 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 
     if (auto it = this->protobuf_map.find(msg.payload_case()); it != this->protobuf_map.end())
     {
-        it->second(msg, std::move(session));
+        this->io_context->post(std::bind(it->second, msg, std::move(session)));
     }
     else
     {
