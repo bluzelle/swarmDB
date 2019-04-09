@@ -74,7 +74,7 @@ session::start_idle_timeout()
 void
 session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 {
-    this->strand->wrap([self = shared_from_this(), ws_factory]()
+    this->io_context->post(this->strand->wrap([self = shared_from_this(), ws_factory]()
     {
 
         std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket();
@@ -123,13 +123,13 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                         self->do_write();
                     }));
             }));
-    })();
+    }));
 }
 
 void
 session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
 {
-    this->strand->wrap([self = shared_from_this(), ws]()
+    this->io_context->post(this->strand->wrap([self = shared_from_this(), ws]()
     {
 
         self->websocket = std::move(ws);
@@ -152,16 +152,16 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
                         }
                 )
        );
-   })();
+   }));
 }
 
 void
 session::add_shutdown_handler(const bzn::session_shutdown_handler handler)
 {
-    this->strand->wrap([handler, self = shared_from_this()]()
+    this->io_context->post(this->strand->wrap([handler, self = shared_from_this()]()
     {
         self->shutdown_handlers.push_back(handler);
-    })();
+    }));
 }
 
 void
@@ -197,23 +197,28 @@ session::do_read()
                 return;
             }
 
-            // get the message...
-            std::stringstream ss;
-            ss << boost::beast::buffers(buffer->data());
-
-            bzn_envelope proto_msg;
-
-            if (proto_msg.ParseFromIstream(&ss))
-            {
-                self->io_context->post(std::bind(self->proto_handler, proto_msg, self));
-            }
-            else
-            {
-                LOG(error) << "Failed to parse incoming message";
-            }
-
             self->reading = false;
             self->do_read();
+
+            auto invoke = [self, buffer]()
+            {
+                // get the message...
+                std::stringstream ss;
+                ss << boost::beast::buffers(buffer->data());
+
+                bzn_envelope proto_msg;
+
+                if (proto_msg.ParseFromIstream(&ss))
+                {
+                    self->proto_handler(proto_msg, self);
+                }
+                else
+                {
+                    LOG(error) << "Failed to parse incoming message";
+                }
+            };
+
+            self->io_context->post(invoke);
         })
     );
 }
@@ -270,13 +275,17 @@ session::do_write()
 void
 session::send_signed_message(std::shared_ptr<bzn_envelope> msg)
 {
-    msg->set_swarm_id(this->options->get_swarm_id());
-    if (msg->signature().empty())
-    {
-        this->crypto->sign(*msg);
-    }
+    this->io_context->post(
+            [self = shared_from_this(), msg]()
+            {
+                msg->set_swarm_id(self->options->get_swarm_id());
+                if (msg->signature().empty())
+                {
+                    self->crypto->sign(*msg);
+                }
 
-    this->send_message(std::make_shared<std::string>(msg->SerializeAsString()));
+                self->send_message(std::make_shared<std::string>(msg->SerializeAsString()));
+            });
 }
 
 void
@@ -295,17 +304,17 @@ session::send_message(std::shared_ptr<bzn::encoded_message> msg)
         return;
     }
 
-    this->strand->wrap([self = shared_from_this(), msg]()
+    this->io_context->post(this->strand->wrap([self = shared_from_this(), msg]()
     {
         self->write_queue.push_back(msg);
         self->do_write();
-    })();
+    }));
 }
 
 void
 session::close()
 {
-    this->strand->wrap([self = shared_from_this()](){self->close();});
+    this->io_context->post(this->strand->wrap([self = shared_from_this()](){self->private_close();}));
 }
 
 void
