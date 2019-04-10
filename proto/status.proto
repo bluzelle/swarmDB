@@ -20,7 +20,8 @@ message status_response
 {
     string swarm_version = 1;
     string swarm_git_commit = 2;
-    string uptime = 3;
-    string module_status_json = 4;
-    bool pbft_enabled = 5;
+    string swarm_id = 3;
+    string uptime = 4;
+    string module_status_json = 5;
+    bool pbft_enabled = 6;
 }

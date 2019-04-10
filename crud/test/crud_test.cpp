@@ -1544,6 +1544,7 @@ TEST(crud, test_that_size_sends_proper_response)
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
+    msg.mutable_create_db()->set_max_size(1234);
 
     crud->handle_request("caller_id", msg, nullptr);
 
@@ -1568,6 +1569,7 @@ TEST(crud, test_that_size_sends_proper_response)
         {
             ASSERT_EQ(resp.size().bytes(), uint64_t(8));
             ASSERT_EQ(resp.size().keys(), uint32_t(1));
+            ASSERT_EQ(resp.size().max_size(), uint64_t(1234));
         });
 
     crud->handle_request("caller_id", msg, session);

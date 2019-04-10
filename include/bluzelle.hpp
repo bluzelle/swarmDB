@@ -40,6 +40,8 @@ namespace bzn
 
     using value_t = std::string;
 
+    using swarm_id_t = std::string;
+
 } // bzn
 
 

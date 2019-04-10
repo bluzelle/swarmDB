@@ -108,6 +108,12 @@ namespace bzn
         virtual bzn::uuid_t get_uuid() const = 0;
 
         /**
+         * Get the swarm id this peer belongs to
+         * @return swarm_id
+         */
+        virtual bzn::swarm_id_t get_swarm_id() const = 0;
+
+        /**
          * Get the websocket activity timeout
          * @return seconds
          */

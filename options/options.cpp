@@ -128,6 +128,12 @@ options::get_uuid() const
     return boost::beast::detail::base64_encode(pubkey_raw);
 }
 
+bzn::swarm_id_t
+options::get_swarm_id() const
+{
+    return this->raw_opts.get<std::string>(SWARM_ID);
+}
+
 bool
 options::get_debug_logging() const
 {
