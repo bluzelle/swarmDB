@@ -29,7 +29,7 @@ namespace bzn
     public:
         using status_provider_list_t = std::vector<std::weak_ptr<bzn::status_provider_base>>;
 
-        status(std::shared_ptr<bzn::node_base> node, status_provider_list_t&& status_providers);
+        status(std::shared_ptr<bzn::node_base> node, status_provider_list_t&& status_providers, const std::string& swarm_id);
 
         void start();
 
@@ -41,6 +41,7 @@ namespace bzn
         std::shared_ptr<bzn::node_base> node;
 
         status_provider_list_t status_providers;
+        const std::string swarm_id;
         std::once_flag start_once;
 
         const std::chrono::steady_clock::time_point start_time;

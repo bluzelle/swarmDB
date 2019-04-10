@@ -43,9 +43,10 @@ namespace
 }
 
 
-status::status(std::shared_ptr<bzn::node_base> node, bzn::status::status_provider_list_t&& status_providers)
+status::status(std::shared_ptr<bzn::node_base> node, bzn::status::status_provider_list_t&& status_providers, const std::string& swarm_id)
     : node(std::move(node))
     , status_providers(std::move(status_providers))
+    , swarm_id(swarm_id)
     , start_time(std::chrono::steady_clock::now())
 {
 }
@@ -95,6 +96,7 @@ status::handle_status_request_message(const bzn_envelope& /*msg*/, std::shared_p
 
     srm.set_swarm_version(SWARM_VERSION);
     srm.set_swarm_git_commit(SWARM_GIT_COMMIT);
+    srm.set_swarm_id(this->swarm_id);
     srm.set_uptime(get_uptime(this->start_time));
     srm.set_pbft_enabled(true);
 

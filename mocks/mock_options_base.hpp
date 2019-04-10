@@ -44,6 +44,8 @@ class mock_options_base : public options_base {
       bool());
   MOCK_CONST_METHOD0(get_uuid,
       bzn::uuid_t());
+  MOCK_CONST_METHOD0(get_swarm_id,
+        bzn::swarm_id_t());
   MOCK_CONST_METHOD0(get_ws_idle_timeout,
       std::chrono::milliseconds());
   MOCK_CONST_METHOD0(get_audit_mem_size,

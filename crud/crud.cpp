@@ -555,6 +555,7 @@ crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
     if (const auto max_size = this->max_database_size(perms); max_size)
     {
         response.mutable_size()->set_remaining_bytes((size < max_size) ? (max_size - size) : (0));
+        response.mutable_size()->set_max_size(max_size);
     }
 
     this->send_response(request, bzn::storage_result::ok, std::move(response), session);

@@ -29,7 +29,7 @@ TEST(status_test, test_that_status_registers_and_responses_to_requests)
 
     // success
     {
-        auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{});
+        auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{}, "1234");
 
         EXPECT_CALL(*mock_node, register_for_message(bzn_envelope::kStatusRequest, _)).WillOnce(Return(true));
 
@@ -38,7 +38,7 @@ TEST(status_test, test_that_status_registers_and_responses_to_requests)
 
     // failure
     {
-        auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{});
+        auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{}, "1234");
 
         EXPECT_CALL(*mock_node, register_for_message(bzn_envelope::kStatusRequest, _)).WillOnce(Return(false));
 
@@ -49,12 +49,14 @@ TEST(status_test, test_that_status_registers_and_responses_to_requests)
 
 TEST(status_test, test_that_status_request_queries_status_providers)
 {
+    const std::string SWARM_ID{"utest"};
+
     auto mock_node = std::make_shared<Mocknode_base>();
     auto mock_session = std::make_shared<Mocksession_base>();
 
     auto mock_status_provider = std::make_shared<Mockstatus_provider_base>();
 
-    auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{mock_status_provider, mock_status_provider});
+    auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{mock_status_provider, mock_status_provider}, SWARM_ID);
 
     bzn::protobuf_handler pbh;
     EXPECT_CALL(*mock_node, register_for_message(bzn_envelope::kStatusRequest, _)).WillOnce(Invoke(
@@ -88,6 +90,7 @@ TEST(status_test, test_that_status_request_queries_status_providers)
             ASSERT_TRUE(sr.ParseFromString(env->status_response()));
             ASSERT_TRUE(sr.pbft_enabled());
             ASSERT_EQ(sr.swarm_version(), SWARM_VERSION);
+            ASSERT_EQ(sr.swarm_id(), SWARM_ID);
             ASSERT_EQ(sr.swarm_git_commit(), SWARM_GIT_COMMIT);
             ASSERT_EQ(sr.uptime(), "0 days, 0 hours, 0 minutes");
 

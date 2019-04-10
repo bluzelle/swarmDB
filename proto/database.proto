@@ -188,6 +188,7 @@ message database_size_response
     uint64 bytes = 1;
     uint32 keys = 2;
     uint64 remaining_bytes = 3;
+    uint64 max_size = 4;
 }
 
 message database_request {}

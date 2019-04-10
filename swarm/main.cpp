@@ -167,7 +167,8 @@ print_banner(const bzn::options& options, double eth_balance)
     std::stringstream ss;
 
     ss << '\n';
-    ss << "  Running node with ID: " << options.get_uuid() << "\n"
+    ss << "              Swarm ID: " << options.get_swarm_id() << "\n"
+       << "  Running node with ID: " << options.get_uuid() << "\n"
        << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port() << "\n"
@@ -285,7 +286,7 @@ main(int argc, const char* argv[])
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
-        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft});
+        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft}, options->get_swarm_id());
 
         node->start(pbft);
         chaos->start();
