@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 project(bluzelle CXX)
 
+# ensure type is set
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 include(cmake/swarm_version.cmake)
 
 message("Build version ${PROJECT_VERSION}")
@@ -36,6 +41,17 @@ endif(APPLE)
 set(CMAKE_CXX_FLAGS ${warnings})
 set(CMAKE_C_FLAGS   ${warnings})
 
+# old or new way?
+if(NOT BUILD_DEPEND)
+    add_subdirectory(depend)
+else()
+    include(cmake/boost.cmake)
+    include(cmake/rocksdb.cmake)
+    include(cmake/jsoncpp.cmake)
+    include(cmake/googletest.cmake)
+    include(cmake/openssl.cmake)
+endif()
+
 # find packages
 include(cmake/add_gmock_test.cmake)
 
@@ -45,17 +61,9 @@ include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
 
 find_package(CURL REQUIRED)
 
-set(REQUIRED_BOOST "1.68.0")
-set(BOOST_URL_HASH "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf")
-
-include(cmake/boost.cmake)
-include(cmake/jsoncpp.cmake)
-include(cmake/rocksdb.cmake)
-include(cmake/googletest.cmake)
-include(cmake/openssl.cmake)
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 enable_testing()
 

@@ -1,0 +1,4 @@
+googletest-debug-1.8.0-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+googletest-release-1.8.0-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+googletest-debug-1.8.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text
+googletest-release-1.8.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text

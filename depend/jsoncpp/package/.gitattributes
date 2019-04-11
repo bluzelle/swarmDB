@@ -1,0 +1,4 @@
+jsoncpp-debug-1.8.4-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+jsoncpp-release-1.8.4-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+jsoncpp-debug-1.8.4-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text
+jsoncpp-release-1.8.4-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text

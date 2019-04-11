@@ -5,5 +5,6 @@ add_library(chaos
         )
 
 target_link_libraries(chaos options)
+target_include_directories(chaos PRIVATE ${JSONCPP_INCLUDE_DIRS})
 add_dependencies(chaos boost openssl)
 add_subdirectory(test)

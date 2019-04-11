@@ -28,7 +28,7 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 **Dependencies \(Protobuf, CMake\)**
 
 ```text
-$ brew update && brew install protobuf && brew install snappy && brew install lz4 && brew upgrade cmake
+$ brew update && brew install protobuf && brew install snappy && brew install lz4 git-lfs && brew upgrade cmake
 ```
 
 **ccache \(Optional\)**
@@ -74,6 +74,8 @@ Here are the steps to build the Daemon and unit test application from the comman
 $ mkdir build
 $ cd build
 $ cmake ..
+$ git lfs install
+$ git lfs pull
 $ sudo make install
 ```
 
@@ -84,6 +86,11 @@ $ mkdir build
 $ cd build
 $ ~/mycmake/bin/cmake ..
 $ sudo make install
+```
+
+###### To disable Git LFS: 
+```text
+$ cmake .. -DBUILD_DEPEND=OFF
 ```
 
 ### Deploying the Daemons

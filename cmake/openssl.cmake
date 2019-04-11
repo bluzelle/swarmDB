@@ -13,6 +13,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 include(ExternalProject)
+include(ProcessorCount)
 
 # Prevent travis gcc crashes...
 if (DEFINED ENV{TRAVIS})

@@ -15,6 +15,9 @@
 include(ExternalProject)
 include(ProcessorCount)
 
+set(REQUIRED_BOOST "1.68.0")
+set(BOOST_URL_HASH "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf")
+
 message(STATUS "Boost: ${REQUIRED_BOOST}")
 
 set(BOOST_TARBALL "boost_${REQUIRED_BOOST}")
