@@ -250,7 +250,6 @@ namespace bzn
         force_checkpoint(10);
     }
 
-
     TEST_F(pbft_proto_test, test_backup_full_checkpoint)
     {
         this->uuid = SECOND_NODE_UUID;

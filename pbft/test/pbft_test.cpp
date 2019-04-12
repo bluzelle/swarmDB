@@ -225,7 +225,6 @@ namespace bzn::test
         EXPECT_EQ(size_t(0), this->pbft->sessions_waiting_on_forwarded_requests.size());
     }
 
-
     TEST_F(pbft_test, client_request_executed_results_in_message_response)
     {
         auto mock_session = std::make_shared<bzn::Mocksession_base>();

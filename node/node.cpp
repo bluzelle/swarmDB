@@ -115,7 +115,8 @@ node::do_accept()
                         , self->options->get_ws_idle_timeout()
                         , std::list<bzn::session_shutdown_handler>{[](){}}
                         , self->crypto
-                        , self->monitor);
+                        , self->monitor
+                        , self->options);
 
                 session->accept(std::move(ws));
 
@@ -133,6 +134,12 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 {
     std::shared_lock<std::shared_mutex> lock(this->message_map_mutex); // lock for read access
 
+    if (msg.swarm_id() != this->options->get_swarm_id())
+    {
+        LOG(error) << "Dropping message with invalid swarm id: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        return;
+    }
+
     if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
@@ -147,7 +154,6 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
     {
         LOG(debug) << "no handler for message type " << msg.payload_case();
     }
-
 }
 
 void
@@ -181,7 +187,8 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , this->options->get_ws_idle_timeout()
                 , std::list<bzn::session_shutdown_handler>{std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)}
                 , this->crypto
-                , this->monitor);
+                , this->monitor
+                , this->options);
         session->open(this->websocket);
         this->sessions.insert_or_assign(key, session);
     }
