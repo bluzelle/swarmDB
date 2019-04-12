@@ -71,6 +71,8 @@ namespace bzn
 
         std::string get_owner_public_key() const override;
 
+        std::string get_swarm_info_esr_address() const override;
+
     private:
         size_t parse_size(const std::string& key) const;
 

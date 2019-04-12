@@ -8,7 +8,7 @@ add_library(utils STATIC
         bytes_to_debug_string.cpp
         bytes_to_debug_string.hpp
         crypto.cpp
-        crypto.hpp)
+        crypto.hpp esr_peer_info.cpp esr_peer_info.h curl.cpp curl.hpp)
 
 target_link_libraries(utils ${CURL_LIBRARIES} ${JSONCPP_LIBRARIES} ${OPENSSL_LIBRARIES})
 

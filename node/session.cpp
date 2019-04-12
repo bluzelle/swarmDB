@@ -87,7 +87,7 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
             {
                 self->activity = true;
 
-                if(ec)
+                if (ec)
                 {
                     LOG(error) << "failed to connect to: " << self->ep.address().to_string() << ":" << self->ep.port() << " - " << ec.message();
                     return;

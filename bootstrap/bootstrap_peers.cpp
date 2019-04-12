@@ -15,15 +15,19 @@
 #include <utils/blacklist.hpp>
 #include <utils/crypto.hpp>
 #include <utils/http_get.hpp>
+#include <utils/esr_peer_info.h>
 #include <bootstrap/bootstrap_peers.hpp>
+#include <json/json.h>
+#include <algorithm>
+#include <iostream>
 #include <fstream>
 #include <sstream>
-#include <json/json.h>
 
 using namespace bzn;
 
 
-bool bootstrap_peers::fetch_peers_from_file(const std::string& filename)
+bool
+bootstrap_peers::fetch_peers_from_file(const std::string& filename)
 {
     std::ifstream file(filename);
     if (file.fail())
@@ -49,6 +53,31 @@ bootstrap_peers::fetch_peers_from_url(const std::string& url)
     stream << peers;
 
     return ingest_json(stream);
+}
+
+
+bool
+bootstrap_peers::fetch_peers_from_esr_contract(const std::string &esr_address, const bzn::uuid_t &swarm_id)
+{
+    auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address);
+    for (const auto& peer_id : peer_ids)
+    {
+        bzn::peer_address_t peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address)};
+        if (peer_info.host.empty()
+            || peer_info.port == 0
+            //|| peer_info.name.empty() // is it important that a peer have a name?
+            || peer_info.http_port == 0
+            || peer_info.uuid.empty()
+            )
+        {
+            LOG(warning) << "Invalid peer information found in esr contract, ignoring info for peer: " << peer_id << " in swarm: " << swarm_id;
+        }
+        else
+        {
+            this->peer_addresses.emplace(peer_info);
+        }
+    }
+    return true;
 }
 
 

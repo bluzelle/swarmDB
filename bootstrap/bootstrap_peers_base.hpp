@@ -53,6 +53,14 @@ namespace bzn
         virtual bool fetch_peers_from_url(const std::string& url) = 0;
 
         /**
+         * Given a swarm id, fetch the peer info for the peers in that swarm
+         * @param esr_address a string containing the Etherium address of the get peer info contract o
+         * @param swarm_id a string containing the unique identifier of the swarm containing the peers of interest
+         * @return true - note that it is possible that the contract does not return any peers
+         */
+        virtual bool fetch_peers_from_esr_contract(const std::string &esr_address, const bzn::uuid_t &swarm_id) = 0;
+
+        /**
          * @return a reference to the initial set of peers
          */
         virtual const peers_list_t& get_peers() const = 0;

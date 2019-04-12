@@ -65,6 +65,8 @@ namespace bzn::option_names
 
     const std::string MONITOR_MAX_TIMERS = "monitor_max_timers";
     const std::string OVERRIDE_NUM_THREADS = "override_num_threads";
+
+    const std::string SWARM_INFO_ESR_ADDRESS = "swarm_info_esr_address";
 }
 
 namespace bzn

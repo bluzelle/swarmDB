@@ -12,14 +12,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <include/bluzelle.hpp>
 #include <options/simple_options.hpp>
 #include <json/json.h>
-#include <iostream>
-#include <fstream>
 #include <swarm_git_commit.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
-#include <include/bluzelle.hpp>
+#include <iostream>
+#include <fstream>
 
 using namespace bzn;
 using namespace bzn::option_names;
@@ -105,7 +105,10 @@ simple_options::build_options()
                         "number of worker threads to run (default is automatic based on hardware")
                 (WS_IDLE_TIMEOUT.c_str(),
                         po::value<uint64_t>()->default_value(300000),
-                        "websocket idle timeout (ms)");
+                        "websocket idle timeout (ms)")
+                (SWARM_INFO_ESR_ADDRESS.c_str(),
+                        po::value<std::string>()->default_value(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS),
+                        "Address of ESR Swarm Info contract");
 
     po::options_description logging("Logging");
     logging.add_options()

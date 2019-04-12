@@ -15,9 +15,10 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
+#include <bootstrap/bootstrap_peers_base.hpp> //for bzn::peer_address_t
 
-
-namespace bzn::utils::blacklist
+namespace bzn::utils::esr
 {
-    bool is_blacklisted(const bzn::uuid_t& uuid, const std::string& url = bzn::utils::ROPSTEN_URL);
+    std::vector<std::string> get_peer_ids(const bzn::uuid_t &swarm_id, const std::string &esr_address = bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, const std::string &url = bzn::utils::ROPSTEN_URL);
+    bzn::peer_address_t get_peer_info(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string &esr_address = bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, const std::string& url = bzn::utils::ROPSTEN_URL);
 }

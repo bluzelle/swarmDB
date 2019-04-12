@@ -16,8 +16,7 @@
 
 #include <include/bluzelle.hpp>
 
-
-namespace bzn::utils::blacklist
+namespace bzn::utils::curl
 {
-    bool is_blacklisted(const bzn::uuid_t& uuid, const std::string& url = bzn::utils::ROPSTEN_URL);
+    std::string perform_curl_request(const std::string& url, const std::string& request);
 }
