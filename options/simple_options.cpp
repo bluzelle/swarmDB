@@ -19,6 +19,7 @@
 #include <swarm_git_commit.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
+#include <include/bluzelle.hpp>
 
 using namespace bzn;
 using namespace bzn::option_names;
@@ -40,6 +41,8 @@ namespace
 
 simple_options::simple_options()
         : options_root("Core configuration")
+        , cmd_opts(&(this->options_root))
+        , config_file_opts(&(this->options_root))
 {
     this->build_options();
 }
@@ -47,12 +50,19 @@ simple_options::simple_options()
 bool
 simple_options::parse(int argc, const char* argv[])
 {
-    return this->handle_command_line_options(argc, argv) && this->handle_config_file_options() && this->validate_options();
+    return this->handle_command_line_options(argc, argv) && this->handle_config_file_options() && this->combine_options() && this->validate_options();
 }
 
 void
 simple_options::build_options()
 {
+    po::options_description cmd_only("Command line only");
+    cmd_only.add_options()
+                    ("help,h", "Shows this information")
+                    ("version,v", "Shows the application's version")
+                    ("config,c", po::value<std::string>()->default_value(DEFAULT_CONFIG_FILE), "Path to configuration file");
+    this->options_root.add(cmd_only);
+
     this->options_root.add_options()
                 (BOOTSTRAP_PEERS_FILE.c_str(),
                         po::value<std::string>(),
@@ -217,6 +227,7 @@ simple_options::build_options()
 bool
 simple_options::validate_options()
 {
+    this->vm.notify();
     bool errors = false;
 
     // Boost will enforce required-ness and types of options, we only need to validate more complex constraints
@@ -278,7 +289,7 @@ simple_options::handle_config_file_options()
         throw std::runtime_error("Config file should be an object");
     }
 
-    po::parsed_options parsed(&(this->options_root));
+    this->config_file_opts = po::parsed_options{&(this->options_root)};
 
     for (const auto& name : json.getMemberNames())
     {
@@ -306,11 +317,8 @@ simple_options::handle_config_file_options()
             opt.value.push_back(option_value);
         }
 
-        parsed.options.push_back(opt);
+        this->config_file_opts.options.push_back(opt);
     }
-
-    boost::program_options::store(parsed, vm);
-    boost::program_options::notify(vm);
 
     return true;
 }
@@ -318,20 +326,13 @@ simple_options::handle_config_file_options()
 bool
 simple_options::handle_command_line_options(int argc, const char* argv[])
 {
-    boost::program_options::options_description desc("Command line options");
-
-    desc.add_options()
-                ("help,h",    "Shows this information")
-                ("version,v", "Show the application's version")
-                ("config,c",  po::value<std::string>(&this->config_file)->default_value(DEFAULT_CONFIG_FILE), "Path to configuration file");
-
-    po::variables_map vm;
-
     try
     {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
+        this->cmd_opts = po::parse_command_line(argc, argv, this->options_root);
+        po::variables_map early_vm;
+        po::store(this->cmd_opts, early_vm);
 
-        if (vm.count("version"))
+        if (early_vm.count("version"))
         {
             std::cout << "swarmdb" << ": " << SWARM_GIT_COMMIT << std::endl;
 
@@ -360,26 +361,22 @@ simple_options::handle_command_line_options(int argc, const char* argv[])
             return false;
         }
 
-        if (vm.count("help") || vm.count("config") == 0)
+        if (early_vm.count("help") || early_vm.count("config") == 0)
         {
             std::cout << "Usage:" << '\n'
                       << "  " << "bluzelle" << " [OPTION]" << '\n'
-                      << '\n' << desc << '\n'
-
-                      << "Config file options (specified as keys in JSON object, not command line arguments)" << '\n'
+                      << "Long form options may be specified on command line or in json object in config file" << '\n'
                       << '\n' << this->options_root << '\n';
 
             return false;
         }
 
-        po::notify(vm);
-
+        this->config_file = early_vm["config"].as<std::string>();
         return true;
     }
     catch (po::error& e)
     {
         std::cerr << "ERROR: " << e.what() << std::endl << std::endl;
-        std::cerr << desc << std::endl;
         return false;
     }
     catch (std::exception& e)
@@ -387,6 +384,26 @@ simple_options::handle_command_line_options(int argc, const char* argv[])
         std::cerr << "Unhandled Exception: " << e.what() << ", application will now exit" << std::endl;
         return false;
     }
+}
+
+bool
+simple_options::combine_options()
+{
+    boost::program_options::parsed_options override_opts(&(this->options_root));
+    for (const auto& pair : this->overrides)
+    {
+        po::basic_option<char> opt;
+        opt.string_key = pair.first;
+        opt.value.push_back(pair.second);
+        override_opts.options.push_back(opt);
+    }
+
+    this->vm = boost::program_options::variables_map{};
+    po::store(override_opts, this->vm);
+    po::store(this->cmd_opts, this->vm);
+    po::store(this->config_file_opts, this->vm);
+
+    return true;
 }
 
 bool
@@ -398,14 +415,8 @@ simple_options::has(const std::string& option_name) const
 void
 simple_options::set(const std::string& option_name, const std::string& option_value)
 {
-    po::basic_option<char> opt;
-    opt.string_key = option_name;
-    opt.value.push_back(option_value);
-
-    boost::program_options::parsed_options parsed(&(this->options_root));
-    parsed.options.push_back(opt);
-
-    this->vm.erase(option_name);
-    po::store(parsed, this->vm);
+    std::lock_guard<std::mutex> lock(this->lock);
+    this->overrides[option_name] = option_value;
+    this->combine_options();
 }
 

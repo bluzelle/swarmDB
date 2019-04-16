@@ -17,6 +17,8 @@
 #include <boost/program_options.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <string>
+#include <mutex>
+#include <unordered_map>
 
 namespace bzn::option_names
 {
@@ -83,6 +85,7 @@ namespace bzn
         T
         get(const std::string& option_name) const
         {
+            std::lock_guard<std::mutex> lock(this->lock);
             if (this->has(option_name))
             {
                 return this->vm[option_name].as<T>();
@@ -109,9 +112,16 @@ namespace bzn
         bool validate_options();
         bool handle_command_line_options(int argc, const char* argv[]);
         bool handle_config_file_options();
+        bool combine_options();
 
         std::string config_file;
         boost::program_options::options_description options_root;
         boost::program_options::variables_map vm;
+
+        boost::program_options::basic_parsed_options<char> cmd_opts;
+        boost::program_options::basic_parsed_options<char> config_file_opts;
+        std::unordered_map<std::string, std::string> overrides;
+
+        mutable std::mutex lock;
     };
 }
