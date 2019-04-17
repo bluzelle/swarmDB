@@ -3,8 +3,6 @@ language: cpp
 
 env:
   global:
-    - BOOST_INSTALL_DIR="$HOME/.local"
-    - BOOST_VERSION="1.68.0"
     - PROJECT_VERSION_MAJOR="0"
     - PROJECT_VERSION_MINOR="5"
     - PROJECT_VERSION_PATCH="${TRAVIS_BUILD_NUMBER}"
@@ -21,11 +19,12 @@ env:
 matrix:
   include:
     - os: linux
+      dist: xenial
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - sourceline: 'deb [trusted=yes] http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main'
+            - sourceline: 'deb [trusted=yes] http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu xenial main'
           packages:
             - g++-7
             - pkg-config
@@ -41,7 +40,7 @@ matrix:
     - os: osx
       osx_image: xcode10.1
       env:
-        - MATRIX_EVAL="brew update && brew unlink python && brew install protobuf && brew install snappy && brew install lz4"
+        - MATRIX_EVAL="brew unlink python && brew install protobuf snappy lz4 git-lfs"
         - CMAKE_COMMAND="cmake"
 
 cache:
@@ -91,10 +90,9 @@ before_script:
 script:
   - ${CXX} --version
   - echo CXXFLAGS=${CXXFLAGS}
-  - make boost
-  - make openssl
-  - make rocksdb
-  - make
+  - git lfs install
+  - git lfs pull
+  - make -j2
   - make static_analysis
   - ctest
   - make package

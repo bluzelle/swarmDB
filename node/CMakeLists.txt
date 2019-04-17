@@ -13,6 +13,6 @@ add_library(node STATIC
 target_link_libraries(node proto pbft)
 add_dependencies(node boost proto googletest jsoncpp) # for FRIEND_TEST
 
-target_include_directories(node PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
+target_include_directories(node PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
 
 add_subdirectory(test)

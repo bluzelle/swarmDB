@@ -9,7 +9,7 @@ add_library(pbft_operations STATIC
     pbft_operation_manager.cpp
     )
 
-target_link_libraries(pbft_operations utils proto)
-target_include_directories(pbft_operations PRIVATE ${PROTO_INCLUDE_DIR})
+target_link_libraries(pbft_operations utils proto pbft)
+target_include_directories(pbft_operations PRIVATE ${PROTO_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR})
 
 add_subdirectory(test)
