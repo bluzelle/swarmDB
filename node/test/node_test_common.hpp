@@ -63,7 +63,7 @@ namespace bzn
             EXPECT_CALL(*(this->io_context), post(_)).WillRepeatedly(Invoke(
                     [&](auto func)
                     {
-                        this->real_io_context->post(func);
+                        func();
                     }));
 
             EXPECT_CALL(*(this->io_context), make_unique_steady_timer()).WillRepeatedly(Invoke(
@@ -187,10 +187,18 @@ namespace bzn
 
         }
 
+        void yield()
+        {
+            // For making sure that async callbacks get a chance to be executed before we assert their result
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
         void do_incoming_connection(size_t id)
         {
             this->tcp_accept_handlers.at(id)(boost::system::error_code{});
+            this->yield();
             this->ws_accept_handlers.at(id)(boost::system::error_code{});
         }
+
     };
 }
