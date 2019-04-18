@@ -87,7 +87,7 @@ public:
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>(this->mock_io, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, this->options);
+        session = std::make_shared<bzn::session>(this->mock_io, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, this->mock_crypto, this->monitor, this->options);
     }
 
     void yield()
