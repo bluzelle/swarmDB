@@ -42,7 +42,8 @@ namespace bzn
                 std::chrono::milliseconds ws_idle_timeout,
                 std::list<bzn::session_shutdown_handler> shutdown_handlers,
                 std::shared_ptr<bzn::crypto_base> crypto,
-                std::shared_ptr<bzn::monitor_base> monitor);
+                std::shared_ptr<bzn::monitor_base> monitor,
+                std::shared_ptr<bzn::options_base> options);
 
         ~session();
 
@@ -94,6 +95,7 @@ namespace bzn
 
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::monitor_base> monitor;
+        std::shared_ptr<bzn::options_base> options;
     };
 
 } // blz

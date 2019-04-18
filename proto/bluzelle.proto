@@ -16,9 +16,10 @@ syntax = "proto3";
 
 message bzn_envelope
 {
-    string sender = 1;
-    bytes signature = 2;
-    uint64 timestamp = 3;
+    string swarm_id = 1;
+    string sender = 2;
+    bytes signature = 3;
+    uint64 timestamp = 4;
 
     oneof payload
     {

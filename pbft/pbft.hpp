@@ -66,6 +66,7 @@ namespace bzn
         // fwd declare test as it's not in the same namespace...
         class pbft_test_database_response_is_forwarded_to_session_Test;
         class pbft_test_add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting_Test;
+        class pbft_test_pbft_wrap_message_sets_swarm_id_Test;
     }
 
     using request_hash_t = std::string;
@@ -324,6 +325,7 @@ namespace bzn
         FRIEND_TEST(pbft_newview_test, test_last_sequence_in_newview_prepared_proofs);
         FRIEND_TEST(bzn::test::pbft_test, database_response_is_forwarded_to_session);
         FRIEND_TEST(bzn::test::pbft_test, add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting);
+        FRIEND_TEST(bzn::test::pbft_test, pbft_wrap_message_sets_swarm_id);
 
         friend class pbft_proto_test;
         friend class pbft_join_leave_test;

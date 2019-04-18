@@ -25,21 +25,21 @@ namespace bzn {
 class Mockpbft_base : public pbft_base {
 public:
     MOCK_METHOD0(start,
-    void());
+            void());
     MOCK_METHOD2(handle_message,
-    void(const pbft_msg& msg, const bzn_envelope& original_msg));
+            void(const pbft_msg& msg, const bzn_envelope& original_msg));
     MOCK_METHOD2(handle_database_message,
-    void(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session));
+            void(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session));
     MOCK_CONST_METHOD0(is_primary,
-    bool());
+            bool());
     MOCK_CONST_METHOD1(get_primary,
-    const peer_address_t&(std::optional<uint64_t> view));
+            const peer_address_t&(std::optional<uint64_t> view));
     MOCK_CONST_METHOD0(get_uuid,
-    const bzn::uuid_t&());
+            const bzn::uuid_t&());
     MOCK_METHOD0(handle_failure,
-    void());
+            void());
     MOCK_CONST_METHOD1(get_peer_by_uuid,
-    const peer_address_t&(const std::string& uuid));
+            const peer_address_t&(const std::string& uuid));
     MOCK_CONST_METHOD0(current_peers_ptr,
         std::shared_ptr<const std::vector<bzn::peer_address_t>>());
 };
