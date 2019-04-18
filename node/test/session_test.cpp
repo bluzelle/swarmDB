@@ -70,6 +70,8 @@ public:
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
                     return strand;
                 }));
+
+        EXPECT_CALL(*(this->io_context), post(_)).WillRepeatedly(Invoke([](auto handler){handler();}));
     }
 };
 
@@ -164,6 +166,7 @@ namespace bzn
                                     .io_context
                                     ->make_unique_tcp_socket()
                                     ->get_tcp_socket()));
+
         this->mock.ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->mock.timer_callbacks.at(0)(boost::system::error_code{});

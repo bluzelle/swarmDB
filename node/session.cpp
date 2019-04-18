@@ -197,28 +197,28 @@ session::do_read()
                 return;
             }
 
+            self->io_context->post(
+                    [self, buffer]()
+                    {
+                        // get the message...
+                        std::stringstream ss;
+                        ss << boost::beast::buffers(buffer->data());
+
+                        bzn_envelope proto_msg;
+
+                        if (proto_msg.ParseFromIstream(&ss))
+                        {
+                            self->proto_handler(proto_msg, self);
+                        }
+                        else
+                        {
+                            LOG(error) << "Failed to parse incoming message";
+                        }
+                    });
+
             self->reading = false;
             self->do_read();
 
-            auto invoke = [self, buffer]()
-            {
-                // get the message...
-                std::stringstream ss;
-                ss << boost::beast::buffers(buffer->data());
-
-                bzn_envelope proto_msg;
-
-                if (proto_msg.ParseFromIstream(&ss))
-                {
-                    self->proto_handler(proto_msg, self);
-                }
-                else
-                {
-                    LOG(error) << "Failed to parse incoming message";
-                }
-            };
-
-            self->io_context->post(invoke);
         })
     );
 }

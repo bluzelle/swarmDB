@@ -86,7 +86,6 @@ node::do_accept()
                 return;
             }
 
-
             auto ep = self->acceptor_socket->remote_endpoint();
             auto key = self->key_from_ep(ep);
 
@@ -97,7 +96,6 @@ node::do_accept()
             {
                 LOG(warning) << "failed to set socket option TCP_NODELAY: " << option_ec.message();
             }
-
 #ifndef __APPLE__
             int flags = 1;
             if (setsockopt(self->acceptor_socket->get_tcp_socket().native_handle(), SOL_TCP, TCP_QUICKACK, &flags, sizeof(flags)))
@@ -124,9 +122,8 @@ node::do_accept()
             // Do not attempt to identify the incoming session; one ip address could be running multiple daemons
             // and we can't identify them based on the outgoing ports they choose
 
-            session->accept(std::move(ws));
             self->do_accept();
-
+            session->accept(std::move(ws));
         });
 }
 

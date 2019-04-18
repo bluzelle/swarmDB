@@ -94,6 +94,7 @@ namespace  bzn
         EXPECT_EQ(mock.socket_count, 1u);
 
         mock.do_incoming_connection(0);
+        this->yield();
         mock.ws_read_closures.at(0)(this->db_msg.SerializeAsString());
         this->yield();
         EXPECT_EQ(callback_invoked, 1u);
@@ -196,6 +197,8 @@ namespace  bzn
         {
             callback_execute++;
         });
+
+        EXPECT_CALL(*mock_io_context, post(_)).WillRepeatedly(Invoke([](auto handler){handler();}));
 
         bzn_envelope bad_msg;
         bad_msg.set_pbft("some stuff");
