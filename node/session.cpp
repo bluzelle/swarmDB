@@ -28,7 +28,8 @@ session::session(
         std::chrono::milliseconds ws_idle_timeout,
         std::list<bzn::session_shutdown_handler> shutdown_handlers,
         std::shared_ptr<bzn::crypto_base> crypto,
-        std::shared_ptr<bzn::monitor_base> monitor
+        std::shared_ptr<bzn::monitor_base> monitor,
+        std::shared_ptr<bzn::options_base> options
 )
         : session_id(session_id)
         , ep(std::move(ep))
@@ -42,6 +43,7 @@ session::session(
         , write_buffer(nullptr, 0)
         , crypto(std::move(crypto))
         , monitor(std::move(monitor))
+        , options(std::move(options))
 {
     LOG(debug) << "creating session " << std::to_string(session_id);
 }
@@ -268,6 +270,7 @@ session::do_write()
 void
 session::send_signed_message(std::shared_ptr<bzn_envelope> msg)
 {
+    msg->set_swarm_id(this->options->get_swarm_id());
     if (msg->signature().empty())
     {
         this->crypto->sign(*msg);
