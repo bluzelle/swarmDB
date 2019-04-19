@@ -87,7 +87,8 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
                  {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)},
                  {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)},
                  {database_msg::kTtl,           std::bind(&crud::handle_ttl,            this, _1, _2, _3)},
-                 {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)}}
+                 {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)},
+                 {database_msg::kExpire,        std::bind(&crud::handle_expire,         this, _1, _2, _3)}}
            , owner_public_key(std::move(owner_public_key))
 {
 }
@@ -460,6 +461,68 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
             else
             {
                 result = bzn::storage_result::ttl_not_found;
+            }
+        }
+    }
+
+    this->send_response(request, result, database_response(), session);
+}
+
+
+void
+crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            const auto generated_key = generate_expire_key(request.header().db_uuid(), request.expire().key());
+
+            const bool has = this->storage->has(TTL_UUID, generated_key);
+
+            // expired?
+            if (has && this->expired(request.header().db_uuid(), request.expire().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
+            result = bzn::storage_result::not_found;
+
+            // assume if ttl entry exists so does the db entry...
+            if (has)
+            {
+                this->remove_expiration_entry(generated_key);
+
+                result = bzn::storage_result::ok;
+
+                this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
+                    request.expire().expire());
+            }
+            else
+            {
+                if (this->storage->has(request.header().db_uuid(), request.expire().key()))
+                {
+                    result = bzn::storage_result::ok;
+
+                    this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
+                        request.expire().expire());
+                }
+                else
+                {
+                    result = bzn::storage_result::not_found;
+                }
             }
         }
     }

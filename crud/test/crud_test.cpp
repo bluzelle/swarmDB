@@ -3145,3 +3145,92 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
     remove_test_database(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
     remove_test_database(crud_1, session_1, mock_node_1, CALLER_UUID, DB_UUID);
 }
+
+
+TEST(crud, test_that_expire_send_proper_response)
+{
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        mock_subscription_manager, nullptr);
+
+    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+
+    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+
+    crud->start(mock_pbft);
+
+    database_msg msg;
+
+    msg.mutable_header()->set_db_uuid("uuid");
+    msg.mutable_header()->set_nonce(uint64_t(123));
+    msg.mutable_create_db();
+
+    crud->handle_request("caller_id", msg, nullptr);
+
+    msg.mutable_create()->set_key("key");
+    msg.mutable_create()->set_value("value");
+
+    // add key...
+    auto session = std::make_shared<bzn::Mocksession_base>();
+
+    EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
+
+    expect_signed_response(session);
+    crud->handle_request("caller_id", msg, session);
+
+    // set expire on key not in db...
+    msg.mutable_expire()->set_key("key1");
+    msg.mutable_expire()->set_expire(1);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::not_found));
+
+    crud->handle_request("caller_id", msg, session);
+
+    // set expire...
+    msg.mutable_expire()->set_key("key");
+    msg.mutable_expire()->set_expire(1);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+
+    crud->handle_request("caller_id", msg, session);
+
+    // update key..
+    msg.mutable_expire()->set_expire(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+
+    crud->handle_request("caller_id", msg, session);
+
+    // get ttl..
+    msg.mutable_ttl()->set_key("key");
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kTtl, std::nullopt,
+        [](const auto& resp)
+        {
+            EXPECT_EQ(resp.ttl().key(), "key");
+            EXPECT_GE(resp.ttl().ttl(), uint64_t(2));
+        });
+
+    crud->handle_request("caller_id", msg, session);
+
+    // test for expired...
+    sleep(3);
+
+    // update key..
+    msg.mutable_expire()->set_key("key");
+    msg.mutable_expire()->set_expire(2);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
+
+    crud->handle_request("caller_id", msg, session);
+}
