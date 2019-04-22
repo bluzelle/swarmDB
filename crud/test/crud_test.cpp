@@ -3204,6 +3204,14 @@ TEST(crud, test_that_expire_send_proper_response)
     crud->handle_request("caller_id", msg, session);
 
     // update key..
+    msg.mutable_expire()->set_expire(0);
+
+    expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+        bzn::storage_result_msg.at(bzn::storage_result::invalid_argument));
+
+    crud->handle_request("caller_id", msg, session);
+
+    // update key..
     msg.mutable_expire()->set_expire(2);
 
     expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);

@@ -498,22 +498,20 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
                 return;
             }
 
-            result = bzn::storage_result::not_found;
-
-            // assume if ttl entry exists so does the db entry...
-            if (has)
+            // do not allow zero expires...
+            if (request.expire().expire() == 0)
             {
-                this->remove_expiration_entry(generated_key);
-
-                result = bzn::storage_result::ok;
-
-                this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
-                    request.expire().expire());
+                result = bzn::storage_result::invalid_argument;
             }
             else
             {
-                if (this->storage->has(request.header().db_uuid(), request.expire().key()))
+                result = bzn::storage_result::not_found;
+
+                // assume if ttl entry exists so does the db entry...
+                if (has)
                 {
+                    this->remove_expiration_entry(generated_key);
+
                     result = bzn::storage_result::ok;
 
                     this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
@@ -521,7 +519,17 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
                 }
                 else
                 {
-                    result = bzn::storage_result::not_found;
+                    if (this->storage->has(request.header().db_uuid(), request.expire().key()))
+                    {
+                        result = bzn::storage_result::ok;
+
+                        this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
+                            request.expire().expire());
+                    }
+                    else
+                    {
+                        result = bzn::storage_result::not_found;
+                    }
                 }
             }
         }
