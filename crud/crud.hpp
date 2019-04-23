@@ -82,7 +82,7 @@ namespace bzn
         // expiration...
         void check_key_expiration(const boost::system::error_code& ec);
         bool expired(const bzn::uuid_t& uuid, const bzn::key_t& key);
-        void update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t expire);
+        void update_expiration_entry(const bzn::uuid_t& generated_key, uint64_t expire);
         void remove_expiration_entry(const bzn::key_t& generated_key);
         void flush_expiration_entries(const bzn::uuid_t& uuid);
         std::optional<uint64_t> get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const;

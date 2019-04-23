@@ -237,7 +237,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (result == bzn::storage_result::ok)
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.create().key(),
+                this->update_expiration_entry(generate_expire_key(request.header().db_uuid(), request.create().key()),
                         request.create().expire());
 
                 this->subscription_manager->inspect_commit(request);
@@ -344,7 +344,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (result == bzn::storage_result::ok)
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+                this->update_expiration_entry(generate_expire_key(request.header().db_uuid(), request.update().key()), request.update().expire());
 
                 this->subscription_manager->inspect_commit(request);
             }
@@ -514,8 +514,7 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
 
                     result = bzn::storage_result::ok;
 
-                    this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
-                        request.expire().expire());
+                    this->update_expiration_entry(generated_key, request.expire().expire());
                 }
                 else
                 {
@@ -523,8 +522,7 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
                     {
                         result = bzn::storage_result::ok;
 
-                        this->update_expiration_entry(request.header().db_uuid(), request.expire().key(),
-                            request.expire().expire());
+                        this->update_expiration_entry(generated_key, request.expire().expire());
                     }
                     else
                     {
@@ -1047,10 +1045,8 @@ crud::load_state(const std::string& state)
 
 
 void
-crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t expire)
+crud::update_expiration_entry(const bzn::key_t& generated_key, uint64_t expire)
 {
-    const auto generated_key = generate_expire_key(uuid, key);
-
     if (expire)
     {
         // now + expire seconds...
@@ -1061,7 +1057,7 @@ crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, ui
 
         if (result == bzn::storage_result::ok)
         {
-            LOG(debug) << "created ttl entry for: " << uuid << ":" << key;
+            LOG(debug) << "created ttl entry for: " << generated_key;
 
             return;
         }
@@ -1070,13 +1066,13 @@ crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, ui
 
         if (result != bzn::storage_result::ok)
         {
-            throw std::runtime_error("Failed to update ttl entry for: " + uuid + ":" + key);
+            throw std::runtime_error("Failed to update ttl entry for: " + generated_key);
         }
 
         return;
     }
 
-    LOG(debug) << "removing old entry for: " << uuid << ":" << key;
+    LOG(debug) << "removing old entry for: " << generated_key;
 
     this->remove_expiration_entry(generated_key);
 }
