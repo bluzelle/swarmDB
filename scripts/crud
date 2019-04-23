@@ -210,6 +210,13 @@ def persist_request(key):
     return msg
 
 
+def expire_request(key, expire):
+    msg = database_pb2.database_msg()
+    msg.expire.key = key
+    msg.expire.expire = expire
+    return msg
+
+
 def keys_request():
     msg = database_pb2.database_msg()
     msg.keys.SetInParent()
@@ -294,6 +301,10 @@ def ttl_handler(args):
 
 def persist_handler(args):
     return send_request(args.node, args.uuid, persist_request(args.key))
+
+
+def expire_handler(args):
+    return  send_request(args.node, args.uuid, expire_request(args.key, args.expire))
 
 
 def keys_handler(args):
@@ -426,11 +437,19 @@ if __name__ == "__main__":
     ttl_parser.set_defaults(func=ttl_handler)
 
     # persist
-    ttl_parser = subparsers.add_parser('persist', help="Remove expiration for a key within a DB by UUID")
-    ttl_group = ttl_parser.add_argument_group('required arguments')
-    ttl_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
-    ttl_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
-    ttl_parser.set_defaults(func=persist_handler)
+    persist_parser = subparsers.add_parser('persist', help="Remove expiration for a key within a DB by UUID")
+    persist_group = persist_parser.add_argument_group('required arguments')
+    persist_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    persist_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    persist_parser.set_defaults(func=persist_handler)
+
+    # expire
+    expire_parser = subparsers.add_parser('expire', help="Set expire for a key within a DB by UUID")
+    expire_group = expire_parser.add_argument_group('required arguments')
+    expire_group.add_argument("-k", "--key",   type=str, default=None, help="key", required=True)
+    expire_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    expire_group.add_argument("-ex", "--expire", type=int, default=0, help="expire in seconds")
+    expire_parser.set_defaults(func=expire_handler)
 
     # keys
     keys_parser = subparsers.add_parser('keys', help="Get all keys for a DB by UUID")

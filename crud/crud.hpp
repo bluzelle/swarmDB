@@ -55,6 +55,7 @@ namespace bzn
         void handle_delete(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_ttl(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_persist(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
+        void handle_expire(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_has(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_keys(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
         void handle_size(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session);
@@ -81,7 +82,7 @@ namespace bzn
         // expiration...
         void check_key_expiration(const boost::system::error_code& ec);
         bool expired(const bzn::uuid_t& uuid, const bzn::key_t& key);
-        void update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t expire);
+        void update_expiration_entry(const bzn::uuid_t& generated_key, uint64_t expire);
         void remove_expiration_entry(const bzn::key_t& generated_key);
         void flush_expiration_entries(const bzn::uuid_t& uuid);
         std::optional<uint64_t> get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const;

@@ -87,7 +87,8 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
                  {database_msg::kRemoveWriters, std::bind(&crud::handle_remove_writers, this, _1, _2, _3)},
                  {database_msg::kQuickRead,     std::bind(&crud::handle_read,           this, _1, _2, _3)},
                  {database_msg::kTtl,           std::bind(&crud::handle_ttl,            this, _1, _2, _3)},
-                 {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)}}
+                 {database_msg::kPersist,       std::bind(&crud::handle_persist,        this, _1, _2, _3)},
+                 {database_msg::kExpire,        std::bind(&crud::handle_expire,         this, _1, _2, _3)}}
            , owner_public_key(std::move(owner_public_key))
 {
 }
@@ -236,7 +237,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (result == bzn::storage_result::ok)
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.create().key(),
+                this->update_expiration_entry(generate_expire_key(request.header().db_uuid(), request.create().key()),
                         request.create().expire());
 
                 this->subscription_manager->inspect_commit(request);
@@ -343,7 +344,7 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (result == bzn::storage_result::ok)
             {
-                this->update_expiration_entry(request.header().db_uuid(), request.update().key(), request.update().expire());
+                this->update_expiration_entry(generate_expire_key(request.header().db_uuid(), request.update().key()), request.update().expire());
 
                 this->subscription_manager->inspect_commit(request);
             }
@@ -460,6 +461,74 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
             else
             {
                 result = bzn::storage_result::ttl_not_found;
+            }
+        }
+    }
+
+    this->send_response(request, result, database_response(), session);
+}
+
+
+void
+crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+{
+    bzn::storage_result result{bzn::storage_result::db_not_found};
+
+    std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
+
+    const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+
+    if (db_exists)
+    {
+        if (!this->is_caller_a_writer(caller_id, perms))
+        {
+            result = bzn::storage_result::access_denied;
+        }
+        else
+        {
+            const auto generated_key = generate_expire_key(request.header().db_uuid(), request.expire().key());
+
+            const bool has = this->storage->has(TTL_UUID, generated_key);
+
+            // expired?
+            if (has && this->expired(request.header().db_uuid(), request.expire().key()))
+            {
+                this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
+
+                return;
+            }
+
+            // do not allow zero expires...
+            if (request.expire().expire() == 0)
+            {
+                result = bzn::storage_result::invalid_argument;
+            }
+            else
+            {
+                result = bzn::storage_result::not_found;
+
+                // assume if ttl entry exists so does the db entry...
+                if (has)
+                {
+                    this->remove_expiration_entry(generated_key);
+
+                    result = bzn::storage_result::ok;
+
+                    this->update_expiration_entry(generated_key, request.expire().expire());
+                }
+                else
+                {
+                    if (this->storage->has(request.header().db_uuid(), request.expire().key()))
+                    {
+                        result = bzn::storage_result::ok;
+
+                        this->update_expiration_entry(generated_key, request.expire().expire());
+                    }
+                    else
+                    {
+                        result = bzn::storage_result::not_found;
+                    }
+                }
             }
         }
     }
@@ -976,10 +1045,8 @@ crud::load_state(const std::string& state)
 
 
 void
-crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, uint64_t expire)
+crud::update_expiration_entry(const bzn::key_t& generated_key, uint64_t expire)
 {
-    const auto generated_key = generate_expire_key(uuid, key);
-
     if (expire)
     {
         // now + expire seconds...
@@ -990,7 +1057,7 @@ crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, ui
 
         if (result == bzn::storage_result::ok)
         {
-            LOG(debug) << "created ttl entry for: " << uuid << ":" << key;
+            LOG(debug) << "created ttl entry for: " << generated_key;
 
             return;
         }
@@ -999,13 +1066,13 @@ crud::update_expiration_entry(const bzn::uuid_t& uuid, const bzn::key_t& key, ui
 
         if (result != bzn::storage_result::ok)
         {
-            throw std::runtime_error("Failed to update ttl entry for: " + uuid + ":" + key);
+            throw std::runtime_error("Failed to update ttl entry for: " + generated_key);
         }
 
         return;
     }
 
-    LOG(debug) << "removing old entry for: " << uuid << ":" << key;
+    LOG(debug) << "removing old entry for: " << generated_key;
 
     this->remove_expiration_entry(generated_key);
 }
