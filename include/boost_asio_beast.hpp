@@ -300,7 +300,7 @@ namespace bzn::asio
 
         void post(bzn::asio::task func) override
         {
-            boost::asio::post(func);
+            boost::asio::post(this->io_context, func);
         }
 
         boost::asio::io_context::count_type run() override
