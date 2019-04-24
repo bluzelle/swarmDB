@@ -64,6 +64,7 @@ namespace bzn::option_names
     const std::string CRYPTO_SELF_VERIFY = "crypto_self_verify";
 
     const std::string MONITOR_MAX_TIMERS = "monitor_max_timers";
+    const std::string OVERRIDE_NUM_THREADS = "override_num_threads";
 }
 
 namespace bzn
