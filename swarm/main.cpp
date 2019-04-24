@@ -188,11 +188,24 @@ print_banner(const bzn::options& options, double eth_balance)
 
 
 void
-start_worker_threads_and_wait(std::shared_ptr<bzn::asio::io_context_base> io_context)
+start_worker_threads_and_wait(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::options_base> options)
 {
     std::vector<std::thread> workers;
 
-    for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+    size_t thread_count;
+    if (options->get_simple_options().has(bzn::option_names::OVERRIDE_NUM_THREADS))
+    {
+        thread_count = options->get_simple_options().get<size_t>(bzn::option_names::OVERRIDE_NUM_THREADS);
+    }
+    else
+    {
+        thread_count = std::thread::hardware_concurrency();
+    }
+
+    LOG(info) << "starting " << thread_count << " worker threads";
+
+
+    for (size_t i = 0; i < thread_count; ++i)
     {
         workers.emplace_back(std::thread([io_context]
         {
@@ -302,7 +315,7 @@ main(int argc, const char* argv[])
 
         print_banner(*options, eth_balance);
 
-        start_worker_threads_and_wait(io_context);
+        start_worker_threads_and_wait(io_context, options);
     }
     catch(std::exception& ex)
     {

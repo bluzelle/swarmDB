@@ -100,6 +100,9 @@ simple_options::build_options()
                 (STATE_DIR.c_str(),
                         po::value<std::string>()->default_value("./.state/"),
                         "location for state files")
+                (OVERRIDE_NUM_THREADS.c_str(),
+                        po::value<size_t>(),
+                        "number of worker threads to run (default is automatic based on hardware")
                 (WS_IDLE_TIMEOUT.c_str(),
                         po::value<uint64_t>()->default_value(300000),
                         "websocket idle timeout (ms)");
