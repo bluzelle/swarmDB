@@ -96,6 +96,8 @@ namespace bzn::asio
 
         virtual bzn::asio::task wrap(bzn::asio::task action) = 0;
 
+        virtual void post(bzn::asio::task action) = 0;
+
         virtual boost::asio::io_context::strand& get_strand() = 0;
     };
 
@@ -257,6 +259,11 @@ namespace bzn::asio
         bzn::asio::task wrap(bzn::asio::task action) override
         {
             return this->s.wrap(std::move(action));
+        }
+
+        void post(bzn::asio::task action) override
+        {
+            this->s.post(action);
         }
 
         boost::asio::io_context::strand& get_strand() override

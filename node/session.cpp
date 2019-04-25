@@ -74,7 +74,7 @@ session::start_idle_timeout()
 void
 session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 {
-    this->strand->wrap([self = shared_from_this(), ws_factory]()
+    this->strand->post([self = shared_from_this(), ws_factory]()
     {
         std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket();
         socket->async_connect(self->ep,
@@ -122,13 +122,13 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                         self->do_write();
                     }));
             }));
-    })();
+    });
 }
 
 void
 session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
 {
-    this->strand->wrap([self = shared_from_this(), ws]()
+    this->strand->post([self = shared_from_this(), ws]()
     {
 
         self->websocket = std::move(ws);
@@ -151,16 +151,16 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
                         }
                 )
        );
-   })();
+   });
 }
 
 void
 session::add_shutdown_handler(const bzn::session_shutdown_handler handler)
 {
-    this->strand->wrap([handler, self = shared_from_this()]()
+    this->strand->post([handler, self = shared_from_this()]()
     {
         self->shutdown_handlers.push_back(handler);
-    })();
+    });
 }
 
 void
@@ -294,17 +294,17 @@ session::send_message(std::shared_ptr<bzn::encoded_message> msg)
         return;
     }
 
-    this->strand->wrap([self = shared_from_this(), msg]()
+    this->strand->post([self = shared_from_this(), msg]()
     {
         self->write_queue.push_back(msg);
         self->do_write();
-    })();
+    });
 }
 
 void
 session::close()
 {
-    this->strand->wrap([self = shared_from_this()](){self->close();});
+    this->strand->post([self = shared_from_this()](){self->close();});
 }
 
 void

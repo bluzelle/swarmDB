@@ -211,7 +211,7 @@ void
 node::multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
 {
     this->io_context->post(
-            [self = shared_from_this(), eps, msg]()
+            [self =  shared_from_this(), msg, eps]()
             {
                 if (msg->signature().empty())
                 {

@@ -648,7 +648,7 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
 {
     msg_env->set_timestamp(this->now());
 
-    auto targets = std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>>();
+    auto targets = std::make_shared<std::vector<boost::asio::ip::tcp::endpoint>>();
     for (const auto& peer : this->current_peers())
     {
         targets->emplace_back(bzn::make_endpoint(peer));
