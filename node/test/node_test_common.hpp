@@ -63,7 +63,7 @@ namespace bzn
             EXPECT_CALL(*(this->io_context), post(_)).WillRepeatedly(Invoke(
                     [&](auto func)
                     {
-                        this->real_io_context->post(func);
+                        boost::asio::post(func);
                     }));
 
             EXPECT_CALL(*(this->io_context), make_unique_steady_timer()).WillRepeatedly(Invoke(
@@ -98,7 +98,7 @@ namespace bzn
                         EXPECT_CALL(*mock_socket, async_connect(_, _)).Times(AtMost(1)).WillOnce(Invoke(
                                 [&](auto, auto handler)
                                 {
-                                    this->real_io_context->post(std::bind(handler,
+                                    boost::asio::post(std::bind(handler,
                                             this->tcp_connect_works ? boost::system::error_code{} : boost::asio::error::connection_refused));
                                 }));
 
@@ -163,7 +163,7 @@ namespace bzn
                         EXPECT_CALL(*wss, async_handshake(_, _, _)).Times(AtMost(1)).WillRepeatedly(Invoke(
                                 [&](auto, auto, auto handler)
                                 {
-                                    this->real_io_context->post(std::bind(handler, boost::system::error_code{}));
+                                    boost::asio::post(std::bind(handler, boost::system::error_code{}));
                                 }));
 
                         EXPECT_CALL(*wss, is_open()).WillRepeatedly(Invoke(
@@ -177,7 +177,7 @@ namespace bzn
                                 [&, id](auto /*reason*/, auto handler)
                                 {
                                     this->ws_closed.insert_or_assign(id, true);
-                                    this->real_io_context->post(std::bind(handler, boost::system::error_code{}));
+                                    boost::asio::post(std::bind(handler, boost::system::error_code{}));
                                 }));
 
                         EXPECT_CALL(*wss, binary(_)).Times(AnyNumber());
