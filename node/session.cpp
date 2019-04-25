@@ -55,20 +55,23 @@ session::start_idle_timeout()
 
     this->idle_timer->expires_from_now(this->ws_idle_timeout);
     this->idle_timer->async_wait(
-        this->strand->wrap([self = shared_from_this()](auto /*ec*/)
+        [self = shared_from_this()](auto ec)
         {
             if (!self->activity)
             {
                 LOG(info) << "Closing session " << std::to_string(self->session_id) << " due to inactivity";
-                self->private_close();
+                self->close();
                 return;
             }
 
-            if (!self->closing)
+            if (self->closing || ec)
             {
-                self->start_idle_timeout();
+                LOG(debug) << "Stopping session " << std::to_string(self->session_id) << "'s idle timer";
+                return;
             }
-        }));
+
+            self->start_idle_timeout();
+        });
 }
 
 void
