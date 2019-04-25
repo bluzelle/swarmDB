@@ -171,9 +171,14 @@ namespace bzn
 
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
+
         bzn_envelope wrap_message(const pbft_msg& message) const;
         bzn_envelope wrap_message(const pbft_membership_msg&) const;
-        bzn_envelope wrap_message(const audit_message& message) const;
+
+        void async_signed_broadcast(const pbft_msg& msg);
+        void async_signed_broadcast(const pbft_membership_msg& message);
+        void async_signed_broadcast(const audit_message& message);
+        void async_signed_broadcast(std::shared_ptr<bzn_envelope> message);
 
         pbft_msg common_message_setup(const std::shared_ptr<pbft_operation>& op, pbft_msg_type type);
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn_envelope& msg

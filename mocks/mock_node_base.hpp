@@ -34,6 +34,8 @@ class Mocknode_base : public node_base {
       void(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg));
   MOCK_METHOD2(send_message_str,
       void(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg));
+  MOCK_METHOD2(multicast_signed_message,
+      void(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg));
 };
 
 }  // namespace bzn

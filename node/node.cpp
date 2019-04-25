@@ -207,6 +207,24 @@ node::send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_
     this->find_session(ep)->send_signed_message(msg);
 }
 
+void
+node::multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
+{
+    this->io_context->post(
+            [self = shared_from_this(), eps, msg]()
+            {
+                if (msg->signature().empty())
+                {
+                    self->crypto->sign(*msg);
+                }
+
+                for (const auto& ep : *eps)
+                {
+                    self->send_signed_message(ep, msg);
+                }
+            });
+}
+
 ep_key_t
 node::key_from_ep(const boost::asio::ip::tcp::endpoint& ep)
 {

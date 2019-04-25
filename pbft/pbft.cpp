@@ -157,8 +157,7 @@ pbft::handle_audit_heartbeat_timeout(const boost::system::error_code& ec)
         msg.mutable_primary_status()->set_view(this->view.value());
         msg.mutable_primary_status()->set_primary(this->uuid);
 
-        this->broadcast(this->wrap_message(msg));
-
+        this->async_signed_broadcast(msg);
     }
 
     this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
@@ -621,6 +620,44 @@ pbft::broadcast(const bzn_envelope& msg)
 }
 
 void
+pbft::async_signed_broadcast(const pbft_membership_msg& msg)
+{
+    auto msg_env = std::make_shared<bzn_envelope>();
+    msg_env->set_pbft_membership(msg.SerializeAsString());
+    this->async_signed_broadcast(std::move(msg_env));
+}
+
+void
+pbft::async_signed_broadcast(const pbft_msg& msg)
+{
+    auto msg_env = std::make_shared<bzn_envelope>();
+    msg_env->set_pbft(msg.SerializeAsString());
+    this->async_signed_broadcast(std::move(msg_env));
+}
+
+void
+pbft::async_signed_broadcast(const audit_message& msg)
+{
+    auto msg_env = std::make_shared<bzn_envelope>();
+    msg_env->set_audit(msg.SerializeAsString());
+    this->async_signed_broadcast(std::move(msg_env));
+}
+
+void
+pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
+{
+    msg_env->set_timestamp(this->now());
+
+    auto targets = std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>>();
+    for (const auto& peer : this->current_peers())
+    {
+        targets->emplace_back(bzn::make_endpoint(peer));
+    }
+
+    this->node->multicast_signed_message(std::move(targets), std::move(msg_env));
+}
+
+void
 pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
     if (op->get_stage() == pbft_operation_stage::prepare && op->is_prepared())
@@ -654,7 +691,7 @@ pbft::do_preprepare(const std::shared_ptr<pbft_operation>& op)
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPREPARE);
     msg.set_allocated_request(new bzn_envelope(op->get_request()));
 
-    this->broadcast(this->wrap_message(msg));
+    this->async_signed_broadcast(msg);
 }
 
 void
@@ -664,7 +701,7 @@ pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_PREPARE);
 
-    this->broadcast(this->wrap_message(msg));
+    this->async_signed_broadcast(msg);
 }
 
 void
@@ -685,7 +722,7 @@ pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
-    this->broadcast(this->wrap_message(msg));
+    this->async_signed_broadcast(msg);
 }
 
 void
@@ -764,7 +801,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         msg.mutable_pbft_commit()->set_sequence_number(op->get_sequence());
         msg.mutable_pbft_commit()->set_sender_uuid(this->uuid);
 
-        this->broadcast(this->wrap_message(msg));
+        this->async_signed_broadcast(msg);
     }
 
     // TODO: this needs to be refactored to be service-agnostic
@@ -839,18 +876,6 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
     return result;
 }
 
-bzn_envelope
-pbft::wrap_message(const audit_message& msg) const
-{
-    bzn_envelope result;
-    result.set_audit(msg.SerializeAsString());
-    result.set_sender(this->uuid);
-    result.set_timestamp(this->now());
-    this->crypto->sign(result);
-
-    return result;
-}
-
 const bzn::uuid_t&
 pbft::get_uuid() const
 {
@@ -870,7 +895,7 @@ pbft::notify_audit_failure_detected()
     {
         audit_message msg;
         msg.mutable_failure_detected()->set_sender_uuid(this->uuid);
-        this->broadcast(this->wrap_message(msg));
+        this->async_signed_broadcast(msg);
     }
 }
 
@@ -892,7 +917,7 @@ pbft::initiate_viewchange()
     pbft_msg view_change{pbft::make_viewchange(this->view.value() + 1, this->checkpoint_manager->get_latest_stable_checkpoint().first
         , this->checkpoint_manager->get_latest_stable_checkpoint_proof(), this->operation_manager->prepared_operations_since(this->checkpoint_manager->get_latest_stable_checkpoint().first))};
     LOG(debug) << "Sending VIEWCHANGE for view " << this->view.value() + 1;
-    this->broadcast(this->wrap_message(view_change));
+    this->async_signed_broadcast(view_change);
 }
 
 std::shared_ptr<std::string>
@@ -1413,7 +1438,7 @@ pbft::handle_viewchange(const pbft_msg &msg, const bzn_envelope &original_msg)
     auto newview_msg = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
     this->move_to_new_configuration(newview_msg.config_hash(), this->view.value() + 1);
     LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
-    this->broadcast(this->wrap_message(newview_msg));
+    this->async_signed_broadcast(newview_msg);
 }
 
 void
