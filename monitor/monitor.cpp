@@ -144,7 +144,7 @@ monitor::format_counter(bzn::statistic stat, uint64_t amount)
 void
 monitor::send(const std::string& stat)
 {
-    LOG(debug) << "..." << (stat.length() <= 30 ? stat : stat.substr(stat.length() - 30));
+//    LOG(debug) << "..." << (stat.length() <= 30 ? stat : stat.substr(stat.length() - 30));
     std::shared_ptr<boost::asio::const_buffer> buffer = std::make_shared<boost::asio::const_buffer>(stat.c_str(), stat.size());
     this->socket->async_send_to(*buffer, *(this->monitor_endpoint),
             [buffer](const boost::system::error_code& ec, std::size_t /*bytes*/)
@@ -162,7 +162,7 @@ monitor::maybe_send()
     auto threshold = this->time_last_sent + this->options->get_simple_options().get<uint64_t>(option_names::MONITOR_COLLATE_INTERVAL_SECONDS)*1000000;
     if (this->clock->microseconds_since_epoch() >= threshold)
     {
-        LOG(debug) << "Sending batched statistics:";
+//        LOG(debug) << "Sending batched statistics:";
         for (const auto& pair : this->accumulated_stats)
         {
             this->send(this->format_counter(pair.first, pair.second));

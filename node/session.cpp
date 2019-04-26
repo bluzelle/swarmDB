@@ -16,6 +16,7 @@
 #include <node/node.hpp>
 #include <sstream>
 #include <boost/beast/websocket/error.hpp>
+#include <utils/bytes_to_debug_string.hpp>
 
 using namespace bzn;
 
@@ -142,6 +143,10 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
                                 LOG(error) << "websocket accept failed: " << ec.message();
                                 return;
                             }
+                            else
+                            {
+                                LOG(debug) << "websocket connected";
+                            }
 
                             self->monitor->send_counter(statistic::session_opened);
                             self->start_idle_timeout();
@@ -198,6 +203,7 @@ session::do_read()
             // get the message...
             std::stringstream ss;
             ss << boost::beast::buffers(buffer->data());
+            LOG(debug) << "Got message: size=" << ss.str().size() << "content: " << bytes_to_debug_string(ss.str(), true);
 
             bzn_envelope proto_msg;
 

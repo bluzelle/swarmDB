@@ -28,7 +28,7 @@ bzn::bytes_to_debug_string(const std::string& input, bool preserve_full)
     {
         // This is not a remotely rigorous way to do this, but as long as the goal is just to make
         // hashes distinguishable in logs it will suffice.
-        ss << std::hex << (0x00ff & static_cast<const unsigned short&>(c));
+        ss << std::hex << (0x00ff & static_cast<const unsigned short&>(c)) << " ";
     }
 
     auto result = ss.str();

@@ -135,6 +135,9 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
 
     if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
     {
+        auto sender = msg.sender();
+        auto sig = msg.signature();
+
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
