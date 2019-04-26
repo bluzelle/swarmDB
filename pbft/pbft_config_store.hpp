@@ -15,11 +15,13 @@
 #pragma once
 
 #include <pbft/pbft_configuration.hpp>
-#include <map>
-#include <gtest/gtest_prod.h>
 #include <pbft/pbft_persistent_state.hpp>
 #include <storage/storage_base.hpp>
+#include <gtest/gtest_prod.h>
+#include <list>
 #include <mutex>
+#include <map>
+
 
 namespace
 {

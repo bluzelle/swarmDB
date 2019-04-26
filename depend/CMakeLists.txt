@@ -38,7 +38,7 @@ macro(add_external_project NAME VERSION)
         )
 endmacro()
 
-add_external_project(boost 1.68.0)
+add_external_project(boost 1.70.0)
 add_external_project(googletest 1.8.0)
 add_external_project(jsoncpp 1.8.4)
 add_external_project(openssl 1.1.1)

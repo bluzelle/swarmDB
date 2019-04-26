@@ -17,6 +17,7 @@
 #include <utils/http_get.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <fstream>
+#include <sstream>
 #include <json/json.h>
 
 using namespace bzn;
