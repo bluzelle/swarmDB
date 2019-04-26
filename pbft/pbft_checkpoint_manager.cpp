@@ -319,5 +319,4 @@ pbft_checkpoint_manager::partial_checkpoint_proofs_count() const
 {
     std::lock_guard<std::mutex> lock(this->lock);
     return this->partial_checkpoint_proofs.size();
-
 }
