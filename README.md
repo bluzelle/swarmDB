@@ -267,10 +267,11 @@ Follow instructions in readme.md
 #### Connectivity Test
 
 ```text
-$ ./crud -p -n localhost:50000 status
+$ ./crud -s <SWARM-ID> -n localhost:49154 status
 
 Client: crud-script-0
-Sending: 
+Sending:
+swarm_id: "<SWARM-ID>"
 sender: "crud-script-0"
 status_request: ""
 
@@ -346,7 +347,7 @@ Response:
 #### Create database
 ```text
 
-./crud -p -n localhost:50000 create-db -u myuuid
+./crud -s <SWARM-ID> -n localhost:50000 create-db -u myuuid
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -363,7 +364,7 @@ header {
 #### Create
 
 ```text
-$ ./crud -p -n localhost:50000 create -u myuuid -k mykey -v myvalue
+$ ./crud -s <SWARM-ID> -n localhost:50000 create -u myuuid -k mykey -v myvalue
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -380,7 +381,7 @@ header {
 #### Read
 
 ```text
-$ ./crud -p -n localhost:50000 read -u myuuid -k mykey
+$ ./crud -s <SWARM-ID> -n localhost:50000 read -u myuuid -k mykey
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -401,7 +402,7 @@ read {
 #### Update
 
 ```text
-$ ./crud -p -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
+$ ./crud -s <SWARM-ID> -n localhost:50000 update -u myuuid -k mykey -v mynewvalue
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -418,7 +419,7 @@ header {
 #### Delete
 
 ```text
-$ ./crud -p -n localhost:50000 delete -u myuuid -k mykey
+$ ./crud -s <SWARM-ID> -n localhost:50000 delete -u myuuid -k mykey
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -435,7 +436,7 @@ header {
 #### Subscribe
 
 ```text
-$ ./crud -p -n localhost:50000 subscribe -u myuuid -k mykey
+$ ./crud -s <SWARM-ID> -n localhost:50000 subscribe -u myuuid -k mykey
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -467,7 +468,7 @@ Waiting....
 
 #### Delete database
 ```text
-./crud -p -n localhost:50000 delete-db -u myuuid
+./crud -s <SWARM-ID> -n localhost:50000 delete-db -u myuuid
 
 Client: crud-script-0
 ------------------------------------------------------------
@@ -516,6 +517,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -i ID, --id ID        Crud script sender id (default 0)
+  -s <SWARM-ID>,        Swarm id
+    --swarm_id <SWARM-ID>  
 
 required arguments:
   -n NODE, --node NODE  node's address (ex. 127.0.0.1:51010)
