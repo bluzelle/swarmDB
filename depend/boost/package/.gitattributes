@@ -4,3 +4,5 @@ boost-release-1.68.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text
 boost-debug-1.68.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text
 boost-debug-1.70.0-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
 boost-release-1.70.0-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+boost-debug-1.70.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text
+boost-release-1.70.0-darwin.tar.gz filter=lfs diff=lfs merge=lfs -text

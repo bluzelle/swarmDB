@@ -40,7 +40,7 @@ matrix:
     - os: osx
       osx_image: xcode10.1
       env:
-        - MATRIX_EVAL="brew unlink python && brew install protobuf snappy lz4 git-lfs"
+        - MATRIX_EVAL="brew unlink python && brew install protobuf snappy lz4 git-lfs && brew uninstall --ignore-dependencies boost"
         - CMAKE_COMMAND="cmake"
 
 cache:
