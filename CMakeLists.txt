@@ -93,6 +93,7 @@ add_subdirectory(pbft)
 add_subdirectory(chaos)
 add_subdirectory(crypto)
 add_subdirectory(monitor)
+add_subdirectory(mocks)
 
 include(cmake/static_analysis.cmake)
 

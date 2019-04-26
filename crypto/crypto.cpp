@@ -78,6 +78,10 @@ crypto::extract_payload(const bzn_envelope& msg)
         {
             return msg.status_response();
         }
+        case bzn_envelope::kCheckpointMsg:
+        {
+            return msg.checkpoint_msg();
+        }
         default :
         {
             throw std::runtime_error(

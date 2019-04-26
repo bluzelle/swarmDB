@@ -126,9 +126,6 @@ namespace bzn
         message.set_type(PBFT_MSG_COMMIT);
         EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
 
-        message.set_type(PBFT_MSG_CHECKPOINT);
-        EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
-
         message.set_type(PBFT_MSG_JOIN);
         EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
 
@@ -227,7 +224,7 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         auto ops = this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first);
-        auto viewchange = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->stable_checkpoint_proof, ops);
+        auto viewchange = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->checkpoint_manager->get_latest_stable_checkpoint_proof(), ops);
 
         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
         EXPECT_EQ(current_sequence, viewchange.sequence());
@@ -300,16 +297,16 @@ namespace bzn
             checkpoint.set_sender("a_nice_sender");
             checkpoint.set_signature("signature_" + std::to_string(i));
 
-            pbft_msg checkpoint_msg;
+            checkpoint_msg checkpoint_msg;
             checkpoint_msg.set_sequence(i);
             checkpoint_msg.set_state_hash("a_state_hash_" + std::to_string(i));
 
-            checkpoint.set_pbft(checkpoint_msg.SerializeAsString());
+            checkpoint.set_checkpoint_msg(checkpoint_msg.SerializeAsString());
             *(msg.add_checkpoint_messages()) = checkpoint;
         }
         this->pbft->save_checkpoint(msg);
         //  expect that there should be 3 unstable checkpoint proofs after calling save_checkpoint.
-        EXPECT_EQ(uint64_t(3), this->pbft->unstable_checkpoint_proofs.size());
+        EXPECT_EQ(uint64_t(3), this->pbft->checkpoint_manager->partial_checkpoint_proofs_count());
     }
 
     TEST_F(pbft_viewchange_test, test_handle_viewchange)
@@ -336,16 +333,20 @@ namespace bzn
             std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> join_retry_timer2 =
             std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::Mocksteady_timer_base> grace_timer2 =
+                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service2 =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
 
         EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
-            .Times(AtMost(3)).WillOnce(Invoke([&]()
+            .Times(AtMost(4)).WillOnce(Invoke([&]()
             { return std::move(audit_heartbeat_timer2); }))
             .WillOnce(Invoke([&]()
             { return std::move(new_config_timer2); }))
             .WillOnce(Invoke([&]()
-            { return std::move(join_retry_timer2); }));
+            { return std::move(join_retry_timer2); }))
+            .WillOnce(Invoke([&]()
+             { return std::move(grace_timer2); }));
 
         auto mock_options = std::make_shared<bzn::mock_options_base>();
 
@@ -392,7 +393,16 @@ namespace bzn
                                                pbft_msg msg;
                                                ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
                                                wmsg->set_sender(p.uuid);
-                                               pbft2->stable_checkpoint = this->pbft->stable_checkpoint;
+                                               for (const auto& peer : TEST_PEER_LIST)
+                                               {
+                                                   checkpoint_msg cp;
+                                                   cp.set_sequence(pbft->latest_stable_checkpoint().first);
+                                                   cp.set_state_hash(pbft->latest_stable_checkpoint().second);
+                                                   bzn_envelope env;
+                                                   env.set_checkpoint_msg(cp.SerializeAsString());
+                                                   env.set_sender(peer.uuid);
+                                                   pbft2->checkpoint_manager->handle_checkpoint_message(env);
+                                               }
                                                pbft2->handle_viewchange(msg, *wmsg);
                                            }));
         }
@@ -442,7 +452,7 @@ namespace bzn
 
         this->pbft->handle_failure();
 
-        auto latest_checkpoint{this->pbft->latest_checkpoint()};
+        auto latest_checkpoint{this->pbft->checkpoint_manager->get_latest_local_checkpoint()};
         EXPECT_EQ(0U, latest_checkpoint.first);
         EXPECT_EQ(INITIAL_CHECKPOINT_HASH, latest_checkpoint.second);
 

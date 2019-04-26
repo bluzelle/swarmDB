@@ -65,8 +65,20 @@ namespace bzn::test
                     }
                 ));
 
+        EXPECT_CALL(*(this->mock_node), register_for_message(bzn_envelope::kCheckpointMsg, _))
+                .Times(Exactly(1))
+                .WillOnce(
+                        Invoke(
+                                [&](const auto&, auto handler)
+                                {
+                                    this->checkpoint_msg_handler = handler;
+                                    return true;
+                                }
+                        ));
+
+
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
-                .Times(AtMost(3))
+                .Times(AnyNumber())
                 .WillOnce(
                         Invoke(
                                 [&]()
@@ -81,6 +93,24 @@ namespace bzn::test
                     Invoke(
                         [&]()
                         { return std::move(this->join_retry_timer); }
+                    ))
+                .WillRepeatedly(
+                    Invoke(
+                        [&]()
+                        {
+                            auto timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+                            EXPECT_CALL(*timer, async_wait(_))
+                                .Times(AnyNumber())
+                                .WillOnce(
+                                    Invoke(
+                                        [&](const auto handler)
+                                        {
+                                            this->cp_manager_timer_callbacks[cp_manager_timer_callback_count++] = handler;
+                                        }
+                                    )
+                                );
+                            return timer;
+                        }
                     ));
 
         EXPECT_CALL(*(this->audit_heartbeat_timer), async_wait(_))
@@ -302,14 +332,14 @@ namespace bzn::test
     bool
     is_checkpoint(std::shared_ptr<bzn_envelope> wrapped_msg)
     {
-        if (wrapped_msg->payload_case() != bzn_envelope::kPbft)
+        if (wrapped_msg->payload_case() != bzn_envelope::kCheckpointMsg)
         {
             return false;
         }
 
-        pbft_msg msg = extract_pbft_msg(*wrapped_msg);
+        checkpoint_msg msg;
 
-        return msg.type() == PBFT_MSG_CHECKPOINT && msg.sequence() > 0 && wrapped_msg->sender() != "" && msg.state_hash() != "";
+        return msg.ParseFromString(wrapped_msg->checkpoint_msg()) && msg.sequence() != 0 && msg.state_hash() != "";
     }
 
     bool

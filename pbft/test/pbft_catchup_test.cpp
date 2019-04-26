@@ -37,7 +37,7 @@ namespace bzn
             pbft_membership_msg msg;
             msg.ParseFromString(wrapped_msg->pbft_membership());
 
-            return msg.type() == PBFT_MMSG_GET_STATE && msg.sequence() > 0 && !wrapped_msg->sender().empty()
+            return msg.type() == PBFT_MMSG_GET_STATE && msg.sequence() > 0
                 && !msg.state_hash().empty();
         }
 
@@ -78,8 +78,11 @@ namespace bzn
 
             for (auto& p : TEST_PEER_LIST)
             {
-                pbft_msg cp = this->build_checkpoint_msg(sequence, view);
-                *(viewchange.add_checkpoint_messages()) = wrap_pbft_msg(cp, p.uuid);
+                checkpoint_msg cp = this->build_checkpoint_msg(sequence);
+                bzn_envelope msg;
+                msg.set_checkpoint_msg(cp.SerializeAsString());
+                msg.set_sender(p.uuid);
+                *(viewchange.add_checkpoint_messages()) = msg;
             }
 
             return wrap_pbft_msg(viewchange, uuid);
@@ -108,7 +111,7 @@ namespace bzn
         this->build_pbft();
 
         // node shouldn't be sending any checkpoint messages right now
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_checkpoint, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_checkpoint, Eq(true))))
             .Times((Exactly(0)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -121,11 +124,12 @@ namespace bzn
 
         // one more checkpoint message and the node should request state from a random node
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         bzn::peer_address_t node(*nodes++);
         send_checkpoint(node, 100);
+        this->cp_manager_timer_callbacks.at(0)(boost::system::error_code{});
     }
 
     TEST_F(pbft_catchup_test, node_doesnt_request_state_after_known_checkpoint)
@@ -140,9 +144,10 @@ namespace bzn
         }
 
         // since the node has this checkpoint it should NOT request state for it
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(0)));
         stabilize_checkpoint(100);
+        EXPECT_EQ(this->cp_manager_timer_callback_count, 0u);
     }
 
     TEST_F(pbft_catchup_test, primary_provides_state)
@@ -171,7 +176,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -181,6 +186,7 @@ namespace bzn
             bzn::peer_address_t node(*nodes++);
             send_checkpoint(node, 100);
         }
+        this->cp_manager_timer_callbacks.at(0)(boost::system::error_code{});
 
         // send the node the checkpoint "data"
         const uint64_t new_view = 3;
@@ -204,7 +210,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_primary();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -214,6 +220,7 @@ namespace bzn
             bzn::peer_address_t node(*nodes++);
             send_checkpoint(node, 100);
         }
+        this->cp_manager_timer_callbacks.at(0)(boost::system::error_code{});
 
         // send the node the checkpoint "data"
         pbft_membership_msg reply;

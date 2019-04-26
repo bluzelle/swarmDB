@@ -22,6 +22,7 @@
 #include <pbft/pbft_persistent_state.hpp>
 #include <pbft/pbft_config_store.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
+#include <pbft/pbft_checkpoint_manager.hpp>
 #include <storage/storage_base.hpp>
 #include <status/status_provider_base.hpp>
 #include <crypto/crypto_base.hpp>
@@ -39,7 +40,6 @@ namespace
     const std::chrono::milliseconds HEARTBEAT_INTERVAL{std::chrono::milliseconds(5000)};
     const std::chrono::seconds NEW_CONFIG_INTERVAL{std::chrono::seconds(30)};
     const std::chrono::seconds JOIN_RETRY_INTERVAL{std::chrono::seconds(30)};
-    const std::string INITIAL_CHECKPOINT_HASH = "<null db state>";
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
@@ -48,10 +48,6 @@ namespace
     const std::string VIEW_KEY{"view"};
     const std::string NEXT_ISSUED_SEQUENCE_NUMBER_KEY{"next_issued_sequence_number"};
     const std::string ACCEPTED_PREPREPARES_KEY{"accepted_preprepares"};
-    const std::string STABLE_CHECKPOINT_KEY{"stable_checkpoint"};
-    const std::string LOCAL_UNSTABLE_CHECKPOINTS_KEY{"local_unstable_checkpoints"};
-    const std::string UNSTABLE_CHECKPOINT_PROOFS_KEY{"unstable_checkpoint_proofs"};
-    const std::string STABLE_CHECKPOINT_PROOF_KEY{"stable_checkpoint_proof"};
     const std::string VIEW_IS_VALID_KEY{"view_is_valid"};
     const std::string LAST_VIEW_SENT_KEY{"last_view_sent"};
     const std::string VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY{"valid_viewchange_messages_for_view"};
@@ -70,7 +66,6 @@ namespace bzn
     }
 
     using request_hash_t = std::string;
-    using checkpoint_t = std::pair<uint64_t, bzn::hash_t>;
     using timestamp_t = uint64_t;
 
     class pbft final : public bzn::pbft_base, public bzn::status_provider_base, public std::enable_shared_from_this<pbft>
@@ -106,12 +101,6 @@ namespace bzn
         void handle_failure() override;
 
         void set_audit_enabled(bool setting);
-
-        checkpoint_t latest_stable_checkpoint() const;
-
-        checkpoint_t latest_checkpoint() const;
-
-        size_t unstable_checkpoints_count() const;
 
         uint64_t get_low_water_mark();
 
@@ -156,6 +145,8 @@ namespace bzn
 
         std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const override;
 
+        checkpoint_t latest_stable_checkpoint() const;
+
     private:
         bool preliminary_filter_msg(const pbft_msg& msg);
 
@@ -197,19 +188,11 @@ namespace bzn
 
         void notify_audit_failure_detected();
 
-        void checkpoint_reached_locally(uint64_t sequence);
-        void maybe_stabilize_checkpoint(checkpoint_t cp);
-        void stabilize_checkpoint(const checkpoint_t& cp);
-        const peer_address_t& select_peer_for_checkpoint(const checkpoint_t& cp);
-        void request_checkpoint_state(const checkpoint_t& cp);
         std::shared_ptr<std::string> get_checkpoint_state(const checkpoint_t& cp) const;
         void set_checkpoint_state(const checkpoint_t& cp, const std::string& data);
 
         inline size_t quorum_size() const;
         size_t max_faulty_nodes() const;
-
-        void clear_local_checkpoints_until(const checkpoint_t&);
-        void clear_checkpoint_messages_until(const checkpoint_t&);
 
         void initialize_persistent_state();
         bool initialize_configuration(const bzn::peers_list_t& peers);
@@ -230,7 +213,7 @@ namespace bzn
 
         // VIEWCHANGE/NEWVIEW Helper methods
         void initiate_viewchange();
-        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, persistent<std::string>>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
+        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
@@ -246,9 +229,6 @@ namespace bzn
         // Using 1 as first value here to distinguish from default value of 0 in protobuf
         persistent<uint64_t> view{storage, uint64_t{1}, VIEW_KEY};
         persistent<uint64_t> next_issued_sequence_number{storage, 1, NEXT_ISSUED_SEQUENCE_NUMBER_KEY};
-
-        uint64_t low_water_mark;
-        uint64_t high_water_mark;
 
         std::shared_ptr<bzn::node_base> node;
 
@@ -276,14 +256,6 @@ namespace bzn
         enum class swarm_status {not_joined, joining, waiting, joined};
         swarm_status in_swarm = swarm_status::not_joined;
 
-        persistent<checkpoint_t> stable_checkpoint{storage, {0, INITIAL_CHECKPOINT_HASH}, STABLE_CHECKPOINT_KEY};
-
-        std::unordered_map<uuid_t, persistent<std::string>> stable_checkpoint_proof;
-
-        std::set<persistent<checkpoint_t>> local_unstable_checkpoints;
-
-        std::map<checkpoint_t, std::unordered_map<uuid_t, persistent<std::string>>> unstable_checkpoint_proofs;
-
         bool new_config_in_flight = false;
 
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
@@ -298,7 +270,8 @@ namespace bzn
         persistent<bzn_envelope> saved_newview{storage, {}, SAVED_NEWVIEW_KEY};
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
-        pbft_config_store configurations;
+        std::shared_ptr<pbft_config_store> configurations;
+        std::shared_ptr<bzn::pbft_checkpoint_manager> checkpoint_manager;
         std::shared_ptr<bzn::monitor_base> monitor;
 
         FRIEND_TEST(pbft_viewchange_test, pbft_with_invalid_view_drops_messages);
