@@ -38,6 +38,7 @@ except ImportError as e:
                       "$ protoc --python_out=../scripts ./*.proto\n".format(e.message))
 
 nonce = 0
+CRUD_SCRIPT_SWARM_ID = ""
 CRUD_SCRIPT_SENDER_ID = "crud-script"
 
 def handle_response(ws):
@@ -60,6 +61,7 @@ def handle_response(ws):
 
 def send_request(node, uuid, msg, loop=False, ws=None):
     global nonce
+    global CRUD_SCRIPT_SWARM_ID
     global CRUD_SCRIPT_SENDER_ID
 
     if not ws:
@@ -74,6 +76,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
 
     msg_outer = bluzelle_pb2.bzn_envelope()
     msg_outer.database_msg = msg.SerializeToString()
+    msg_outer.swarm_id = CRUD_SCRIPT_SWARM_ID
     msg_outer.sender = CRUD_SCRIPT_SENDER_ID
 
     ws.send_binary(msg_outer.SerializeToString())
@@ -102,6 +105,7 @@ def send_status_request(node):
     ws = websocket.create_connection("ws://" + args.node)
     msg_outer = bluzelle_pb2.bzn_envelope()
     msg_inner = status_pb2.status_request()
+    msg_outer.swarm_id = CRUD_SCRIPT_SWARM_ID
     msg_outer.sender = CRUD_SCRIPT_SENDER_ID
     msg_outer.status_request = msg_inner.SerializeToString()
 
@@ -326,6 +330,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(description="crud", formatter_class=RawDescriptionHelpFormatter)
 
+    parser.add_argument("-s", "--swarm_id", type=str, default="0", help="Target swarm id (default 0)", required=False)
+
     parser.add_argument("-i", "--id", type=str, default="0", help="Crud script sender id (default 0)", required=False)
 
     required = parser.add_argument_group('required arguments')
@@ -479,6 +485,8 @@ if __name__ == "__main__":
     except AttributeError:
         # no input file specified. Value was passed via command line
         pass
+
+    CRUD_SCRIPT_SWARM_ID = args.swarm_id
 
     CRUD_SCRIPT_SENDER_ID += "-" + args.id
     print("\nClient: " + CRUD_SCRIPT_SENDER_ID)
