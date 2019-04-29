@@ -20,6 +20,7 @@
 #include <pbft/pbft_persistent_state.hpp>
 #include <storage/storage_base.hpp>
 #include <mutex>
+#include <list>
 
 namespace
 {
