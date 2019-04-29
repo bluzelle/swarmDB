@@ -19,6 +19,7 @@
 #include <pbft/operations/pbft_operation.hpp>
 #include <unordered_set>
 #include <queue>
+#include <list>
 
 #include <gtest/gtest_prod.h>
 

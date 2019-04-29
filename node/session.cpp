@@ -197,10 +197,9 @@ session::do_read()
             }
 
             // get the message...
-            std::stringstream ss;
-            ss << boost::beast::buffers(buffer->data());
-
             bzn_envelope proto_msg;
+            std::stringstream ss;
+            ss << boost::beast::make_printable(buffer->data());
 
             if (proto_msg.ParseFromIstream(&ss))
             {
