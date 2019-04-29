@@ -45,6 +45,8 @@ namespace bzn
 
         void send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) override;
 
+        void multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg) override;
+
         void send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg) override;
 
         void send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg) override;

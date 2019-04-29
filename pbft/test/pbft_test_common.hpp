@@ -30,6 +30,7 @@
 #include <mocks/mock_pbft_service_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_monitor.hpp>
+#include <mocks/smart_mock_node.hpp>
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
 #include <storage/mem_storage.hpp>
@@ -72,7 +73,7 @@ namespace bzn::test
 
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        std::shared_ptr<bzn::Mocknode_base> mock_node = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        std::shared_ptr<bzn::smart_mock_node> mock_node = std::make_shared<bzn::smart_mock_node>();
         std::shared_ptr<bzn::Mockpbft_failure_detector_base> mock_failure_detector =
                 std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =

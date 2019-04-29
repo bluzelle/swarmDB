@@ -31,6 +31,15 @@ bzn::smart_mock_node::smart_mock_node()
                 return true;
             }
             ));
+
+    EXPECT_CALL(*this, multicast_signed_message(_, _)).WillRepeatedly(Invoke(
+            [&](auto endpoints, auto message)
+            {
+                for (const auto ep : *endpoints)
+                {
+                    this->send_signed_message(ep, message);
+                }
+            }));
 }
 
 void bzn::smart_mock_node::deliver(const bzn_envelope& msg)
@@ -41,4 +50,9 @@ void bzn::smart_mock_node::deliver(const bzn_envelope& msg)
     }
 
     this->registrants.at(msg.payload_case())(msg, nullptr);
+}
+
+void bzn::smart_mock_node::clear()
+{
+    this->registrants.clear();
 }

@@ -75,10 +75,11 @@ node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_h
 void
 node::do_accept()
 {
-    this->acceptor_socket = this->io_context->make_unique_tcp_socket();
+    std::shared_ptr<bzn::asio::strand_base> strand = this->io_context->make_unique_strand();
+    this->acceptor_socket = this->io_context->make_unique_tcp_socket(*strand);
 
     this->tcp_acceptor->async_accept(*this->acceptor_socket,
-        [self = shared_from_this()](const boost::system::error_code& ec)
+        [self = shared_from_this(), strand](const boost::system::error_code& ec)
         {
             if (ec)
             {
@@ -116,7 +117,8 @@ node::do_accept()
                         , std::list<bzn::session_shutdown_handler>{[](){}}
                         , self->crypto
                         , self->monitor
-                        , self->options);
+                        , self->options
+                        , strand);
 
                 session->accept(std::move(ws));
 
@@ -188,7 +190,8 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , std::list<bzn::session_shutdown_handler>{std::bind(&node::priv_session_shutdown_handler, shared_from_this(), key)}
                 , this->crypto
                 , this->monitor
-                , this->options);
+                , this->options
+                , std::nullopt);
         session->open(this->websocket);
         this->sessions.insert_or_assign(key, session);
     }
@@ -205,6 +208,24 @@ void
 node::send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
 {
     this->find_session(ep)->send_signed_message(msg);
+}
+
+void
+node::multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
+{
+    this->io_context->post(
+            [self =  shared_from_this(), msg, eps]()
+            {
+                if (msg->signature().empty())
+                {
+                    self->crypto->sign(*msg);
+                }
+
+                for (const auto& ep : *eps)
+                {
+                    self->send_signed_message(ep, msg);
+                }
+            });
 }
 
 ep_key_t
