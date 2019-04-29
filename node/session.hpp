@@ -61,6 +61,8 @@ namespace bzn
 
         void add_shutdown_handler(const bzn::session_shutdown_handler handler) override;
 
+        std::shared_ptr<bzn::asio::strand_base> strand;
+
     private:
         void do_read();
         void do_write();
@@ -84,7 +86,6 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;
 
-        std::unique_ptr<bzn::asio::strand_base> strand;
 
         std::atomic<bool> writing = false;
         std::atomic<bool> reading = false;

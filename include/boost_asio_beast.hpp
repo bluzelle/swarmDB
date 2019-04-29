@@ -112,6 +112,8 @@ namespace bzn::asio
 
         virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() = 0;
 
+        virtual std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket(bzn::asio::strand_base& ctx) = 0;
+
         virtual std::unique_ptr<bzn::asio::udp_socket_base> make_unique_udp_socket() = 0;
 
         virtual std::unique_ptr<bzn::asio::steady_timer_base> make_unique_steady_timer() = 0;
@@ -156,6 +158,11 @@ namespace bzn::asio
     public:
         explicit tcp_socket(boost::asio::io_context& io_context)
             : socket(io_context)
+        {
+        }
+
+        explicit tcp_socket(bzn::asio::strand_base& ctx)
+                : socket(ctx.get_strand())
         {
         }
 
@@ -288,6 +295,11 @@ namespace bzn::asio
         std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket() override
         {
             return std::make_unique<bzn::asio::tcp_socket>(this->io_context);
+        }
+
+        std::unique_ptr<bzn::asio::tcp_socket_base> make_unique_tcp_socket(bzn::asio::strand_base& ctx) override
+        {
+            return std::make_unique<bzn::asio::tcp_socket>(ctx);
         }
 
         std::unique_ptr<bzn::asio::udp_socket_base> make_unique_udp_socket() override

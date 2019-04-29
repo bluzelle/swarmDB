@@ -31,7 +31,8 @@ session::session(
         std::shared_ptr<bzn::monitor_base> monitor,
         std::shared_ptr<bzn::options_base> options
 )
-        : session_id(session_id)
+        : strand(io_context->make_unique_strand())
+        , session_id(session_id)
         , ep(std::move(ep))
         , io_context(std::move(io_context))
         , chaos(std::move(chaos))
@@ -39,7 +40,6 @@ session::session(
         , shutdown_handlers(std::move(shutdown_handlers))
         , idle_timer(this->io_context->make_unique_steady_timer())
         , ws_idle_timeout(std::move(ws_idle_timeout))
-        , strand(this->io_context->make_unique_strand())
         , write_buffer(nullptr, 0)
         , crypto(std::move(crypto))
         , monitor(std::move(monitor))
@@ -79,7 +79,7 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 {
     this->strand->post([self = shared_from_this(), ws_factory]()
     {
-        std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket();
+        std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket(*(self->strand));
         socket->async_connect(self->ep,
             self->strand->wrap([self, socket, ws_factory](const boost::system::error_code& ec)
             {

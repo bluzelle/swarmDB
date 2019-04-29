@@ -224,12 +224,12 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
     if (!this->preliminary_filter_msg(msg))
     {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(this->pbft_lock);
 
     switch (msg.type())
     {

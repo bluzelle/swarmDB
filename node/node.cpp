@@ -75,10 +75,11 @@ node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_h
 void
 node::do_accept()
 {
-    this->acceptor_socket = this->io_context->make_unique_tcp_socket();
+    std::shared_ptr<bzn::asio::strand_base> strand = this->io_context->make_unique_strand();
+    this->acceptor_socket = this->io_context->make_unique_tcp_socket(*strand);
 
     this->tcp_acceptor->async_accept(*this->acceptor_socket,
-        [self = shared_from_this()](const boost::system::error_code& ec)
+        [self = shared_from_this(), strand](const boost::system::error_code& ec)
         {
             if (ec)
             {
@@ -117,6 +118,7 @@ node::do_accept()
                         , self->crypto
                         , self->monitor
                         , self->options);
+                session->strand = strand;
 
                 session->accept(std::move(ws));
 
