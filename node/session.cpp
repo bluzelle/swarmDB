@@ -194,7 +194,7 @@ session::do_read()
                 }
                 if (ec != boost::beast::websocket::error::closed)
                 {
-                    self->private_close();
+                    self->close();
                 }
                 return;
             }
@@ -259,7 +259,7 @@ session::do_write()
                 self->write_queue.push_front(msg);
                 if (ec != boost::beast::websocket::error::closed)
                 {
-                    self->private_close();
+                    self->close();
                 }
                 return;
             }
@@ -307,7 +307,7 @@ session::send_message(std::shared_ptr<bzn::encoded_message> msg)
 void
 session::close()
 {
-    this->strand->post([self = shared_from_this()](){self->close();});
+    this->strand->post(std::bind(&session::private_close, shared_from_this()));
 }
 
 void
