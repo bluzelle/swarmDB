@@ -15,8 +15,8 @@
 include(ExternalProject)
 include(ProcessorCount)
 
-set(REQUIRED_BOOST "1.68.0")
-set(BOOST_URL_HASH "da3411ea45622579d419bfda66f45cd0f8c32a181d84adfa936f5688388995cf")
+set(REQUIRED_BOOST "1.70.0")
+set(BOOST_URL_HASH "882b48708d211a5f48e60b0124cf5863c1534cd544ecd0664bb534a4b5d506e9")
 
 message(STATUS "Boost: ${REQUIRED_BOOST}")
 
