@@ -94,12 +94,15 @@ TEST(status_test, test_that_status_request_queries_status_providers)
             ASSERT_EQ(sr.swarm_git_commit(), SWARM_GIT_COMMIT);
             ASSERT_EQ(sr.uptime(), "0 days, 0 hours, 0 minutes");
 
-            Json::Value ms;
-            Json::Reader reader;
-            reader.parse(sr.module_status_json(), ms);
+            Json::CharReaderBuilder builder;
+            Json::CharReader* reader = builder.newCharReader();
+            bzn::json_message ms;
+            std::string error;
+            ASSERT_TRUE(reader->parse(sr.module_status_json().c_str(), sr.module_status_json().c_str() + sr.module_status_json().size(), &ms, &error));
             ASSERT_EQ(ms["module"].size(), size_t(2));
             ASSERT_EQ(ms["module"][0]["name"].asString(), "mock1");
             ASSERT_EQ(ms["module"][1]["name"].asString(), "mock2");
+            delete reader;
         }));
 
     pbh(bzn_envelope(), mock_session);

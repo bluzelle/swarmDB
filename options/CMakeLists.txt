@@ -8,7 +8,7 @@ add_library(options STATIC
         )
 
 target_link_libraries(options utils)
-target_include_directories(options PRIVATE ${JSONCPP_INCLUDE_DIRS})
+target_include_directories(options PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_dependencies(options boost jsoncpp)
 
 add_subdirectory(test)

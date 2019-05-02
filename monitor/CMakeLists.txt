@@ -5,6 +5,6 @@ add_library(monitor
         )
 
 add_dependencies(monitor boost jsoncpp)
-target_include_directories(monitor PRIVATE ${JSONCPP_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR})
+target_include_directories(monitor PRIVATE ${BLUZELLE_STD_INCLUDES})
 target_link_libraries(utils)
 add_subdirectory(test)

@@ -6,5 +6,5 @@ add_library(audit
 
 target_link_libraries(audit utils proto)
 add_dependencies(audit boost jsoncpp)
-target_include_directories(audit PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR})
+target_include_directories(audit PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_subdirectory(test)

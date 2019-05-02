@@ -7,4 +7,4 @@ add_library(smart_mocks STATIC
 
 add_dependencies(smart_mocks boost proto googletest)
 
-target_include_directories(smart_mocks PRIVATE ${PROTO_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR})
+target_include_directories(smart_mocks PRIVATE ${BLUZELLE_STD_INCLUDES})

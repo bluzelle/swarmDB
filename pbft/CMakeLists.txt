@@ -21,7 +21,7 @@ add_library(pbft STATIC
     pbft_persistent_state.cpp)
 
 target_link_libraries(pbft utils pbft_operations proto)
-target_include_directories(pbft PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
+target_include_directories(pbft PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_dependencies(pbft boost openssl)
 
 add_subdirectory(test)
