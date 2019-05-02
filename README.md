@@ -53,7 +53,7 @@ Again, this will result in a custom cmake install into `~/mycmake/` and will not
 **Protobuf \(Ver. 3 or greater\) etc.**
 
 ```text
-$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev libsnappy-dev
+$ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev libsnappy-dev libbz2-dev
 ```
 
 **ccache \(Optional\)**
