@@ -44,7 +44,7 @@ session::session(
         , crypto(std::move(crypto))
         , monitor(std::move(monitor))
         , options(std::move(options))
-        , strand(strand_opt.has_value() ? strand_opt.value() : this->io_context->make_unique_strand())
+        , strand(strand_opt.has_value() ? *strand_opt : this->io_context->make_unique_strand())
 
 {
     LOG(debug) << "creating session " << std::to_string(session_id);
