@@ -68,7 +68,18 @@ public:
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
+                    EXPECT_CALL(*strand, post(A<bzn::asio::task>())).WillRepeatedly(Invoke(
+                            [](auto task)
+                            {
+                                task();
+                            }));
                     return strand;
+                }));
+
+        EXPECT_CALL(*(this->io_context), post(_)).WillRepeatedly(Invoke(
+                [](auto task)
+                {
+                    task();
                 }));
     }
 };
@@ -82,12 +93,13 @@ public:
     std::shared_ptr<bzn::Mockcrypto_base> mock_crypto = std::make_shared<NiceMock<bzn::Mockcrypto_base>>();
     std::shared_ptr<bzn::options> options = std::make_shared<bzn::options>();
 
+
     uint handler_called = 0;
     std::shared_ptr<bzn::session> session;
 
     session_test2()
     {
-        session = std::make_shared<bzn::session>(this->mock_io, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, this->mock_crypto, this->monitor, this->options);
+        session = std::make_shared<bzn::session>(this->mock_io, 0, TEST_ENDPOINT, this->mock_chaos, [&](auto, auto){this->handler_called++;}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, this->mock_crypto, this->monitor, this->options, std::nullopt);
     }
 
     void yield()
@@ -119,7 +131,7 @@ namespace bzn
 
         EXPECT_CALL(*mock_websocket_stream, async_read(_,_));
 
-        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr);
+        auto session = std::make_shared<bzn::session>(this->io_context, bzn::session_id(1), TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr, std::nullopt);
         session->accept(mock_websocket_stream);
         accept_handler(boost::system::error_code{});
 
@@ -134,6 +146,7 @@ namespace bzn
         auto msg{std::make_shared<bzn_envelope>()};
 
         this->session->send_signed_message(msg);
+        this->yield();
 
         EXPECT_EQ(TEST_SWARM_UUID, msg->swarm_id());
     }
@@ -144,6 +157,7 @@ namespace bzn
 
         this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
                                 this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
+        this->yield();
         this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->yield();
@@ -155,6 +169,7 @@ namespace bzn
     {
         this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
                                 this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
+        this->yield();
         this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
 
         this->mock_io->timer_callbacks.at(0)(boost::system::error_code{});
@@ -170,7 +185,7 @@ namespace bzn
         auto io2 = std::make_shared<bzn::asio::smart_mock_io>();
         io2->tcp_connect_works = false;
 
-        auto session = std::make_shared<bzn::session>(io2, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr);
+        auto session = std::make_shared<bzn::session>(io2, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr, std::nullopt);
         session->open(io2->websocket);
 
         this->yield();
@@ -189,7 +204,7 @@ namespace bzn
                     , 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT
                     , std::list<bzn::session_shutdown_handler>{[&handler_counters]() {
                         ++handler_counters[0];
-                    }}, nullptr, this->monitor, nullptr);
+                    }}, nullptr, this->monitor, nullptr, std::nullopt);
 
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});

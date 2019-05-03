@@ -369,7 +369,7 @@ namespace bzn
         this->build_pbft();
 
         // set up a second pbft to be the new primary after a view change
-        auto mock_node2 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        auto mock_node2 = std::make_shared<bzn::smart_mock_node>();
         auto mock_io_context2 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         auto audit_heartbeat_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto new_config_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
@@ -382,6 +382,7 @@ namespace bzn
             .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer2);}))
             .WillOnce(Invoke([&](){return std::move(new_config_timer2);}))
             .WillOnce(Invoke([&](){return std::move(join_retry_timer2);}));
+        EXPECT_CALL(*mock_io_context2, post(_)).WillRepeatedly(Invoke([](auto func){boost::asio::post(func);}));
         EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Return("uuid2"));
         EXPECT_CALL(*mock_options, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
@@ -482,6 +483,7 @@ namespace bzn
                 EXPECT_TRUE(msg.config_hash() == config->get_hash());
                 EXPECT_TRUE(msg.config() == config->to_string());
 
+                newview_env->set_sender(pbft2->get_uuid());
                 newview_env = wmsg;
             }));
 
@@ -490,7 +492,7 @@ namespace bzn
 
 
         // set up a third pbft to receive the new_view message and join the swarm
-        auto mock_node3 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        auto mock_node3 = std::make_shared<bzn::smart_mock_node>();
         auto mock_io_context3 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         auto audit_heartbeat_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
         auto new_config_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
@@ -503,6 +505,7 @@ namespace bzn
             .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer3);}))
             .WillOnce(Invoke([&](){return std::move(new_config_timer3);}))
             .WillOnce(Invoke([&](){return std::move(join_retry_timer3);}));
+        EXPECT_CALL(*mock_io_context3, post(_)).WillRepeatedly(Invoke([](auto func){boost::asio::post(func);}));
         EXPECT_CALL(*mock_options3, get_uuid()).WillRepeatedly(Return("uuid3"));
         EXPECT_CALL(*mock_options3, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto pbft3 = std::make_shared<bzn::pbft>(mock_node3, mock_io_context3, TEST_PEER_LIST, mock_options3, mock_service3,
@@ -514,6 +517,9 @@ namespace bzn
         this->set_swarm_status_waiting(pbft3);
         this->handle_newview(pbft3, *newview_env);
         EXPECT_TRUE(this->is_in_swarm(pbft3));
+
+        mock_node2->clear();
+        mock_node3->clear();
     }
 
     TEST_F(pbft_join_leave_test, test_move_to_new_config)

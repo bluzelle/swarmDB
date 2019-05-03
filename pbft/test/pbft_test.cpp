@@ -92,21 +92,6 @@ namespace bzn::test
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
     }
 
-    TEST_F(pbft_test, test_prepare_contains_uuid)
-    {
-        this->build_pbft();
-        std::shared_ptr<bzn_envelope> wrapped_msg;
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).WillRepeatedly(SaveArg<1>(&wrapped_msg));
-
-        this->pbft->handle_message(this->preprepare_msg, default_original_msg);
-
-        pbft_msg msg_sent;
-        msg_sent.ParseFromString(wrapped_msg->pbft());
-
-        ASSERT_EQ(wrapped_msg->sender(), this->pbft->get_uuid());
-        ASSERT_EQ(wrapped_msg->sender(), TEST_NODE_UUID);
-    }
-
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
     {
         this->build_pbft();

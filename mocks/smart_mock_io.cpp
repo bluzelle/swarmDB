@@ -26,6 +26,12 @@ bzn::asio::smart_mock_io::smart_mock_io()
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
+                EXPECT_CALL(*strand, post(A<bzn::asio::task>())).WillRepeatedly(Invoke(
+                        [](auto task)
+                        {
+                            boost::asio::post(task);
+                        }));
+
                 return strand;
             }));
 
@@ -48,6 +54,12 @@ bzn::asio::smart_mock_io::smart_mock_io()
                         }));
                 EXPECT_CALL(*timer, expires_from_now(_)).Times(AnyNumber());
                 return timer;
+            }));
+
+    EXPECT_CALL(*this, make_unique_tcp_socket(_)).WillRepeatedly(Invoke(
+            [&](auto& /*strand*/)
+            {
+                return this->make_unique_tcp_socket();
             }));
 
     EXPECT_CALL(*this, make_unique_tcp_socket()).WillRepeatedly(Invoke(

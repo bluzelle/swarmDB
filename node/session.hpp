@@ -23,6 +23,7 @@
 #include <mutex>
 #include <list>
 #include <atomic>
+#include <optional>
 #include <node/node.hpp>
 
 #include <gtest/gtest_prod.h>
@@ -43,7 +44,9 @@ namespace bzn
                 std::list<bzn::session_shutdown_handler> shutdown_handlers,
                 std::shared_ptr<bzn::crypto_base> crypto,
                 std::shared_ptr<bzn::monitor_base> monitor,
-                std::shared_ptr<bzn::options_base> options);
+                std::shared_ptr<bzn::options_base> options,
+                std::optional<std::shared_ptr<bzn::asio::strand_base>> strand
+                );
 
         ~session();
 
@@ -60,6 +63,7 @@ namespace bzn
         void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
 
         void add_shutdown_handler(const bzn::session_shutdown_handler handler) override;
+
 
     private:
         void do_read();
@@ -84,8 +88,6 @@ namespace bzn
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;
 
-        std::unique_ptr<bzn::asio::strand_base> strand;
-
         std::atomic<bool> writing = false;
         std::atomic<bool> reading = false;
         std::atomic<bool> closing = false;
@@ -96,6 +98,8 @@ namespace bzn
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::monitor_base> monitor;
         std::shared_ptr<bzn::options_base> options;
+        
+        std::shared_ptr<bzn::asio::strand_base> strand;
     };
 
 } // blz
