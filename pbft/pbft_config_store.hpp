@@ -22,7 +22,6 @@
 #include <mutex>
 #include <map>
 
-
 namespace
 {
     std::string CONFIG_STORE_CONFIGS_KEY{"config_store_configs"};

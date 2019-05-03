@@ -204,11 +204,11 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto viewchange_env)
+                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, auto viewchange_env)
                 {
-                    EXPECT_EQ(this->pbft->get_uuid(), viewchange_env->sender());
                     pbft_msg viewchange;
                     EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
+                    viewchange_env->set_sender(this->pbft->get_uuid());
                     EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
                 }));
 
@@ -324,7 +324,7 @@ namespace bzn
         auto mock_crypto = this->build_pft_with_mock_crypto();
 
         // sut2 is new primary after view change
-        std::shared_ptr<bzn::Mocknode_base> mock_node2 = std::make_shared<NiceMock<bzn::Mocknode_base>>();
+        auto mock_node2 = std::make_shared<bzn::smart_mock_node>();
         std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context2 =
                 std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
         std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer2 =
@@ -419,6 +419,7 @@ namespace bzn
                                                            .Times(Exactly(2 * TEST_PEER_LIST.size()));
                                                    pbft_msg msg;
                                                    ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                                                   wmsg->set_sender("uuid2");
                                                    this->pbft->handle_newview(msg, *wmsg);
                                                }
                                            }));
@@ -431,6 +432,7 @@ namespace bzn
         this->pbft->handle_failure();
 
         EXPECT_EQ(this->pbft->view.value(), 2U);
+        mock_node2->clear();
     }
 
     TEST_F(pbft_viewchange_test, is_valid_viewchange_does_not_throw_if_no_checkpoint_yet)
@@ -467,6 +469,7 @@ namespace bzn
         try
         {
             // even though there is no checkpoint, it is still valid to request a view change, and thus possible to have a valid viewchange message
+            original_message.set_sender(this->pbft->get_uuid());
             EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange_message, original_message));
         }
         catch(...)

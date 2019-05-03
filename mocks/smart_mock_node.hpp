@@ -28,5 +28,7 @@ namespace bzn
 
         std::unordered_map<bzn_envelope::PayloadCase, bzn::protobuf_handler> registrants;
 
+        void clear();
+
     };
 }
