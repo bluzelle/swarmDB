@@ -18,33 +18,45 @@ project(googletest CXX)
 
 include(ExternalProject)
 
+if (NOT DEFINED PKG_VER)
+	message(FATAL_ERROR "usage: -DPKG_VER=x.y.z [-DPKG_HASH=<sha256>]")
+endif()
+
+if(PKG_HASH)
+	set(URL_HASH_OPTION SHA256=${PKG_HASH})
+else()
+	message(WARNING "PKG_HASH not specified! Downloaded package will not be validated.")
+endif()
+
 # default to debug builds
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-set(PKG_VER "1.8.0")
 string(TOLOWER ${CMAKE_BUILD_TYPE} PKG_BUILD_TYPE)
-set(URL_HASH "58a6f4277ca2bc8565222b3bbd58a177609e9c488e8a72649359ba51450db7d8")
+set(URL https://github.com/google/googletest/archive/release-${PKG_VER}.tar.gz)
 set(PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_${PKG_BUILD_TYPE})
 
 message(STATUS "${PROJECT_NAME} -- ${PKG_BUILD_TYPE} ${PKG_VER}")
+message(STATUS "${PROJECT_NAME} -- URL: ${URL}")
+message(STATUS "${PROJECT_NAME} -- URL_HASH: ${PKG_HASH}")
 
 ExternalProject_Add(googletest
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/googletest"
-    URL https://github.com/google/googletest/archive/release-${PKG_VER}.tar.gz
-    URL_HASH SHA256=${URL_HASH}
+    URL ${URL}
+    URL_HASH ${URL_HASH_OPTION}
     TIMEOUT 30
 	CMAKE_ARGS
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
  	-DCMAKE_INSTALL_PREFIX=${PREFIX}
     DOWNLOAD_NO_PROGRESS true
     )
-  
+
 set(CPACK_GENERATOR TGZ)
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "8")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
+string(REPLACE "." ";" VERSION_LIST ${PKG_VER})
+list(GET VERSION_LIST 0 CPACK_PACKAGE_VERSION_MAJOR)
+list(GET VERSION_LIST 1 CPACK_PACKAGE_VERSION_MINOR)
+list(GET VERSION_LIST 2 CPACK_PACKAGE_VERSION_PATCH)
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME}-${PKG_BUILD_TYPE})
 string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)

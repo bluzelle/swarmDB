@@ -19,6 +19,16 @@ project(rocksdb CXX)
 include(ExternalProject)
 include(ProcessorCount)
 
+if (NOT DEFINED PKG_VER)
+  message(FATAL_ERROR "usage: -DPKG_VER=x.y.z [-DPKG_HASH=<sha256>]")
+endif()
+
+if(PKG_HASH)
+  set(URL_HASH_OPTION SHA256=${PKG_HASH})
+else()
+  message(WARNING "PKG_HASH not specified! Downloaded package will not be validated.")
+endif()
+
 # default to debug builds
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
@@ -31,17 +41,20 @@ else()
   set(DEBUG_LEVEL "0")
 endif()
 
-set(PKG_VER "5.14.3")
 string(TOLOWER ${CMAKE_BUILD_TYPE} PKG_BUILD_TYPE)
-set(URL_HASH "c7019a645fc23df0adfe97ef08e793a36149bff2f57ef3b6174cbb0c8c9867b1")
 set(PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_${PKG_BUILD_TYPE})
+set(URL https://github.com/facebook/rocksdb/archive/v${PKG_VER}.tar.gz)
 
 ProcessorCount(NPROC)
 
+message(STATUS "${PROJECT_NAME} -- ${PKG_BUILD_TYPE} ${PKG_VER}")
+message(STATUS "${PROJECT_NAME} -- URL: ${URL}")
+message(STATUS "${PROJECT_NAME} -- URL_HASH: ${PKG_HASH}")
+
 ExternalProject_Add(rocksdb
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/rocksdb"
-    URL https://github.com/facebook/rocksdb/archive/v${PKG_VER}.tar.gz
-    URL_HASH SHA256=${URL_HASH}
+    URL ${URL}
+    URL_HASH ${URL_HASH_OPTION}
     TIMEOUT 30
     CONFIGURE_COMMAND ""
     BUILD_COMMAND PORTABLE=1 make -e DISABLE_JEMALLOC=1 DEBUG_LEVEL=${DEBUG_LEVEL} static_lib -j${NPROC}
@@ -51,9 +64,10 @@ ExternalProject_Add(rocksdb
     )
 
 set(CPACK_GENERATOR TGZ)
-set(CPACK_PACKAGE_VERSION_MAJOR "5")
-set(CPACK_PACKAGE_VERSION_MINOR "14")
-set(CPACK_PACKAGE_VERSION_PATCH "3")
+string(REPLACE "." ";" VERSION_LIST ${PKG_VER})
+list(GET VERSION_LIST 0 CPACK_PACKAGE_VERSION_MAJOR)
+list(GET VERSION_LIST 1 CPACK_PACKAGE_VERSION_MINOR)
+list(GET VERSION_LIST 2 CPACK_PACKAGE_VERSION_PATCH)
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME}-${PKG_BUILD_TYPE})
 string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
@@ -61,5 +75,3 @@ string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_${PKG_BUILD_TYPE}/ DESTINATION ${PKG_BUILD_TYPE}/)
 
 include(CPack)
-
-message(STATUS "${PROJECT_NAME} -- ${CPACK_SYSTEM_NAME} ${PKG_BUILD_TYPE} ${PKG_VER}")

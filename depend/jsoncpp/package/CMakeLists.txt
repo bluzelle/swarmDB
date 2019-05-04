@@ -18,22 +18,33 @@ project(jsoncpp CXX)
 
 include(ExternalProject)
 
+if (NOT DEFINED PKG_VER)
+	message(FATAL_ERROR "usage: -DPKG_VER=x.y.z [-DPKG_HASH=<sha256>]")
+endif()
+
+if(PKG_HASH)
+	set(URL_HASH_OPTION SHA256=${PKG_HASH})
+else()
+	message(WARNING "PKG_HASH not specified! Downloaded package will not be validated.")
+endif()
+
 # default to debug builds
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-set(PKG_VER "1.8.4")
 string(TOLOWER ${CMAKE_BUILD_TYPE} PKG_BUILD_TYPE)
-set(URL_HASH "c49deac9e0933bcb7044f08516861a2d560988540b23de2ac1ad443b219afdb6")
 set(PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_${PKG_BUILD_TYPE})
+set(URL https://github.com/open-source-parsers/jsoncpp/archive/${PKG_VER}.tar.gz)
 
 message(STATUS "${PROJECT_NAME} -- ${PKG_BUILD_TYPE} ${PKG_VER}")
+message(STATUS "${PROJECT_NAME} -- URL: ${URL}")
+message(STATUS "${PROJECT_NAME} -- URL_HASH: ${PKG_HASH}")
 
 ExternalProject_Add(jsoncpp
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/jsoncpp"
-    URL https://github.com/open-source-parsers/jsoncpp/archive/${PKG_VER}.tar.gz
-    URL_HASH SHA256=${URL_HASH}
+    URL ${URL}
+	URL_HASH ${URL_HASH_OPTION}
     TIMEOUT 30
     CMAKE_ARGS
 	-DJSONCPP_WITH_PKGCONFIG_SUPPORT=OFF
@@ -45,9 +56,10 @@ ExternalProject_Add(jsoncpp
     )
 
 set(CPACK_GENERATOR TGZ)
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "8")
-set(CPACK_PACKAGE_VERSION_PATCH "4")
+string(REPLACE "." ";" VERSION_LIST ${PKG_VER})
+list(GET VERSION_LIST 0 CPACK_PACKAGE_VERSION_MAJOR)
+list(GET VERSION_LIST 1 CPACK_PACKAGE_VERSION_MINOR)
+list(GET VERSION_LIST 2 CPACK_PACKAGE_VERSION_PATCH)
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 0)
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME}-${PKG_BUILD_TYPE})
 string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
