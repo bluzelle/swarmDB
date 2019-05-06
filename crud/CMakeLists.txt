@@ -9,6 +9,5 @@ add_library(crud STATIC
 
 target_link_libraries(crud proto)
 add_dependencies(crud boost jsoncpp openssl)
-target_include_directories(crud PRIVATE ${JSONCPP_INCLUDE_DIRS} ${PROTO_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
-
+target_include_directories(crud PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_subdirectory(test)

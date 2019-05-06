@@ -10,6 +10,6 @@ add_library(pbft_operations STATIC
     )
 
 target_link_libraries(pbft_operations utils proto pbft)
-target_include_directories(pbft_operations PRIVATE ${PROTO_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR})
+target_include_directories(pbft_operations PRIVATE ${BLUZELLE_STD_INCLUDES})
 
 add_subdirectory(test)

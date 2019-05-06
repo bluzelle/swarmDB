@@ -30,13 +30,18 @@
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
 #include <monitor/monitor.hpp>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include <boost/log/utility/setup/console.hpp>
+#pragma GCC diagnostic pop
+
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
-#include <boost/log/utility/setup/console.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/program_options.hpp>
 #include <thread>
 
 

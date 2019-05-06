@@ -7,6 +7,6 @@ add_library(storage STATIC
 
 target_link_libraries(storage)
 add_dependencies(storage boost jsoncpp rocksdb)
-target_include_directories(storage PRIVATE ${JSONCPP_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
+target_include_directories(storage PRIVATE ${BLUZELLE_STD_INCLUDES})
 
 add_subdirectory(test)

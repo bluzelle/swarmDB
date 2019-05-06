@@ -52,7 +52,6 @@ set_property(DIRECTORY PROPERTY CLEAN_NO_CUSTOM ${CMAKE_CURRENT_BINARY_DIR}/boos
 
 ExternalProject_Get_Property(boost source_dir)
 set(Boost_INCLUDE_DIRS ${source_dir})
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 set(Boost_LIBRARIES
     ${source_dir}/stage/lib/libboost_log.a

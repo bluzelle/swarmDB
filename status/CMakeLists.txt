@@ -5,6 +5,6 @@ add_library(status STATIC
 
 target_link_libraries(status proto)
 add_dependencies(status boost jsoncpp proto)
-target_include_directories(status PRIVATE ${JSONCPP_INCLUDE_DIRS})
+target_include_directories(status PRIVATE ${BLUZELLE_STD_INCLUDES})
 
 add_subdirectory(test)

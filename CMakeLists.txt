@@ -33,13 +33,12 @@ add_compile_options("-fdiagnostics-color=auto")
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
-set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic")
+set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Wpedantic")
 if (APPLE)
-    set(warnings "${warnings} -Wno-extended-offsetof")
+    set(warnings "${warnings} -Werror=extended-offsetof")
 endif(APPLE)
 
 set(CMAKE_CXX_FLAGS ${warnings})
-set(CMAKE_C_FLAGS   ${warnings})
 
 # old or new way?
 if(NOT BUILD_DEPEND)
@@ -57,13 +56,13 @@ include(cmake/add_gmock_test.cmake)
 
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
-include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
 
 find_package(CURL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(SYSTEM ${OPENSSL_INCLUDE_DIR})
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
+
+set(BLUZELLE_STD_INCLUDES ${Boost_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${PROTO_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
 
 enable_testing()
 

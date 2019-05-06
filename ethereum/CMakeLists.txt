@@ -6,6 +6,5 @@ add_library(ethereum STATIC
 
 add_dependencies(ethereum boost)
 target_link_libraries(ethereum utils)
-target_include_directories(ethereum PRIVATE ${JSONCPP_INCLUDE_DIRS})
-
+target_include_directories(ethereum PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_subdirectory(test)

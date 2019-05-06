@@ -70,6 +70,7 @@ namespace
                 , DEFAULT_CONFIG_DATA.c_str() + DEFAULT_CONFIG_DATA.size()
                 , &json
                 , &errors);
+        delete reader;
     }
 }
 
