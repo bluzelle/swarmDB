@@ -31,10 +31,14 @@
 #include <storage/rocksdb_storage.hpp>
 #include <monitor/monitor.hpp>
 
+#ifdef __APPLE__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #include <boost/log/utility/setup/console.hpp>
+#ifdef __APPLE__
 #pragma GCC diagnostic pop
+#endif
 
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/program_options.hpp>

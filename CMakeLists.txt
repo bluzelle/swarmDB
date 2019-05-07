@@ -33,9 +33,10 @@ add_compile_options("-fdiagnostics-color=auto")
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
-set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Wpedantic")
+# todo: remove -Wno-implicit-fallthrough once CI moves past gcc 7.4.0...
+set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic -Wno-implicit-fallthrough")
 if (APPLE)
-    set(warnings "${warnings} -Werror=extended-offsetof")
+    set(warnings "${warnings} -Wno-extended-offsetof")
 endif(APPLE)
 
 set(CMAKE_CXX_FLAGS ${warnings})

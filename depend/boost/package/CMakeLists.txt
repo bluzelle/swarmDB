@@ -55,7 +55,7 @@ ExternalProject_Add(boost
     URL_HASH ${URL_HASH_OPTION}
     TIMEOUT 120
     CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/boost/src/boost/bootstrap.sh --prefix=${PREFIX} --with-libraries=${BOOST_LIBS}
-    BUILD_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/boost/src/boost/b2 variant=${PKG_BUILD_TYPE} link=static -j${NPROC} install
+    BUILD_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/boost/src/boost/b2 variant=${PKG_BUILD_TYPE} link=static visibility=global -j${NPROC} install
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE true
     DOWNLOAD_NO_PROGRESS true
