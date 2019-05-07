@@ -38,7 +38,7 @@ matrix:
         - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh -DENABLE_GCOV=ON"
 
     - os: osx
-      osx_image: xcode10.1
+      osx_image: xcode10.2
       env:
         - MATRIX_EVAL="brew unlink python && brew install protobuf snappy lz4 git-lfs && brew uninstall --ignore-dependencies boost"
         - CMAKE_COMMAND="cmake"
