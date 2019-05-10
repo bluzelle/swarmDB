@@ -49,12 +49,10 @@ namespace bzn
             }));
 
         bzn_envelope request;
-        auto dmsg = new database_msg;
-        auto create = new database_create;
-        create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(this->index)));
-        dmsg->set_allocated_create(create);
-        request.set_database_msg(dmsg->SerializeAsString());
+        database_msg dmsg;
+        dmsg.mutable_create()->set_key(std::string("key_" + std::to_string(++this->index)));
+        dmsg.mutable_create()->set_value(std::string("value_" + std::to_string(this->index)));
+        request.set_database_msg(dmsg.SerializeAsString());
         request.set_timestamp(this->now());
         request.set_sender(this->pbft->get_uuid());
 
@@ -205,12 +203,10 @@ namespace bzn
     {
         // create request
         bzn_envelope request;
-        auto dmsg = new database_msg;
-        auto create = new database_create;
-        create->set_key(std::string("key_" + std::to_string(++this->index)));
-        create->set_value(std::string("value_" + std::to_string(this->index)));
-        dmsg->set_allocated_create(create);
-        request.set_database_msg(dmsg->SerializeAsString());
+        database_msg dmsg;
+        dmsg.mutable_create()->set_key(std::string("key_" + std::to_string(++this->index)));
+        dmsg.mutable_create()->set_value(std::string("value_" + std::to_string(this->index)));
+        request.set_database_msg(dmsg.SerializeAsString());
 
         // send pre-prepare to SUT
         send_preprepare(this->index, request);

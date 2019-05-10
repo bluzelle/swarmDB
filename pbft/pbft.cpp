@@ -812,10 +812,10 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     else
     {
         // the service needs sequentially sequenced operations. post a null request to fill in this hole
-        auto msg = new database_msg;
-        msg->set_allocated_nullmsg(new database_nullmsg);
+        database_msg msg;
+        msg.mutable_nullmsg();
         bzn_envelope request;
-        request.set_database_msg(msg->SerializeAsString());
+        request.set_database_msg(msg.SerializeAsString());
         auto new_op = std::make_shared<pbft_memory_operation>(op->get_view(), op->get_sequence()
             , this->crypto->hash(request), nullptr);
         new_op->record_request(request);
@@ -1626,11 +1626,11 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 void
 pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash)
 {
-    auto cfg_msg = new pbft_config_msg;
-    cfg_msg->set_configuration(config->to_string());
-    cfg_msg->set_join_request_hash(join_request_hash);
+    pbft_config_msg cfg_msg;
+    cfg_msg.set_configuration(config->to_string());
+    cfg_msg.set_join_request_hash(join_request_hash);
     bzn_envelope req;
-    req.set_pbft_internal_request(cfg_msg->SerializeAsString());
+    req.set_pbft_internal_request(cfg_msg.SerializeAsString());
 
     auto op = this->setup_request_operation(req, this->crypto->hash(req));
     this->do_preprepare(op);
@@ -1772,17 +1772,18 @@ pbft::join_swarm()
         return;
     }
 
-    auto info = new pbft_peer_info;
-    info->set_host(this->options->get_listener().address().to_string());
-    info->set_port(this->options->get_listener().port());
-    info->set_uuid(this->uuid);
+    pbft_membership_msg join_msg;
+    join_msg.set_type(PBFT_MMSG_JOIN);
+    join_msg.mutable_peer_info()->set_host(this->options->get_listener().address().to_string());
+    join_msg.mutable_peer_info()->set_port(this->options->get_listener().port());
+    join_msg.mutable_peer_info()->set_uuid(this->uuid);
 
     // is_peer checks against uuid only, we need to bail if the list contains a node with the same IP and port,
     // So, check the peers list for node with same ip and port and post error and bail if found.
     auto bad_peer = std::find_if( std::begin(this->current_peers()), std::end(this->current_peers()),
                                   [&](const bzn::peer_address_t& address)
                                   {
-                                        return address.port == info->port() && address.host == info->host();
+                                        return address.port == join_msg.peer_info().port() && address.host == join_msg.peer_info().host();
                                   });
 
     if (bad_peer != std::end(this->current_peers()))
@@ -1790,10 +1791,6 @@ pbft::join_swarm()
         LOG (error) << "Bootstrap configuration file validation failure - peer with UUID: " << bad_peer->uuid << " hides local peer";
         throw std::runtime_error("Bad peer found in Bootstrap Configuration file");
     }
-
-    pbft_membership_msg join_msg;
-    join_msg.set_type(PBFT_MMSG_JOIN);
-    join_msg.set_allocated_peer_info(info);
 
     uint32_t selected = this->generate_random_number(0, this->current_peers().size() - 1);
 

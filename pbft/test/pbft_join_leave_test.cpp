@@ -90,16 +90,15 @@ namespace bzn
             const bzn::pbft_configuration &config)
         {
             // make and "send" a pre-prepare message for a new_config
-            auto req = new bzn_envelope;
-            auto cfg_msg = new pbft_config_msg;
-            cfg_msg->set_configuration(config.to_string());
-            req->set_pbft_internal_request(cfg_msg->SerializeAsString());
+            pbft_config_msg cfg_msg;
+            cfg_msg.set_configuration(config.to_string());
 
             pbft_msg preprepare;
             preprepare.set_view(1);
             preprepare.set_sequence(1);
             preprepare.set_type(PBFT_MSG_PREPREPARE);
-            preprepare.set_allocated_request(new bzn_envelope(*req));
+            preprepare.mutable_request()->set_pbft_internal_request(cfg_msg.SerializeAsString());
+
             auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
             auto crypto = std::make_shared<bzn::crypto>(std::make_shared<bzn::options>(), monitor);
             auto expect_hash = crypto->hash(preprepare.request());
