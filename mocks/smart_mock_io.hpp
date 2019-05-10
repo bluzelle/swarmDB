@@ -25,6 +25,8 @@ namespace bzn::asio
         void do_incoming_connection(size_t id);
         void shutdown();
 
+        void yield_until_clear();
+
         std::shared_ptr<bzn::asio::io_context_base> real_io_context = std::make_shared<bzn::asio::io_context>();
         std::shared_ptr<bzn::beast::Mockwebsocket_base> websocket = std::make_shared<bzn::beast::Mockwebsocket_base>();
 
@@ -46,5 +48,9 @@ namespace bzn::asio
 
         bool tcp_connect_works = true;
 
+    private:
+        void wrapped_post(bzn::asio::task task);
+
+        std::atomic_int pending_real_callbacks;
     };
 }

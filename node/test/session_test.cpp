@@ -211,14 +211,15 @@ namespace bzn
 
             session->open(io2->websocket);
 
-            this->yield();
+            io2->yield_until_clear();
 
             // we are just testing that this doesn't cause a segfault
             io2->timer_callbacks.at(0)(boost::system::error_code{});
             io2->timer_callbacks.at(0)(boost::system::error_code{});
 
         }
-        this->yield();
+
+        io2->yield_until_clear();
 
         // each shutdown handler must be called exactly once.
         for(const auto handler_counter : handler_counters)

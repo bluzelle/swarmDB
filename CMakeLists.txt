@@ -109,3 +109,13 @@ add_custom_command(
 )
 
 add_custom_target(swarm-git-commit ALL DEPENDS swarm_git_commit)
+
+# enable valgrind for CI...
+if(ENABLE_MEMCHECK)
+    # todo: add to CI: ctest --test-action memcheck
+    if(NOT APPLE)
+        set(MEMORYCHECK_SUPPRESSIONS_FILE ${PROJECT_SOURCE_DIR}/valgrind/bluzelle.supp)
+        set(VALGRIND_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --show-reachable=yes --error-limit=no --gen-suppressions=all")
+        include(CTest)
+    endif()
+endif()

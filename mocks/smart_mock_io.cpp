@@ -12,6 +12,7 @@
 // You should have received a copy of the GNU Affero General Public License
 
 #include <mocks/smart_mock_io.hpp>
+#include <include/bluzelle.hpp>
 
 using namespace ::testing;
 using namespace bzn;
@@ -20,16 +21,16 @@ using namespace bzn;
 bzn::asio::smart_mock_io::smart_mock_io()
 {
     EXPECT_CALL(*this, make_unique_strand()).WillRepeatedly(Invoke(
-            []()
+            [&]()
             {
                 auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, post(A<bzn::asio::task>())).WillRepeatedly(Invoke(
-                        [](auto task)
+                        [&](auto task)
                         {
-                            boost::asio::post(task);
+                            this->wrapped_post(task);
                         }));
 
                 return strand;
@@ -38,7 +39,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
     EXPECT_CALL(*this, post(_)).WillRepeatedly(Invoke(
             [&](auto func)
             {
-                boost::asio::post(func);
+                this->wrapped_post(func);
             }));
 
     EXPECT_CALL(*this, make_unique_steady_timer()).WillRepeatedly(Invoke(
@@ -79,7 +80,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
                 EXPECT_CALL(*mock_socket, async_connect(_, _)).Times(AtMost(1)).WillOnce(Invoke(
                         [&](auto, auto handler)
                         {
-                            boost::asio::post(std::bind(handler,
+                            this->wrapped_post(std::bind(handler,
                                     this->tcp_connect_works ? boost::system::error_code{} : boost::asio::error::connection_refused));
                         }));
 
@@ -144,7 +145,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
                 EXPECT_CALL(*wss, async_handshake(_, _, _)).Times(AtMost(1)).WillRepeatedly(Invoke(
                         [&](auto, auto, auto handler)
                         {
-                            boost::asio::post(std::bind(handler, boost::system::error_code{}));
+                            this->wrapped_post(std::bind(handler, boost::system::error_code{}));
                         }));
 
                 EXPECT_CALL(*wss, is_open()).WillRepeatedly(Invoke(
@@ -158,7 +159,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
                         [&, id](auto /*reason*/, auto handler)
                         {
                             this->ws_closed.insert_or_assign(id, true);
-                            boost::asio::post(std::bind(handler, boost::system::error_code{}));
+                            this->wrapped_post(std::bind(handler, boost::system::error_code{}));
                         }));
 
                 EXPECT_CALL(*wss, binary(_)).Times(AnyNumber());
@@ -171,12 +172,19 @@ void
 bzn::asio::smart_mock_io::do_incoming_connection(size_t id)
 {
     this->tcp_accept_handlers.at(id)(boost::system::error_code{});
+    this->yield_until_clear();
     this->ws_accept_handlers.at(id)(boost::system::error_code{});
+    this->yield_until_clear();
 }
 
 void
 bzn::asio::smart_mock_io::shutdown()
 {
+    if (this->pending_real_callbacks > 0)
+    {
+        LOG(error) << "Warning: shutting down mock io context while it still has pending real callbacks to execute";
+    }
+
     // These callbacks are likely to transitively hold a shared pointers to us,
     // so cleaning them up is necessary for us to be cleaned up
     this->timer_callbacks.clear();
@@ -184,5 +192,31 @@ bzn::asio::smart_mock_io::shutdown()
     this->ws_write_closures.clear();
     this->ws_accept_handlers.clear();
     this->tcp_accept_handlers.clear();
+}
 
+void
+bzn::asio::smart_mock_io::wrapped_post(bzn::asio::task task)
+{
+    this->pending_real_callbacks++;
+    boost::asio::post([this, task]()
+        {
+            task();
+            this->pending_real_callbacks--;
+        });
+}
+
+void
+bzn::asio::smart_mock_io::yield_until_clear()
+{
+    uint64_t sleep_time = 1;
+    while (this->pending_real_callbacks > 0)
+    {
+        if (sleep_time > 1)
+        {
+            LOG(debug) << "some callbacks are still pending; mock waiting for " << sleep_time << " ms";
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+        sleep_time *= 2;
+    }
 }
