@@ -3107,6 +3107,10 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
 
     // update a lot of keys with values that will exceed the database max storage
     boost::random::mt19937 mt;
+
+    // valgrind suppression needs this as there's different behaviour every run...
+    mt.seed(123);
+
     for(size_t i{0}; i < 20; ++i)
     {
         const std::set<std::string> active_keys{get_database_keys(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID)};
