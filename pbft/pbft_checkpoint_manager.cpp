@@ -179,6 +179,7 @@ pbft_checkpoint_manager::maybe_stabilize_checkpoint(const checkpoint_t& cp)
 
         if (this->latest_local_checkpoint.value().first < cp.first)
         {
+            LOG(info) << "We are behind the newly stable checkpoint; scheduling delayed state request";
             this->send_delayed_state_request(cp);
         }
         else if (this->latest_local_checkpoint.value().first == cp.first

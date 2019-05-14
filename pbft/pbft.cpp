@@ -859,6 +859,7 @@ pbft::wrap_message(const pbft_msg& msg) const
     result.set_pbft(msg.SerializeAsString());
     result.set_sender(this->uuid);
     result.set_timestamp(this->now());
+    result.set_swarm_id(this->options->get_swarm_id());
     this->crypto->sign(result);
 
     return result;
@@ -871,6 +872,7 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
     result.set_pbft_membership(msg.SerializeAsString());
     result.set_sender(this->uuid);
     result.set_timestamp(this->now());
+    result.set_swarm_id(this->options->get_swarm_id());
     this->crypto->sign(result);
     
     return result;
