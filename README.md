@@ -41,18 +41,31 @@ $ brew install ccache
 
 ### Installation - Ubuntu
 
-**CMake**
+**CMake (Ver. 3.10 or greater) etc.**
+
+On Ubuntu 18.04 and newer, you can simply install via `apt`.
 
 ```text
+$ sudo apt-get install curl libcurl4-openssl-dev
+$ sudo apt-get install cmake
+```
+If your system packages don't have a new enough version, you can install a
+different CMake into `~/mycmake/` to avoid overwriting your system's `cmake`.
+
+```text
+$ sudo apt-get install curl libcurl4-openssl-dev
 $ mkdir -p ~/mycmake
 $ curl -L http://cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.tar.gz | tar -xz -C ~/mycmake --strip-components=1
 ```
 
-Again, this will result in a custom cmake install into `~/mycmake/` and will not overwrite your system's cmake.
+You would then use `~/mycmake/bin/cmake ..` instead of `cmake ..` in further
+instructions.
 
 **Protobuf \(Ver. 3 or greater\) etc.**
 
 ```text
+$ sudo apt-add-repository ppa:maarten-fonville/protobuf
+$ sudo apt-get update
 $ sudo apt-get install pkg-config protobuf-compiler libprotobuf-dev libsnappy-dev libbz2-dev
 ```
 
@@ -64,11 +77,22 @@ If available, cmake will attempt to use ccache \([https://ccache.samba.org](http
 $ sudo apt-get install ccache
 ```
 
+**Git LFS \(Optional\)**
+
+Git LFS is currently being used to speed up builds if available.
+
+```text
+$ sudo apt-get install git-lfs
+$ git lfs install
+```
+
 ### Building the Daemon from Command Line Interface \(CLI\)
 
-Here are the steps to build the Daemon and unit test application from the command line:
+**Note**: Git LFS is used by default. If you do not have it set up, you must
+build the dependencies by setting `BUILD_DEPEND=YES` in your `cmake` call, e.g.
+`cmake .. -DBUILD_DEPEND=YES`, and omit the `git lfs` commands.
 
-#### OSX
+Here are the steps to build the Daemon and unit test application from the command line:
 
 ```text
 $ mkdir build
@@ -77,20 +101,6 @@ $ cmake ..
 $ git lfs install
 $ git lfs pull
 $ sudo make install
-```
-
-#### Ubuntu
-
-```text
-$ mkdir build
-$ cd build
-$ ~/mycmake/bin/cmake ..
-$ sudo make install
-```
-
-###### To disable Git LFS: 
-```text
-$ cmake .. -DBUILD_DEPEND=OFF
 ```
 
 ### Deploying the Daemons
