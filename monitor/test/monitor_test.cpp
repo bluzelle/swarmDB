@@ -29,7 +29,7 @@ using namespace ::testing;
 class monitor_test : public Test
 {
 public:
-    std::shared_ptr<bzn::asio::Mockio_context_base> io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+    std::shared_ptr<bzn::asio::mock_io_context_base> io_context = std::make_shared<bzn::asio::mock_io_context_base>();
     std::shared_ptr<bzn::mock_system_clock> clock = std::make_shared<bzn::mock_system_clock>();
     std::shared_ptr<bzn::mock_options_base> options = std::make_shared<bzn::mock_options_base>();
     std::shared_ptr<bzn::monitor> monitor;
@@ -65,7 +65,7 @@ public:
         EXPECT_CALL(*(this->io_context), make_unique_udp_socket()).WillRepeatedly(Invoke(
                 [&]()
                 {
-                    auto socket = std::make_unique<bzn::asio::Mockudp_socket_base>();
+                    auto socket = std::make_unique<bzn::asio::mock_udp_socket_base>();
                     EXPECT_CALL(*socket, async_send_to(_, _, _)).WillRepeatedly(Invoke(
                             [&](auto buffer, auto /*endpoint*/, auto handler)
                             {

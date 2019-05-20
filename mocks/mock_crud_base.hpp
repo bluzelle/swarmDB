@@ -19,7 +19,7 @@
 
 namespace bzn {
 
-    class Mockcrud_base : public crud_base {
+    class mock_crud_base : public crud_base {
     public:
         MOCK_METHOD3(handle_request,
             void(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session));

@@ -25,10 +25,10 @@ namespace bzn
     {
     public:
 
-        std::shared_ptr<Mockcrypto_base>
+        std::shared_ptr<mock_crypto_base>
         build_pft_with_mock_crypto()
         {
-            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            std::shared_ptr<mock_crypto_base> mockcrypto = std::make_shared<mock_crypto_base>();
             this->crypto = mockcrypto;
             this->build_pbft();
             return mockcrypto;

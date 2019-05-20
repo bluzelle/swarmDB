@@ -22,7 +22,7 @@
 
 namespace bzn {
 
-    class Mockstatus_provider_base : public status_provider_base {
+    class mock_status_provider_base : public status_provider_base {
     public:
         MOCK_METHOD0(get_name,
             std::string());

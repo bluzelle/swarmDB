@@ -98,7 +98,7 @@ namespace bzn::test
                     Invoke(
                         [&]()
                         {
-                            auto timer = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+                            auto timer = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
                             EXPECT_CALL(*timer, async_wait(_))
                                 .Times(AnyNumber())
                                 .WillOnce(

@@ -86,7 +86,7 @@ namespace bzn
     {
     protected:
         pbft_msg
-        send_new_config_preprepare(std::shared_ptr<bzn::pbft> pbft, std::shared_ptr<bzn::Mocknode_base> mock_node,
+        send_new_config_preprepare(std::shared_ptr<bzn::pbft> pbft, std::shared_ptr<bzn::mock_node_base> mock_node,
             const bzn::pbft_configuration &config)
         {
             // make and "send" a pre-prepare message for a new_config
@@ -369,10 +369,10 @@ namespace bzn
 
         // set up a second pbft to be the new primary after a view change
         auto mock_node2 = std::make_shared<bzn::smart_mock_node>();
-        auto mock_io_context2 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        auto audit_heartbeat_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        auto new_config_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        auto join_retry_timer2 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto mock_io_context2 = std::make_shared<NiceMock<bzn::asio::mock_io_context_base >>();
+        auto audit_heartbeat_timer2 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        auto new_config_timer2 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        auto join_retry_timer2 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
         auto mock_service2 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         auto mock_options = std::make_shared<bzn::mock_options_base>();
         auto storage2 = std::make_shared<bzn::mem_storage>();
@@ -492,10 +492,10 @@ namespace bzn
 
         // set up a third pbft to receive the new_view message and join the swarm
         auto mock_node3 = std::make_shared<bzn::smart_mock_node>();
-        auto mock_io_context3 = std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        auto audit_heartbeat_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        auto new_config_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        auto join_retry_timer3 = std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        auto mock_io_context3 = std::make_shared<NiceMock<bzn::asio::mock_io_context_base >>();
+        auto audit_heartbeat_timer3 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        auto new_config_timer3 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        auto join_retry_timer3 = std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
         auto mock_service3 = std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         auto mock_options3 = std::make_shared<bzn::mock_options_base>();
         auto storage3 = std::make_shared<bzn::mem_storage>();

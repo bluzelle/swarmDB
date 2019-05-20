@@ -21,7 +21,7 @@
 // gmock_gen.py generated...
 
 namespace bzn {
-    class Mocksession_base : public session_base {
+    class mock_session_base : public session_base {
     public:
         MOCK_METHOD1(send_message,
             void(std::shared_ptr<bzn::encoded_message> msg));

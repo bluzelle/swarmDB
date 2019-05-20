@@ -30,46 +30,46 @@ namespace
 
 TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_doesnt_exist_its_created)
 {
-    auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
+    auto mock_storage = std::make_shared<bzn::mock_storage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
     EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
     EXPECT_CALL(*mock_storage, update(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
 
-    bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
+    bzn::database_pbft_service dps(std::make_shared<bzn::asio::mock_io_context_base>(), mock_storage, std::make_shared<bzn::mock_crud_base>(), TEST_UUID);
 }
 
 
 TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_exists_its_loaded)
 {
-    auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
+    auto mock_storage = std::make_shared<bzn::mock_storage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>("123")));
     EXPECT_CALL(*mock_storage, update(_, _, "123")).WillOnce(Return(bzn::storage_result::ok));
 
-    bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
+    bzn::database_pbft_service dps(std::make_shared<bzn::asio::mock_io_context_base>(), mock_storage, std::make_shared<bzn::mock_crud_base>(), TEST_UUID);
 }
 
 
 TEST(database_pbft_service, test_that_on_construction_if_next_request_sequence_doesnt_exist_it_throws_if_error_occurs)
 {
-    auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
+    auto mock_storage = std::make_shared<bzn::mock_storage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
     EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::value_too_large));
 
-    EXPECT_THROW(bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID), std::runtime_error);
+    EXPECT_THROW(bzn::database_pbft_service dps(std::make_shared<bzn::asio::mock_io_context_base>(), mock_storage, std::make_shared<bzn::mock_crud_base>(), TEST_UUID), std::runtime_error);
 }
 
 
 TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw_for_duplicate)
 {
-    auto mock_storage = std::make_shared<bzn::Mockstorage_base>();
+    auto mock_storage = std::make_shared<bzn::mock_storage_base>();
 
     EXPECT_CALL(*mock_storage, read(_, _)).WillOnce(Return(std::optional<bzn::value_t>()));
     EXPECT_CALL(*mock_storage, create(_, _, DEFAULT_NEXT_REQUEST_SEQUENCE)).WillOnce(Return(bzn::storage_result::ok));
 
-    bzn::database_pbft_service dps(std::make_shared<bzn::asio::Mockio_context_base>(), mock_storage, std::make_shared<bzn::Mockcrud_base>(), TEST_UUID);
+    bzn::database_pbft_service dps(std::make_shared<bzn::asio::mock_io_context_base>(), mock_storage, std::make_shared<bzn::mock_crud_base>(), TEST_UUID);
 
     EXPECT_CALL(*mock_storage, create(_, _, _)).WillOnce(Return(bzn::storage_result::exists));
     EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_result::ok));
@@ -86,8 +86,8 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw
 TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_operation)
 {
     auto mem_storage = std::make_shared<bzn::mem_storage>();
-    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    auto mock_crud = std::make_shared<NiceMock<bzn::Mockcrud_base>>();
+    auto mock_io_context = std::make_shared<bzn::asio::mock_io_context_base>();
+    auto mock_crud = std::make_shared<NiceMock<bzn::mock_crud_base>>();
 
     EXPECT_CALL(*mock_io_context, post(_)).WillOnce(InvokeArgument<0>());
 
@@ -123,8 +123,8 @@ TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_ope
 TEST(database_pbft_service, test_that_apply_operation_now_is_handled)
 {
     auto mem_storage = std::make_shared<bzn::mem_storage>();
-    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+    auto mock_io_context = std::make_shared<bzn::asio::mock_io_context_base>();
+    auto mock_crud = std::make_shared<bzn::mock_crud_base>();
 
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
 
@@ -162,8 +162,8 @@ TEST(database_pbft_service, test_that_apply_operation_now_is_handled)
 TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_registered_handler_is_scheduled)
 {
     auto mem_storage = std::make_shared<bzn::mem_storage>();
-    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+    auto mock_io_context = std::make_shared<bzn::asio::mock_io_context_base>();
+    auto mock_crud = std::make_shared<bzn::mock_crud_base>();
 
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
 
@@ -186,7 +186,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_create()->set_key("key3");
     msg.mutable_create()->set_value("value3");
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
     EXPECT_CALL(*mock_session, is_open()).WillRepeatedly(Return(true));
     auto operation3 = std::make_shared<bzn::pbft_memory_operation>(0, 3, "somehashb", nullptr);
     env.set_database_msg(msg.SerializeAsString());
@@ -204,7 +204,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     auto operation1 = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehashc", nullptr);
     env.set_database_msg(msg.SerializeAsString());
     operation1->record_request(env);
-    auto session2 = std::make_shared<bzn::Mocksession_base>();
+    auto session2 = std::make_shared<bzn::mock_session_base>();
     EXPECT_CALL(*session2, is_open()).WillRepeatedly(Return(true));
     operation1->set_session(std::move(session2));
 
@@ -273,8 +273,8 @@ namespace test
 TEST(database_pbft_service, test_that_set_state_catches_up_backlogged_operations)
 {
     auto mem_storage = std::make_shared<bzn::mem_storage>();
-    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    auto mock_crud = std::make_shared<bzn::Mockcrud_base>();
+    auto mock_io_context = std::make_shared<bzn::asio::mock_io_context_base>();
+    auto mock_crud = std::make_shared<bzn::mock_crud_base>();
 
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, TEST_UUID);
 

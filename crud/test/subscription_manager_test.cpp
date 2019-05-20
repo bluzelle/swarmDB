@@ -30,15 +30,15 @@ namespace
 
 TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_updates)
 {
-    auto mock_session1 = std::make_shared<bzn::Mocksession_base>();
-    auto mock_session2 = std::make_shared<bzn::Mocksession_base>();
-    auto mock_session3 = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session1 = std::make_shared<bzn::mock_session_base>();
+    auto mock_session2 = std::make_shared<bzn::mock_session_base>();
+    auto mock_session3 = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_session1, get_session_id()).WillRepeatedly(Return(bzn::session_id(1)));
     EXPECT_CALL(*mock_session2, get_session_id()).WillRepeatedly(Return(bzn::session_id(2)));
     EXPECT_CALL(*mock_session3, get_session_id()).WillRepeatedly(Return(bzn::session_id(3)));
 
-    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>());
+    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>());
 
     // two subscribers...
     {
@@ -138,13 +138,13 @@ TEST(subscription_manager, test_that_session_can_subscribe_and_unsubscribe_for_u
 
 TEST(subscription_manager, test_that_session_cannot_unsubscribe_other_sessions)
 {
-    auto mock_session1 = std::make_shared<bzn::Mocksession_base>();
-    auto mock_session2 = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session1 = std::make_shared<bzn::mock_session_base>();
+    auto mock_session2 = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_session1, get_session_id()).WillRepeatedly(Return(bzn::session_id(1)));
     EXPECT_CALL(*mock_session2, get_session_id()).WillRepeatedly(Return(bzn::session_id(2)));
 
-    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>());
+    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>());
 
     // two subscribers...
     {
@@ -165,13 +165,13 @@ TEST(subscription_manager, test_that_session_cannot_unsubscribe_other_sessions)
 
 TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updates)
 {
-    auto mock_session1 = std::make_shared<bzn::Mocksession_base>();
-    auto mock_session2 = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session1 = std::make_shared<bzn::mock_session_base>();
+    auto mock_session2 = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_session1, get_session_id()).WillRepeatedly(Return(bzn::session_id(1)));
     EXPECT_CALL(*mock_session2, get_session_id()).WillRepeatedly(Return(bzn::session_id(2)));
 
-    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>());
+    bzn::subscription_manager sm(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>());
 
     database_response response;
     sm.subscribe(TEST_UUID, "0", 0,    response, mock_session1);
@@ -303,8 +303,8 @@ TEST(subscription_manager, test_that_subscriber_is_notified_for_create_and_updat
 
 TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_list)
 {
-    auto mock_io_context = std::make_shared<bzn::asio::Mockio_context_base>();
-    auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+    auto mock_io_context = std::make_shared<bzn::asio::mock_io_context_base>();
+    auto mock_steady_timer = std::make_unique<bzn::asio::mock_steady_timer_base>();
 
     EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
 
@@ -325,8 +325,8 @@ TEST(subscription_manager, test_that_dead_session_is_removed_from_subscriber_lis
 
     sm->start();
 
-    auto mock_session1 = std::make_shared<bzn::Mocksession_base>();
-    auto mock_session2 = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session1 = std::make_shared<bzn::mock_session_base>();
+    auto mock_session2 = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_session1, get_session_id()).WillRepeatedly(Return(bzn::session_id(1)));
     EXPECT_CALL(*mock_session2, get_session_id()).WillRepeatedly(Return(bzn::session_id(2)));

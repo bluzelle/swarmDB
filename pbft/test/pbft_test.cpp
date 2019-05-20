@@ -162,7 +162,7 @@ namespace bzn::test
     TEST_F(pbft_test, client_request_does_not_result_in_message_ack)
     {
         this->build_pbft();
-        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        auto mock_session = std::make_shared<NiceMock<bzn::mock_session_base>>();
 
         EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>())).Times(Exactly(0));
 
@@ -172,7 +172,7 @@ namespace bzn::test
     TEST_F(pbft_test, database_response_is_forwarded_to_session)
     {
         this->build_pbft();
-        auto mock_session = std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        auto mock_session = std::make_shared<NiceMock<bzn::mock_session_base>>();
 
         EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
 
@@ -212,7 +212,7 @@ namespace bzn::test
 
     TEST_F(pbft_test, client_request_executed_results_in_message_response)
     {
-        auto mock_session = std::make_shared<bzn::Mocksession_base>();
+        auto mock_session = std::make_shared<bzn::mock_session_base>();
         EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
 
         auto peers = std::make_shared<const std::vector<bzn::peer_address_t>>();

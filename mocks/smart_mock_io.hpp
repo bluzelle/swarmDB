@@ -17,7 +17,7 @@
 
 namespace bzn::asio
 {
-    class smart_mock_io : public Mockio_context_base
+    class smart_mock_io : public mock_io_context_base
     {
     public:
 
@@ -28,7 +28,7 @@ namespace bzn::asio
         void yield_until_clear();
 
         std::shared_ptr<bzn::asio::io_context_base> real_io_context = std::make_shared<bzn::asio::io_context>();
-        std::shared_ptr<bzn::beast::Mockwebsocket_base> websocket = std::make_shared<bzn::beast::Mockwebsocket_base>();
+        std::shared_ptr<bzn::beast::mock_websocket_base> websocket = std::make_shared<bzn::beast::mock_websocket_base>();
 
         size_t timer_count = 0;
         std::map<size_t, bzn::asio::wait_handler> timer_callbacks;

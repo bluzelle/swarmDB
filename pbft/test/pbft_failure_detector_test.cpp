@@ -27,10 +27,10 @@ namespace bzn
     public:
         std::shared_ptr<bzn::pbft_failure_detector> failure_detector;
 
-        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
-                std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> request_timer =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+        std::shared_ptr<bzn::asio::mock_io_context_base> mock_io_context =
+                std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> request_timer =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
 
         bzn::asio::wait_handler request_timer_callback;
 

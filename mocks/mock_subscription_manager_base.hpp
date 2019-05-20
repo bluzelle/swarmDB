@@ -19,7 +19,7 @@
 
 namespace bzn {
 
-class Mocksubscription_manager_base : public subscription_manager_base {
+class mock_subscription_manager_base : public subscription_manager_base {
  public:
   MOCK_METHOD0(start,
       void());

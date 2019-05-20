@@ -25,7 +25,7 @@ using namespace testing;
 
 TEST(status_test, test_that_status_registers_and_responses_to_requests)
 {
-    auto mock_node = std::make_shared<Mocknode_base>();
+    auto mock_node = std::make_shared<mock_node_base>();
 
     // success
     {
@@ -51,10 +51,10 @@ TEST(status_test, test_that_status_request_queries_status_providers)
 {
     const std::string SWARM_ID{"utest"};
 
-    auto mock_node = std::make_shared<Mocknode_base>();
-    auto mock_session = std::make_shared<Mocksession_base>();
+    auto mock_node = std::make_shared<mock_node_base>();
+    auto mock_session = std::make_shared<mock_session_base>();
 
-    auto mock_status_provider = std::make_shared<Mockstatus_provider_base>();
+    auto mock_status_provider = std::make_shared<mock_status_provider_base>();
 
     auto status = std::make_shared<bzn::status>(mock_node, bzn::status::status_provider_list_t{mock_status_provider, mock_status_provider}, SWARM_ID);
 

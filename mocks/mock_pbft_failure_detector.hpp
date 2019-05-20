@@ -20,7 +20,7 @@
 
 namespace bzn
 {
-    class Mockpbft_failure_detector_base : public pbft_failure_detector_base
+    class mock_pbft_failure_detector_base : public pbft_failure_detector_base
     {
     public:
         MOCK_METHOD1(request_seen, void(const bzn::hash_t& req));
