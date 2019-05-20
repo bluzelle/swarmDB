@@ -29,10 +29,12 @@ database_pbft_service::database_pbft_service(
     std::shared_ptr<bzn::asio::io_context_base> io_context,
     std::shared_ptr<bzn::storage_base> unstable_storage,
     std::shared_ptr<bzn::crud_base> crud,
+    std::shared_ptr<bzn::monitor_base> monitor,
     bzn::uuid_t uuid)
     : io_context(std::move(io_context))
     , unstable_storage(std::move(unstable_storage))
     , crud(std::move(crud))
+    , monitor(std::move(monitor))
     , uuid(std::move(uuid))
 {
     this->load_next_request_sequence();
@@ -142,6 +144,9 @@ database_pbft_service::process_awaiting_operations()
 
                 this->crud->handle_request(op_it->second->get_request().sender(), request, nullptr);
             }
+
+            // update stats...
+            this->monitor->finish_timer(bzn::statistic::request_latency, op_it->second->get_request_hash());
 
             if (this->next_request_sequence == this->next_checkpoint)
             {
