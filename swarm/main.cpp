@@ -303,7 +303,7 @@ main(int argc, const char* argv[])
         auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(unstable_storage);
 
         auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
-            std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, options->get_uuid())
+            std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, monitor, options->get_uuid())
             ,failure_detector, crypto, operation_manager, unstable_storage, monitor);
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
