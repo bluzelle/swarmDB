@@ -22,7 +22,7 @@
 
 namespace bzn {
 
-class Mockpbft_base : public pbft_base {
+class mock_pbft_base : public pbft_base {
 public:
     MOCK_METHOD0(start,
             void());

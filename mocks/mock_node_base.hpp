@@ -22,7 +22,7 @@
 
 namespace bzn {
 
-class Mocknode_base : public node_base {
+class mock_node_base : public node_base {
  public:
   MOCK_METHOD2(register_for_message,
       bool(const bzn_envelope::PayloadCase msg_type, bzn::protobuf_handler message_handler));

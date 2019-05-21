@@ -19,7 +19,7 @@
 
 namespace bzn
 {
-    class smart_mock_node : public Mocknode_base
+    class smart_mock_node : public mock_node_base
     {
     public:
         smart_mock_node();

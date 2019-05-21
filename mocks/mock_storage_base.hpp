@@ -19,7 +19,7 @@
 
 namespace bzn {
 
-    class Mockstorage_base : public storage_base {
+    class mock_storage_base : public storage_base {
     public:
         MOCK_METHOD3(create,
             bzn::storage_result(const bzn::uuid_t& uuid, const std::string& key, const std::string& value));

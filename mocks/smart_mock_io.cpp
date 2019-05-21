@@ -23,7 +23,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
     EXPECT_CALL(*this, make_unique_strand()).WillRepeatedly(Invoke(
             [&]()
             {
-                auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+                auto strand = std::make_unique<bzn::asio::mock_strand_base>();
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
                 EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
@@ -47,7 +47,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
             {
                 auto id = timer_count++;
 
-                auto timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+                auto timer = std::make_unique<bzn::asio::mock_steady_timer_base>();
                 EXPECT_CALL(*timer, async_wait(_)).WillRepeatedly(Invoke(
                         [&, id](auto wh)
                         {
@@ -68,7 +68,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
             {
                 auto id = socket_count++;
 
-                auto mock_socket = std::make_unique<bzn::asio::Mocktcp_socket_base>();
+                auto mock_socket = std::make_unique<bzn::asio::mock_tcp_socket_base>();
 
                 static boost::asio::io_context io;
                 static boost::asio::ip::tcp::socket socket(io);
@@ -90,7 +90,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
     EXPECT_CALL(*this, make_unique_tcp_acceptor(_)).Times(AtMost(1)).WillOnce(Invoke(
             [&](auto& /*ep*/)
             {
-                auto mock_acceptor = std::make_unique<bzn::asio::Mocktcp_acceptor_base>();
+                auto mock_acceptor = std::make_unique<bzn::asio::mock_tcp_acceptor_base>();
 
                 EXPECT_CALL(*mock_acceptor, async_accept(_, _)).WillRepeatedly(Invoke(
                         [&](auto& socket, auto handler)
@@ -107,7 +107,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
             {
                 auto id = this->socket_id_map.at(socket.native_handle());
                 this->socket_is_open.insert_or_assign(id, true);
-                auto wss = std::make_unique<bzn::beast::Mockwebsocket_stream_base>();
+                auto wss = std::make_unique<bzn::beast::mock_websocket_stream_base>();
 
                 EXPECT_CALL(*wss, async_accept(_)).Times(AtMost(1)).WillOnce(Invoke(
                         [&, id](auto handler)

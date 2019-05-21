@@ -42,7 +42,7 @@ namespace
         return intermediate.ParseFromString(source) && target.ParseFromString(intermediate.database_response());
     }
 
-    void expect_signed_response(const std::shared_ptr<bzn::Mocksession_base>& session,
+    void expect_signed_response(const std::shared_ptr<bzn::mock_session_base>& session,
             std::optional<bzn::uuid_t> db_uuid = std::nullopt,
             std::optional<uint64_t> nonce = std::nullopt,
             std::optional<database_response::ResponseCase> response_case = std::nullopt,
@@ -80,7 +80,7 @@ namespace
             }));
     }
 
-    void expect_response(const std::shared_ptr<bzn::Mocksession_base>& session,
+    void expect_response(const std::shared_ptr<bzn::mock_session_base>& session,
         std::optional<bzn::uuid_t> db_uuid = std::nullopt,
         std::optional<uint64_t> nonce = std::nullopt,
         std::optional<database_response::ResponseCase> response_case = std::nullopt,
@@ -123,24 +123,24 @@ namespace
 
     std::shared_ptr<bzn::crud>
     initialize_crud(
-            std::shared_ptr<bzn::Mocksession_base>& session
-            , std::shared_ptr<bzn::Mocknode_base>& mock_node
+            std::shared_ptr<bzn::mock_session_base>& session
+            , std::shared_ptr<bzn::mock_node_base>& mock_node
             , bzn::uuid_t caller_id)
     {
-        mock_node = std::make_shared<bzn::Mocknode_base>();
-        auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-        auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-        session = std::make_shared<bzn::Mocksession_base>();
+        mock_node = std::make_shared<bzn::mock_node_base>();
+        auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+        auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+        session = std::make_shared<bzn::mock_session_base>();
 
         EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
                 [&]()
                 {
-                    return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                    return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
                 }));
 
         auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, mock_node, caller_id);
 
-        auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+        auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
         EXPECT_CALL(*mock_pbft,
                     current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
@@ -205,8 +205,8 @@ namespace
     void
     create_test_database(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller_uuid
             , const bzn::uuid_t& db_uuid
             , uint64_t max_size = 0
@@ -224,8 +224,8 @@ namespace
     void
     remove_test_database(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller_uuid
             , const bzn::uuid_t& db_uuid)
     {
@@ -242,8 +242,8 @@ namespace
     void
     create_key_value(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller
             , const std::string& request_hash
             , const bzn::uuid_t& db
@@ -262,8 +262,8 @@ namespace
     void
     update_key_value(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller
             , const std::string& request_hash
             , const bzn::uuid_t& db
@@ -282,8 +282,8 @@ namespace
     std::pair<std::size_t, std::size_t>
     get_database_size(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller, const bzn::uuid_t& db)
     {
         std::promise<std::pair<std::size_t, std::size_t>> db_size_promise;
@@ -311,8 +311,8 @@ namespace
     std::set<std::string>
     get_database_keys(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller_id
             , const bzn::uuid_t& db_uuid)
     {
@@ -337,8 +337,8 @@ namespace
 
     std::string
     do_quickread(const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller_id
             , const bzn::uuid_t& db_uuid
             , const bzn::key_t& key)
@@ -376,8 +376,8 @@ namespace
     size_t
     fill_database(
             const std::shared_ptr<bzn::crud>& crud
-            , const std::shared_ptr<bzn::Mocksession_base>& session
-            , const std::shared_ptr<bzn::Mocknode_base>& mock_node
+            , const std::shared_ptr<bzn::mock_session_base>& session
+            , const std::shared_ptr<bzn::mock_node_base>& mock_node
             , const bzn::uuid_t& caller_id
             , const std::string request_hash
             , const bzn::uuid_t& db_uuid
@@ -399,19 +399,19 @@ namespace
 
 TEST(crud, test_that_create_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -425,7 +425,7 @@ TEST(crud, test_that_create_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(session, "uuid", 123, std::nullopt,
         bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
@@ -504,20 +504,20 @@ TEST(crud, test_that_create_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -644,19 +644,19 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
 TEST(crud, test_that_read_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -676,7 +676,7 @@ TEST(crud, test_that_read_sends_proper_response)
     msg.mutable_create()->set_expire(2);
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
@@ -762,20 +762,20 @@ TEST(crud, test_that_read_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_read_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -879,19 +879,19 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
 
 TEST(crud, test_that_update_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -912,7 +912,7 @@ TEST(crud, test_that_update_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
@@ -963,20 +963,20 @@ TEST(crud, test_that_update_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_update_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1052,19 +1052,19 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
 
 TEST(crud, test_that_delete_sends_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1085,7 +1085,7 @@ TEST(crud, test_that_delete_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 
@@ -1113,20 +1113,20 @@ TEST(crud, test_that_delete_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1193,19 +1193,19 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
 
 TEST(crud, test_that_has_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1224,7 +1224,7 @@ TEST(crud, test_that_has_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(session);
     crud->handle_request("caller_id", msg, session);
@@ -1274,19 +1274,19 @@ TEST(crud, test_that_has_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1355,18 +1355,18 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 
 TEST(crud, test_that_keys_sends_proper_response)
 {
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1385,7 +1385,7 @@ TEST(crud, test_that_keys_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*session, send_signed_message(_)).Times(2);
     crud->handle_request("caller_id", msg, session);
@@ -1431,19 +1431,19 @@ TEST(crud, test_that_keys_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1522,18 +1522,18 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
 
 TEST(crud, test_that_size_sends_proper_response)
 {
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1553,7 +1553,7 @@ TEST(crud, test_that_size_sends_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(session);
     crud->handle_request("caller_id", msg, session);
@@ -1587,19 +1587,19 @@ TEST(crud, test_that_size_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_size_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1667,20 +1667,20 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
 
 TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
 
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1697,7 +1697,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
     crud->handle_request("caller_id", msg, nullptr);
 
     // try again with a valid session...
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, subscribe(msg.header().db_uuid(), msg.subscribe().key(),
         msg.header().nonce(), _, _));
@@ -1710,20 +1710,20 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 
 TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1740,7 +1740,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
     // nothing should happen...
     crud->handle_request("caller_id", msg, nullptr);
     
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, unsubscribe(msg.header().db_uuid(), msg.unsubscribe().key(),
         msg.unsubscribe().nonce(), _, _));
@@ -1753,18 +1753,18 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 
 TEST(crud, test_that_create_db_request_sends_proper_response)
 {
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1776,7 +1776,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(mock_session, "uuid", std::nullopt, database_response::RESPONSE_NOT_SET);
 
@@ -1791,19 +1791,19 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1847,18 +1847,18 @@ TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 
 TEST(crud, test_that_has_db_request_sends_proper_response)
 {
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1874,7 +1874,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
     // nothing should happen...
     crud->handle_request("caller_id", msg, nullptr);
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     // request has db..
     msg.mutable_has_db();
@@ -1903,19 +1903,19 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1969,18 +1969,18 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 TEST(crud, test_that_delete_db_sends_proper_response)
 {
     auto storage = std::make_shared<bzn::mem_storage>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillOnce(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -1992,7 +1992,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_delete_db();
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(mock_session, "uuid", std::nullopt, std::nullopt, bzn::storage_result_msg.at(bzn::storage_result::db_not_found));
 
@@ -2035,19 +2035,19 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2112,8 +2112,8 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
 
 TEST(crud, test_that_state_can_be_saved_and_retrieved)
 {
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
     ASSERT_TRUE(crud.save_state());
 
@@ -2127,8 +2127,8 @@ TEST(crud, test_that_state_can_be_saved_and_retrieved)
 
 TEST(crud, test_that_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -2136,7 +2136,7 @@ TEST(crud, test_that_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(mock_session);
 
@@ -2159,10 +2159,10 @@ TEST(crud, test_that_writers_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
 
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -2197,8 +2197,8 @@ TEST(crud, test_that_point_of_contact_writers_sends_proper_response)
 
 TEST(crud, test_that_add_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -2206,7 +2206,7 @@ TEST(crud, test_that_add_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(mock_session);
 
@@ -2247,10 +2247,10 @@ TEST(crud, test_that_add_writers_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
 
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -2320,8 +2320,8 @@ TEST(crud, test_that_point_of_contact_add_writers_sends_proper_response)
 
 TEST(crud, test_that_remove_writers_sends_proper_response)
 {
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
     // create database...
     database_msg msg;
@@ -2329,7 +2329,7 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
     msg.mutable_header()->set_nonce(uint64_t(123));
     msg.mutable_create_db();
 
-    auto mock_session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_session = std::make_shared<bzn::mock_session_base>();
 
     expect_signed_response(mock_session);
 
@@ -2360,10 +2360,10 @@ TEST(crud, test_that_remove_writers_sends_proper_response)
 
 TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
 {
-    auto mock_node = std::make_shared<bzn::Mocknode_base>();
+    auto mock_node = std::make_shared<bzn::mock_node_base>();
 
-    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>(), std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), mock_node);
+    bzn::crud crud(std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>(), std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), mock_node);
 
     // create database...
     database_msg msg;
@@ -2417,9 +2417,9 @@ TEST(crud, test_that_point_of_contact_remove_writers_sends_proper_response)
 
 TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
 {
-    auto mock_subscription_manager = std::make_shared<bzn::Mocksubscription_manager_base>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+    auto mock_subscription_manager = std::make_shared<bzn::mock_subscription_manager_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto mock_steady_timer = std::make_unique<bzn::asio::mock_steady_timer_base>();
 
     EXPECT_CALL(*mock_steady_timer, expires_from_now(_)).Times(2);
 
@@ -2440,7 +2440,7 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2454,7 +2454,7 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_nonce(uint64_t(123));
 
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     msg.mutable_create_db();
     expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
@@ -2488,8 +2488,8 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
 
 TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
 {
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto mock_steady_timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto mock_steady_timer = std::make_unique<bzn::asio::mock_steady_timer_base>();
 
     EXPECT_CALL(*mock_steady_timer, expires_from_now(_));
     EXPECT_CALL(*mock_steady_timer, async_wait(_));
@@ -2501,9 +2501,9 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
-        std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>(), nullptr);
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2514,7 +2514,7 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
     msg.mutable_header()->set_db_uuid("uuid");
     msg.mutable_header()->set_nonce(uint64_t(123));
 
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     msg.mutable_create_db();
     expect_signed_response(session, "uuid", 123, database_response::RESPONSE_NOT_SET);
@@ -2548,20 +2548,20 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
 
 TEST(crud, test_that_create_db_uses_bluzelle_key_to_validate)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             {
-                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
             }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
                                             mock_subscription_manager, nullptr, "caller_id");
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2584,19 +2584,19 @@ TEST(crud, test_that_create_db_uses_bluzelle_key_to_validate)
 
 TEST(crud, test_that_create_db_with_incorrect_bluzelle_key_fails_to_validate)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             {
-                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
             }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2619,19 +2619,19 @@ TEST(crud, test_that_create_db_with_incorrect_bluzelle_key_fails_to_validate)
 
 TEST(crud, test_that_delete_db_uses_bluzelle_key_to_validate)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             {
-                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
             }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2675,19 +2675,19 @@ TEST(crud, test_that_delete_db_uses_bluzelle_key_to_validate)
 
 TEST(crud, test_that_delete_db_with_incorrect_bluzelle_key_fails_to_validate)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
             [&]()
             {
-                return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+                return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
             }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr, "caller_id");
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -2747,17 +2747,17 @@ TEST(crud, test_assumption_that_boost_random_mt19937_produces_the_same_values_fo
 
 TEST(crud, test_that_create_and_updates_which_exceed_db_limit_send_proper_responses)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
@@ -2817,8 +2817,8 @@ TEST(crud, test_random_eviction_policy_randomly_removes_a_key_value_pair_for_cre
     const uint64_t NONCE{123};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
     remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
@@ -2872,8 +2872,8 @@ TEST(crud, test_random_eviction_policy_with_large_value_requiring_many_evictions
     const bzn::value_t LARGE_TEST_VALUE{make_value(3 * VALUE_SIZE)};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
     remove_test_database(crud, session, mock_node, CALLER_UUID, DB_UUID);
@@ -2913,8 +2913,8 @@ TEST(crud, test_random_eviction_policy_edge_case_of_create_with_value_larger_tha
     const uint64_t NONCE{123};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
 
@@ -2941,8 +2941,8 @@ TEST(crud, test_random_eviction_policy_randomly_removes_a_single_key_value_pair_
     const size_t VALUE_SIZE{45};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
 
@@ -2991,8 +2991,8 @@ TEST(crud, test_random_eviction_policy_randomly_removes_many_key_value_pairs_for
     const size_t LARGE_VALUE_SIZE{5 * VALUE_SIZE};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
 
@@ -3039,8 +3039,8 @@ TEST(crud, test_random_eviction_policy_edge_case_of_update_with_value_larger_tha
     const bzn::uuid_t DB_UUID{"sut_uuid"};
     const bzn::uuid_t CALLER_UUID{"caller_id"};
 
-    std::shared_ptr<bzn::Mocksession_base> session;
-    std::shared_ptr<bzn::Mocknode_base> mock_node;
+    std::shared_ptr<bzn::mock_session_base> session;
+    std::shared_ptr<bzn::mock_node_base> mock_node;
 
     auto crud{initialize_crud(session, mock_node, CALLER_UUID)};
 
@@ -3063,12 +3063,12 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
     const size_t VALUE_SIZE{27};
     const std::string REQUEST_HASH{generate_random_hash()};
 
-    std::shared_ptr<bzn::Mocksession_base> session_0;
-    std::shared_ptr<bzn::Mocknode_base> mock_node_0;
+    std::shared_ptr<bzn::mock_session_base> session_0;
+    std::shared_ptr<bzn::mock_node_base> mock_node_0;
     auto crud_0{initialize_crud(session_0, mock_node_0, CALLER_UUID)};
 
-    std::shared_ptr<bzn::Mocksession_base> session_1;
-    std::shared_ptr<bzn::Mocknode_base> mock_node_1;
+    std::shared_ptr<bzn::mock_session_base> session_1;
+    std::shared_ptr<bzn::mock_node_base> mock_node_1;
     auto crud_1{initialize_crud(session_1, mock_node_1, CALLER_UUID)};
 
     remove_test_database(crud_0, session_0, mock_node_0, CALLER_UUID, DB_UUID);
@@ -3153,19 +3153,19 @@ TEST(crud, test_that_two_cruds_evict_the_same_key_value_pairs)
 
 TEST(crud, test_that_expire_send_proper_response)
 {
-    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::Mocksubscription_manager_base>>();
-    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::Mockio_context_base>>();
+    auto mock_subscription_manager = std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>();
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
 
     EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
         [&]()
         {
-            return std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base>>();
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
         }));
 
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
         mock_subscription_manager, nullptr);
 
-    auto mock_pbft = std::make_shared<bzn::Mockpbft_base>();
+    auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
     EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
 
@@ -3183,7 +3183,7 @@ TEST(crud, test_that_expire_send_proper_response)
     msg.mutable_create()->set_value("value");
 
     // add key...
-    auto session = std::make_shared<bzn::Mocksession_base>();
+    auto session = std::make_shared<bzn::mock_session_base>();
 
     EXPECT_CALL(*mock_subscription_manager, inspect_commit(_));
 

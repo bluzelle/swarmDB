@@ -40,7 +40,7 @@ namespace
 class session_test : public Test
 {
 public:
-    std::shared_ptr<bzn::asio::Mockio_context_base> io_context = std::make_shared<bzn::asio::Mockio_context_base>();
+    std::shared_ptr<bzn::asio::mock_io_context_base> io_context = std::make_shared<bzn::asio::mock_io_context_base>();
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
     std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
 
@@ -51,7 +51,7 @@ public:
         EXPECT_CALL(*(this->io_context), make_unique_steady_timer()).WillRepeatedly(Invoke(
                 [&]()
                 {
-                    auto timer = std::make_unique<bzn::asio::Mocksteady_timer_base>();
+                    auto timer = std::make_unique<bzn::asio::mock_steady_timer_base>();
                     EXPECT_CALL(*timer, async_wait(_)).WillRepeatedly(Invoke(
                             [&](auto wh)
                             {
@@ -64,7 +64,7 @@ public:
         EXPECT_CALL(*(this->io_context), make_unique_strand()).WillRepeatedly(Invoke(
                 []()
                 {
-                    auto strand = std::make_unique<bzn::asio::Mockstrand_base>();
+                    auto strand = std::make_unique<bzn::asio::mock_strand_base>();
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::close_handler>())).WillRepeatedly(ReturnArg<0>());
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::read_handler>())).WillRepeatedly(ReturnArg<0>());
                     EXPECT_CALL(*strand, wrap(A<bzn::asio::task>())).WillRepeatedly(ReturnArg<0>());
@@ -90,7 +90,7 @@ public:
     std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
     std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
     std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
-    std::shared_ptr<bzn::Mockcrypto_base> mock_crypto = std::make_shared<NiceMock<bzn::Mockcrypto_base>>();
+    std::shared_ptr<bzn::mock_crypto_base> mock_crypto = std::make_shared<NiceMock<bzn::mock_crypto_base>>();
     std::shared_ptr<bzn::options> options = std::make_shared<bzn::options>();
 
 
@@ -119,7 +119,7 @@ namespace bzn
 
     TEST_F(session_test, test_that_when_session_starts_it_accepts_and_read_is_scheduled)
     {
-        auto mock_websocket_stream = std::make_shared<bzn::beast::Mockwebsocket_stream_base>();
+        auto mock_websocket_stream = std::make_shared<bzn::beast::mock_websocket_stream_base>();
         EXPECT_CALL(*mock_websocket_stream, is_open()).WillRepeatedly(Return(true));
 
         bzn::asio::accept_handler accept_handler;

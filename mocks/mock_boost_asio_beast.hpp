@@ -22,7 +22,7 @@
 
 namespace bzn::asio {
 
-    class Mocktcp_socket_base : public tcp_socket_base {
+    class mock_tcp_socket_base : public tcp_socket_base {
     public:
         MOCK_METHOD0(get_tcp_socket,
             boost::asio::ip::tcp::socket&());
@@ -37,7 +37,7 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
-    class Mockudp_socket_base : public udp_socket_base {
+    class mock_udp_socket_base : public udp_socket_base {
     public:
         MOCK_METHOD3(async_send_to, void(const boost::asio::const_buffer& msg,
                            boost::asio::ip::udp::endpoint ep,
@@ -49,7 +49,7 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
-    class Mocktcp_acceptor_base : public tcp_acceptor_base {
+    class mock_tcp_acceptor_base : public tcp_acceptor_base {
     public:
         MOCK_METHOD2(async_accept,
             void(bzn::asio::tcp_socket_base& socket, bzn::asio::accept_handler handler));
@@ -62,7 +62,7 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
-    class Mocksteady_timer_base : public steady_timer_base {
+    class mock_steady_timer_base : public steady_timer_base {
     public:
         MOCK_METHOD1(async_wait,
             void(wait_handler handler));
@@ -79,7 +79,7 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
-    class Mockstrand_base : public strand_base {
+    class mock_strand_base : public strand_base {
     public:
         MOCK_METHOD1(wrap,
             bzn::asio::write_handler(write_handler handler));
@@ -98,7 +98,7 @@ namespace bzn::asio {
 
 namespace bzn::asio {
 
-    class Mockio_context_base : public io_context_base {
+    class mock_io_context_base : public io_context_base {
     public:
         MOCK_METHOD1(make_unique_tcp_acceptor,
             std::unique_ptr<bzn::asio::tcp_acceptor_base>(const boost::asio::ip::tcp::endpoint& ep));
@@ -127,7 +127,7 @@ namespace bzn::asio {
 
 namespace bzn::beast {
 
-    class Mockhttp_socket_base : public http_socket_base {
+    class mock_http_socket_base : public http_socket_base {
     public:
         MOCK_METHOD0(get_socket,
             boost::asio::ip::tcp::socket&());
@@ -144,7 +144,7 @@ namespace bzn::beast {
 
 namespace bzn::beast {
 
-    class Mockwebsocket_stream_base : public websocket_stream_base {
+    class mock_websocket_stream_base : public websocket_stream_base {
     public:
         MOCK_METHOD0(get_websocket,
             boost::beast::websocket::stream<boost::asio::ip::tcp::socket>&());
@@ -171,7 +171,7 @@ namespace bzn::beast {
 
 namespace bzn::beast {
 
-    class Mockwebsocket_base : public websocket_base {
+    class mock_websocket_base : public websocket_base {
     public:
         MOCK_METHOD1(make_unique_websocket_stream,
             std::unique_ptr<bzn::beast::websocket_stream_base>(boost::asio::ip::tcp::socket& socket));

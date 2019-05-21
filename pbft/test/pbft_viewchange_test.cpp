@@ -27,10 +27,10 @@ namespace bzn
     public:
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
 
-        std::shared_ptr<Mockcrypto_base>
+        std::shared_ptr<mock_crypto_base>
         build_pft_with_mock_crypto()
         {
-            std::shared_ptr<Mockcrypto_base> mockcrypto = std::make_shared<Mockcrypto_base>();
+            std::shared_ptr<mock_crypto_base> mockcrypto = std::make_shared<mock_crypto_base>();
             this->crypto = mockcrypto;
             this->build_pbft();
             return mockcrypto;
@@ -325,16 +325,16 @@ namespace bzn
 
         // sut2 is new primary after view change
         auto mock_node2 = std::make_shared<bzn::smart_mock_node>();
-        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context2 =
-                std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer2 =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> new_config_timer2 =
-            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> join_retry_timer2 =
-            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> grace_timer2 =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::shared_ptr<bzn::asio::mock_io_context_base> mock_io_context2 =
+                std::make_shared<NiceMock<bzn::asio::mock_io_context_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> audit_heartbeat_timer2 =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> new_config_timer2 =
+            std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> join_retry_timer2 =
+            std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> grace_timer2 =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service2 =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
 

@@ -71,15 +71,15 @@ namespace bzn::test
         pbft_msg preprepare_msg;
         bzn_envelope default_original_msg;
 
-        std::shared_ptr<bzn::asio::Mockio_context_base> mock_io_context =
-                std::make_shared<NiceMock<bzn::asio::Mockio_context_base >>();
+        std::shared_ptr<bzn::asio::mock_io_context_base> mock_io_context =
+                std::make_shared<NiceMock<bzn::asio::mock_io_context_base >>();
         std::shared_ptr<bzn::smart_mock_node> mock_node = std::make_shared<bzn::smart_mock_node>();
-        std::shared_ptr<bzn::Mockpbft_failure_detector_base> mock_failure_detector =
-                std::make_shared<NiceMock<bzn::Mockpbft_failure_detector_base >>();
+        std::shared_ptr<bzn::mock_pbft_failure_detector_base> mock_failure_detector =
+                std::make_shared<NiceMock<bzn::mock_pbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
-        std::shared_ptr<bzn::Mocksession_base> mock_session =
-                std::make_shared<NiceMock<bzn::Mocksession_base>>();
+        std::shared_ptr<bzn::mock_session_base> mock_session =
+                std::make_shared<NiceMock<bzn::mock_session_base>>();
         std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
         std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
                 std::make_shared<bzn::pbft_operation_manager>(storage);
@@ -90,17 +90,17 @@ namespace bzn::test
 
         std::shared_ptr<bzn::pbft> pbft;
 
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> audit_heartbeat_timer =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> audit_heartbeat_timer =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
 
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> new_config_timer =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> new_config_timer =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
 
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> join_retry_timer =
-            std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> join_retry_timer =
+            std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
 
-        std::unique_ptr<bzn::asio::Mocksteady_timer_base> cp_manager_timer1 =
-                std::make_unique<NiceMock<bzn::asio::Mocksteady_timer_base >>();
+        std::unique_ptr<bzn::asio::mock_steady_timer_base> cp_manager_timer1 =
+                std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base >>();
 
         bzn::asio::wait_handler audit_heartbeat_timer_callback;
         bzn::asio::wait_handler new_config_timer_callback;

@@ -19,7 +19,7 @@
 
 namespace bzn
 {
-    class Mockcrypto_base : public crypto_base
+    class mock_crypto_base : public crypto_base
     {
     public:
         MOCK_METHOD1(sign, bool(bzn_envelope& msg));
