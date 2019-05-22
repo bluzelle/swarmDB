@@ -14,7 +14,7 @@
 
 #include <options/options.hpp>
 #include <utils/curl.hpp>
-#include <utils/esr_peer_info.h>
+#include <utils/esr_peer_info.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
 #include <json/json.h>

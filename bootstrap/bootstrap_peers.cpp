@@ -15,7 +15,7 @@
 #include <utils/blacklist.hpp>
 #include <utils/crypto.hpp>
 #include <utils/http_get.hpp>
-#include <utils/esr_peer_info.h>
+#include <utils/esr_peer_info.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <json/json.h>
 #include <algorithm>

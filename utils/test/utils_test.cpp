@@ -18,7 +18,7 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <utils/blacklist.hpp>
 #include <utils/crypto.hpp>
-#include <utils/esr_peer_info.h>
+#include <utils/esr_peer_info.hpp>
 #include <algorithm>
 #include <random>
 
