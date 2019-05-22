@@ -180,26 +180,35 @@ namespace
             switch (state)
             {
                 case HEADER:
+                {
                     state = HEADER_SWARM_SIZE;
-                    break;
+                }
+                break;
                 case HEADER_SWARM_SIZE:
+                {
                     state = HEADER_INFO;
                     node_count = std::strtoul(line, nullptr, 16);
-                    if (node_count==0)
+                    if (node_count == 0)
                     {
                         LOG(error) << "Requested swarm may not exist or has no nodes";
                         return results;
                     }
-                    break;
+                }
+                break;
                 case HEADER_INFO:
-                    state = index == node_count + 1 ? PEER_ID_SIZE : state ;
-                    break;
+                {
+                    state = (index == node_count + 1 ? PEER_ID_SIZE : state) ;
+                }
+                break;
                 case PEER_ID_SIZE:
+                {
                     // the first line of data is the size of the string
                     peer_id_length = std::strtoul(line, nullptr, 16);
                     state = PEER_ID;
-                    break;
+                }
+                break;
                 case PEER_ID:
+                {
                     peer_id.append(hex_to_char_string(std::string{line}));
                     if (peer_id.size() >= peer_id_length)
                     {
@@ -208,12 +217,18 @@ namespace
                         peer_id = "";
                         state = PEER_ID_SIZE;
                     }
+                }
+                break;
                 default:
-                    break;
+                {
+                    LOG(warning) << "Failed to correctly parse peer peers from esr";
+                    return results;
+                }
+                break;
             }
-            index++;
+            ++index;
         }
-        assert(results.size()==node_count);
+        assert(results.size() == node_count);
         return results;
     }
 
@@ -239,49 +254,66 @@ namespace
                 case NODE_COUNT: state = NA_0; break;
                 case NA_0: state = HTTP_PORT; break;
                 case HTTP_PORT:
+                {
                     http_port = uint16_t(std::strtoul(line, nullptr, 16));
-                    if (0 == http_port)
+                    if (!http_port)
                     {
                         LOG(warning) << "Invalid value for http port:[" << http_port << "] node may not exist";
                     }
                     state = NA_1;
-                    break;
-                case NA_1: state = NODE_PORT; break;
+                }
+                break;
+                case NA_1:
+                {
+                    state = NODE_PORT;
+                }
+                break;
                 case NODE_PORT:
+                {
+
                     port = std::strtoul(line, nullptr, 16);
-                    if (0 == http_port)
+                    if (!http_port)
                     {
                         LOG(warning) << "Invalid value for port:[" << port << "] node may not exist";
                     }
                     state = NA_2;
-                    break;
+                }
+                break;
                 case NA_2:
+                {
                     state = NODE_HOST;
-                    break;
-                case NODE_HOST:
+                }
+                break;
+                case NODE_HOST: {
                     host = hex_to_char_string(line);
                     trim_right_nulls(host);
-                    if (0 == http_port)
-                    {
+                    if (!http_port) {
                         LOG(warning) << "Empty value for host ip, node may not exist";
                     }
                     state = NA_3;
-                    break;
+                }
+                break;
                 case NA_3:
+                {
                     state = NODE_NAME;
-                    break;
+                }
+                break;
                 case NODE_NAME:
+                {
                     name = hex_to_char_string(line);
                     trim_right_nulls(name);
-                    if (0 == http_port)
+                    if (!http_port)
                     {
                         LOG(warning) << "Empty value for host name, node may not exist";
                     }
-                    break;
+                }
+                break;
                 default:
+                {
                     LOG(error) << "Failed to correctly parse peer info from esr";
                     return bzn::peer_address_t(host, port, http_port, name, peer_id);
-                    break;
+                }
+                break;
             }
         }
         return bzn::peer_address_t(host, port, http_port, name, peer_id);
@@ -304,8 +336,7 @@ namespace
     {
         std::stringbuf buf;
         std::ostream os(&buf);
-        os << std::setfill('0') << std::setw(width)
-           << std::hex << (int)i;
+        os << std::setfill('0') << std::setw(width) << std::hex << (int)i;
         return buf.str().c_str();
     }
 

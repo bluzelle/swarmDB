@@ -20,7 +20,6 @@
 #include <utils/crypto.hpp>
 #include <utils/esr_peer_info.hpp>
 #include <algorithm>
-#include <random>
 
 using namespace::testing;
 
@@ -421,21 +420,14 @@ TEST(util_test, test_that_esr_returns_peer_info)
         EXPECT_EQ(bzn::peer_address_t("", 0, 0, "", "NotAGoodID"), peer_info);
     }
 
-    // exhaustive testing must occur in integration testing, since this functionality takes a long time we will randomly
+    // exhaustive testing must occur in integration testing, since this functionality takes a long time we will
     // select a single swarm and a single node to test against.
     {
-        std::default_random_engine generator;
-        generator.seed(time(nullptr));
-        std::uniform_int_distribution<int> random_swarm(0, SWARMS.size()-1); // we want values of 0,1,2, not including 3
+        const auto SWARM_ID{"BluzelleSwarm"};
+        auto swarm_info{SWARMS.at(SWARM_ID)};
+        auto accepted_peer_info{swarm_info.front()}; // Grab the info for the first peer in BluzelleSwarm
 
-        auto swarm_info{SWARMS.begin()};
-        std::advance(swarm_info, random_swarm(generator));
-
-        std::uniform_int_distribution<int> random_peer(0, swarm_info->second.size()-1); // we want values of 0,1,2, not including 3
-        auto accepted_peers{swarm_info->second};
-        auto accepted_peer_info{accepted_peers[random_peer(generator)]};
-
-        const auto peer_info{bzn::utils::esr::get_peer_info(swarm_info->first, accepted_peer_info.uuid)};
+        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid)};
         EXPECT_EQ(peer_info, accepted_peer_info);
     }
 }
