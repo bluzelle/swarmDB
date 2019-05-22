@@ -52,6 +52,10 @@ namespace bzn::utils
     {
         return path.substr(path.rfind('/') + 1);
     }
+
+    const std::string ROPSTEN_URL{"https://ropsten.infura.io"};
+
+    const std::string DEFAULT_SWARM_INFO_ESR_ADDRESS{"D5B3d7C061F817ab05aF9Fab3b61EEe036e4f4fc"};
 } // bzn::utils
 
 

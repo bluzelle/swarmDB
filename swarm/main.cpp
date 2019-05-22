@@ -103,12 +103,23 @@ init_logging(const bzn::options& options)
 
 
 bool
-init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url)
+init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url, const std::string &swarm_info_esr_address, const bzn::uuid_t& swarm_id)
 {
-    if (peers_file.empty() && peers_url.empty())
+    if (peers_file.empty() && peers_url.empty() && swarm_id.empty())
     {
-        LOG(error) << "Bootstrap peers must be specified options (bootstrap_file or bootstrap_url)";
+        LOG(error) << "Bootstrap peers must be specified options (bootstrap_file, bootstrap_url or swarm_id)";
         return false;
+    }
+
+    if (!swarm_id.empty())
+    {
+        peers.fetch_peers_from_esr_contract(swarm_info_esr_address, swarm_id);
+        if (!peers.get_peers().empty())
+        {
+            return true;
+        }
+
+        LOG(warning) << "Etherium Smart Contract Registry contained no peer listing for the swarm with id " << swarm_id << " checking other sources";
     }
 
     if (!peers_file.empty())
@@ -253,7 +264,8 @@ main(int argc, const char* argv[])
         }
 
         bzn::bootstrap_peers peers(options->peer_validation_enabled());
-        if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url()))
+        if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url(),
+                        options->get_swarm_info_esr_address(), options->get_swarm_id()))
             throw std::runtime_error("Bootstrap peers initialization failed.");
 
         auto io_context = std::make_shared<bzn::asio::io_context>();

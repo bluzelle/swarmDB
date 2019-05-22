@@ -18,8 +18,8 @@
 #include <include/bluzelle.hpp>
 #include <options/options.hpp>
 #include <boost/lexical_cast.hpp>
-#include <fstream>
 #include <gtest/gtest.h>
+#include <fstream>
 #include <unordered_set>
 
 
@@ -46,7 +46,8 @@ namespace
         "  \"logfile_dir\" : \".\","
         "  \"signed_key\" : \"Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=\","
         "  \"owner_public_key\" : \"MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==\","
-        "  \"mem_storage\" : false";
+        "  \"mem_storage\" : false,"
+        "  \"swarm_info_esr_address\" : \"this_would_be_a_good_ESR_address\"";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
 
@@ -154,6 +155,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_FALSE(options.get_mem_storage());
     EXPECT_EQ("Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=",options.get_signed_key());
     EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
+    EXPECT_EQ("this_would_be_a_good_ESR_address", options.get_swarm_info_esr_address());
 
     // defaults..
     {
@@ -169,6 +171,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
         EXPECT_EQ("logs/", options.get_logfile_dir());
         EXPECT_TRUE(options.get_mem_storage());
         EXPECT_EQ("", options.get_swarm_id());
+        EXPECT_EQ(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, options.get_swarm_info_esr_address());
     }
 }
 
@@ -262,6 +265,7 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ(".", options.get_logfile_dir());
     EXPECT_FALSE(options.peer_validation_enabled());
     EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
+    EXPECT_EQ("this_would_be_a_good_ESR_address", options.get_swarm_info_esr_address());
 }
 
 TEST_F(options_file_test, test_that_no_monitor_endpoint_when_not_specified)

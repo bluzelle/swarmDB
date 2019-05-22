@@ -188,5 +188,12 @@ namespace bzn
          * @return string containing the path to the Bluzelle publi key pem file
          */
         virtual std::string get_owner_public_key() const = 0;
+
+
+        /**
+         * Retrieve the address of the ESR where the contract to return the swarm info is
+         * @return string containing the address of the swarm info contract
+         */
+        virtual std::string get_swarm_info_esr_address() const = 0;
     };
 } // bzn
