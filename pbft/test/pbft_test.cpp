@@ -255,6 +255,17 @@ namespace bzn::test
         pbft->handle_database_message(this->request_msg, this->mock_session);
     }
 
+    TEST_F(pbft_test, invalid_request_redirect_to_primary_does_not_notify_failure_detector) {
+        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
+
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+        EXPECT_FALSE(pbft->is_primary());
+        pbft->handle_database_message(this->request_msg, this->mock_session);
+        EXPECT_TRUE(false);
+    }
+
     MATCHER(operation_ptr_has_session, "")
     {
         return arg->has_session();
