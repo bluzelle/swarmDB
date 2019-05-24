@@ -184,6 +184,7 @@ namespace bzn
         std::shared_ptr<pbft_operation> setup_request_operation(const bzn_envelope& msg
             , const bzn::hash_t& request_hash);
         void forward_request_to_primary(const bzn_envelope& request_env);
+        bool preliminary_validate_request(const bzn_envelope& request_env);
 
         void broadcast(const bzn_envelope& message);
 

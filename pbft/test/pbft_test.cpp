@@ -18,6 +18,7 @@
 #include <utils/make_endpoint.hpp>
 #include <gtest/gtest.h>
 #include <pbft/operations/pbft_memory_operation.hpp>
+#include <mocks/mock_crypto_base.hpp>
 
 namespace bzn::test
 {
@@ -249,6 +250,10 @@ namespace bzn::test
         EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
 
         this->uuid = SECOND_NODE_UUID;
+        auto crypto = std::make_shared<bzn::mock_crypto_base>();
+        EXPECT_CALL(*crypto, verify(_)).WillRepeatedly(Return(true));
+        this->crypto = crypto;
+
         this->build_pbft();
 
         EXPECT_FALSE(pbft->is_primary());
@@ -256,14 +261,17 @@ namespace bzn::test
     }
 
     TEST_F(pbft_test, invalid_request_redirect_to_primary_does_not_notify_failure_detector) {
-        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
+        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(0));
 
         this->uuid = SECOND_NODE_UUID;
+        auto crypto = std::make_shared<bzn::mock_crypto_base>();
+        EXPECT_CALL(*crypto, verify(_)).WillRepeatedly(Return(false));
+        this->crypto = crypto;
+
         this->build_pbft();
 
         EXPECT_FALSE(pbft->is_primary());
         pbft->handle_database_message(this->request_msg, this->mock_session);
-        EXPECT_TRUE(false);
     }
 
     MATCHER(operation_ptr_has_session, "")

@@ -303,6 +303,11 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    if (!this->preliminary_validate_request(request_env))
+    {
+        return;
+    }
+
     const auto hash = this->crypto->hash(request_env);
 
     if (session)
@@ -321,12 +326,6 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
-    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
-    {
-        // TODO: send error message to client
-        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
-        return;
-    }
 
     // keep track of what requests we've seen based on timestamp and only send preprepares once
     if (this->already_seen_request(request_env, hash))
@@ -338,6 +337,20 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     this->saw_request(request_env, hash);
     auto op = setup_request_operation(request_env, hash);
     this->do_preprepare(op);
+}
+
+bool
+pbft::preliminary_validate_request(const bzn_envelope& request_env)
+{
+    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
+    {
+        // TODO: send error message to client
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
+        return false;
+    }
+
+    database_msg inner;
+    inner.ParseFromString(request_env.database_msg());
 }
 
 void
