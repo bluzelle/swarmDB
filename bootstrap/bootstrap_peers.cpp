@@ -14,7 +14,7 @@
 
 #include <utils/blacklist.hpp>
 #include <utils/crypto.hpp>
-#include <utils/http_get.hpp>
+#include <utils/http_req.hpp>
 #include <utils/esr_peer_info.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <json/json.h>
@@ -45,7 +45,7 @@ bootstrap_peers::fetch_peers_from_file(const std::string& filename)
 bool 
 bootstrap_peers::fetch_peers_from_url(const std::string& url)
 {
-    std::string peers = bzn::utils::http::sync_get(url);
+    std::string peers = bzn::utils::http::sync_req(url);
 
     LOG(info) << "Downloaded peer list from " << url;
 

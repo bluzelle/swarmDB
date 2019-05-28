@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <include/bluzelle.hpp>
-#include <utils/curl.hpp>
+#include <utils/http_req.hpp>
 #include <boost/format.hpp>
 
 namespace
@@ -42,7 +42,7 @@ namespace bzn::utils::blacklist
         bzn::json_message response;
         Json::Reader reader;
 
-        if (!reader.parse(bzn::utils::curl::perform_curl_request(url.c_str(), post_fields), response))
+        if (!reader.parse(bzn::utils::http::sync_req(url, post_fields), response))
         {
             LOG(error) << "Unable to parse response from Ropsten - could not validate peer";
             return false;

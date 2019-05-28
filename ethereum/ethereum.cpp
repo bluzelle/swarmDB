@@ -14,7 +14,7 @@
 
 #include <include/bluzelle.hpp>
 #include <ethereum/ethereum.hpp>
-#include <utils/http_get.hpp>
+#include <utils/http_req.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -30,7 +30,7 @@ using namespace bzn;
 double
 ethereum::get_ether_balance(const std::string& address, const std::string& api_key)
 {
-    std::string response = utils::http::sync_get(boost::str(boost::format(GET_ETHER_BALANCE_API) % address % api_key));
+    std::string response = utils::http::sync_req(boost::str(boost::format(GET_ETHER_BALANCE_API) % address % api_key));
 
     LOG(debug) << "received response: " << response;
 

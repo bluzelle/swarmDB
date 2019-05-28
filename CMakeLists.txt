@@ -37,7 +37,12 @@ add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic -Wno-implicit-fallthrough")
 if (APPLE)
     set(warnings "${warnings} -Wno-extended-offsetof")
-endif(APPLE)
+else()
+    # for beast and gcc release builds...
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+        set(warnings "${warnings} -Wno-maybe-uninitialized")
+    endif()
+endif()
 
 set(CMAKE_CXX_FLAGS ${warnings})
 
@@ -57,8 +62,6 @@ include(cmake/add_gmock_test.cmake)
 
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
-
-find_package(CURL REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})

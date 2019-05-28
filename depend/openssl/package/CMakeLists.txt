@@ -41,8 +41,10 @@ message(STATUS "${PROJECT_NAME} -- URL_HASH: ${PKG_HASH}")
 # platform detection
 if (APPLE)
     set(OPENSSL_BUILD_PLATFORM darwin64-x86_64-cc)
+    set(OPENSSLDIR /usr/local/etc/openssl)
 else()
     set(OPENSSL_BUILD_PLATFORM linux-generic64)
+    set(OPENSSLDIR /etc/ssl)
 endif()
 
 ProcessorCount(NPROC)
@@ -53,7 +55,7 @@ ExternalProject_Add(openssl
     URL_HASH ${URL_HASH_OPTION}
     TIMEOUT 30
     DOWNLOAD_NO_PROGRESS true
-	CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/openssl/src/openssl/Configure ${OPENSSL_BUILD_PLATFORM} --prefix=${PREFIX} --${PKG_BUILD_TYPE}
+	CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/openssl/src/openssl/Configure ${OPENSSL_BUILD_PLATFORM} --prefix=${PREFIX} --${PKG_BUILD_TYPE} --openssldir=${OPENSSLDIR}
 	INSTALL_COMMAND make install_sw
     BUILD_COMMAND make -j${NPROC}
     )

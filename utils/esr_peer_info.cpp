@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <options/options.hpp>
-#include <utils/curl.hpp>
+#include <utils/http_req.hpp>
 #include <utils/esr_peer_info.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -393,7 +393,7 @@ namespace bzn::utils::esr
     {
         const auto DATA{data_string_for_get_peers(swarm_id)};
         const auto REQUEST{make_request( esr_address, DATA)};
-        const auto response{bzn::utils::curl::perform_curl_request(url.c_str(), REQUEST )};
+        const auto response{bzn::utils::http::sync_req(url, REQUEST)};
         const auto json_response{str_to_json(response)};
         const auto result{json_response["result"].asCString() + 2}; // + 2 skips the '0x'
         return parse_get_peers_result_to_vector(result);
@@ -405,7 +405,7 @@ namespace bzn::utils::esr
     {
         const auto DATA{data_string_for_get_peer_info(swarm_id, peer_id)};
         const auto REQUEST{make_request( esr_address, DATA)};
-        const auto response {bzn::utils::curl::perform_curl_request(url.c_str(), REQUEST)};
+        const auto response{bzn::utils::http::sync_req(url, REQUEST)};
         const auto json_response{str_to_json(response)};
         const auto result{json_response["result"].asCString() + 2};
         return parse_get_peer_info_result_to_peer_address(peer_id, result);
