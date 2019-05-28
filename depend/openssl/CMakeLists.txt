@@ -17,8 +17,8 @@ set(SOURCE_DIR ${CMAKE_BINARY_DIR}/openssl/src/openssl)
 set(OPENSSL_INCLUDE_DIR ${SOURCE_DIR}/include CACHE INTERNAL "")
 
 set(OPENSSL_LIBRARIES
-    ${SOURCE_DIR}/lib/libcrypto.a
     ${SOURCE_DIR}/lib/libssl.a
+    ${SOURCE_DIR}/lib/libcrypto.a
     dl
     pthread
     CACHE INTERNAL "")

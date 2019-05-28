@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Bluzelle
+ // Copyright (C) 2018 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -14,9 +14,12 @@
 
 #pragma once
 
-#include <include/bluzelle.hpp>
+#include <string>
 
-namespace bzn::utils::curl
+
+namespace bzn::utils::http
 {
-    std::string perform_curl_request(const std::string& url, const std::string& request);
-}
+    // Performs an HTTP GET or POST and returns the body of the HTTP response
+    std::string sync_req(const std::string& url, const std::string& post = "");
+
+} // namespace bzn::http
