@@ -42,7 +42,6 @@ namespace bzn::utils::blacklist
         bzn::json_message response;
         Json::Reader reader;
 
-        //if (!reader.parse(bzn::utils::curl::perform_curl_request(url.c_str(), post_fields), response))
         if (!reader.parse(bzn::utils::http::sync_req(url, post_fields), response))
         {
             LOG(error) << "Unable to parse response from Ropsten - could not validate peer";
