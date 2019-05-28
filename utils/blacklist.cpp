@@ -13,7 +13,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <include/bluzelle.hpp>
-//#include <utils/curl.hpp>
 #include <utils/http_req.hpp>
 #include <boost/format.hpp>
 
