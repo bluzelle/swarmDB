@@ -67,6 +67,7 @@ namespace bzn::option_names
     const std::string OVERRIDE_NUM_THREADS = "override_num_threads";
 
     const std::string SWARM_INFO_ESR_ADDRESS = "swarm_info_esr_address";
+    const std::string SWARM_INFO_ESR_URL = "swarm_info_esr_url";
 }
 
 namespace bzn

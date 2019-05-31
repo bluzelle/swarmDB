@@ -103,7 +103,7 @@ init_logging(const bzn::options& options)
 
 
 bool
-init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url, const std::string &swarm_info_esr_address, const bzn::uuid_t& swarm_id)
+init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url, const std::string &swarm_info_esr_url, const std::string &swarm_info_esr_address, const bzn::uuid_t& swarm_id)
 {
     if (peers_file.empty() && peers_url.empty() && swarm_id.empty())
     {
@@ -113,7 +113,7 @@ init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std
 
     if (!swarm_id.empty())
     {
-        peers.fetch_peers_from_esr_contract(swarm_info_esr_address, swarm_id);
+        peers.fetch_peers_from_esr_contract(swarm_info_esr_url, swarm_info_esr_address, swarm_id);
         if (!peers.get_peers().empty())
         {
             return true;
@@ -265,7 +265,8 @@ main(int argc, const char* argv[])
 
         bzn::bootstrap_peers peers(options->peer_validation_enabled());
         if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url(),
-                        options->get_swarm_info_esr_address(), options->get_swarm_id()))
+                        options->get_swarm_info_esr_url(), options->get_swarm_info_esr_address(),
+                        options->get_swarm_id()))
             throw std::runtime_error("Bootstrap peers initialization failed.");
 
         auto io_context = std::make_shared<bzn::asio::io_context>();

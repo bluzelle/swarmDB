@@ -393,7 +393,7 @@ TEST(util_test, test_that_esr_returns_peers_list)
 
     // Check for swarm that doesn't exist, must return empty vector.
     {
-        const auto peer_ids = bzn::utils::esr::get_peer_ids(BAD_SWARM.first);
+        const auto peer_ids = bzn::utils::esr::get_peer_ids(BAD_SWARM.first, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL);
         EXPECT_EQ( BAD_SWARM.second, peer_ids.size());
     }
 
@@ -402,7 +402,7 @@ TEST(util_test, test_that_esr_returns_peers_list)
     {
         std::vector<bzn::uuid_t> accepted_ids(swarm.second.size());
         std::transform(swarm.second.begin(), swarm.second.end(), accepted_ids.begin(), [](const auto &pinfo){return pinfo.uuid;});
-        const auto peer_ids = bzn::utils::esr::get_peer_ids(swarm.first);
+        const auto peer_ids = bzn::utils::esr::get_peer_ids(swarm.first, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL);
         EXPECT_EQ(swarm.second.size(), accepted_ids.size());
         EXPECT_EQ(accepted_ids, peer_ids);
     }
@@ -412,12 +412,12 @@ TEST(util_test, test_that_esr_returns_peers_list)
 TEST(util_test, test_that_esr_returns_peer_info)
 {
     {
-        const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID")};
+        const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
         EXPECT_EQ(bzn::peer_address_t("", 0, 0, "", "NotAGoodID"), peer_info);
     }
 
     {
-        const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID")};
+        const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
         EXPECT_EQ(bzn::peer_address_t("", 0, 0, "", "NotAGoodID"), peer_info);
     }
 
@@ -428,7 +428,7 @@ TEST(util_test, test_that_esr_returns_peer_info)
         auto swarm_info{SWARMS.at(SWARM_ID)};
         auto accepted_peer_info{swarm_info.front()}; // Grab the info for the first peer in BluzelleSwarm
 
-        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid)};
+        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
         EXPECT_EQ(peer_info, accepted_peer_info);
     }
 }

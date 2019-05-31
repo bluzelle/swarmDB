@@ -57,12 +57,12 @@ bootstrap_peers::fetch_peers_from_url(const std::string& url)
 
 
 bool
-bootstrap_peers::fetch_peers_from_esr_contract(const std::string &esr_address, const bzn::uuid_t &swarm_id)
+bootstrap_peers::fetch_peers_from_esr_contract(const std::string &esr_url, const std::string &esr_address, const bzn::uuid_t &swarm_id)
 {
-    auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address);
+    auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address, esr_url);
     for (const auto& peer_id : peer_ids)
     {
-        bzn::peer_address_t peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address)};
+        bzn::peer_address_t peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address, esr_url)};
         if (peer_info.host.empty()
             || peer_info.port == 0
             //|| peer_info.name.empty() // is it important that a peer have a name?

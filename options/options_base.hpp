@@ -195,5 +195,12 @@ namespace bzn
          * @return string containing the address of the swarm info contract
          */
         virtual std::string get_swarm_info_esr_address() const = 0;
+
+
+        /**
+         * Retrieve the url of the server where the ESR is served
+         * @return string containing the url of the server
+         */
+        virtual std::string get_swarm_info_esr_url() const = 0;
     };
 } // bzn
