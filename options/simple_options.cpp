@@ -95,7 +95,7 @@ simple_options::build_options()
                         po::value<std::string>(),
                         "uuid of this node")
                 (SWARM_ID.c_str(),
-                        po::value<std::string>(),
+                        po::value<std::string>()->required(),
                         "swarm id of this node")
                 (STATE_DIR.c_str(),
                         po::value<std::string>()->default_value("./.state/"),
