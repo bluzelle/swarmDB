@@ -389,7 +389,7 @@ namespace
 namespace bzn::utils::esr
 {
     std::vector<std::string>
-    get_peer_ids(const bzn::uuid_t &swarm_id, const std::string &esr_address, const std::string &url)
+    get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url)
     {
         const auto DATA{data_string_for_get_peers(swarm_id)};
         const auto REQUEST{make_request( esr_address, DATA)};
@@ -401,7 +401,7 @@ namespace bzn::utils::esr
 
 
     bzn::peer_address_t
-    get_peer_info(const bzn::uuid_t &swarm_id, const std::string &peer_id, const std::string &esr_address, const std::string &url)
+    get_peer_info(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string& esr_address, const std::string& url)
     {
         const auto DATA{data_string_for_get_peer_info(swarm_id, peer_id)};
         const auto REQUEST{make_request( esr_address, DATA)};

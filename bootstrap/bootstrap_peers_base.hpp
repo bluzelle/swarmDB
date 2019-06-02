@@ -59,7 +59,7 @@ namespace bzn
          * @param swarm_id a string containing the unique identifier of the swarm containing the peers of interest
          * @return true - note that it is possible that the contract does not return any peers
          */
-        virtual bool fetch_peers_from_esr_contract(const std::string &esr_url, const std::string &esr_address, const bzn::uuid_t &swarm_id) = 0;
+        virtual bool fetch_peers_from_esr_contract(const std::string& esr_url, const std::string& esr_address, const bzn::uuid_t& swarm_id) = 0;
 
         /**
          * @return a reference to the initial set of peers

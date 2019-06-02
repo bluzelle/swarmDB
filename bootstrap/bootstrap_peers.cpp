@@ -57,7 +57,7 @@ bootstrap_peers::fetch_peers_from_url(const std::string& url)
 
 
 bool
-bootstrap_peers::fetch_peers_from_esr_contract(const std::string &esr_url, const std::string &esr_address, const bzn::uuid_t &swarm_id)
+bootstrap_peers::fetch_peers_from_esr_contract(const std::string& esr_url, const std::string& esr_address, const bzn::uuid_t& swarm_id)
 {
     auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address, esr_url);
     for (const auto& peer_id : peer_ids)
