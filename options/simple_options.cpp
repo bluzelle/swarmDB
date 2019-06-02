@@ -108,7 +108,10 @@ simple_options::build_options()
                         "websocket idle timeout (ms)")
                 (SWARM_INFO_ESR_ADDRESS.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS),
-                        "Address of ESR Swarm Info contract");
+                        "Address of ESR Swarm Info contract")
+                (SWARM_INFO_ESR_URL.c_str(),
+                        po::value<std::string>()->default_value(bzn::utils::ROPSTEN_URL),
+                        "url of ESR Swarm Info contract server");
 
     po::options_description logging("Logging");
     logging.add_options()

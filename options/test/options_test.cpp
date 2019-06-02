@@ -47,7 +47,8 @@ namespace
         "  \"signed_key\" : \"Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=\","
         "  \"owner_public_key\" : \"MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==\","
         "  \"mem_storage\" : false,"
-        "  \"swarm_info_esr_address\" : \"this_would_be_a_good_ESR_address\"";
+        "  \"swarm_info_esr_address\" : \"this_would_be_a_good_ESR_address\","
+        "  \"swarm_info_esr_url\" : \"192.0.0.1:41000\"";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
 
@@ -156,22 +157,24 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ("Oo8ZlDQcMlZF4hqnhN/2D...hoEgc0jRUl1b9mHSY7E4puk=",options.get_signed_key());
     EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
     EXPECT_EQ("this_would_be_a_good_ESR_address", options.get_swarm_info_esr_address());
+    EXPECT_EQ("192.0.0.1:41000", options.get_swarm_info_esr_url());
 
     // defaults..
     {
-        bzn::options options;
+        bzn::options options0;
         this->save_options_file("{}");
 
         // Will fail without many required arguments, but we can still get default values where they exist
-        EXPECT_THROW(options.parse_command_line(1, NO_ARGS), std::exception);
+        EXPECT_THROW(options0.parse_command_line(1, NO_ARGS), std::exception);
 
-        EXPECT_EQ("./.state/", options.get_state_dir());
-        EXPECT_EQ(size_t(524288), options.get_logfile_max_size());
-        EXPECT_EQ(size_t(65536), options.get_logfile_rotation_size());
-        EXPECT_EQ("logs/", options.get_logfile_dir());
-        EXPECT_TRUE(options.get_mem_storage());
-        EXPECT_EQ("", options.get_swarm_id());
-        EXPECT_EQ(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, options.get_swarm_info_esr_address());
+        EXPECT_EQ("./.state/", options0.get_state_dir());
+        EXPECT_EQ(size_t(524288), options0.get_logfile_max_size());
+        EXPECT_EQ(size_t(65536), options0.get_logfile_rotation_size());
+        EXPECT_EQ("logs/", options0.get_logfile_dir());
+        EXPECT_TRUE(options0.get_mem_storage());
+        EXPECT_EQ("", options0.get_swarm_id());
+        EXPECT_EQ(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, options0.get_swarm_info_esr_address());
+        EXPECT_EQ(bzn::utils::ROPSTEN_URL, options0.get_swarm_info_esr_url());
     }
 }
 

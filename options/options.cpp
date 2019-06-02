@@ -253,5 +253,12 @@ options::get_owner_public_key() const
 std::string
 options::get_swarm_info_esr_address() const
 {
-    return this->raw_opts.has(SWARM_INFO_ESR_ADDRESS) ? this->raw_opts.get<std::string>(SWARM_INFO_ESR_ADDRESS) : bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS;
+    return this->raw_opts.get<std::string>(SWARM_INFO_ESR_ADDRESS);
+}
+
+
+std::string
+options::get_swarm_info_esr_url() const
+{
+    return this->raw_opts.get<std::string>(SWARM_INFO_ESR_URL);
 }

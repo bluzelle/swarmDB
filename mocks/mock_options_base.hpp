@@ -74,6 +74,8 @@ class mock_options_base : public options_base {
       std::string());
   MOCK_CONST_METHOD0(get_swarm_info_esr_address,
       std::string());
+  MOCK_CONST_METHOD0(get_swarm_info_esr_url,
+      std::string());
 };
 
 }  // namespace bzn
