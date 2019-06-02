@@ -54,8 +54,8 @@ class mock_options_base : public options_base {
       std::string());
   MOCK_CONST_METHOD0(get_logfile_dir,
       std::string());
-  MOCK_CONST_METHOD0(get_max_storage,
-      size_t());
+  MOCK_CONST_METHOD0(get_max_swarm_storage,
+        size_t());
   MOCK_CONST_METHOD0(get_mem_storage,
       bool());
   MOCK_CONST_METHOD0(get_logfile_rotation_size,

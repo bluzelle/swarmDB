@@ -145,7 +145,7 @@ namespace bzn
          * Get the maximum allowed storage for the daemon.
          * @return size
          */
-        virtual size_t get_max_storage() const = 0;
+        virtual size_t get_max_swarm_storage() const = 0;
 
 
         /**

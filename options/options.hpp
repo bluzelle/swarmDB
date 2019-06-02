@@ -57,7 +57,7 @@ namespace bzn
 
         std::string get_logfile_dir() const override;
 
-        size_t get_max_storage() const override;
+        size_t get_max_swarm_storage() const override;
 
         bool get_mem_storage() const override;
 

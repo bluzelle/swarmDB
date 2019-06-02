@@ -195,6 +195,15 @@ namespace
     }
 
     database_msg
+    build_update_db_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, size_t max_size, database_create_db_eviction_policy_type eviction_policy)
+    {
+        database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, generate_random_hash())};
+        msg.mutable_update_db()->set_max_size(max_size);
+        msg.mutable_update_db()->set_eviction_policy(eviction_policy);
+        return msg;
+    }
+
+    database_msg
     build_quick_read_msg(const bzn::uuid_t &caller_uuid, const bzn::uuid_t &db_uuid, uint64_t nonce, const bzn::key_t &key)
     {
         database_msg msg {build_header_msg(caller_uuid, db_uuid, nonce, generate_random_hash())};
@@ -3245,4 +3254,218 @@ TEST(crud, test_that_expire_send_proper_response)
         bzn::storage_result_msg.at(bzn::storage_result::delete_pending));
 
     crud->handle_request("caller_id", msg, session);
+}
+
+
+TEST(crud, test_that_create_exceeding_max_swarm_storage_sends_proper_response)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
+
+    // start crud with a max swarm storage size of 2K...
+    crud->start(std::make_shared<NiceMock<bzn::mock_pbft_base>>(), 2048);
+
+    // create a valid sized db...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 2048, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // try to create another but this time we will fail since the swarm is full...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid2", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid2", uint64_t(123), database_response::kError,
+            bzn::storage_result_msg.at(bzn::storage_result::db_full));
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // delete a database to make room...
+    {
+        database_msg request;
+        request.mutable_header()->set_db_uuid("uuid");
+        request.mutable_header()->set_nonce(uint64_t(123));
+        request.mutable_delete_db();
+
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // try to create again...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid2", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid2", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // test that update size to 2048 to fill swarm...
+    {
+        database_msg request;
+        request.mutable_header()->set_db_uuid("uuid2");
+        request.mutable_header()->set_nonce(uint64_t(123));
+        request.mutable_update_db()->set_max_size(2048);
+        request.mutable_update_db()->set_eviction_policy(database_create_db::NONE);
+
+        expect_signed_response(session, "uuid2", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // try to create another and we fail because swarm is full...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+            bzn::storage_result_msg.at(bzn::storage_result::db_full));
+        crud->handle_request("caller_id", request, session);
+    }
+}
+
+
+TEST(crud, test_that_update_exceeding_max_swarm_stroage_sends_proper_resonse)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
+
+    // start crud with a max swarm storage size of 2K...
+    crud->start(std::make_shared<NiceMock<bzn::mock_pbft_base>>(), 2048);
+
+    // create a valid sized db...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // another...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid2", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid2", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // update with a new size that exceeds swarm db limit...
+    {
+        auto request = build_update_db_msg("caller_id", "uuid", uint64_t(123), 1025, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+            bzn::storage_result_msg.at(bzn::storage_result::db_full));
+        crud->handle_request("caller_id", request, session);
+    }
+}
+
+
+TEST(crud, test_that_create_db_cannot_create_a_database_that_is_unlimited_when_max_swarm_storage_is_set)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
+
+    // start crud with limited storage...
+    crud->start(std::make_shared<NiceMock<bzn::mock_pbft_base>>(), 1024);
+
+    // try to create an unlimited db...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 0, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+            bzn::storage_result_msg.at(bzn::storage_result::invalid_size));
+        crud->handle_request("caller_id", request, session);
+    }
+}
+
+
+TEST(crud, test_that_update_db_cannot_convert_a_database_to_unlimited_when_max_swarm_storage_is_set)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
+
+    // start crud with limited storage...
+    crud->start(std::make_shared<NiceMock<bzn::mock_pbft_base>>(), 1024);
+
+    // create a valid db with a limit...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // attempt to convert to an unlimited db...
+    {
+        auto request = build_update_db_msg("caller_id", "uuid", uint64_t(123), 0, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::kError,
+            bzn::storage_result_msg.at(bzn::storage_result::invalid_size));
+        crud->handle_request("caller_id", request, session);
+    }
+}
+
+
+TEST(crud, test_that_status_reports_current_usage)
+{
+    auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
+    auto session = std::make_shared<bzn::mock_session_base>();
+
+    EXPECT_CALL(*mock_io_context, make_unique_steady_timer()).WillOnce(Invoke(
+        [&]()
+        {
+            return std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        }));
+
+    auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(),
+        std::make_shared<NiceMock<bzn::mock_subscription_manager_base>>(), nullptr);
+
+    // start crud with limited storage...
+    crud->start(std::make_shared<NiceMock<bzn::mock_pbft_base>>(), 2048);
+
+    // create a valid db with a limit...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid", uint64_t(123), 1024, database_create_db::NONE);
+        expect_signed_response(session, "uuid", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    // and another...
+    {
+        auto request = build_create_db_msg("caller_id", "uuid2", uint64_t(123), 512, database_create_db::NONE);
+        expect_signed_response(session, "uuid2", uint64_t(123), database_response::RESPONSE_NOT_SET);
+        crud->handle_request("caller_id", request, session);
+    }
+
+    auto status = crud->get_status();
+
+    EXPECT_EQ(status["max_swarm_storage"].asUInt64(), uint64_t(2048));
+    EXPECT_EQ(status["swarm_storage_usage"].asUInt64(), uint64_t(1536));
+    EXPECT_EQ(crud->get_name(), "crud");
 }

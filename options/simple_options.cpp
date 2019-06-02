@@ -85,9 +85,9 @@ simple_options::build_options()
                 (LISTENER_PORT.c_str(),
                         po::value<uint16_t>()->required(),
                         "port for consensus node")
-                (MAX_STORAGE.c_str(),
-                         po::value<std::string>()->default_value("2G"),
-                        "maximum db storage on this node (bytes)")
+                (MAX_SWARM_STORAGE.c_str(),
+                         po::value<std::string>()->default_value("0"),
+                        "maximum db storage (bytes) in the swarm (default value of zero indicates no limit)")
                 (MEM_STORAGE.c_str(),
                          po::value<bool>()->default_value(true),
                          "enable in memory storage for debugging")
