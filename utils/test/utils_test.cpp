@@ -389,21 +389,19 @@ TEST(util_test, test_that_verifying_a_signature_with_empty_inputs_will_fail_grac
 
 TEST(util_test, test_that_esr_returns_peers_list)
 {
-    const std::pair<bzn::uuid_t, size_t> BAD_SWARM{"NonExistentBluzelleSwarm", 0};
-
     // Check for swarm that doesn't exist, must return empty vector.
     {
+        const std::pair<bzn::uuid_t, size_t> BAD_SWARM{"NonExistentBluzelleSwarm", 0};
         const auto peer_ids = bzn::utils::esr::get_peer_ids(BAD_SWARM.first, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL);
         EXPECT_EQ( BAD_SWARM.second, peer_ids.size());
     }
 
-    // There are three test swarms
     for (const auto& swarm : SWARMS)
     {
         std::vector<bzn::uuid_t> accepted_ids(swarm.second.size());
         std::transform(swarm.second.begin(), swarm.second.end(), accepted_ids.begin(), [](const auto &pinfo){return pinfo.uuid;});
         const auto peer_ids = bzn::utils::esr::get_peer_ids(swarm.first, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL);
-        EXPECT_EQ(swarm.second.size(), accepted_ids.size());
+        EXPECT_EQ(swarm.second.size(), peer_ids.size());
         EXPECT_EQ(accepted_ids, peer_ids);
     }
 }
@@ -431,4 +429,19 @@ TEST(util_test, test_that_esr_returns_peer_info)
         const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
         EXPECT_EQ(peer_info, accepted_peer_info);
     }
+}
+
+
+TEST(util_test, test_that_esr_returns_peers_list_with_deletions)
+{
+    // There is a swarm in the ESR called BluzelleSwarm4.  It contins 2 nodes, there were originally 4, the 2nd and 4th
+    // node have been deleted which will leave two 0 length strings.
+    const std::string CONTRACT{"D5B3d7C061F817ab05aF9Fab3b61EEe036e4f4fc"};
+    const std::string SWARM_ID{"BluzelleSwarm4"};
+    const std::vector<bzn::uuid_t> ACCEPTED_IDS{"MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEvsJhAghU+bWyVjiSg5VMHJKLqs2NGKGNmWTkl3zU8syKIPo+CEuXey7YAAS7pMOFErkjpMyi4FEWnG2ysuN1Pg==", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEbrgU0EQ2UHRG5UFFfcDIaqfarezPvT1uRJAA++8mRc3FgK3DYeTrOdVVopCBLA+EaNiJdkLDObvRkkFny6185g=="};
+
+    const auto peer_ids = bzn::utils::esr::get_peer_ids( SWARM_ID, CONTRACT, bzn::utils::ROPSTEN_URL);
+
+    EXPECT_EQ(ACCEPTED_IDS.size(), peer_ids.size());
+    EXPECT_EQ(ACCEPTED_IDS, peer_ids);
 }
