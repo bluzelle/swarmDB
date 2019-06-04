@@ -20,8 +20,6 @@
 #include <json/json.h>
 #include <iostream>
 #include <sstream>
-#include <cassert>
-#include <sstream>
 
 namespace
 {
@@ -204,7 +202,15 @@ namespace
                 {
                     // the first line of data is the size of the string
                     peer_id_length = std::strtoul(line, nullptr, 16);
-                    state = PEER_ID;
+                    if (peer_id_length)
+                    {
+                        state = PEER_ID;
+                    }
+                    else
+                    {
+                        --node_count;
+                        state = PEER_ID_SIZE;
+                    }
                 }
                 break;
                 case PEER_ID:
@@ -228,7 +234,13 @@ namespace
             }
             ++index;
         }
-        assert(results.size() == node_count);
+
+        // TODO: rhn - reconsider if we need to keep node_count and this check.
+        if (results.size() == node_count)
+        {
+            LOG(warning) << "Actual size of the peers list [" << results.size() << "] does not agree with the expected size [" << node_count << "]";
+        }
+
         return results;
     }
 
