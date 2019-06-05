@@ -236,7 +236,7 @@ namespace
         }
 
         // TODO: rhn - reconsider if we need to keep node_count and this check.
-        if (results.size() == node_count)
+        if (results.size() != node_count)
         {
             LOG(warning) << "Actual size of the peers list [" << results.size() << "] does not agree with the expected size [" << node_count << "]";
         }
