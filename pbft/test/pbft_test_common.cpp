@@ -149,8 +149,9 @@ namespace bzn::test
         preprepare_msg.set_type(PBFT_MSG_PREPREPARE);
         preprepare_msg.set_sequence(19);
         preprepare_msg.set_view(1);
-        preprepare_msg.set_allocated_request(new bzn_envelope(this->request_msg));
+
         preprepare_msg.set_request_hash(this->crypto->hash(this->request_msg));
+        *(this->default_original_msg.add_piggybacked_requests()) = this->request_msg;
     }
 
     void
@@ -194,12 +195,12 @@ namespace bzn::test
         preprepare.set_request_hash(req_hash);
         preprepare.set_type(PBFT_MSG_PREPREPARE);
 
+        bzn_envelope original;
         if (request)
         {
-            preprepare.set_allocated_request(new bzn_envelope(*request));
+            (*original.add_piggybacked_requests()) = *request;
         }
 
-        bzn_envelope original;
         original.set_pbft(preprepare.SerializeAsString());
 
         this->pbft->handle_message(preprepare, original);

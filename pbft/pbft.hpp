@@ -63,6 +63,7 @@ namespace bzn
         class pbft_test_database_response_is_forwarded_to_session_Test;
         class pbft_test_add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting_Test;
         class pbft_test_pbft_wrap_message_sets_swarm_id_Test;
+        class pbft_test_ensure_save_all_requests_records_requests_Test;
     }
 
     using request_hash_t = std::string;
@@ -208,7 +209,7 @@ namespace bzn
         bool move_to_new_configuration(const hash_t& config_hash, uint64_t view);
         bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
 
-        void maybe_record_request(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
+        void maybe_record_request(const bzn_envelope &env, const std::shared_ptr<pbft_operation> &op);
 
         timestamp_t now() const;
         bool already_seen_request(const bzn_envelope& msg, const request_hash_t& hash) const;
@@ -218,7 +219,7 @@ namespace bzn
 
         // VIEWCHANGE/NEWVIEW Helper methods
         void initiate_viewchange();
-        pbft_msg make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
+        std::shared_ptr<bzn_envelope> make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const;
         std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message) const;
@@ -228,6 +229,10 @@ namespace bzn
         bool get_sequences_and_request_hashes_from_proofs( const pbft_msg& viewchange_msg, std::set<std::pair<uint64_t, std::string>>& sequence_request_pairs) const;
 
         void add_session_to_sessions_waiting(const std::string &msg_hash, std::shared_ptr<bzn::session_base> session);
+
+        std::map<bzn::hash_t, int> map_request_to_hash(const bzn_envelope& original_msg);
+        void save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg);
+
 
         std::shared_ptr<bzn::storage_base> storage;
 
@@ -304,6 +309,7 @@ namespace bzn
         FRIEND_TEST(bzn::test::pbft_test, database_response_is_forwarded_to_session);
         FRIEND_TEST(bzn::test::pbft_test, add_session_to_sessions_waiting_can_add_a_session_and_shutdown_handler_removes_session_from_sessions_waiting);
         FRIEND_TEST(bzn::test::pbft_test, pbft_wrap_message_sets_swarm_id);
+        FRIEND_TEST(bzn::test::pbft_test, ensure_save_all_requests_records_requests);
 
         friend class pbft_proto_test;
         friend class pbft_join_leave_test;

@@ -25,10 +25,9 @@ namespace bzn::test
         this->build_pbft();
         this->pbft->set_audit_enabled(true);
 
-        bzn_envelope dummy_original_msg;
         pbft_msg preprepare = pbft_msg(this->preprepare_msg);
         preprepare.set_sequence(1);
-        this->pbft->handle_message(preprepare, dummy_original_msg);
+        this->pbft->handle_message(preprepare, this->default_original_msg);
 
         for (const auto& peer : TEST_PEER_LIST)
         {

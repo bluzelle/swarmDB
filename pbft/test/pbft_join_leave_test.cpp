@@ -60,12 +60,21 @@ namespace bzn
 
     MATCHER_P(message_has_req_with_correct_type, req_type, "")
     {
+        // note: arg is a bzn_envelope
         auto pmsg = extract_pbft_msg_option(*arg);
-        if (pmsg)
+        if (pmsg->has_request())
         {
-            if (pmsg->has_request())
+            return pmsg->request().payload_case() == req_type;
+        }
+        else if (arg->piggybacked_requests_size())
+        {
+            for (int i{0}; i < arg->piggybacked_requests_size(); ++i)
             {
-                return pmsg->request().payload_case() == req_type;
+                const auto request{arg->piggybacked_requests(i)};
+                if (request.payload_case() == req_type)
+                {
+                    return true;
+                }
             }
         }
         return false;
@@ -85,6 +94,7 @@ namespace bzn
     class pbft_join_leave_test : public pbft_test
     {
     protected:
+
         pbft_msg
         send_new_config_preprepare(std::shared_ptr<bzn::pbft> pbft, std::shared_ptr<bzn::mock_node_base> mock_node,
             const bzn::pbft_configuration &config)
@@ -97,6 +107,7 @@ namespace bzn
             preprepare.set_view(1);
             preprepare.set_sequence(1);
             preprepare.set_type(PBFT_MSG_PREPREPARE);
+            preprepare.set_request_type(pbft_request_type::PBFT_REQUEST_INTERNAL);
             preprepare.mutable_request()->set_pbft_internal_request(cfg_msg.SerializeAsString());
 
             auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
@@ -109,7 +120,9 @@ namespace bzn
             {
                 EXPECT_CALL(*(mock_node),
                     send_signed_message(bzn::make_endpoint(p),
-                        AllOf(message_has_correct_req_hash(expect_hash), message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
+                        AllOf(
+                                message_has_correct_req_hash(expect_hash) ,
+                                message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
                     .Times(Exactly(1));
             }
 
@@ -379,6 +392,7 @@ namespace bzn
             .WillOnce(Invoke([&](){return std::move(new_config_timer2);}))
             .WillOnce(Invoke([&](){return std::move(join_retry_timer2);}));
         EXPECT_CALL(*mock_io_context2, post(_)).WillRepeatedly(Invoke([](auto func){boost::asio::post(func);}));
+        EXPECT_CALL(*mock_options, get_swarm_id()).WillRepeatedly(Return("swarm_id"));
         EXPECT_CALL(*mock_options, get_uuid()).WillRepeatedly(Return("uuid2"));
         EXPECT_CALL(*mock_options, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
@@ -502,6 +516,7 @@ namespace bzn
             .WillOnce(Invoke([&](){return std::move(new_config_timer3);}))
             .WillOnce(Invoke([&](){return std::move(join_retry_timer3);}));
         EXPECT_CALL(*mock_io_context3, post(_)).WillRepeatedly(Invoke([](auto func){boost::asio::post(func);}));
+        EXPECT_CALL(*mock_options3, get_swarm_id()).WillRepeatedly(Return("swarm_id"));
         EXPECT_CALL(*mock_options3, get_uuid()).WillRepeatedly(Return("uuid3"));
         EXPECT_CALL(*mock_options3, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto pbft3 = std::make_shared<bzn::pbft>(mock_node3, mock_io_context3, TEST_PEER_LIST, mock_options3, mock_service3,
@@ -511,6 +526,9 @@ namespace bzn
 
         // simulate that the new pbft has just joined the swarm and is waiting for a new_view
         this->set_swarm_status_waiting(pbft3);
+        EXPECT_CALL(*(mock_node3),
+            send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size() + 1));
         this->handle_newview(pbft3, *newview_env);
         EXPECT_TRUE(this->is_in_swarm(pbft3));
 
@@ -590,6 +608,7 @@ namespace bzn
 
                     auto wmsg2 = wrap_pbft_msg(prepare);
                     wmsg2.set_sender(p.uuid);
+                    (*wmsg2.add_piggybacked_requests()) = *envelope;
                     this->handle_prepare(prepare, wmsg2);
                 }));
         }

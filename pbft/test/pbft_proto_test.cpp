@@ -16,6 +16,11 @@
 
 using namespace ::testing;
 
+namespace
+{
+    uint64_t MAX_REQUEST_SIZE{249 * 1024};
+}
+
 namespace bzn
 {
     using namespace test;
@@ -51,7 +56,9 @@ namespace bzn
         bzn_envelope request;
         database_msg dmsg;
         dmsg.mutable_create()->set_key(std::string("key_" + std::to_string(++this->index)));
-        dmsg.mutable_create()->set_value(std::string("value_" + std::to_string(this->index)));
+
+        dmsg.mutable_create()->set_value(std::string(MAX_REQUEST_SIZE, 'a'));
+
         request.set_database_msg(dmsg.SerializeAsString());
         request.set_timestamp(this->now());
         request.set_sender(this->pbft->get_uuid());
@@ -75,9 +82,18 @@ namespace bzn
         preprepare.set_view(this->view);
         preprepare.set_sequence(sequence);
         preprepare.set_type(PBFT_MSG_PREPREPARE);
-        preprepare.set_allocated_request(new bzn_envelope(request));
+
+        if (request.payload_case() == bzn_envelope::kPbftInternalRequest)
+        {
+            preprepare.set_allocated_request(new bzn_envelope(request));
+        }
+
         preprepare.set_request_hash(this->pbft->crypto->hash(request));
         auto wmsg = wrap_pbft_msg(preprepare, peer.uuid);
+        if (request.payload_case() != bzn_envelope::kPbftInternalRequest)
+        {
+            *wmsg.add_piggybacked_requests() = request;
+        }
         pbft->handle_message(preprepare, wmsg);
     }
 

@@ -216,6 +216,9 @@ pbft_persistent_operation::record_request(const bzn_envelope& encoded_request)
         case storage_result::exists:
             LOG(debug) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
             break;
+        case storage_result::value_too_large:
+            LOG(debug) << "request too large to store: " << encoded_request.SerializeAsString().size() << " bytes, " << bzn::bytes_to_debug_string(this->prefix);
+            break;
         default:
             throw std::runtime_error("failed to write request for operation " + bzn::bytes_to_debug_string(this->prefix));
     }
