@@ -34,6 +34,7 @@ namespace
         "/system/etc/security/cacerts", // Android
         "/usr/local/share/certs",       // FreeBSD
         "/etc/pki/tls/certs",           // Fedora/RHEL
+        "/etc/ssl/certs",               // Ubuntu
         "/etc/openssl/certs",           // NetBSD
         "/var/ssl/certs",               // AIX
     };

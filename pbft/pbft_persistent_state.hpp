@@ -322,12 +322,12 @@ namespace bzn
                 {
                     if (val != to_string(t))
                     {
-                        throw std::runtime_error("Persistent value in memory does not match stored value");
+                        throw std::runtime_error(this->key + ": Persistent value in memory does not match stored value");
                     }
                 }
                 else
                 {
-                    throw std::runtime_error("Persistent value missing from storage");
+                    throw std::runtime_error(this->key + ": Persistent value missing from storage");
                 }
             }
             else
