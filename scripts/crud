@@ -129,6 +129,11 @@ def create_db_request(max_size):
     msg.create_db.max_size = max_size
     return msg
 
+def update_db_request(max_size):
+    msg = database_pb2.database_msg()
+    msg.update_db.SetInParent()
+    msg.update_db.max_size = max_size
+    return msg
 
 def delete_db_request():
     msg = database_pb2.database_msg()
@@ -255,6 +260,9 @@ def create_db_handler(args):
     return send_request(args.node, args.uuid, create_db_request(args.max_size))
 
 
+def update_db_handler(args):
+    return send_request(args.node, args.uuid, update_db_request(args.max_size))
+
 def delete_db_handler(args):
     return send_request(args.node, args.uuid, delete_db_request())
 
@@ -350,6 +358,13 @@ if __name__ == "__main__":
     create_db_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
     create_db_group.add_argument("-s", "--max-size",  type=int, default=0, help="max-size", required=False)
     create_db_parser.set_defaults(func=create_db_handler)
+
+    # Update db
+    update_db_parser = subparsers.add_parser('update-db', help="Update database max size")
+    update_db_group = update_db_parser.add_argument_group('required arguments')
+    update_db_group.add_argument("-u", "--uuid",  type=str, default=None, help="uuid", required=True)
+    update_db_group.add_argument("-s", "--max-size",  type=int, default=0, help="max-size", required=False)
+    update_db_parser.set_defaults(func=update_db_handler)
 
     # Delete db
     delete_db_parser = subparsers.add_parser('delete-db', help="Delete database")

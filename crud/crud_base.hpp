@@ -30,7 +30,7 @@ namespace bzn
 
         virtual void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) = 0;
 
-        virtual void start(std::shared_ptr<bzn::pbft_base> pbft) = 0;
+        virtual void start(std::shared_ptr<bzn::pbft_base> pbft, size_t max_storage) = 0;
 
         virtual bool save_state() = 0;
 

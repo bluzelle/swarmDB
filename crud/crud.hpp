@@ -19,7 +19,9 @@
 #include <include/bluzelle.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <node/node_base.hpp>
+#include <options/options_base.hpp>
 #include <pbft/pbft_base.hpp>
+#include <status/status_provider_base.hpp>
 #include <storage/storage_base.hpp>
 #include <shared_mutex>
 #include <gtest/gtest_prod.h>
@@ -27,7 +29,7 @@
 
 namespace bzn
 {
-    class crud final : public bzn::crud_base, public std::enable_shared_from_this<crud>
+    class crud final : public bzn::crud_base, public bzn::status_provider_base, public std::enable_shared_from_this<crud>
     {
     public:
         crud(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager,
@@ -35,13 +37,17 @@ namespace bzn
 
         void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) override;
 
-        void start(std::shared_ptr<bzn::pbft_base> pbft) override;
+        void start(std::shared_ptr<bzn::pbft_base> pbft, size_t max_storage = 0) override;
 
         bool save_state() override;
 
         std::shared_ptr<std::string> get_saved_state() override;
 
         bool load_state(const std::string& state) override;
+
+        bzn::json_message get_status() override;
+
+        std::string get_name() override;
 
     private:
 
@@ -69,8 +75,9 @@ namespace bzn
 
         // permission...
         std::pair<bool, Json::Value> get_database_permissions(const bzn::uuid_t& uuid) const;
-        bzn::value_t create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const;
+        Json::Value create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const;
         bzn::value_t update_permission_data(Json::Value& perms, const database_create_db& request) const;
+        size_t get_swarm_storage_usage();
         bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
@@ -103,6 +110,7 @@ namespace bzn
         std::once_flag start_once;
         std::shared_mutex crud_lock; // for multi-reader and single writer access
         const bzn::key_t  owner_public_key;
+        size_t max_swarm_storage{}; // maximum size of swarm database (unlimited when zero)
     };
 
 } // namespace bzn

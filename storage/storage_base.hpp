@@ -39,7 +39,8 @@ namespace bzn
         db_full,
         access_denied,
         delete_pending,
-        invalid_argument
+        invalid_argument,
+        invalid_size
     };
 
     const std::unordered_map<storage_result, const std::string> storage_result_msg{
@@ -55,7 +56,8 @@ namespace bzn
         {storage_result::db_full,         "INSUFFICIENT_SPACE"},
         {storage_result::access_denied,   "ACCESS_DENIED"},
         {storage_result::delete_pending,  "DELETE_PENDING"},
-        {storage_result::invalid_argument,"INVALID_ARGUMENT"}};
+        {storage_result::invalid_argument,"INVALID_ARGUMENT"},
+        {storage_result::invalid_size,    "INVALID_SIZE_LIMITS_SET"}};
 
 
     class storage_base

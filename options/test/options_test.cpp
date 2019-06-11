@@ -148,7 +148,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ("./daemon_state/", options.get_state_dir());
     EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
-    EXPECT_EQ(size_t(2147483648), options.get_max_storage());
+    EXPECT_EQ(size_t(0), options.get_max_swarm_storage());
     EXPECT_EQ(size_t(1048576), options.get_logfile_max_size());
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());
@@ -198,14 +198,14 @@ TEST_F(options_file_test, test_max_storage_parsing)
                   {
                       const size_t expected = 3 * 1099511627776; // 3TB in B
                       {
-                          json["max_storage"] = boost::lexical_cast<std::string>(expected / p.second) + p.first;
+                          json["max_swarm_storage"] = boost::lexical_cast<std::string>(expected / p.second) + p.first;
 
                           this->save_options_file(json.toStyledString());
 
                           bzn::options options;
                           options.parse_command_line(1, NO_ARGS);
 
-                          EXPECT_EQ(expected, options.get_max_storage());
+                          EXPECT_EQ(expected, options.get_max_swarm_storage());
                       }
                       {
                           std::string max_storage{boost::lexical_cast<std::string>(expected / p.second)};
@@ -214,14 +214,14 @@ TEST_F(options_file_test, test_max_storage_parsing)
                           {
                               max_storage = max_storage.append("B");
                           }
-                          json["max_storage"] = max_storage;
+                          json["max_swarm_storage"] = max_storage;
 
                           this->save_options_file(json.toStyledString());
 
                           bzn::options options;
                           options.parse_command_line(1, NO_ARGS);
 
-                          EXPECT_EQ(expected, options.get_max_storage());
+                          EXPECT_EQ(expected, options.get_max_swarm_storage());
                       }
                   });
 
@@ -262,7 +262,7 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     EXPECT_EQ("./daemon_state/", options.get_state_dir());
     EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());
-    EXPECT_EQ(size_t(2147483648), options.get_max_storage());
+    EXPECT_EQ(size_t(0), options.get_max_swarm_storage());
     EXPECT_EQ(size_t(1048576), options.get_logfile_max_size());
     EXPECT_EQ(size_t(2097152), options.get_logfile_rotation_size());
     EXPECT_EQ(".", options.get_logfile_dir());

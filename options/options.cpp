@@ -183,9 +183,9 @@ options::get_logfile_dir() const
 
 
 size_t
-options::get_max_storage() const
+options::get_max_swarm_storage() const
 {
-    return this->parse_size(this->raw_opts.get<std::string>(MAX_STORAGE));
+    return this->parse_size(this->raw_opts.get<std::string>(MAX_SWARM_STORAGE));
 }
 
 

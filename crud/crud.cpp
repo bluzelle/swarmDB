@@ -95,12 +95,14 @@ crud::crud(std::shared_ptr<bzn::asio::io_context_base> io_context,
 
 
 void
-crud::start(std::shared_ptr<bzn::pbft_base> pbft)
+crud::start(std::shared_ptr<bzn::pbft_base> pbft, const size_t max_swarm_storage)
 {
     std::call_once(this->start_once,
-        [this, pbft]()
+        [this, pbft, max_swarm_storage]()
         {
             this->pbft = std::move(pbft);
+
+            this->max_swarm_storage = max_swarm_storage;
 
             this->subscription_manager->start();
 
@@ -687,7 +689,26 @@ crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& re
     }
     else
     {
-        result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), this->create_permission_data(caller_id, request.create_db()));
+        const Json::Value perms = this->create_permission_data(caller_id, request.create_db());
+
+        // Check max_database_size and if requested database is set to unlimited!
+        if ((request.create_db().max_size() == 0) && this->max_swarm_storage)
+        {
+            LOG(debug) << "attempting to create a database with no limits (max_swarm_storage = " << this->max_swarm_storage << ")";
+
+            result = bzn::storage_result::invalid_size;
+        }
+        else
+        {
+            if (!this->operation_exceeds_available_space(request, perms))
+            {
+                result = this->storage->create(PERMISSION_UUID, request.header().db_uuid(), perms.toStyledString());
+            }
+            else
+            {
+                result = bzn::storage_result::db_full;
+            }
+        }
     }
 
     this->send_response(request, result, database_response(), session);
@@ -711,9 +732,33 @@ crud::handle_update_db(const bzn::caller_id_t& caller_id, const database_msg& re
         }
         else
         {
-            result = this->storage->update(PERMISSION_UUID, request.header().db_uuid(), this->update_permission_data(perms, request.update_db()));
+            // Check max_database_size and if requested database is set to unlimited!
+            if ((request.update_db().max_size() == 0) && this->max_swarm_storage)
+            {
+                LOG(debug) << "attempting to update a database with no limits (max_swarm_storage = " << this->max_swarm_storage << ")";
 
-            // todo: enforce new policy, max size etc.
+                result = bzn::storage_result::invalid_size;
+            }
+            else
+            {
+                // only check if max size has grown...
+                if (request.update_db().max_size() > perms[MAX_SIZE_KEY].asUInt64())
+                {
+                    auto new_perms = perms;
+
+                    new_perms[MAX_SIZE_KEY] = request.update_db().max_size();
+
+                    if (this->operation_exceeds_available_space(request, new_perms))
+                    {
+                        this->send_response(request, bzn::storage_result::db_full, database_response(), session);
+
+                        return;
+                    }
+                }
+
+                result = this->storage->update(PERMISSION_UUID, request.header().db_uuid(),
+                    this->update_permission_data(perms, request.update_db()));
+            }
         }
     }
 
@@ -890,7 +935,7 @@ crud::get_database_permissions(const bzn::uuid_t& uuid) const
 }
 
 
-bzn::value_t
+Json::Value
 crud::create_permission_data(const bzn::caller_id_t& caller_id, const database_create_db& request) const
 {
     Json::Value json;
@@ -902,7 +947,7 @@ crud::create_permission_data(const bzn::caller_id_t& caller_id, const database_c
 
     LOG(debug) << "created db perms: " << json.toStyledString();
 
-    return json.toStyledString();
+    return json;
 }
 
 
@@ -1201,7 +1246,31 @@ crud::flush_expiration_entries(const bzn::uuid_t& uuid)
 bool
 crud::operation_exceeds_available_space(const database_msg& request, const Json::Value& perms)
 {
+    const auto request_type = request.msg_case();
     const auto max_size = this->max_database_size(perms);
+
+    if (request_type == database_msg::kCreateDb || request_type == database_msg::kUpdateDb)
+    {
+        if (!this->max_swarm_storage)
+        {
+            LOG(debug) << "max storage zero, ignoring: " << request.msg_case();
+
+            return false;
+        }
+
+        if (request_type == database_msg::kCreateDb)
+        {
+            return (this->get_swarm_storage_usage() + max_size > this->max_swarm_storage);
+        }
+
+        if (request_type == database_msg::kUpdateDb)
+        {
+            Json::Value prev_perms;
+            std::tie(std::ignore, prev_perms) = this->get_database_permissions(request.header().db_uuid());
+
+            return (this->get_swarm_storage_usage() - this->max_database_size(prev_perms) + max_size > this->max_swarm_storage);
+        }
+    }
 
     // any max size set?
     if (max_size)
@@ -1210,13 +1279,13 @@ crud::operation_exceeds_available_space(const database_msg& request, const Json:
         std::tie(std::ignore, size) = this->storage->get_size(request.header().db_uuid());
 
         // test create
-        if (request.msg_case() == database_msg::kCreate)
+        if (request_type == database_msg::kCreate)
         {
             return (size + request.create().key().size() + request.create().value().size() > max_size);
         }
 
         // test update
-        if (request.msg_case() == database_msg::kUpdate)
+        if (request_type == database_msg::kUpdate)
         {
             const auto prev_kv_size = this->storage->get_key_size(request.header().db_uuid(),
                 request.update().key());
@@ -1229,6 +1298,39 @@ crud::operation_exceeds_available_space(const database_msg& request, const Json:
     }
 
     return false;
+}
+
+
+size_t
+crud::get_swarm_storage_usage()
+{
+    const auto databases = this->storage->get_keys(PERMISSION_UUID);
+
+    size_t current_database_max_sizes{};
+
+    for(const auto& database : databases)
+    {
+        auto const result = this->storage->read(PERMISSION_UUID, database);
+
+        if (result)
+        {
+            Json::Reader reader;
+            Json::Value json;
+
+            if (!reader.parse(result.value(), json))
+            {
+                throw std::runtime_error("Failed to parse database json uuid data: " + reader.getFormattedErrorMessages());
+            }
+
+            const auto max_size = this->max_database_size(json);
+
+            LOG(debug) << "database: " << database << " " << result.value();
+
+            current_database_max_sizes += max_size;
+        }
+    }
+
+    return current_database_max_sizes;
 }
 
 
@@ -1272,4 +1374,25 @@ crud::random_cache_replacement(const database_msg& request, size_t key_value_siz
             keys_to_evict.emplace_back(key_to_evict);
         }
     }
+}
+
+
+std::string
+crud::get_name()
+{
+    return "crud";
+}
+
+
+bzn::json_message
+crud::get_status()
+{
+    bzn::json_message status;
+
+    std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
+
+    status["max_swarm_storage"] = uint64_t(this->max_swarm_storage);
+    status["swarm_storage_usage"] = uint64_t(this->get_swarm_storage_usage());
+
+    return status;
 }

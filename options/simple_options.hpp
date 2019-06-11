@@ -36,7 +36,7 @@ namespace bzn::option_names
     const std::string LOGFILE_DIR = "logfile_dir";
     const std::string LOGFILE_MAX_SIZE = "logfile_max_size";
     const std::string LOGFILE_ROTATION_SIZE = "logfile_rotation_size";
-    const std::string MAX_STORAGE = "max_storage";
+    const std::string MAX_SWARM_STORAGE = "max_swarm_storage";
     const std::string MEM_STORAGE = "mem_storage";
     const std::string MONITOR_ADDRESS = "monitor_address";
     const std::string MONITOR_PORT = "monitor_port";

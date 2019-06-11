@@ -174,13 +174,6 @@ get_dir_size(const boost::filesystem::path& dir)
 }
 
 
-size_t
-get_state_dir_size(const bzn::options& options)
-{
-    return get_dir_size(boost::filesystem::path{options.get_state_dir() + options.get_uuid()});
-}
-
-
 void
 print_banner(const bzn::options& options, double eth_balance)
 {
@@ -193,9 +186,7 @@ print_banner(const bzn::options& options, double eth_balance)
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port() << "\n"
        << "         Token Balance: " << eth_balance << " ETH" << "\n"
-       // todo: disabled for now...
-       //<< "       Maximum Storage: " << options.get_max_storage() << " Bytes" << "\n"
-       << "          Used Storage: " << get_state_dir_size(options) << " Bytes" << "\n"
+       << " Maximum Swarm Storage: " << options.get_max_swarm_storage() << " Bytes" << "\n"
        << '\n';
 
     LOG(info) << ss.str();
@@ -321,11 +312,11 @@ main(int argc, const char* argv[])
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 
-        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft}, options->get_swarm_id());
+        auto status = std::make_shared<bzn::status>(node, bzn::status::status_provider_list_t{pbft,crud}, options->get_swarm_id());
 
         node->start(pbft);
         chaos->start();
-        crud->start(pbft);
+        crud->start(pbft, options->get_max_swarm_storage());
         pbft->start();
         status->start();
         chaos->start();
