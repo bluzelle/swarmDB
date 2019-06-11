@@ -122,7 +122,7 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
         // peer didn't contain everything we need
         if (host.empty() || port == 0)
         {
-            LOG(warning) << "Ignoring underspecified peer (needs host, port and http_port) " << peer;
+            LOG(warning) << "Ignoring underspecified peer (needs host and port) " << peer;
             continue;
         }
 

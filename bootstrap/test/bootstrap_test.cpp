@@ -22,8 +22,8 @@ namespace
 {
     const std::string invalid_json = "[{\"Some key\": 124}, }}[} oh noes I broke it";
     const std::string no_peers = "[]";
-    const std::string valid_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"host\": \"nonamepeer.com\", \"port\": 54321, \"http_port\" : 8080}]";
-    const std::string duplicate_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}]";
+    const std::string valid_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"host\": \"nonamepeer.com\", \"port\": 54321}]";
+    const std::string duplicate_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345}]";
     const std::string underspecified_peer = "[{\"name\": \"peer1\", \"port\": 1024}]";
     const std::string bad_port = "[{\"name\": \"peer1\", \"host\": \"127.0.0.1\", \"port\": 70000}]";
     const std::string test_peers_filename = "peers.json";
