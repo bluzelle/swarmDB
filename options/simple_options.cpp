@@ -28,15 +28,6 @@ namespace po = boost::program_options;
 namespace
 {
     const std::string DEFAULT_CONFIG_FILE = "bluzelle.json";
-
-    // https://stackoverflow.com/questions/8899069
-    bool
-    is_hex_notation(std::string const& s)
-    {
-        return s.compare(0, 2, "0x") == 0
-               && s.size() > 2
-               && s.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos;
-    }
 }
 
 simple_options::simple_options()
@@ -70,12 +61,6 @@ simple_options::build_options()
                 (BOOTSTRAP_PEERS_URL.c_str(),
                         po::value<std::string>(),
                         "url for bootstrap peers list")
-                (ETHERERUM_IO_API_TOKEN.c_str(),
-                        po::value<std::string>()->required(),
-                        "ethereum io api token")
-                (ETHERERUM.c_str(),
-                        po::value<std::string>()->required(),
-                        "ethereum address")
                 (HTTP_PORT.c_str(),
                         po::value<uint16_t>()->default_value(8080),
                         "port for http server")
@@ -245,13 +230,6 @@ simple_options::validate_options()
     if (port <= 1024)
     {
         std::cerr << "Invalid listener port " << std::to_string(port);
-        errors = true;
-    }
-
-    auto eth_address = this->get<std::string>(ETHERERUM);
-    if (!is_hex_notation(eth_address))
-    {
-        std::cerr << "Invalid Ethereum address " << eth_address;
         errors = true;
     }
 

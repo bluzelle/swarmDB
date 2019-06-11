@@ -32,8 +32,6 @@ namespace
     const std::string DEFAULT_CONFIG_CONTENT =
         "  \"listener_address\" : \"0.0.0.0\",\n"
         "  \"listener_port\" : 49152,\n"
-        "  \"ethereum\" : \"0x006eae72077449caca91078ef78552c0cd9bce8f\",\n"
-        "  \"ethereum_io_api_token\" : \"ASDFASDFASDFASDFSDF\",\n"
         "  \"bootstrap_file\" : \"peers.json\",\n"
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
         "  \"uuid\" : \"c05c0dff-3c27-4532-96de-36f53d8a278e\",\n"
@@ -140,7 +138,6 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
 
     options.parse_command_line(1, NO_ARGS);
 
-    EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
     ASSERT_EQ(true, options.get_debug_logging());
     ASSERT_EQ(true, options.get_log_to_stdout());
@@ -255,7 +252,6 @@ TEST_F(options_file_test, test_that_command_line_options_work)
     const char* ARGS[] = {"swarm", "-c", TEST_CONFIG_FILE.c_str()};
     options.parse_command_line(3, ARGS);
     std::cout << options.get_bootstrap_peers_file() << std::endl;
-    EXPECT_EQ("0x006eae72077449caca91078ef78552c0cd9bce8f", options.get_ethererum_address());
     EXPECT_EQ(DEFAULT_LISTENER, options.get_listener());
     ASSERT_EQ(true, options.get_debug_logging());
     ASSERT_EQ(true, options.get_log_to_stdout());

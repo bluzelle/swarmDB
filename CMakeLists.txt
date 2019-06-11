@@ -82,7 +82,6 @@ endif()
 
 add_subdirectory(bootstrap)
 add_subdirectory(crud)
-add_subdirectory(ethereum)
 add_subdirectory(node)
 add_subdirectory(options)
 add_subdirectory(pkg)

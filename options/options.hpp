@@ -33,13 +33,9 @@ namespace bzn
 
         std::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> context) const override;
 
-        std::string get_ethererum_address() const override;
-
         std::string get_bootstrap_peers_file() const override;
 
         std::string get_bootstrap_peers_url() const override;
-
-        std::string get_ethererum_io_api_token() const override;
 
         bool get_debug_logging() const override;
 
