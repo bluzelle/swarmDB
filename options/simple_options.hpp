@@ -27,7 +27,6 @@ namespace bzn::option_names
     const std::string BOOTSTRAP_PEERS_FILE = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL = "bootstrap_url";
     const std::string DEBUG_LOGGING = "debug_logging";
-    const std::string HTTP_PORT = "http_port";
     const std::string LISTENER_ADDRESS = "listener_address";
     const std::string LISTENER_PORT = "listener_port";
     const std::string LOG_TO_STDOUT = "log_to_stdout";

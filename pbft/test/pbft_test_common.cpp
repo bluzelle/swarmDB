@@ -142,7 +142,6 @@ namespace bzn::test
 
         this->options->get_mutable_simple_options().set("listener_address", TEST_NODE_ADDR);
         this->options->get_mutable_simple_options().set("listener_port", std::to_string(TEST_NODE_LISTEN_PORT));
-        this->options->get_mutable_simple_options().set("http_port", std::to_string(TEST_NODE_HTTP_PORT));
         this->options->get_mutable_simple_options().set("crypto_enabled_incoming", std::to_string(false));
         this->options->get_mutable_simple_options().set("crypto_enabled_outgoing", std::to_string(false));
 
