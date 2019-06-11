@@ -19,7 +19,6 @@
 #include <crud/subscription_manager.hpp>
 #include <crypto/crypto.hpp>
 #include <crypto/crypto_base.hpp>
-#include <ethereum/ethereum.hpp>
 #include <node/node.hpp>
 #include <options/options.hpp>
 #include <options/simple_options.hpp>
@@ -175,17 +174,15 @@ get_dir_size(const boost::filesystem::path& dir)
 
 
 void
-print_banner(const bzn::options& options, double eth_balance)
+print_banner(const bzn::options& options)
 {
     std::stringstream ss;
 
     ss << '\n';
     ss << "              Swarm ID: " << options.get_swarm_id() << "\n"
        << "  Running node with ID: " << options.get_uuid() << "\n"
-       << "   Ethereum Address ID: " << options.get_ethererum_address()  << "\n"
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port() << "\n"
-       << "         Token Balance: " << eth_balance << " ETH" << "\n"
        << " Maximum Swarm Storage: " << options.get_max_swarm_storage() << " Bytes" << "\n"
        << '\n';
 
@@ -244,15 +241,6 @@ main(int argc, const char* argv[])
         }
 
         init_logging(*options);
-
-        // todo: right now we just want to check that an account "has" a balance...
-        double eth_balance = bzn::ethereum().get_ether_balance(options->get_ethererum_address(), options->get_ethererum_io_api_token());
-
-        if (eth_balance == 0)
-        {
-            LOG(error) << "No ETH balance found";
-            return 0;
-        }
 
         bzn::bootstrap_peers peers(options->peer_validation_enabled());
         if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url(),
@@ -326,7 +314,7 @@ main(int argc, const char* argv[])
             audit->start();
         }
 
-        print_banner(*options, eth_balance);
+        print_banner(*options);
 
         start_worker_threads_and_wait(io_context, options);
     }

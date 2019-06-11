@@ -86,22 +86,6 @@ options::get_monitor_endpoint(std::shared_ptr<bzn::asio::io_context_base> contex
 
 
 std::string
-options::get_ethererum_address() const
-{
-    //TODO: Remove this
-    return this->raw_opts.get<std::string>(ETHERERUM);
-}
-
-
-std::string
-options::get_ethererum_io_api_token() const
-{
-    //TODO: Remove this
-    return this->raw_opts.get<std::string>(ETHERERUM_IO_API_TOKEN);
-}
-
-
-std::string
 options::get_bootstrap_peers_file() const
 {
     //TODO: Remove this

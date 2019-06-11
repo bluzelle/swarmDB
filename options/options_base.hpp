@@ -66,18 +66,6 @@ namespace bzn
             std::shared_ptr<bzn::asio::io_context_base> context) const = 0;
 
         /**
-         * Get the Ethererum address the node will be using
-         * @return address
-         */
-        virtual std::string get_ethererum_address() const = 0;
-
-        /**
-         * Get the Ethererum io api token
-         * @return address
-         */
-        virtual std::string get_ethererum_io_api_token() const = 0;
-
-        /**
          * Get the url to fetch initial peers from
          * @return url
          */
