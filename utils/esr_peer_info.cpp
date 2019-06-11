@@ -251,7 +251,6 @@ namespace
     {
         uint16_t    port{0};
         std::string host;
-        uint16_t    http_port{0};
         std::string name;
         enum {NODE_COUNT, NA_0, HTTP_PORT, NA_1, NODE_PORT, NA_2, NODE_HOST, NA_3, NODE_NAME} state {NODE_COUNT};
 
@@ -267,11 +266,7 @@ namespace
                 case NA_0: state = HTTP_PORT; break;
                 case HTTP_PORT:
                 {
-                    http_port = uint16_t(std::strtoul(line, nullptr, 16));
-                    if (!http_port)
-                    {
-                        LOG(warning) << "Invalid value for http port:[" << http_port << "] node may not exist";
-                    }
+                    // http_port no longer used
                     state = NA_1;
                 }
                 break;
@@ -284,7 +279,7 @@ namespace
                 {
 
                     port = std::strtoul(line, nullptr, 16);
-                    if (!http_port)
+                    if (!port)
                     {
                         LOG(warning) << "Invalid value for port:[" << port << "] node may not exist";
                     }
@@ -299,9 +294,6 @@ namespace
                 case NODE_HOST: {
                     host = hex_to_char_string(line);
                     trim_right_nulls(host);
-                    if (!http_port) {
-                        LOG(warning) << "Empty value for host ip, node may not exist";
-                    }
                     state = NA_3;
                 }
                 break;
@@ -314,7 +306,7 @@ namespace
                 {
                     name = hex_to_char_string(line);
                     trim_right_nulls(name);
-                    if (!http_port)
+                    if (name.empty())
                     {
                         LOG(warning) << "Empty value for host name, node may not exist";
                     }
@@ -323,12 +315,12 @@ namespace
                 default:
                 {
                     LOG(error) << "Failed to correctly parse peer info from esr";
-                    return bzn::peer_address_t(host, port, http_port, name, peer_id);
+                    return bzn::peer_address_t(host, port, name, peer_id);
                 }
                 break;
             }
         }
-        return bzn::peer_address_t(host, port, http_port, name, peer_id);
+        return bzn::peer_address_t(host, port, name, peer_id);
     }
 
 

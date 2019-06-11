@@ -66,7 +66,6 @@ bootstrap_peers::fetch_peers_from_esr_contract(const std::string& esr_url, const
         if (peer_info.host.empty()
             || peer_info.port == 0
             //|| peer_info.name.empty() // is it important that a peer have a name?
-            || peer_info.http_port == 0
             || peer_info.uuid.empty()
             )
         {
@@ -99,13 +98,11 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
         std::string name;
         std::string uuid;
         uint16_t    port;
-        uint16_t    http_port;
 
         try
         {
             host = peer["host"].asString();
             port = peer["port"].asUInt();
-            http_port = peer["http_port"].asUInt();
             uuid = peer.isMember("uuid") ? peer["uuid"].asString() : "unknown";
             name = peer.isMember("name") ? peer["name"].asString() : "unknown";
         }
@@ -122,14 +119,8 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
             continue;
         }
 
-        if (peer["http_port"].asUInt() != http_port)
-        {
-            LOG(warning) << "Ignoring peer with bad http port " << peer;
-            continue;
-        }
-
         // peer didn't contain everything we need
-        if (host.empty() || port == 0 || http_port == 0)
+        if (host.empty() || port == 0)
         {
             LOG(warning) << "Ignoring underspecified peer (needs host, port and http_port) " << peer;
             continue;
@@ -147,7 +138,7 @@ bootstrap_peers::initialize_peer_list(const Json::Value& root, bzn::peers_list_t
             }
         }
 
-        this->peer_addresses.emplace(host, port, http_port, name, uuid);
+        this->peer_addresses.emplace(host, port, name, uuid);
 
         LOG(trace) << "Found peer " << host << ":" << port << " (" << name << ")";
 

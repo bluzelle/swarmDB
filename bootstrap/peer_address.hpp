@@ -21,10 +21,9 @@ namespace bzn
 {
     struct peer_address_t
     {
-        peer_address_t(std::string host, uint16_t port, uint16_t http_port, std::string name, std::string uuid)
+        peer_address_t(std::string host, uint16_t port, std::string name, std::string uuid)
             : host(std::move(host))
             , port(port)
-            , http_port(http_port)
             , name(std::move(name))
             , uuid(std::move(uuid))
         {
@@ -37,12 +36,11 @@ namespace bzn
                 return true;
             }
 
-            return this->host == other.host && this->port == other.port && this->http_port == other.http_port && this->uuid == other.uuid;
+            return this->host == other.host && this->port == other.port && this->uuid == other.uuid;
         }
 
         const std::string host;
         const uint16_t    port;
-        const uint16_t    http_port;
         const std::string name;
         const std::string uuid;
     };

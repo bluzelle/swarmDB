@@ -75,7 +75,7 @@ pbft_configuration::from_json(const Json::Value& json)
     for (auto& p : json["peers"])
     {
         bzn::peer_address_t peer(p["host"].asString(), static_cast<uint16_t>(p["port"].asUInt()),
-            static_cast<uint16_t>(p["http_port"].asUInt()), p["name"].asString(), p["uuid"].asString());
+            p["name"].asString(), p["uuid"].asString());
 
         if (this->conflicting_peer_exists(peer) || !this->valid_peer(peer))
         {
@@ -103,7 +103,6 @@ pbft_configuration::to_json() const
         bzn::json_message peer;
         peer["host"] = p.host;
         peer["port"] = p.port;
-        peer["http_port"] = p.http_port;
         peer["name"] = p.name;
         peer["uuid"] = p.uuid;
 

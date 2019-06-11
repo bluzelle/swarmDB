@@ -434,7 +434,7 @@ pbft::handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& m
         // build a peer_address_t from the message
         auto const &peer_info = msg.peer_info();
         bzn::peer_address_t peer(peer_info.host(), static_cast<uint16_t>(peer_info.port()),
-            static_cast<uint16_t>(peer_info.http_port()), peer_info.name(), peer_info.uuid());
+            peer_info.name(), peer_info.uuid());
 
         // test for re-join of existing swarm member
         if (msg.type() == PBFT_MMSG_JOIN && this->is_peer(peer_info.uuid()))
@@ -1539,7 +1539,6 @@ pbft::get_status()
     auto primary = this->get_primary();
     status["primary"]["host"] = primary.host;
     status["primary"]["host_port"] = primary.port;
-    status["primary"]["http_port"] = primary.http_port;
     status["primary"]["name"] = primary.name;
     status["primary"]["uuid"] = primary.uuid;
 
@@ -1557,7 +1556,6 @@ pbft::get_status()
         bzn::json_message peer;
         peer["host"] = p.host;
         peer["port"] = p.port;
-        peer["http_port"] = p.http_port;
         peer["name"] = p.name;
         peer["uuid"] = p.uuid;
         status["peer_index"].append(peer);
