@@ -46,6 +46,8 @@ public:
     {
         EXPECT_CALL(*(this->options), get_uuid()).WillRepeatedly(Return("uuid"));
         EXPECT_CALL(*(this->options), get_monitor_endpoint(_)).WillRepeatedly(Invoke([&](auto){return this->ep;}));
+        EXPECT_CALL(*(this->options), get_stack()).WillRepeatedly(Return("utest"));
+        EXPECT_CALL(*(this->options), get_swarm_id()).WillRepeatedly(Return("0"));
         this->soptions.set(bzn::option_names::MONITOR_MAX_TIMERS, "100");
         this->soptions.set(bzn::option_names::MONITOR_COLLATE, "false");
         EXPECT_CALL(*(this->options), get_simple_options()).WillRepeatedly(Invoke(
@@ -164,7 +166,7 @@ TEST_F(monitor_test, test_timer_with_duplicate_triggers)
 
 TEST_F(monitor_test, test_no_endpoint)
 {
-    auto options2 = std::make_shared<bzn::mock_options_base>();
+    auto options2 = std::make_shared<NiceMock<bzn::mock_options_base>>();
     EXPECT_CALL(*options2, get_monitor_endpoint(_)).WillRepeatedly(Return(std::nullopt));
     auto monitor2 = std::make_shared<bzn::monitor>(options2, io_context, clock);
 

@@ -47,16 +47,19 @@ namespace bzn
          */
         virtual const simple_options& get_simple_options() const = 0;
 
+
         /**
          * @return the raw_options container for accessing simple options
          */
         virtual simple_options& get_mutable_simple_options() = 0;
+
 
         /**
          * Get the address and port for the node to listen on
          * @return endpoint
          */
         virtual boost::asio::ip::tcp::endpoint get_listener() const = 0;
+
 
         /**
          * The address and port to send stats.d data to, if this is enabled
@@ -65,11 +68,13 @@ namespace bzn
         virtual std::optional<boost::asio::ip::udp::endpoint> get_monitor_endpoint(
             std::shared_ptr<bzn::asio::io_context_base> context) const = 0;
 
+
         /**
          * Get the url to fetch initial peers from
          * @return url
          */
         virtual std::string get_bootstrap_peers_url() const = 0;
+
 
         /**
          * Get the file to fetch initial peers from
@@ -77,11 +82,13 @@ namespace bzn
          */
         virtual std::string get_bootstrap_peers_file() const = 0;
 
+
         /**
          * Debug logging level?
          * @return true if we should log debug entries
          */
         virtual bool get_debug_logging() const = 0;
+
 
         /**
          * Log to terminal instead of disk.
@@ -89,17 +96,20 @@ namespace bzn
          */
         virtual bool get_log_to_stdout() const = 0;
 
+
         /**
          * Get the peer's unique id
          * @return uuid
          */
         virtual bzn::uuid_t get_uuid() const = 0;
 
+
         /**
          * Get the swarm id this peer belongs to
          * @return swarm_id
          */
         virtual bzn::swarm_id_t get_swarm_id() const = 0;
+
 
         /**
          * Get the websocket activity timeout
@@ -190,5 +200,11 @@ namespace bzn
          * @return string containing the url of the server
          */
         virtual std::string get_swarm_info_esr_url() const = 0;
+
+        /**
+         * Retrieve the name of the stack the swarm is using
+         * @return string stack name
+         */
+        virtual std::string get_stack() const = 0;
     };
 } // bzn
