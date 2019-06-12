@@ -64,8 +64,6 @@ class mock_options_base : public options_base {
       size_t());
   MOCK_CONST_METHOD0(pbft_enabled,
       bool());
-  MOCK_CONST_METHOD0(get_http_port,
-      uint16_t());
   MOCK_CONST_METHOD0(peer_validation_enabled,
       bool());
   MOCK_CONST_METHOD0(get_signed_key,

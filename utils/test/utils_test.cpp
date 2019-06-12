@@ -306,33 +306,33 @@ namespace
         {
             {"BluzelleSwarm",
              {
-                bzn::peer_address_t("209.50.61.87", 51010, 8080, "node_0", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEysScFkwI4d8I65aJnr8UAohqjYCYuBXgMb73Aa0SlQF62+ql4XGuTRoYZVX8L9WrzSlg3m4UY7KrIBJPYS++pA=="),
-                bzn::peer_address_t("212.2.189.19", 51010, 8081, "node_1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEqWDJpK28T/9wHAVLrgTQFgBToHEF9W1WNv1ot7mqyNODHyQL+m8gt3CoMSJZc2Op0pF7PuYDex87koGbKVo9KA=="),
-                bzn::peer_address_t("62.134.146.33", 51010, 8082, "node_2", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEmuAiBMszxYT8GM9RzoBHHHmo5Y6Hs+KO+ny48iF8UtSy55LcOfj4P8v4s9TUx3VdLxtCBAKk6ZHqBcHDQrZl4Q=="),
-                bzn::peer_address_t("75.96.163.85", 51010, 8083, "node_3", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE73T48e2Go71nvycBVHvTxKJ27qFdQBJ4Fcp6n9V9NhjrCAmfz3rn86XOMiCKzsSXc3qDr/C8LhTB5KfHhCoLKg=="),
-                bzn::peer_address_t("152.44.45.81", 51010, 8084, "node_4", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEyCa3KWa9/jMtlZ7+mMgX2Qih6JkKE2x8l5Y3aErf7e22d77fY51zidS+9d26Fm5TPC6dOZ4M7i9BIhVsIodLtA=="),
-                bzn::peer_address_t("152.44.45.82", 51010, 8085, "node_5", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEEERq5ucX48gQwTdtc2JFIDjySD0gA9VFppTZaXM4RuOxwuBJ3NVpPl6HjG5hDDLU6wVNCZQMTzLsvOzm9bFwJw=="),
-                bzn::peer_address_t("75.96.165.79", 51010, 8086, "node_6", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE5ZG9N2xBiAbl2BVXmw6QCvTgpnZ58RYJ9du4C42QVAyBw5ok+7xvytZ1WBVLYfACK8SP7Q1neKNVK6UvAReVAA==")
+                bzn::peer_address_t("209.50.61.87", 51010, "node_0", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEysScFkwI4d8I65aJnr8UAohqjYCYuBXgMb73Aa0SlQF62+ql4XGuTRoYZVX8L9WrzSlg3m4UY7KrIBJPYS++pA=="),
+                bzn::peer_address_t("212.2.189.19", 51010, "node_1", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEqWDJpK28T/9wHAVLrgTQFgBToHEF9W1WNv1ot7mqyNODHyQL+m8gt3CoMSJZc2Op0pF7PuYDex87koGbKVo9KA=="),
+                bzn::peer_address_t("62.134.146.33", 51010,"node_2", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEmuAiBMszxYT8GM9RzoBHHHmo5Y6Hs+KO+ny48iF8UtSy55LcOfj4P8v4s9TUx3VdLxtCBAKk6ZHqBcHDQrZl4Q=="),
+                bzn::peer_address_t("75.96.163.85", 51010, "node_3", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE73T48e2Go71nvycBVHvTxKJ27qFdQBJ4Fcp6n9V9NhjrCAmfz3rn86XOMiCKzsSXc3qDr/C8LhTB5KfHhCoLKg=="),
+                bzn::peer_address_t("152.44.45.81", 51010, "node_4", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEyCa3KWa9/jMtlZ7+mMgX2Qih6JkKE2x8l5Y3aErf7e22d77fY51zidS+9d26Fm5TPC6dOZ4M7i9BIhVsIodLtA=="),
+                bzn::peer_address_t("152.44.45.82", 51010, "node_5", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEEERq5ucX48gQwTdtc2JFIDjySD0gA9VFppTZaXM4RuOxwuBJ3NVpPl6HjG5hDDLU6wVNCZQMTzLsvOzm9bFwJw=="),
+                bzn::peer_address_t("75.96.165.79", 51010, "node_6", "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE5ZG9N2xBiAbl2BVXmw6QCvTgpnZ58RYJ9du4C42QVAyBw5ok+7xvytZ1WBVLYfACK8SP7Q1neKNVK6UvAReVAA==")
              }},
              {"BluzelleSwarm2",
               {
-                 bzn::peer_address_t("127.0.0.1", 51010, 8080, "TestNodeBZ", "nodeuuid1"),
-                 bzn::peer_address_t("127.0.0.1", 51011, 8081, "TestNodeBZ1", "nodeuuid2"),
-                 bzn::peer_address_t("127.0.0.1", 51012, 8082, "TestNodeBZ2", "nodeuuid3"),
-                 bzn::peer_address_t("127.0.0.1", 51013, 8083, "TestNodeBZ3", "nodeuuid4")
+                 bzn::peer_address_t("127.0.0.1", 51010, "TestNodeBZ", "nodeuuid1"),
+                 bzn::peer_address_t("127.0.0.1", 51011, "TestNodeBZ1", "nodeuuid2"),
+                 bzn::peer_address_t("127.0.0.1", 51012, "TestNodeBZ2", "nodeuuid3"),
+                 bzn::peer_address_t("127.0.0.1", 51013, "TestNodeBZ3", "nodeuuid4")
               }},
               {"BluzelleSwarm3",
                {
-                  bzn::peer_address_t("10.0.0.60", 51010, 8080, "NodeBZ1", "uuid1"),
-                  bzn::peer_address_t("10.0.0.60", 51011, 8081, "NodeBZ2", "uuid2"),
-                  bzn::peer_address_t("10.0.0.60", 51012, 8082, "NodeBZ3", "uuid3"),
-                  bzn::peer_address_t("10.0.0.60", 51013, 8083, "NodeBZ4", "uuid4"),
-                  bzn::peer_address_t("10.0.0.60", 51014, 8084, "NodeBZ5", "uuid5"),
-                  bzn::peer_address_t("10.0.0.60", 51015, 8085, "NodeBZ6", "uuid6"),
-                  bzn::peer_address_t("10.0.0.60", 51016, 8086, "NodeBZ7", "uuid7"),
-                  bzn::peer_address_t("10.0.0.60", 51017, 8087, "NodeBZ8", "uuid8"),
-                  bzn::peer_address_t("10.0.0.60", 51018, 8088, "NodeBZ9", "uuid9"),
-                  bzn::peer_address_t("10.0.0.60", 51019, 8089, "NodeBZ10", "uuid10")
+                  bzn::peer_address_t("10.0.0.60", 51010, "NodeBZ1", "uuid1"),
+                  bzn::peer_address_t("10.0.0.60", 51011, "NodeBZ2", "uuid2"),
+                  bzn::peer_address_t("10.0.0.60", 51012, "NodeBZ3", "uuid3"),
+                  bzn::peer_address_t("10.0.0.60", 51013, "NodeBZ4", "uuid4"),
+                  bzn::peer_address_t("10.0.0.60", 51014, "NodeBZ5", "uuid5"),
+                  bzn::peer_address_t("10.0.0.60", 51015, "NodeBZ6", "uuid6"),
+                  bzn::peer_address_t("10.0.0.60", 51016, "NodeBZ7", "uuid7"),
+                  bzn::peer_address_t("10.0.0.60", 51017, "NodeBZ8", "uuid8"),
+                  bzn::peer_address_t("10.0.0.60", 51018, "NodeBZ9", "uuid9"),
+                  bzn::peer_address_t("10.0.0.60", 51019, "NodeBZ10", "uuid10")
                }}
         }};
 }
@@ -411,12 +411,12 @@ TEST(util_test, test_that_esr_returns_peer_info)
 {
     {
         const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-        EXPECT_EQ(bzn::peer_address_t("", 0, 0, "", "NotAGoodID"), peer_info);
+        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
     }
 
     {
         const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-        EXPECT_EQ(bzn::peer_address_t("", 0, 0, "", "NotAGoodID"), peer_info);
+        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
     }
 
     // exhaustive testing must occur in integration testing, since this functionality takes a long time we will

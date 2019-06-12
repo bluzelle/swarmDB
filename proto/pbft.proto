@@ -111,9 +111,8 @@ message pbft_peer_info
 {
     string host = 1;
     uint32 port = 2;
-    uint32 http_port = 3;
-    string name = 4;
-    string uuid = 5;
+    string name = 3;
+    string uuid = 4;
 }
 
 message prepared_proof

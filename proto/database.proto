@@ -150,7 +150,6 @@ message database_redirect_response
     string leader_name = 2;
     string leader_host = 3;
     uint32 leader_port = 4;
-    uint32 leader_http_port = 5;
 }
 
 message database_has_response

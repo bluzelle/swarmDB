@@ -61,9 +61,6 @@ simple_options::build_options()
                 (BOOTSTRAP_PEERS_URL.c_str(),
                         po::value<std::string>(),
                         "url for bootstrap peers list")
-                (HTTP_PORT.c_str(),
-                        po::value<uint16_t>()->default_value(8080),
-                        "port for http server")
                 (LISTENER_ADDRESS.c_str(),
                         po::value<std::string>()->required(),
                         "listener address for consensus node")

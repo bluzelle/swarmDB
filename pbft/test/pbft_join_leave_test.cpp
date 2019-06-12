@@ -22,8 +22,8 @@ using namespace ::testing;
 namespace bzn
 {
     using namespace bzn::test;
-    const bzn::peer_address_t new_peer{"127.0.0.1", 8090, 83, "name_new", "uuid_new"};
-    const bzn::peer_address_t new_peer2{"127.0.0.1", 8091, 84, "name_new2", "uuid_new2"};
+    const bzn::peer_address_t new_peer{"127.0.0.1", 8090, "name_new", "uuid_new"};
+    const bzn::peer_address_t new_peer2{"127.0.0.1", 8091, "name_new2", "uuid_new2"};
 
     std::optional<pbft_msg> extract_pbft_msg_option(bzn_envelope message)
     {
@@ -220,7 +220,6 @@ namespace bzn
         info->set_host(new_peer.host);
         info->set_name(new_peer.name);
         info->set_port(new_peer.port);
-        info->set_http_port(new_peer.http_port);
         info->set_uuid(new_peer.uuid);
 
         pbft_membership_msg join_msg;
@@ -259,7 +258,6 @@ namespace bzn
         info->set_host(peer.host);
         info->set_name(peer.name);
         info->set_port(peer.port);
-        info->set_http_port(peer.http_port);
         info->set_uuid(peer.uuid);
 
         pbft_membership_msg leave_msg;
@@ -288,7 +286,6 @@ namespace bzn
         info->set_host(new_peer.host);
         info->set_name(new_peer.name);
         info->set_port(new_peer.port);
-        info->set_http_port(new_peer.http_port);
         info->set_uuid(new_peer.uuid);
 
         pbft_membership_msg leave_msg;
@@ -630,7 +627,6 @@ namespace bzn
         info->set_name(new_peer.name);
         info->set_host(new_peer.host);
         info->set_port(new_peer.port);
-        info->set_http_port(new_peer.http_port);
         info->set_uuid(new_peer.uuid);
 
         pbft_membership_msg join_msg;
@@ -656,7 +652,6 @@ namespace bzn
         info->set_name(peer.name);
         info->set_host(peer.host);
         info->set_port(peer.port);
-        info->set_http_port(peer.http_port);
         info->set_uuid(peer.uuid);
 
         pbft_membership_msg join_msg;
@@ -675,7 +670,6 @@ namespace bzn
         info->set_host(peer.host);
         info->set_name(peer.name);
         info->set_port(peer.port);
-        info->set_http_port(peer.http_port);
         info->set_uuid("bogus_uuid");
 
         pbft_membership_msg join_msg;

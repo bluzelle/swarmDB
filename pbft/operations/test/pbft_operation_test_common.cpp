@@ -26,17 +26,17 @@ namespace
 
     const bzn::uuid_t TEST_NODE_UUID{"uuid4"};
 
-    const std::vector<bzn::peer_address_t> TEST_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
-                                           , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
-                                           , {"127.0.0.1", 8083, 8883, "name3", "uuid3"}
-                                           , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
+    const std::vector<bzn::peer_address_t> TEST_PEER_LIST{{  "127.0.0.1", 8081, "name1", "uuid1"}
+                                           , {"127.0.0.1", 8082, "name2", "uuid2"}
+                                           , {"127.0.0.1", 8083, "name3", "uuid3"}
+                                           , {"127.0.0.1", 8084, "name4", TEST_NODE_UUID}};
 
-    const std::vector<bzn::peer_address_t> TEST_2F_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
-                                              , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
+    const std::vector<bzn::peer_address_t> TEST_2F_PEER_LIST{{  "127.0.0.1", 8081, "name1", "uuid1"}
+                                              , {"127.0.0.1", 8084, "name4", TEST_NODE_UUID}};
 
-    const std::vector<bzn::peer_address_t> TEST_2F_PLUS_1_PEER_LIST{{  "127.0.0.1", 8081, 8881, "name1", "uuid1"}
-                                                     , {"127.0.0.1", 8082, 8882, "name2", "uuid2"}
-                                                     , {"127.0.0.1", 8084, 8884, "name4", TEST_NODE_UUID}};
+    const std::vector<bzn::peer_address_t> TEST_2F_PLUS_1_PEER_LIST{{  "127.0.0.1", 8081, "name1", "uuid1"}
+                                                     , {"127.0.0.1", 8082, "name2", "uuid2"}
+                                                     , {"127.0.0.1", 8084, "name4", TEST_NODE_UUID}};
 
 
     class pbft_operation_test_common : public Test
