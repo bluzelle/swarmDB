@@ -93,7 +93,10 @@ simple_options::build_options()
                         "Address of ESR Swarm Info contract")
                 (SWARM_INFO_ESR_URL.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::ROPSTEN_URL),
-                        "url of ESR Swarm Info contract server");
+                        "url of ESR Swarm Info contract server")
+                (STACK.c_str(),
+                        po::value<std::string>()->required(),
+                        "software stack used by swarm");
 
     po::options_description logging("Logging");
     logging.add_options()

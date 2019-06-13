@@ -19,7 +19,7 @@ using namespace bzn;
 
 namespace
 {
-    std::unordered_map<statistic, std::string> statistic_names{
+    const std::unordered_map<statistic, std::string> statistic_names{
             {
                     {statistic::hash_computed, "crypto.hashes_computed"},
                     {statistic::hash_computed_bytes, "crypto.bytes_hashed"},
@@ -52,7 +52,7 @@ monitor::monitor(std::shared_ptr<bzn::options_base> options, std::shared_ptr<bzn
         , clock(std::move(clock))
         , socket(this->context->make_unique_udp_socket())
         , monitor_endpoint(this->options->get_monitor_endpoint(this->context))
-        , scope_prefix("com.bluzelle.swarm.singleton.node." + this->options->get_uuid())
+        , scope_prefix("com.bluzelle." + this->options->get_stack() + "." + this->options->get_swarm_id() + ".swarmdb." + this->options->get_uuid())
 {
     if (this->monitor_endpoint)
     {

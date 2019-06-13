@@ -36,6 +36,7 @@ namespace
         "  \"bootstrap_url\"  : \"example.org/peers.json\",\n"
         "  \"uuid\" : \"c05c0dff-3c27-4532-96de-36f53d8a278e\",\n"
         "  \"swarm_id\" : \"utest\",\n"
+        "  \"stack\" : \"utest\", \n"
         "  \"debug_logging\" : true,"
         "  \"log_to_stdout\" : true,"
         "  \"state_dir\" : \"./daemon_state/\","
@@ -142,6 +143,7 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     ASSERT_EQ(true, options.get_debug_logging());
     ASSERT_EQ(true, options.get_log_to_stdout());
     EXPECT_EQ("utest", options.get_swarm_id());
+    EXPECT_EQ("utest", options.get_stack());
     EXPECT_EQ("./daemon_state/", options.get_state_dir());
     EXPECT_EQ("peers.json", options.get_bootstrap_peers_file());
     EXPECT_EQ("example.org/peers.json", options.get_bootstrap_peers_url());

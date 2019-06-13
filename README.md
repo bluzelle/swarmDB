@@ -120,13 +120,12 @@ The configuration file is a JSON format file, as seen in the following example:
     {
         "listener_address" : "127.0.0.1",
         "listener_port" : 50000,
-        "ethereum" : "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a",
-        "ethereum_io_api_token" : "<your API key here>",
         "bootstrap_file" : "/home/isabel/swarmdb/local/nodes/peers.json",
         "debug_logging" : true,
         "log_to_stdout" : true,
         "use_pbft": true,
         "bootstrap_file": "./peers.json",
+        "stack" : "testnet-dev"
     }
 
 The complete documentation of the options available for this file is given by 
@@ -137,12 +136,11 @@ but the properties likely useful for a minimal swarm are summarized here:
 
 - "bootstrap_file" - path to peers file (see below)
 - "debug_logging" - show more log info
-- "ethereum" - is your Ethereum block chain address, used to pay for transactions. For now, you will not be charged, and you do not actually need to own this address.
-- "ethereum_io_api_token" - this is used to identify the SwarmDB daemon to Etherscan Developer API (see https://etherscan.io/apis). Use the given value for now, this  property may be moved out the config file in the future.
 - "listener_address" - the ip address that SwarmDB will listen on (this should be "127.0.0.1" unless you are doing something fancy)
 - "listener_port" - the port that SwarmDB will listen on (each node running on the same host should use a different port)
 - "log_to_stdout" (optional) - log to stdout as well as log file
 - "uuid" - the universally unique identifier that this instance of SwarmDB will use to uniquely identify itself. This should be specified if and only if node cryptography is disabled (the default) - otherwise, nodes use their private keys as their identifier.
+- "stack" - software stack used by swarm
 
 #### The Bluzelle Bootstrap File
 

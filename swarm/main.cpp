@@ -118,7 +118,7 @@ init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std
             return true;
         }
 
-        LOG(warning) << "Etherium Smart Contract Registry contained no peer listing for the swarm with id " << swarm_id << " checking other sources";
+        LOG(warning) << "Ethereum Swarm Registry contained no peer listing for the swarm with id " << swarm_id << " checking other sources";
     }
 
     if (!peers_file.empty())
@@ -184,6 +184,7 @@ print_banner(const bzn::options& options)
        << "      Local IP Address: " << options.get_listener().address().to_string() << "\n"
        << "               On port: " << options.get_listener().port() << "\n"
        << " Maximum Swarm Storage: " << options.get_max_swarm_storage() << " Bytes" << "\n"
+       << "                 Stack: " << options.get_stack() << "\n"
        << '\n';
 
     LOG(info) << ss.str();

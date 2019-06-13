@@ -246,3 +246,10 @@ options::get_swarm_info_esr_url() const
 {
     return this->raw_opts.get<std::string>(SWARM_INFO_ESR_URL);
 }
+
+
+std::string
+options::get_stack() const
+{
+    return this->raw_opts.get<std::string>(STACK);
+}
