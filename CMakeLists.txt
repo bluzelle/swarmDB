@@ -15,7 +15,7 @@ message("Build version ${PROJECT_VERSION}")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/swarm_version.hpp.in ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp ${CMAKE_BINARY_DIR}/swarm_version.hpp)
 execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/swarm_version.hpp.tmp)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR}) # hides path bug!
 
 # use ccache if available...
 find_program(CCACHE_FOUND ccache)
@@ -60,13 +60,12 @@ endif()
 # find packages
 include(cmake/add_gmock_test.cmake)
 
+set(Protobuf_USE_STATIC_LIBS ON)
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIR})
-
-set(BLUZELLE_STD_INCLUDES ${Boost_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${PROTO_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
 
 enable_testing()
 
@@ -80,12 +79,15 @@ if (ENABLE_GCOV)
     endif()
 endif()
 
+add_subdirectory(proto)
+
+set(BLUZELLE_STD_INCLUDES ${Boost_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${PROTO_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
+
 add_subdirectory(bootstrap)
 add_subdirectory(crud)
 add_subdirectory(node)
 add_subdirectory(options)
 add_subdirectory(pkg)
-add_subdirectory(proto)
 add_subdirectory(status)
 add_subdirectory(storage)
 add_subdirectory(swarm)
