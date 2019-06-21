@@ -20,6 +20,7 @@ message bzn_envelope
     string sender = 2;
     bytes signature = 3;
     uint64 timestamp = 4;
+    repeated bzn_envelope piggybacked_requests = 5;
 
     oneof payload
     {

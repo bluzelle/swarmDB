@@ -53,6 +53,15 @@ message pbft_msg
 
     // for newview
     string config = 14;
+
+    pbft_request_type request_type = 15;
+}
+
+
+enum pbft_request_type
+{
+    PBFT_REQUEST_PAYLOAD = 0; // this must be zero
+    PBFT_REQUEST_INTERNAL = 1;
 }
 
 message checkpoint_msg
@@ -74,8 +83,6 @@ enum pbft_msg_type
     PBFT_MSG_PREPREPARE = 2;
     PBFT_MSG_PREPARE = 3;
     PBFT_MSG_COMMIT = 4;
-    PBFT_MSG_JOIN = 6;
-    PBFT_MSG_LEAVE = 7;
     PBFT_MSG_VIEWCHANGE = 8;
     PBFT_MSG_NEWVIEW = 9;
 }

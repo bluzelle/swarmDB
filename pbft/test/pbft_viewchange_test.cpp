@@ -49,16 +49,7 @@ namespace bzn
         void
         generate_checkpoint_at_sequence_100(uint64_t& current_sequence)
         {
-            auto mock_crypto = this->build_pft_with_mock_crypto();
-
-            EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
-                    .WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
-                                           {
-                                               return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());
-                                           }));
-
-            EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
-            EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
+            this->build_pbft();
 
             for (current_sequence=1; current_sequence < 100; ++current_sequence)
             {
@@ -72,19 +63,8 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, test_fill_in_missing_pre_prepares)
     {
-        auto mock_crypto = this->build_pft_with_mock_crypto();
+        this->build_pbft();
 
-        EXPECT_CALL(*mock_crypto, sign(_))
-                .WillRepeatedly(Invoke([&](bzn_envelope &msg)
-                                 {
-                                     msg.set_sender(this->pbft->get_uuid());
-                                     msg.set_signature("mock_signature");
-                                     return true;
-                                 }));
-
-        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
-                .WillRepeatedly(Invoke([&](auto env) {return env.SerializeAsString();}));
-        
         bzn_envelope envelope;
         std::map<uint64_t, bzn_envelope> pre_prepares;
         pre_prepares.insert(std::make_pair(uint64_t(103), envelope));
@@ -126,12 +106,6 @@ namespace bzn
         message.set_type(PBFT_MSG_COMMIT);
         EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
 
-        message.set_type(PBFT_MSG_JOIN);
-        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-
-        message.set_type(PBFT_MSG_LEAVE);
-        EXPECT_FALSE(this->pbft->preliminary_filter_msg(message));
-
         message.set_type(PBFT_MSG_VIEWCHANGE);
         EXPECT_TRUE(this->pbft->preliminary_filter_msg(message));
 
@@ -160,38 +134,36 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke(
-                        [&](const auto & /*endpoint*/, const auto &viewchange_env)
+            .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env)
+            {
+                pbft_msg viewchange;
+                viewchange.ParseFromString(viewchange_env->pbft());
+                EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
+
+                std::map<bzn::checkpoint_t, std::set<bzn::uuid_t>> checkpoints = this->pbft->validate_and_extract_checkpoint_hashes(
+                    viewchange);
+                EXPECT_EQ(uint64_t(1), checkpoints.size());
+
+                for (const auto &p : checkpoints)
+                {
+                    auto checkpoint = p.first;
+                    auto uuids = p.second;
+
+                    // there will be a checkpoint 100, with a hash value of "100"
+                    EXPECT_EQ(uint64_t(100), checkpoint.first);
+                    EXPECT_EQ("100", checkpoint.second);
+
+                    EXPECT_EQ(uint64_t(3), uuids.size());
+                    for (const auto &uuid : uuids)
+                    {
+                        EXPECT_FALSE(TEST_PEER_LIST.end() == std::find_if(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end()
+                            , [&](const auto &peer)
                         {
-                            pbft_msg viewchange;
-                            viewchange.ParseFromString(viewchange_env->pbft());
-                            EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
-
-                            std::map<bzn::checkpoint_t, std::set<bzn::uuid_t>> checkpoints = this->pbft->validate_and_extract_checkpoint_hashes(
-                                    viewchange);
-                            EXPECT_EQ(uint64_t(1), checkpoints.size());
-
-                            for (const auto &p : checkpoints)
-                            {
-                                auto checkpoint = p.first;
-                                auto uuids = p.second;
-
-                                // there will be a checkpoint 100, with a hash value of "100"
-                                EXPECT_EQ(uint64_t(100), checkpoint.first);
-                                EXPECT_EQ("100", checkpoint.second);
-
-                                EXPECT_EQ(uint64_t(3), uuids.size());
-                                for (const auto &uuid : uuids)
-                                {
-                                    EXPECT_FALSE(TEST_PEER_LIST.end() ==
-                                                 std::find_if(TEST_PEER_LIST.begin(), TEST_PEER_LIST.end(),
-                                                              [&](const auto &peer)
-                                                              {
-                                                                  return peer.uuid == uuid;
-                                                              }));
-                                }
-                            }
+                            return peer.uuid == uuid;
                         }));
+                    }
+                }
+            }));
         this->pbft->handle_failure();
     }
 
@@ -204,13 +176,13 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, auto viewchange_env)
-                {
-                    pbft_msg viewchange;
-                    EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
-                    viewchange_env->set_sender(this->pbft->get_uuid());
-                    EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
-                }));
+            .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, auto viewchange_env)
+            {
+                pbft_msg viewchange;
+                EXPECT_TRUE(viewchange.ParseFromString(viewchange_env->pbft())); // this will be valid.
+                viewchange_env->set_sender(this->pbft->get_uuid());
+                EXPECT_TRUE(this->pbft->is_valid_viewchange_message(viewchange, *viewchange_env));
+            }));
 
         this->pbft->handle_failure();
     }
@@ -224,7 +196,11 @@ namespace bzn
         this->run_transaction_through_primary_times(2, current_sequence);
 
         auto ops = this->operation_manager->prepared_operations_since(this->pbft->latest_stable_checkpoint().first);
-        auto viewchange = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->checkpoint_manager->get_latest_stable_checkpoint_proof(), ops);
+
+        auto viewchange_env = this->pbft->make_viewchange(this->pbft->get_view() + uint64_t(1), current_sequence, this->pbft->checkpoint_manager->get_latest_stable_checkpoint_proof(), ops);
+
+        pbft_msg viewchange;
+        viewchange.ParseFromString(viewchange_env->pbft());
 
         EXPECT_EQ(PBFT_MSG_VIEWCHANGE, viewchange.type());
         EXPECT_EQ(current_sequence, viewchange.sequence());
@@ -237,18 +213,17 @@ namespace bzn
         this->build_pbft();
 
         EXPECT_CALL(*mock_node, send_message_str(_, _))
-                .WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto encoded_message)
-                                       {
-                                           bzn_envelope envelope;
-                                           envelope.ParseFromString(*encoded_message);
+            .WillRepeatedly(Invoke([&](const auto& /*endpoint*/, const auto encoded_message)
+            {
+               bzn_envelope envelope;
+               envelope.ParseFromString(*encoded_message);
+               pbft_msg view_change;
 
-
-                                           pbft_msg view_change;
-                                           view_change.ParseFromString(envelope.pbft());
-                                           EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
-                                           EXPECT_TRUE(2 == view_change.view());
-                                           EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
-                                       }));
+               view_change.ParseFromString(envelope.pbft());
+               EXPECT_EQ(PBFT_MSG_VIEWCHANGE, view_change.type());
+               EXPECT_TRUE(2 == view_change.view());
+               EXPECT_TRUE(this->pbft->latest_stable_checkpoint().first == view_change.sequence());
+            }));
 
         this->pbft->handle_failure();
 
@@ -283,11 +258,7 @@ namespace bzn
 
     TEST_F(pbft_viewchange_test, test_save_checkpoint)
     {
-        auto mock_crypto = this->build_pft_with_mock_crypto();
-
-        // I expect 3 calls from crypto::verify
-        EXPECT_CALL(*mock_crypto, verify(_)).Times(3).WillRepeatedly(Return(true));
-
+        this->build_pbft();
         pbft_msg msg;
 
         // add three checkpoint messages
@@ -321,7 +292,7 @@ namespace bzn
         // capture newview and send to sut1 handle_newview
 
         // sut1 (this->pbft) is initial primary
-        auto mock_crypto = this->build_pft_with_mock_crypto();
+        this->build_pbft();
 
         // sut2 is new primary after view change
         auto mock_node2 = std::make_shared<bzn::smart_mock_node>();
@@ -362,16 +333,6 @@ namespace bzn
 
         pbft2->start();
 
-        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>()))
-                .WillRepeatedly(Invoke([&](auto env)
-                                       {
-                                           return env.SerializeAsString();
-                                       }));
-
-        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
-        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
-
-
         // set up a stable checkpoint plus a couple of uncommitted transactions on sut1
         for (size_t i = 0; i < 99; i++)
         {
@@ -380,49 +341,52 @@ namespace bzn
         prepare_for_checkpoint(100);
         run_transaction_through_primary();
         this->stabilize_checkpoint(100);
-        run_transaction_through_primary(false);
-        run_transaction_through_primary(false);
+
+        for (size_t i = 0; i < 50; i++)
+        {
+            run_transaction_through_primary(false);
+        }
 
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                        send_signed_message(bzn::make_endpoint(p), ResultOf(test::is_viewchange, Eq(true))))
-                    .Times(Exactly(1))
-                    .WillRepeatedly(Invoke([&](auto, auto wmsg)
-                                           {
-                                               pbft_msg msg;
-                                               ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
-                                               wmsg->set_sender(p.uuid);
-                                               for (const auto& peer : TEST_PEER_LIST)
-                                               {
-                                                   checkpoint_msg cp;
-                                                   cp.set_sequence(pbft->latest_stable_checkpoint().first);
-                                                   cp.set_state_hash(pbft->latest_stable_checkpoint().second);
-                                                   bzn_envelope env;
-                                                   env.set_checkpoint_msg(cp.SerializeAsString());
-                                                   env.set_sender(peer.uuid);
-                                                   pbft2->checkpoint_manager->handle_checkpoint_message(env);
-                                               }
-                                               pbft2->handle_viewchange(msg, *wmsg);
-                                           }));
+                send_signed_message(bzn::make_endpoint(p), ResultOf(test::is_viewchange, Eq(true))))
+                .Times(Exactly(1))
+                .WillRepeatedly(Invoke([&](auto, auto wmsg)
+                {
+                   pbft_msg msg;
+                   ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                   wmsg->set_sender(p.uuid);
+                   for (const auto& peer : TEST_PEER_LIST)
+                   {
+                       checkpoint_msg cp;
+                       cp.set_sequence(pbft->latest_stable_checkpoint().first);
+                       cp.set_state_hash(pbft->latest_stable_checkpoint().second);
+                       bzn_envelope env;
+                       env.set_checkpoint_msg(cp.SerializeAsString());
+                       env.set_sender(peer.uuid);
+                       pbft2->checkpoint_manager->handle_checkpoint_message(env);
+                   }
+                   pbft2->handle_viewchange(msg, *wmsg);
+                }));
         }
 
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*mock_node2, send_signed_message(bzn::make_endpoint(p), ResultOf(test::is_newview, Eq(true))))
-                    .Times(Exactly(1))
-                    .WillRepeatedly(Invoke([&](auto, auto wmsg)
-                                           {
-                                                if (p.uuid == TEST_NODE_UUID)
-                                               {
-                                                   EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
-                                                           .Times(Exactly(2 * TEST_PEER_LIST.size()));
-                                                   pbft_msg msg;
-                                                   ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
-                                                   wmsg->set_sender("uuid2");
-                                                   this->pbft->handle_newview(msg, *wmsg);
-                                               }
-                                           }));
+                .Times(Exactly(1))
+                .WillRepeatedly(Invoke([&](auto, auto wmsg)
+                {
+                    if (p.uuid == TEST_NODE_UUID)
+                   {
+                       EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
+                               .Times(Exactly(50 * TEST_PEER_LIST.size()));
+                       pbft_msg msg;
+                       ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
+                       wmsg->set_sender("uuid2");
+                       this->pbft->handle_newview(msg, *wmsg);
+                   }
+                }));
         }
 
         EXPECT_CALL(*mock_node2, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true))))
@@ -439,14 +403,9 @@ namespace bzn
     {
         // This test was written for KEP-902: is_valid_viewchange throws if no checkpoint yet
         uint64_t current_sequence{0};
-        auto mock_crypto = this->build_pft_with_mock_crypto();
+        this->build_pbft();
         bzn_envelope original_message;
 
-        EXPECT_CALL(*mock_crypto, sign(_)).WillRepeatedly(Return(true));
-        EXPECT_CALL(*mock_crypto, verify(_)).WillRepeatedly(Return(true));
-
-        EXPECT_CALL(*mock_crypto, hash(An<const bzn_envelope&>())).WillRepeatedly(Invoke([&](const bzn_envelope& envelope)
-            {return envelope.sender() + "_" + std::to_string(current_sequence) + "_" + std::to_string(envelope.timestamp());}));
         EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_viewchange, Eq(true)))).WillRepeatedly(Invoke([&](const auto & /*endpoint*/, const auto &viewchange_env)
             { original_message = *viewchange_env; }));
 

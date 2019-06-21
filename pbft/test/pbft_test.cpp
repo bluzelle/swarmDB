@@ -308,4 +308,63 @@ namespace bzn::test
 
         this->send_commits(1, 1, hash);
     }
+
+
+    TEST_F(pbft_test, bzn_envelope_has_repeated_request_body_field)
+    {
+        // My goal here is to generate a bzn_envelope and ensure that it has the repeated request_body field
+        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), A<std::shared_ptr<bzn_envelope>>())).Times(1).WillRepeatedly(Invoke(
+                [&](auto /*ep*/, auto msg)
+                {
+                    EXPECT_EQ( 0, msg->piggybacked_requests_size());
+                    auto piggybacked_requests = msg->mutable_piggybacked_requests();
+                    EXPECT_TRUE(piggybacked_requests->empty());
+
+                    bzn_envelope env;
+                    *(msg->add_piggybacked_requests()) = env;
+                    *(msg->add_piggybacked_requests()) = env;
+
+                    EXPECT_FALSE(piggybacked_requests->empty());
+                    EXPECT_EQ( 2, msg->piggybacked_requests_size());
+                }));
+
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+        EXPECT_FALSE(pbft->is_primary());
+
+        pbft->handle_database_message(this->request_msg, this->mock_session);
+    }
+
+
+    TEST_F(pbft_test, ensure_save_all_requests_records_requests)
+    {
+        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), A<std::shared_ptr<bzn_envelope>>())).Times(1).WillRepeatedly(Invoke(
+                [&](auto /*ep*/, auto msg)
+                {
+                    EXPECT_EQ( 0, msg->piggybacked_requests_size());
+                    auto piggybacked_requests = msg->mutable_piggybacked_requests();
+                    EXPECT_TRUE(piggybacked_requests->empty());
+
+                    bzn_envelope env;
+                    pbft_msg d_msg;
+                    env.set_pbft(d_msg.SerializeAsString());
+
+                    *(msg->add_piggybacked_requests()) = env;
+
+                    d_msg.set_view(3);
+                    env.set_pbft(d_msg.SerializeAsString());
+
+                    *(msg->add_piggybacked_requests()) = env;
+
+                    auto hash_to_env = this->pbft->map_request_to_hash(*msg);
+
+                    EXPECT_FALSE(piggybacked_requests->empty());
+                    EXPECT_EQ( 2u, hash_to_env.size());
+                }));
+
+        this->uuid = SECOND_NODE_UUID;
+        this->build_pbft();
+
+        this->pbft->handle_database_message(this->request_msg, this->mock_session);
+    }
 }
