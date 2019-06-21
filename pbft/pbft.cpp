@@ -376,7 +376,6 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
         lookup != this->accepted_preprepares.end()
         && std::get<2>(lookup->second.value()) != msg.request_hash())
     {
-
         LOG(debug) << "Rejecting preprepare: already accepted a conflicting one";
         return;
     }

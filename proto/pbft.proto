@@ -54,11 +54,10 @@ message pbft_msg
     // for newview
     string config = 14;
 
-    // KEP-823
     pbft_request_type request_type = 15;
 }
 
-// KEP-823
+
 enum pbft_request_type
 {
     PBFT_REQUEST_PAYLOAD = 0; // this must be zero
