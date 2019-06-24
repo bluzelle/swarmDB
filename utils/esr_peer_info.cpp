@@ -249,10 +249,11 @@ namespace
     bzn::peer_address_t
     parse_get_peer_info_result_to_peer_address(const std::string &peer_id, const std::string_view &result)
     {
+        size_t      text_size{0};
         uint16_t    port{0};
         std::string host;
         std::string name;
-        enum {NODE_COUNT, NA_0, HTTP_PORT, NA_1, NODE_PORT, NA_2, NODE_HOST, NA_3, NODE_NAME} state {NODE_COUNT};
+        enum {NODE_COUNT, NA_0, NA_1, NODE_PORT, NODE_HOST_SIZE, NODE_HOST, NODE_NAME_SIZE, NODE_NAME, FINISHED} state {NODE_COUNT};
 
         // NOTE: I needed to add the extra null character to "line" so that any 64 length buffer read from the result
         // will be correctly null terminated for the boost::algorithm::unhex function
@@ -260,58 +261,88 @@ namespace
         std::istringstream stream{result.begin()};
         while(stream.read(line, ESR_RESPONSE_LINE_LENGTH))
         {
+            // TODO: replace this switch/case with the strategy pattern - Rich
             switch (state)
             {
-                case NODE_COUNT: state = NA_0; break;
-                case NA_0: state = HTTP_PORT; break;
-                case HTTP_PORT:
+                case NODE_COUNT:
                 {
-                    // http_port no longer used
+                    state = NA_0;
+                }
+                break;
+
+                case NA_0:
+                {
                     state = NA_1;
                 }
                 break;
+
                 case NA_1:
                 {
                     state = NODE_PORT;
                 }
                 break;
+
                 case NODE_PORT:
                 {
-
                     port = std::strtoul(line, nullptr, 16);
                     if (!port)
                     {
-                        LOG(warning) << "Invalid value for port:[" << port << "] node may not exist";
+                        LOG(warning) << "Invalid value for port:[" << port << "], node may not exist";
                     }
-                    state = NA_2;
+                    state = NODE_HOST_SIZE;
                 }
                 break;
-                case NA_2:
+
+                case NODE_HOST_SIZE:
                 {
+                    text_size = std::strtoul(line, nullptr, 16);
+                    if (!text_size)
+                    {
+                        LOG(warning) << "Invalid value for host string length:[" << text_size << "]";
+                    }
                     state = NODE_HOST;
                 }
                 break;
-                case NODE_HOST: {
+
+                case NODE_HOST:
+                {
                     host = hex_to_char_string(line);
                     trim_right_nulls(host);
-                    state = NA_3;
+                    assert(text_size == host.size());
+                    state = NODE_NAME_SIZE;
                 }
                 break;
-                case NA_3:
+
+                case NODE_NAME_SIZE:
                 {
+                    text_size = std::strtoul(line, nullptr, 16);
+                    if (!text_size)
+                    {
+                        LOG(warning) << "Invalid value for node name string length:[" << text_size << "]";
+                    }
                     state = NODE_NAME;
                 }
                 break;
+
                 case NODE_NAME:
                 {
                     name = hex_to_char_string(line);
                     trim_right_nulls(name);
+                    assert(text_size == name.size());
                     if (name.empty())
                     {
                         LOG(warning) << "Empty value for host name, node may not exist";
                     }
+                    state = FINISHED;
                 }
                 break;
+
+                case FINISHED:
+                {
+                    LOG(warning) << "Peer Info result contains too many lines";
+                }
+                break;
+
                 default:
                 {
                     LOG(error) << "Failed to correctly parse peer info from esr";

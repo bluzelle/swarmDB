@@ -409,25 +409,40 @@ TEST(util_test, test_that_esr_returns_peers_list)
 
 TEST(util_test, test_that_esr_returns_peer_info)
 {
-    {
-        const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
-    }
+    // TODO: Rich to work with Matthew to put the test data into the new solidty contract to make these
+    // tests valid again.
+//    {
+//        const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
+//        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
+//    }
+
+//    {
+//        const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
+//        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
+//    }
+
+//    // exhaustive testing must occur in integration testing, since this functionality takes a long time we will
+//    // select a single swarm and a single node to test against.
+//    {
+//        const auto SWARM_ID{"BluzelleSwarm"};
+//        auto swarm_info{SWARMS.at(SWARM_ID)};
+//        auto accepted_peer_info{swarm_info.front()}; // Grab the info for the first peer in BluzelleSwarm
+//
+//        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
+//        EXPECT_EQ(peer_info, accepted_peer_info);
+//    }
 
     {
-        const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
-    }
+        const std::string swarm_id{"testnet-2"};
+        const std::string peer_id{"MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt9cCXQcYyY3deRevkG0C1jhMYrqH2kWTCONUM30gdktj0he8AQucXytSJHBI/erOoJr0ejF3zu/lKllEsqTfXQ=="};
+        const std::string esr_address{"f039E760a4E97b1E50689ea6572DD74a46359aD9"};
+        const std::string ropsten_url{"https://ropsten.infura.io/uvek7IebbbHoP8Bb9NkV"};
+        const auto peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address, ropsten_url)};
 
-    // exhaustive testing must occur in integration testing, since this functionality takes a long time we will
-    // select a single swarm and a single node to test against.
-    {
-        const auto SWARM_ID{"BluzelleSwarm"};
-        auto swarm_info{SWARMS.at(SWARM_ID)};
-        auto accepted_peer_info{swarm_info.front()}; // Grab the info for the first peer in BluzelleSwarm
-
-        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-        EXPECT_EQ(peer_info, accepted_peer_info);
+        EXPECT_EQ(peer_id, peer_info.uuid);
+        EXPECT_EQ("node_0_testnet-2", peer_info.name);
+        EXPECT_EQ(51010, peer_info.port);
+        EXPECT_EQ("54.183.253.191", peer_info.host);
     }
 }
 
