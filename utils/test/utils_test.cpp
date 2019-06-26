@@ -407,7 +407,7 @@ TEST(util_test, test_that_esr_returns_peers_list)
 }
 
 
-TEST(util_test, test_that_esr_returns_peer_info)
+TEST(util_test, DISABLED_test_that_esr_returns_peer_info)
 {
     // TODO: Rich to work with Matthew to put the test data into the new solidty contract to make these
     // tests valid again.
