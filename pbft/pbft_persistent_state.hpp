@@ -90,6 +90,7 @@ namespace bzn
         persistent(std::shared_ptr<bzn::storage_base> persist_storage, const T& default_value, const std::string& name, K... subkeys)
             : storage(persist_storage), key(escape(name) + generate_key(subkeys...))
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             if (this->storage)
             {
                 if (sizeof...(subkeys))
@@ -139,6 +140,7 @@ namespace bzn
         // assign a new value to a persistent variable. the new value is immediately placed in storage
         persistent<T>& operator=(const T& value)
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             this->validate();
 
             t = value;
@@ -158,6 +160,7 @@ namespace bzn
         // destroy it in order to remove from storage
         void destroy()
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             if (this->storage)
             {
                 this->storage->remove(STATE_UUID, this->key);
@@ -171,6 +174,7 @@ namespace bzn
         // get the value of the variable
         const T& value() const
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             this->validate();
             return t;
         }
@@ -178,12 +182,14 @@ namespace bzn
         // comparison operator, mainly for ordering in collections
         bool operator<(const persistent<T>& rhs) const
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             return t < rhs.t;
         }
 
         // test for equality
         bool operator==(const persistent<T>& rhs) const
         {
+            std::scoped_lock<std::mutex> locker(*(this->lock));
             return t == rhs.t;
         }
 
@@ -300,6 +306,7 @@ namespace bzn
         T t;
         std::shared_ptr<bzn::storage_base> storage;
         std::string key;
+        std::shared_ptr<std::mutex> lock = std::make_shared<std::mutex>();
 
         static std::string generate_key()
         {
