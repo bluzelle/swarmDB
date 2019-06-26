@@ -1080,7 +1080,7 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     //  filter checkpoint_hashes to only those pairs (checkpoint, senders) such that |senders| >= 2f+1
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> retval;
     std::copy_if(checkpoint_hashes.begin(), checkpoint_hashes.end(), std::inserter(retval, retval.end())
-        , [&](const auto& h) {return h.second.size() >= 2 * this->max_faulty_nodes() + 1;});
+        , [&](const auto& h) {return h.second.size() >= this->honest_member_size(this->current_peers().size());});
 
     return retval;
 }
