@@ -354,7 +354,6 @@ namespace bzn
                 .Times(Exactly(1))
                 .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
-                    std::cout << "viewchange is " << wmsg->ByteSize() << " bytes" << std::endl;
                    pbft_msg msg;
                    ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
                    wmsg->set_sender(p.uuid);
@@ -378,7 +377,6 @@ namespace bzn
                 .Times(Exactly(1))
                 .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
-                    std::cout << "newview is " << wmsg->ByteSize() << " bytes" << std::endl;
                     if (p.uuid == TEST_NODE_UUID)
                    {
                        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))

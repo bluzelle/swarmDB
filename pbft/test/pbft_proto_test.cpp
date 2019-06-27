@@ -18,8 +18,8 @@ using namespace ::testing;
 
 namespace
 {
-    uint64_t MAX_REQUEST_SIZE{249 * 1024};
-//    uint64_t MAX_REQUEST_SIZE{10 * 1024};
+//    uint64_t MAX_REQUEST_SIZE{249 * 1024};
+    uint64_t MAX_REQUEST_SIZE{10 * 1024};
 }
 
 namespace bzn

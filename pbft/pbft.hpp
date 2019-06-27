@@ -277,7 +277,7 @@ namespace bzn
         persistent<uint64_t> last_view_sent{storage, 0, LAST_VIEW_SENT_KEY};
 
         std::map<uint64_t,std::map<bzn::uuid_t, persistent<bzn_envelope>>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
-        persistent<bzn_envelope> saved_newview{storage, {}, SAVED_NEWVIEW_KEY};
+        bzn_envelope saved_newview;
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
         std::shared_ptr<pbft_config_store> configurations;
