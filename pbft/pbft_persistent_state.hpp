@@ -97,6 +97,7 @@ namespace bzn
                 {
                     if (initialized_containers.find(name) == initialized_containers.end())
                     {
+                        LOG(error) << "Use of uninitialized collection of persistent values:  " << name;
                         throw std::runtime_error("Use of uninitialized collection of persistent values: " + name);
                     }
                 }
@@ -146,7 +147,12 @@ namespace bzn
             t = value;
             if (this->storage)
             {
-                this->storage->update(STATE_UUID, this->key, to_string(value));
+                auto res = this->storage->update(STATE_UUID, this->key, to_string(value));
+                if (res != storage_result::ok)
+                {
+                    LOG(error) << "Error " << static_cast<uint64_t>(res) << " storing persistent value with key: " << this->key;
+                    throw(std::runtime_error("Error storing persistent value"));
+                }
             }
             else
             {
@@ -329,11 +335,15 @@ namespace bzn
                 {
                     if (val != to_string(t))
                     {
+                        LOG(error) << "validation error for persistent value with key: " << this->key;
+                        LOG(error) << "stored value size is: " << (*val).size();
+                        LOG(error) << "in-mem value size is: " << to_string(t).size();
                         throw std::runtime_error(this->key + ": Persistent value in memory does not match stored value");
                     }
                 }
                 else
                 {
+                    LOG(error) << "missing value for persistent value with key: " << this->key;
                     throw std::runtime_error(this->key + ": Persistent value missing from storage");
                 }
             }

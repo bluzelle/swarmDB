@@ -541,6 +541,12 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         return;
     }
 
+    if (this->get_view() > 1 && this->saved_newview.value().payload_case() != bzn_envelope::kPbft)
+    {
+        LOG(warning) << "No saved NEWVIEW message to send for state message. Not responding";
+        return;
+    }
+
     pbft_membership_msg reply;
     reply.set_type(PBFT_MMSG_SET_STATE);
     reply.set_sequence(req_cp.first);
@@ -557,10 +563,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         *(reply.add_checkpoint_proof()) = checkpoint_claim;
     }
 
-    if (this->saved_newview.value().payload_case() == bzn_envelope::kPbft)
-    {
-        reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview.value()));
-    }
+    reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview.value()));
 
     auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
     session->send_message(msg_ptr);
@@ -1339,12 +1342,14 @@ pbft::make_newview(
     // V is the set of 2f+1 view change messages
     for (const auto &sender_viewchange_envelope: viewchange_envelopes_from_senders)
     {
+        std::cout << sender_viewchange_envelope.second.ByteSize() << std::endl;
         *(newview.add_viewchange_messages()) = sender_viewchange_envelope.second;
     }
 
     // O
     for (const auto& preprepare_message : pre_prepare_messages)
     {
+        std::cout << preprepare_message.second.ByteSize() << std::endl;
         *(newview.add_pre_prepare_messages()) = preprepare_message.second;
     }
     return newview;
@@ -1497,7 +1502,9 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     save_all_requests(msg, original_msg);
 
     auto mutable_env{original_msg};
+    std::cout << mutable_env.ByteSize() << std::endl;
     mutable_env.clear_piggybacked_requests();
+    std::cout << mutable_env.ByteSize() << std::endl;
 
     this->valid_viewchange_messages_for_view[msg.view()][original_msg.sender()] =
         {this->storage, mutable_env, VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY, original_msg.sender(), msg.view()};
@@ -1528,6 +1535,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     std::map<uuid_t, bzn_envelope> viewchange_envelopes_from_senders;
     for (const auto &sender_envelope : this->valid_viewchange_messages_for_view[msg.view()])
     {
+        std::cout << sender_envelope.second.value().ByteSize();
         const auto &sender{sender_envelope.first};
         const auto &viewchange_envelope{sender_envelope.second.value()};
         viewchange_envelopes_from_senders[sender] = viewchange_envelope;
