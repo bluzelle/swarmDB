@@ -541,6 +541,12 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         return;
     }
 
+    if (this->get_view() > 1 && this->saved_newview.payload_case() != bzn_envelope::kPbft)
+    {
+        LOG(warning) << "No saved NEWVIEW message to send for state message. Not responding";
+        return;
+    }
+
     pbft_membership_msg reply;
     reply.set_type(PBFT_MMSG_SET_STATE);
     reply.set_sequence(req_cp.first);
@@ -557,10 +563,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         *(reply.add_checkpoint_proof()) = checkpoint_claim;
     }
 
-    if (this->saved_newview.value().payload_case() == bzn_envelope::kPbft)
-    {
-        reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview.value()));
-    }
+    reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview));
 
     auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
     session->send_message(msg_ptr);
