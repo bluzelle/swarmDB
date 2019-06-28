@@ -308,7 +308,10 @@ namespace
                 {
                     host = hex_to_char_string(line);
                     trim_right_nulls(host);
-                    assert(text_size == host.size());
+                    if (text_size != host.size())
+                    {
+                        LOG(warning) << "Parsed host string size does not match expected size";
+                    }
                     state = NODE_NAME_SIZE;
                 }
                 break;
