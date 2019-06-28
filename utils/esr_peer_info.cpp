@@ -321,19 +321,18 @@ namespace
                         LOG(warning) << "Invalid value for node name string length:[" << text_size << "]";
                     }
                     state = NODE_NAME;
+                    name = "";
                 }
                 break;
 
                 case NODE_NAME:
                 {
-                    name = hex_to_char_string(line);
+                    name += hex_to_char_string(line);
                     trim_right_nulls(name);
-                    assert(text_size == name.size());
-                    if (name.empty())
+                    if (text_size == name.size())
                     {
-                        LOG(warning) << "Empty value for host name, node may not exist";
+                        state = FINISHED;
                     }
-                    state = FINISHED;
                 }
                 break;
 
