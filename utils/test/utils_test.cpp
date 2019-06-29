@@ -410,39 +410,47 @@ TEST(util_test, test_that_esr_returns_peers_list)
 }
 
 
-TEST(util_test, test_that_esr_returns_peer_info)
+TEST(util_test, test_that_esr_fails_nicely)
 {
     const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
-    const std::string ESR_URL{bzn::utils::ROPSTEN_URL};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
 
-    {
-        // testing non existant node
-        const std::string SWARM_ID{"testswarm-333333333333333333333333"};
-        const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "NOPE", ESR_CONTRACT, ESR_URL);
-        EXPECT_EQ(peer_info.uuid, "NOPE");
-        EXPECT_TRUE(peer_info.host.empty());
-        EXPECT_EQ(peer_info.port, 0);
-        EXPECT_TRUE(peer_info.name.empty());
-    }
+    // testing non existant node
+    const std::string SWARM_ID{"testswarm-333333333333333333333333"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "NOPE", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "NOPE");
+    EXPECT_TRUE(peer_info.host.empty());
+    EXPECT_EQ(peer_info.port, 0);
+    EXPECT_TRUE(peer_info.name.empty());
+}
 
-    {
-        // testing name larger than 32 characters
-        const std::string SWARM_ID{"testswarm-333333333333333333333333"};
-        const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID2", ESR_CONTRACT, ESR_URL);
-        EXPECT_EQ(peer_info.uuid, "TestUUID2");
-        EXPECT_EQ(peer_info.host, "127.0.0.1");
-        EXPECT_EQ(peer_info.port, 51010);
-        EXPECT_EQ(peer_info.name, "node_name111111111111111111111111111111111111111111111111111");
-    }
 
-    {
-        const std::string SWARM_ID{"testswarm-444444444444444444444444444444444444444444444444444444444444"};
-        const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID1", ESR_CONTRACT, ESR_URL);
-        EXPECT_EQ(peer_info.uuid, "TestUUID1");
-        EXPECT_EQ(peer_info.host, "127.0.0.1");
-        EXPECT_EQ(peer_info.port, 51010);
-        EXPECT_EQ(peer_info.name, "node_name_less");
-    }
+TEST(util_test, test_that_esr_works_with_large_swarm_id)
+{
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
+
+    const std::string SWARM_ID{"testswarm-444444444444444444444444444444444444444444444444444444444444"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID1", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "TestUUID1");
+    EXPECT_EQ(peer_info.host, "127.0.0.1");
+    EXPECT_EQ(peer_info.port, 51010);
+    EXPECT_EQ(peer_info.name, "node_1");
+}
+
+
+TEST(util_test, test_that_esr_returns_peer_info_with_large_node_name)
+{
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
+
+    // testing esr get peer info parser with a node name larger than 32 characters
+    const std::string SWARM_ID{"testswarm-333333333333333333333333"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID2", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "TestUUID2");
+    EXPECT_EQ(peer_info.host, "127.0.0.1");
+    EXPECT_EQ(peer_info.port, 51010);
+    EXPECT_EQ(peer_info.name, "node_name111111111111111111111111111111111111111111111111111");
 }
 
 

@@ -324,13 +324,13 @@ namespace
                         LOG(warning) << "Invalid value for node name string length:[" << text_size << "]";
                     }
                     state = NODE_NAME;
-                    name = "";
+                    name.clear();
                 }
                 break;
 
                 case NODE_NAME:
                 {
-                    name += hex_to_char_string(line);
+                    name.append(hex_to_char_string(line));
                     trim_right_nulls(name);
                     if (text_size == name.size())
                     {
@@ -410,14 +410,19 @@ namespace
         static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
         static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asCString() + 2};
 
+        static const std::string PARAMS
+                {
+                    size_type_to_hex(swarm_id.size(), 64)             // size of swarm id string (pre hexification)
+                    + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
+                    + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
+                    + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
+                };
+
         return std::string{"0x"
             + pad_str_to_mod_64(GET_PEER_INFO_SIGNATURE)
             + pad_str_to_mod_64("00000040")                 // first param type?
-            + pad_str_to_mod_64("00000080")                 // second param type?
-            + size_type_to_hex(swarm_id.size())             // size of swarm id string (pre hexification)
-            + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
-            + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
-            + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
+            + size_type_to_hex(PARAMS.size() / 2)           // size of params blob in bytes, padded to 8 chars
+            + PARAMS
         };
     }
 }
