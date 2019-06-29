@@ -31,7 +31,8 @@ namespace
 
     // NOTE - not constant as the test shuffles the list before use to get five
     // random uuids.
-    std::vector<std::string> blacklisted_uuids {
+    std::vector<std::string> blacklisted_uuids
+    {
             "9dc2f619-2e77-49f7-9b20-5b55fd87ea44",
             "51bfd541-ab3e-4f02-93c7-8c3328daccfa",
             "f06ab617-7ccc-45fe-aee2-d4f5d175891b",
@@ -138,7 +139,8 @@ namespace
 
     const std::string password {"6Y4qTvHbQcyNccKW"};
 
-    const std::string private_pem {
+    const std::string private_pem
+    {
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "Proc-Type: 4,ENCRYPTED\n"
             "DEK-Info: AES-256-CBC,4C0EA37BB36FBF5E9799A14A3EC78A70\n"
@@ -195,7 +197,8 @@ namespace
             "-----END RSA PRIVATE KEY-----\n"
     };
 
-    const std::string public_pem {
+    const std::string public_pem
+    {
             "-----BEGIN PUBLIC KEY-----\n"
             "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA3Delbh36s+NJCCOYi1ql\n"
             "NGp+R5EoKWtcazi+Kh/t2V4kN4QCEQdxi3nlhbHdiWWNi8puwwJYFDRdjZvEO+2H\n"
@@ -407,43 +410,47 @@ TEST(util_test, test_that_esr_returns_peers_list)
 }
 
 
-TEST(util_test, DISABLED_test_that_esr_returns_peer_info)
+TEST(util_test, test_that_esr_fails_nicely)
 {
-    // TODO: Rich to work with Matthew to put the test data into the new solidty contract to make these
-    // tests valid again.
-//    {
-//        const auto peer_info{bzn::utils::esr::get_peer_info("BluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-//        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
-//    }
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
 
-//    {
-//        const auto peer_info{bzn::utils::esr::get_peer_info("NotABluzelleSwarm", "NotAGoodID", bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-//        EXPECT_EQ(bzn::peer_address_t("", 0, "", "NotAGoodID"), peer_info);
-//    }
+    // testing non existant node
+    const std::string SWARM_ID{"testswarm-333333333333333333333333"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "NOPE", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "NOPE");
+    EXPECT_TRUE(peer_info.host.empty());
+    EXPECT_EQ(peer_info.port, 0);
+    EXPECT_TRUE(peer_info.name.empty());
+}
 
-//    // exhaustive testing must occur in integration testing, since this functionality takes a long time we will
-//    // select a single swarm and a single node to test against.
-//    {
-//        const auto SWARM_ID{"BluzelleSwarm"};
-//        auto swarm_info{SWARMS.at(SWARM_ID)};
-//        auto accepted_peer_info{swarm_info.front()}; // Grab the info for the first peer in BluzelleSwarm
-//
-//        const auto peer_info{bzn::utils::esr::get_peer_info(SWARM_ID, accepted_peer_info.uuid, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, bzn::utils::ROPSTEN_URL)};
-//        EXPECT_EQ(peer_info, accepted_peer_info);
-//    }
 
-    {
-        const std::string swarm_id{"testnet-2"};
-        const std::string peer_id{"MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEt9cCXQcYyY3deRevkG0C1jhMYrqH2kWTCONUM30gdktj0he8AQucXytSJHBI/erOoJr0ejF3zu/lKllEsqTfXQ=="};
-        const std::string esr_address{"f039E760a4E97b1E50689ea6572DD74a46359aD9"};
-        const std::string ropsten_url{"https://ropsten.infura.io/uvek7IebbbHoP8Bb9NkV"};
-        const auto peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address, ropsten_url)};
+TEST(util_test, test_that_esr_works_with_large_swarm_id)
+{
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
 
-        EXPECT_EQ(peer_id, peer_info.uuid);
-        EXPECT_EQ("node_0_testnet-2", peer_info.name);
-        EXPECT_EQ(51010, peer_info.port);
-        EXPECT_EQ("54.183.253.191", peer_info.host);
-    }
+    const std::string SWARM_ID{"testswarm-444444444444444444444444444444444444444444444444444444444444"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID1", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "TestUUID1");
+    EXPECT_EQ(peer_info.host, "127.0.0.1");
+    EXPECT_EQ(peer_info.port, 51010);
+    EXPECT_EQ(peer_info.name, "node_1");
+}
+
+
+TEST(util_test, test_that_esr_returns_peer_info_with_large_node_name)
+{
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
+    const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
+
+    // testing esr get peer info parser with a node name larger than 32 characters
+    const std::string SWARM_ID{"testswarm-333333333333333333333333"};
+    const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, "TestUUID2", ESR_CONTRACT, ESR_URL);
+    EXPECT_EQ(peer_info.uuid, "TestUUID2");
+    EXPECT_EQ(peer_info.host, "127.0.0.1");
+    EXPECT_EQ(peer_info.port, 51010);
+    EXPECT_EQ(peer_info.name, "node_name111111111111111111111111111111111111111111111111111");
 }
 
 
