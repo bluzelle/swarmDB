@@ -410,13 +410,13 @@ namespace
         static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
         static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asCString() + 2};
 
-        static const std::string PARAMS
-                {
-                    size_type_to_hex(swarm_id.size(), 64)             // size of swarm id string (pre hexification)
-                    + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
-                    + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
-                    + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
-                };
+        const std::string PARAMS
+            {
+                size_type_to_hex(swarm_id.size(), 64)           // size of swarm id string (pre hexification)
+                + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
+                + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
+                + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
+            };
 
         return std::string{"0x"
             + pad_str_to_mod_64(GET_PEER_INFO_SIGNATURE)
