@@ -35,7 +35,6 @@
 #include <iostream>
 #include <memory>
 #include <cstdio>
-#include <curl/curl.h>
 #include <boost/format.hpp>
 #include <iomanip>
 
