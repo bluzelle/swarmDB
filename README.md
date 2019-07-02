@@ -28,7 +28,7 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 **Dependencies \(Protobuf, CMake\)**
 
 ```text
-$ brew update && brew install protobuf && brew install snappy && brew install lz4 git-lfs && brew upgrade cmake
+$ brew install protobuf openssl snappy lz4 git-lfs
 ```
 
 **ccache \(Optional\)**
@@ -46,8 +46,7 @@ $ brew install ccache
 On Ubuntu 18.04 and newer, you can simply install via `apt`.
 
 ```text
-$ sudo apt-get install curl libcurl4-openssl-dev
-$ sudo apt-get install cmake
+$ sudo apt-get install cmake 
 ```
 If your system packages don't have a new enough version, you can install a
 different CMake into `~/mycmake/` to avoid overwriting your system's `cmake`.
