@@ -24,74 +24,11 @@
 namespace
 {
     const std::string ERR_UNABLE_TO_PARSE_JSON_RESPONSE{"Unable to parse JSON response: "};
-    const std::string GET_NODE_LIST_ABI{R"(
-        {
-           "constant":true,
-           "inputs":[
-              {
-                 "name":"swarmID",
-                 "type":"string"
-              }
-           ],
-           "name":"getNodeList",
-           "outputs":[
-              {
-                 "name":"",
-                 "type":"string[]"
-              }
-           ],
-           "payable":false,
-           "stateMutability":"view",
-           "type":"function",
-           "signature":"0x46e76d8b"
-        }
-    )"};
-
-    const std::string GET_PEER_INFO_ABI{R"(
-        {
-           "constant":true,
-           "inputs":[
-              {
-                 "name":"swarmID",
-                 "type":"string"
-              },
-              {
-                 "name":"nodeUUID",
-                 "type":"string"
-              }
-           ],
-           "name":"getNodeInfo",
-           "outputs":[
-              {
-                 "name":"nodeCount",
-                 "type":"uint256"
-              },
-              {
-                 "name":"nodeHost",
-                 "type":"string"
-              },
-              {
-                 "name":"nodeHttpPort",
-                 "type":"uint256"
-              },
-              {
-                 "name":"nodeName",
-                 "type":"string"
-              },
-              {
-                 "name":"nodePort",
-                 "type":"uint256"
-              }
-           ],
-           "payable":false,
-           "stateMutability":"view",
-           "type":"function",
-           "signature":"0xcc8575cb"
-        }
-    )"};
-
     const size_t ESR_RESPONSE_LINE_LENGTH{64};
-
+    const size_t REQUIRED_SIZE_MULTIPLE{64};
+    const off_t PARAMETER_OFFSET{64};
+    const std::string GET_PEERS_ADDRESS{"46e76d8b"}; // TODO: refactor to put the 0x back
+    const std::string GET_PEER_INFO_SIGNATURE{"0xcc8575cb"};
 
     void
     trim_right_nulls(std::string& s)
@@ -358,13 +295,15 @@ namespace
 
 
     std::string
-    pad_str_to_mod_64(const std::string &parameter)
+    pad_str_to_mod_64(std::string parameter)
     {
-        const size_t REQUIRED_MOD{64};
-        const size_t PADDING_REQUIRED = (REQUIRED_MOD - parameter.size() % REQUIRED_MOD);
-        std::string result{parameter};
-        result.insert(result.size(), PADDING_REQUIRED, '0');
-        return result;
+        const size_t REMAINDER{parameter.size() % REQUIRED_SIZE_MULTIPLE};
+        if (REMAINDER)
+        {
+            const size_t padding_required = REQUIRED_SIZE_MULTIPLE - REMAINDER;
+            parameter.insert(parameter.size(), padding_required, '0');
+        }
+        return parameter;
     }
 
 
@@ -391,9 +330,6 @@ namespace
     const std::string
     data_string_for_get_peers(const std::string &swarm_id)
     {
-        static const auto NODE_LIST_ABI = str_to_json(GET_NODE_LIST_ABI);
-        static const auto GET_PEERS_ADDRESS{NODE_LIST_ABI["signature"].asCString() + 2}; // 0x46e76d8b -> 46e76d8b
-
         return std::string{"0x"
                 + pad_str_to_mod_64(GET_PEERS_ADDRESS)
                 + pad_str_to_mod_64("00000020")             // input parameter type? (no)
@@ -401,35 +337,42 @@ namespace
                 + pad_str_to_mod_64(string_to_hex(swarm_id))// hexified swarm id
         };
     }
-
-
-    // TODO: replace this with a function that uses the ABI to create the request data
-    const std::string
-    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
-    {
-        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
-        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asCString() + 2};
-
-        const std::string PARAMS
-            {
-                size_type_to_hex(swarm_id.size(), 64)           // size of swarm id string (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
-                + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
-            };
-
-        return std::string{"0x"
-            + pad_str_to_mod_64(GET_PEER_INFO_SIGNATURE)
-            + pad_str_to_mod_64("00000040")                 // first param type?
-            + size_type_to_hex(PARAMS.size() / 2)           // size of params blob in bytes, padded to 8 chars
-            + PARAMS
-        };
-    }
 }
 
 
 namespace bzn::utils::esr
 {
+    // TODO: replace this with a function that uses the ABI to create the request data
+    // data_string_for_get_peer_info has been moved out of the anonymous namespace to make it possible to
+    // unit test directly.
+    const std::string
+    data_string_for_get_peer_info(const std::string& swarm_id, const std::string& peer_id)
+    {
+
+        const std::string SWARM_ID_PARAMETER {
+            size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
+            + pad_str_to_mod_64(string_to_hex(swarm_id))    // swarm id parameter
+        };
+
+        const std::string PEER_ID_PARAMETER {
+            size_type_to_hex(peer_id.size(), 64)
+            + pad_str_to_mod_64(string_to_hex(peer_id))
+        };
+
+        const std::string PREAMBLE {
+            GET_PEER_INFO_SIGNATURE
+            + size_type_to_hex( PARAMETER_OFFSET, 64)
+            + size_type_to_hex( PARAMETER_OFFSET + SWARM_ID_PARAMETER.size() / 2, 64)
+        };
+
+        return std::string{
+                PREAMBLE
+                + SWARM_ID_PARAMETER
+                + PEER_ID_PARAMETER
+        };
+    }
+
+
     std::vector<std::string>
     get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url)
     {
