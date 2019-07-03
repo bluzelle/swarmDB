@@ -358,13 +358,16 @@ namespace
 
 
     std::string
-    pad_str_to_mod_64(const std::string &parameter)
+    pad_str_to_mod_64(std::string parameter)
     {
-        const size_t REQUIRED_MOD{64};
-        const size_t PADDING_REQUIRED = (REQUIRED_MOD - parameter.size() % REQUIRED_MOD);
-        std::string result{parameter};
-        result.insert(result.size(), PADDING_REQUIRED, '0');
-        return result;
+        static const size_t REQUIRED_SIZE_MULTIPLE{64};
+        const size_t REMAINDER{parameter.size() % REQUIRED_SIZE_MULTIPLE};
+        if (REMAINDER)
+        {
+            const size_t padding_required = REQUIRED_SIZE_MULTIPLE - REMAINDER;
+            parameter.insert(parameter.size(), padding_required, '0');
+        }
+        return parameter;
     }
 
 
@@ -401,35 +404,45 @@ namespace
                 + pad_str_to_mod_64(string_to_hex(swarm_id))// hexified swarm id
         };
     }
-
-
-    // TODO: replace this with a function that uses the ABI to create the request data
-    const std::string
-    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
-    {
-        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
-        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asCString() + 2};
-
-        const std::string PARAMS
-            {
-                size_type_to_hex(swarm_id.size(), 64)           // size of swarm id string (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
-                + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
-            };
-
-        return std::string{"0x"
-            + pad_str_to_mod_64(GET_PEER_INFO_SIGNATURE)
-            + pad_str_to_mod_64("00000040")                 // first param type?
-            + size_type_to_hex(PARAMS.size() / 2)           // size of params blob in bytes, padded to 8 chars
-            + PARAMS
-        };
-    }
 }
 
 
 namespace bzn::utils::esr
 {
+    // TODO: replace this with a function that uses the ABI to create the request data
+    // data_string_for_get_peer_info has been moved out of the anonymous namespace to make it possible to
+    // unit test directly.
+    const std::string
+    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
+    {
+        static const off_t PARAMETER_OFFSET{64};
+        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
+        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asString()};
+
+        const std::string SWARM_ID_PARAMETER {
+            size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
+            + pad_str_to_mod_64(string_to_hex(swarm_id))    // swarm id parameter
+        };
+
+        const std::string PEER_ID_PARAMETER {
+            size_type_to_hex(peer_id.size(), 64)
+            + pad_str_to_mod_64(string_to_hex(peer_id))
+        };
+
+        const std::string PREAMBLE {
+            GET_PEER_INFO_SIGNATURE
+            + size_type_to_hex( PARAMETER_OFFSET, 64)
+            + size_type_to_hex( PARAMETER_OFFSET + SWARM_ID_PARAMETER.size() / 2, 64)
+        };
+
+        return std::string{
+                PREAMBLE
+                + SWARM_ID_PARAMETER
+                + PEER_ID_PARAMETER
+        };
+    }
+
+
     std::vector<std::string>
     get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url)
     {
