@@ -367,23 +367,20 @@ namespace
         return result;
     }
 
-
     std::string
     size_type_to_hex(size_t i, size_t width = 8)
     {
         std::stringbuf buf;
         std::ostream os(&buf);
         os << std::setfill('0') << std::setw(width) << std::hex << (int)i;
-        return buf.str().c_str();
+        return buf.str();
     }
 
 
     std::string
     string_to_hex(const std::string& value)
     {
-        std::stringstream hexstream;
-        boost::algorithm::hex(value, std::ostream_iterator<char>{hexstream, ""});
-        return hexstream.str();
+        return boost::algorithm::hex_lower(value);
     }
 
 
@@ -401,35 +398,43 @@ namespace
                 + pad_str_to_mod_64(string_to_hex(swarm_id))// hexified swarm id
         };
     }
-
-
-    // TODO: replace this with a function that uses the ABI to create the request data
-    const std::string
-    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
-    {
-        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
-        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asCString() + 2};
-
-        const std::string PARAMS
-            {
-                size_type_to_hex(swarm_id.size(), 64)           // size of swarm id string (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
-                + size_type_to_hex(peer_id.size(), 64)          // size of peer id (pre hexification)
-                + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
-            };
-
-        return std::string{"0x"
-            + pad_str_to_mod_64(GET_PEER_INFO_SIGNATURE)
-            + pad_str_to_mod_64("00000040")                 // first param type?
-            + size_type_to_hex(PARAMS.size() / 2)           // size of params blob in bytes, padded to 8 chars
-            + PARAMS
-        };
-    }
 }
 
 
 namespace bzn::utils::esr
 {
+    // TODO: replace this with a function that uses the ABI to create the request data
+    const std::string
+    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
+    {
+        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
+        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asString()};
+        static const auto PEER_INFO_NUM_PARAMS{PEER_INFO_ABI["inputs"].size()};
+        static const auto DATA_OFFSET_BYTES{PEER_INFO_NUM_PARAMS * 32};
+
+        std::string param_1_encoded
+                {
+                    size_type_to_hex(swarm_id.size(), 64)           // size of swarm id string (pre hexification)
+                    + pad_str_to_mod_64(string_to_hex(swarm_id))    // parameter 1 - swarm id
+                };
+        auto param_1_encoded_bytes = param_1_encoded.size() / 2;
+
+        std::string param_2_encoded
+                {
+                    size_type_to_hex(peer_id.size(), 64)            // size of peer id (pre hexification)
+                    + pad_str_to_mod_64(string_to_hex(peer_id))     // parameter 2 - peer id
+                };
+
+        return std::string{
+            GET_PEER_INFO_SIGNATURE
+            + size_type_to_hex(DATA_OFFSET_BYTES, 64)                            // Param 1 encoding found at start of data section
+            + size_type_to_hex(DATA_OFFSET_BYTES + param_1_encoded_bytes, 64)    // Param 2 encoding is just after Param 1's encoding
+            + param_1_encoded                                                    // Param 1 encoded data
+            + param_2_encoded                                                    // Param 2 encoded data
+        };
+    }
+
+
     std::vector<std::string>
     get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url)
     {
