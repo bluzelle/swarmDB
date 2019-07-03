@@ -24,75 +24,11 @@
 namespace
 {
     const std::string ERR_UNABLE_TO_PARSE_JSON_RESPONSE{"Unable to parse JSON response: "};
-    const std::string GET_NODE_LIST_ABI{R"(
-        {
-           "constant":true,
-           "inputs":[
-              {
-                 "name":"swarmID",
-                 "type":"string"
-              }
-           ],
-           "name":"getNodeList",
-           "outputs":[
-              {
-                 "name":"",
-                 "type":"string[]"
-              }
-           ],
-           "payable":false,
-           "stateMutability":"view",
-           "type":"function",
-           "signature":"0x46e76d8b"
-        }
-    )"};
-
-    const std::string GET_PEER_INFO_ABI{R"(
-        {
-           "constant":true,
-           "inputs":[
-              {
-                 "name":"swarmID",
-                 "type":"string"
-              },
-              {
-                 "name":"nodeUUID",
-                 "type":"string"
-              }
-           ],
-           "name":"getNodeInfo",
-           "outputs":[
-              {
-                 "name":"nodeCount",
-                 "type":"uint256"
-              },
-              {
-                 "name":"nodeHost",
-                 "type":"string"
-              },
-              {
-                 "name":"nodeHttpPort",
-                 "type":"uint256"
-              },
-              {
-                 "name":"nodeName",
-                 "type":"string"
-              },
-              {
-                 "name":"nodePort",
-                 "type":"uint256"
-              }
-           ],
-           "payable":false,
-           "stateMutability":"view",
-           "type":"function",
-           "signature":"0xcc8575cb"
-        }
-    )"};
-
     const size_t ESR_RESPONSE_LINE_LENGTH{64};
     const size_t REQUIRED_SIZE_MULTIPLE{64};
     const off_t PARAMETER_OFFSET{64};
+    const std::string GET_PEERS_ADDRESS{"46e76d8b"}; // TODO: refactor to put the 0x back
+    const std::string GET_PEER_INFO_SIGNATURE{"0xcc8575cb"};
 
     void
     trim_right_nulls(std::string& s)
@@ -394,9 +330,6 @@ namespace
     const std::string
     data_string_for_get_peers(const std::string &swarm_id)
     {
-        const auto NODE_LIST_ABI = str_to_json(GET_NODE_LIST_ABI);
-        const auto GET_PEERS_ADDRESS{NODE_LIST_ABI["signature"].asCString() + 2}; // 0x46e76d8b -> 46e76d8b
-
         return std::string{"0x"
                 + pad_str_to_mod_64(GET_PEERS_ADDRESS)
                 + pad_str_to_mod_64("00000020")             // input parameter type? (no)
@@ -415,8 +348,6 @@ namespace bzn::utils::esr
     const std::string
     data_string_for_get_peer_info(const std::string& swarm_id, const std::string& peer_id)
     {
-        const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
-        const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asString()};
 
         const std::string SWARM_ID_PARAMETER {
             size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
