@@ -91,7 +91,8 @@ namespace
     )"};
 
     const size_t ESR_RESPONSE_LINE_LENGTH{64};
-
+    const size_t REQUIRED_SIZE_MULTIPLE{64};
+    const off_t PARAMETER_OFFSET{64};
 
     void
     trim_right_nulls(std::string& s)
@@ -360,7 +361,6 @@ namespace
     std::string
     pad_str_to_mod_64(std::string parameter)
     {
-        static const size_t REQUIRED_SIZE_MULTIPLE{64};
         const size_t REMAINDER{parameter.size() % REQUIRED_SIZE_MULTIPLE};
         if (REMAINDER)
         {
@@ -394,8 +394,8 @@ namespace
     const std::string
     data_string_for_get_peers(const std::string &swarm_id)
     {
-        static const auto NODE_LIST_ABI = str_to_json(GET_NODE_LIST_ABI);
-        static const auto GET_PEERS_ADDRESS{NODE_LIST_ABI["signature"].asCString() + 2}; // 0x46e76d8b -> 46e76d8b
+        const auto NODE_LIST_ABI = str_to_json(GET_NODE_LIST_ABI);
+        const auto GET_PEERS_ADDRESS{NODE_LIST_ABI["signature"].asCString() + 2}; // 0x46e76d8b -> 46e76d8b
 
         return std::string{"0x"
                 + pad_str_to_mod_64(GET_PEERS_ADDRESS)
@@ -413,11 +413,10 @@ namespace bzn::utils::esr
     // data_string_for_get_peer_info has been moved out of the anonymous namespace to make it possible to
     // unit test directly.
     const std::string
-    data_string_for_get_peer_info(const std::string &swarm_id, const std::string &peer_id)
+    data_string_for_get_peer_info(const std::string& swarm_id, const std::string& peer_id)
     {
-        static const off_t PARAMETER_OFFSET{64};
-        static const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
-        static const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asString()};
+        const auto PEER_INFO_ABI{str_to_json(GET_PEER_INFO_ABI)};
+        const auto GET_PEER_INFO_SIGNATURE{PEER_INFO_ABI["signature"].asString()};
 
         const std::string SWARM_ID_PARAMETER {
             size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
