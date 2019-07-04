@@ -43,7 +43,7 @@ if (APPLE)
     set(OPENSSL_BUILD_PLATFORM darwin64-x86_64-cc)
     set(OPENSSLDIR /usr/local/etc/openssl)
 else()
-    set(OPENSSL_BUILD_PLATFORM linux-generic64)
+    set(OPENSSL_BUILD_PLATFORM linux-x86_64)
     set(OPENSSLDIR /etc/ssl)
 endif()
 
