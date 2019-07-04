@@ -29,7 +29,7 @@ endif()
 if (APPLE)
     set(OPENSSL_BUILD_PLATFORM darwin64-x86_64-cc)
 else()
-    set(OPENSSL_BUILD_PLATFORM linux-generic64)
+    set(OPENSSL_BUILD_PLATFORM linux-x86_64)
 endif()
 
 ExternalProject_Add(openssl
