@@ -303,6 +303,17 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    // Allowing the maximum size to simply be bzn::MAX_VALUE_SIZE does not take into account the overhead that the
+    // primary peer will add to the message when it re-broadcasts the request to the other peers in the swarm. This
+    // additional overhead has been experimentally determined, on MacOS, to be 245 bytes. For now we shall use the magic
+    // number overhead size of 512 when we limit
+    const size_t OVERHEAD_SIZE{512};
+    if (!request_env.database_msg().empty() && request_env.database_msg().size() >= (bzn::MAX_VALUE_SIZE - OVERHEAD_SIZE))
+    {
+        LOG(warning) << "Rejecting request because it is too large [" << request_env.database_msg().size() << " bytes]";
+        return;
+    }
+
     const auto hash = this->crypto->hash(request_env);
 
     if (session)
@@ -320,6 +331,13 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         this->forward_request_to_primary(request_env);
         return;
     }
+
+
+
+
+
+
+
 
     if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
@@ -1445,7 +1463,6 @@ pbft::map_request_to_hash(const bzn_envelope& env)
 }
 
 
-// KEP-823
 void
 pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
@@ -1454,7 +1471,7 @@ pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
     // go through the prepared proofs
     for (int i{0}; i < msg.prepared_proofs_size(); ++i)
     {
-        const prepared_proof &prepared_proof = msg.prepared_proofs(i); // todo change to auto
+        const auto &prepared_proof = msg.prepared_proofs(i);
 
         // look at the pre-prepare for each proof
         if (prepared_proof.has_pre_prepare())
