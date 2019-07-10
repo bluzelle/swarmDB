@@ -61,7 +61,7 @@ namespace
     {
         bzn::json_message params;
         bzn::json_message param;
-        param["to"] = "0x" + to_hex;
+        param["to"] = (to_hex.substr(0,2) == "0x" ? "" : "0x") + to_hex;
         param["data"] = data_hex;
         params.append(param);
         params.append("latest");
