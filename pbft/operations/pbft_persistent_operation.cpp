@@ -84,10 +84,10 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
     switch (response)
     {
         case storage_result::ok:
-            LOG(info) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; this is our first record of it";
+            LOG(trace) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; this is our first record of it";
             break;
         case storage_result::exists:
-            LOG(info) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; using existing records";
+            LOG(trace) << "created persistent operation with prefix " << bzn::bytes_to_debug_string(this->prefix) << "; using existing records";
             break;
         default:
             throw std::runtime_error("failed to write stage of new persistent operation " + storage_result_msg.at(response));
@@ -102,7 +102,7 @@ pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storag
     , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
     assert(this->storage->read(get_uuid(), generate_key(this->prefix, STAGE_KEY)));
-    LOG(info) << "re-hydrated operation with prefix " << bzn::bytes_to_debug_string(this->prefix);
+    LOG(trace) << "re-hydrated operation with prefix " << bzn::bytes_to_debug_string(this->prefix);
 }
 
 void
@@ -202,7 +202,7 @@ pbft_persistent_operation::record_request(const bzn_envelope& encoded_request)
 {
     if (this->transient_request_available)
     {
-        LOG(debug) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
+        LOG(trace) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
         return;
     }
 
@@ -211,10 +211,10 @@ pbft_persistent_operation::record_request(const bzn_envelope& encoded_request)
     switch (response)
     {
         case storage_result::ok:
-            LOG(debug) << "recorded request for operation " << bzn::bytes_to_debug_string(this->prefix);
+            LOG(trace) << "recorded request for operation " << bzn::bytes_to_debug_string(this->prefix);
             break;
         case storage_result::exists:
-            LOG(debug) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
+            LOG(trace) << "ignoring record of request for operation " << bzn::bytes_to_debug_string(this->prefix) << " because we already have one";
             break;
         case storage_result::value_too_large:
             LOG(debug) << "request too large to store: " << encoded_request.SerializeAsString().size() << " bytes, " << bzn::bytes_to_debug_string(this->prefix);
