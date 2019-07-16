@@ -301,8 +301,32 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 }
 
 void
+pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
+    , const std::string& msg) const
+{
+    database_msg req;
+    if (session && req.ParseFromString(request_env.database_msg()))
+    {
+        database_response resp;
+        *resp.mutable_header() = req.header();
+        resp.mutable_error()->set_message(msg);
+
+        session->send_message(std::make_shared<std::string>(this->wrap_message(resp).SerializeAsString()));
+    }
+}
+
+void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
+    {
+        this->send_error_response(request_env, session, TIMESTAMP_ERROR_MSG);
+
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
+                << request_env.ShortDebugString();
+        return;
+    }
+
     // Allowing the maximum size to simply be bzn::MAX_VALUE_SIZE does not take into account the overhead that the
     // primary peer will add to the message when it re-broadcasts the request to the other peers in the swarm. This
     // additional overhead has been experimentally determined, on MacOS, to be 245 bytes. For now we shall use the magic
@@ -310,6 +334,8 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     const size_t OVERHEAD_SIZE{512};
     if (!request_env.database_msg().empty() && request_env.database_msg().size() >= (bzn::MAX_VALUE_SIZE - OVERHEAD_SIZE))
     {
+        this->send_error_response(request_env, session, TOO_LARGE_ERROR_MSG);
+
         LOG(warning) << "Rejecting request because it is too large [" << request_env.database_msg().size() << " bytes]";
         return;
     }
@@ -329,20 +355,6 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (!this->is_primary())
     {
         this->forward_request_to_primary(request_env);
-        return;
-    }
-
-
-
-
-
-
-
-
-    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
-    {
-        // TODO: send error message to client
-        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
         return;
     }
 
@@ -891,16 +903,22 @@ pbft::get_primary(std::optional<uint64_t> view) const
 }
 
 bzn_envelope
+pbft::wrap_message(bzn_envelope& env) const
+{
+    env.set_sender(this->uuid);
+    env.set_timestamp(this->now());
+    env.set_swarm_id(this->options->get_swarm_id());
+    this->crypto->sign(env);
+
+    return env;
+}
+
+bzn_envelope
 pbft::wrap_message(const pbft_msg& msg) const
 {
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
-    result.set_sender(this->uuid);
-    result.set_timestamp(this->now());
-    result.set_swarm_id(this->options->get_swarm_id());
-    this->crypto->sign(result);
-
-    return result;
+    return this->wrap_message(result);
 }
 
 bzn_envelope
@@ -908,12 +926,15 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
 {
     bzn_envelope result;
     result.set_pbft_membership(msg.SerializeAsString());
-    result.set_sender(this->uuid);
-    result.set_timestamp(this->now());
-    result.set_swarm_id(this->options->get_swarm_id());
-    this->crypto->sign(result);
-    
-    return result;
+    return this->wrap_message(result);
+}
+
+bzn_envelope
+pbft::wrap_message(const database_response& msg) const
+{
+    bzn_envelope result;
+    result.set_database_response(msg.SerializeAsString());
+    return this->wrap_message(result);
 }
 
 const bzn::uuid_t&
