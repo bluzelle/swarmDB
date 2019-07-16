@@ -52,6 +52,8 @@ namespace
     const std::string LAST_VIEW_SENT_KEY{"last_view_sent"};
     const std::string VALID_VIEWCHANGE_MESSAGES_FOR_VIEW_KEY{"valid_viewchange_messages_for_view"};
     const std::string SAVED_NEWVIEW_KEY{"saved_newview"};
+    const std::string TIMESTAMP_ERROR_MSG{"INVALID TIMESTAMP"};
+    const std::string TOO_LARGE_ERROR_MSG{"REQUEST TOO LARGE"};
 }
 
 
@@ -173,8 +175,10 @@ namespace bzn
         void handle_bzn_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session = nullptr);
 
+        bzn_envelope wrap_message(bzn_envelope& env) const;
         bzn_envelope wrap_message(const pbft_msg& message) const;
         bzn_envelope wrap_message(const pbft_membership_msg&) const;
+        bzn_envelope wrap_message(const database_response&) const;
 
         void async_signed_broadcast(const pbft_msg& msg);
         void async_signed_broadcast(const pbft_membership_msg& message);
@@ -187,6 +191,10 @@ namespace bzn
         void forward_request_to_primary(const bzn_envelope& request_env);
 
         void broadcast(const bzn_envelope& message);
+
+        void send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
+            , const std::string& msg) const;
+
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
         void handle_new_config_timeout(const boost::system::error_code& ec);
