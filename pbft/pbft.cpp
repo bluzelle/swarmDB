@@ -222,7 +222,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 void
 pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+    LOG(trace) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
@@ -362,7 +362,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        LOG(trace) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
     this->saw_request(request_env, hash);
@@ -388,7 +388,7 @@ pbft::maybe_record_request(const bzn_envelope &request_env, const std::shared_pt
 {
     if (request_env.payload_case() == bzn_envelope::PayloadCase::PAYLOAD_NOT_SET || this->crypto->hash(request_env) != op->get_request_hash())
     {
-        LOG(info) << "Not recording request because hashes do not match";
+        LOG(trace) << "Not recording request because hashes do not match";
         return;
     }
     op->record_request(request_env);
