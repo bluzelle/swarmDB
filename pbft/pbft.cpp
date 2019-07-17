@@ -222,7 +222,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 void
 pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+    LOG(trace) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
@@ -301,8 +301,45 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 }
 
 void
+pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
+    , const std::string& msg) const
+{
+    database_msg req;
+    if (session && req.ParseFromString(request_env.database_msg()))
+    {
+        database_response resp;
+        *resp.mutable_header() = req.header();
+        resp.mutable_error()->set_message(msg);
+
+        session->send_message(std::make_shared<std::string>(this->wrap_message(resp).SerializeAsString()));
+    }
+}
+
+void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
+    {
+        this->send_error_response(request_env, session, TIMESTAMP_ERROR_MSG);
+
+        LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
+                << request_env.ShortDebugString();
+        return;
+    }
+
+    // Allowing the maximum size to simply be bzn::MAX_VALUE_SIZE does not take into account the overhead that the
+    // primary peer will add to the message when it re-broadcasts the request to the other peers in the swarm. This
+    // additional overhead has been experimentally determined, on MacOS, to be 245 bytes. For now we shall use the magic
+    // number overhead size of 512 when we limit
+    const size_t OVERHEAD_SIZE{512};
+    if (!request_env.database_msg().empty() && request_env.database_msg().size() >= (bzn::MAX_VALUE_SIZE - OVERHEAD_SIZE))
+    {
+        this->send_error_response(request_env, session, TOO_LARGE_ERROR_MSG);
+
+        LOG(warning) << "Rejecting request because it is too large [" << request_env.database_msg().size() << " bytes]";
+        return;
+    }
+
     const auto hash = this->crypto->hash(request_env);
 
     if (session)
@@ -321,18 +358,11 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
-    if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
-    {
-        // TODO: send error message to client
-        LOG(info) << "Rejecting request because it is outside allowable timestamp range: " << request_env.ShortDebugString();
-        return;
-    }
-
     // keep track of what requests we've seen based on timestamp and only send preprepares once
     if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(info) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        LOG(trace) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
     this->saw_request(request_env, hash);
@@ -358,7 +388,7 @@ pbft::maybe_record_request(const bzn_envelope &request_env, const std::shared_pt
 {
     if (request_env.payload_case() == bzn_envelope::PayloadCase::PAYLOAD_NOT_SET || this->crypto->hash(request_env) != op->get_request_hash())
     {
-        LOG(info) << "Not recording request because hashes do not match";
+        LOG(trace) << "Not recording request because hashes do not match";
         return;
     }
     op->record_request(request_env);
@@ -873,16 +903,22 @@ pbft::get_primary(std::optional<uint64_t> view) const
 }
 
 bzn_envelope
+pbft::wrap_message(bzn_envelope& env) const
+{
+    env.set_sender(this->uuid);
+    env.set_timestamp(this->now());
+    env.set_swarm_id(this->options->get_swarm_id());
+    this->crypto->sign(env);
+
+    return env;
+}
+
+bzn_envelope
 pbft::wrap_message(const pbft_msg& msg) const
 {
     bzn_envelope result;
     result.set_pbft(msg.SerializeAsString());
-    result.set_sender(this->uuid);
-    result.set_timestamp(this->now());
-    result.set_swarm_id(this->options->get_swarm_id());
-    this->crypto->sign(result);
-
-    return result;
+    return this->wrap_message(result);
 }
 
 bzn_envelope
@@ -890,12 +926,15 @@ pbft::wrap_message(const pbft_membership_msg& msg) const
 {
     bzn_envelope result;
     result.set_pbft_membership(msg.SerializeAsString());
-    result.set_sender(this->uuid);
-    result.set_timestamp(this->now());
-    result.set_swarm_id(this->options->get_swarm_id());
-    this->crypto->sign(result);
-    
-    return result;
+    return this->wrap_message(result);
+}
+
+bzn_envelope
+pbft::wrap_message(const database_response& msg) const
+{
+    bzn_envelope result;
+    result.set_database_response(msg.SerializeAsString());
+    return this->wrap_message(result);
 }
 
 const bzn::uuid_t&
@@ -1445,7 +1484,6 @@ pbft::map_request_to_hash(const bzn_envelope& env)
 }
 
 
-// KEP-823
 void
 pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
@@ -1454,7 +1492,7 @@ pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
     // go through the prepared proofs
     for (int i{0}; i < msg.prepared_proofs_size(); ++i)
     {
-        const prepared_proof &prepared_proof = msg.prepared_proofs(i); // todo change to auto
+        const auto &prepared_proof = msg.prepared_proofs(i);
 
         // look at the pre-prepare for each proof
         if (prepared_proof.has_pre_prepare())

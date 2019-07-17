@@ -471,36 +471,28 @@ TEST(util_test, test_that_esr_returns_peer_info_with_large_node_name)
 
 TEST(util_test, test_that_live_esr_returns_peer_info)
 {
-    const std::string ESR_CONTRACT{"f039E760a4E97b1E50689ea6572DD74a46359aD9"};
+    const std::string ESR_CONTRACT{"3a38a7ed11431975fa4a5403a246850479e7b930"};
     const std::string ESR_URL{bzn::utils::ROPSTEN_URL+ "/uvek7IebbbHoP8Bb9NkV"};
 
     {
-        const std::string SWARM_ID{"testnet-1"};
-        const std::string NODE_ID{"MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEpVjlefytrB8r4bz8+CDf9z66biQBe5v/hJ2P5/+HdfM3zAee7aWkAzkHBVjNSEym8/7ifpmKLXmm9oB4w7ISpg=="};
+        const std::string SWARM_ID{"debug-swarm"};
+        const std::string NODE_ID{"nodeuuid111111111111111111111111"};
         const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, NODE_ID, ESR_CONTRACT, ESR_URL);
-
         EXPECT_EQ(peer_info.uuid, NODE_ID);
-        EXPECT_EQ(peer_info.host, "54.162.31.254");
+        EXPECT_EQ(peer_info.host, "127.0.0.1");
         EXPECT_EQ(peer_info.port, 51010);
-        EXPECT_EQ(peer_info.name, "node_0_testnet-1");
+        EXPECT_EQ(peer_info.name, "node_1");
     }
-}
 
-
-TEST(util_test, test_that_live_esr_returns_second_peer_info)
-{
-    const std::string ESR_CONTRACT{"f039E760a4E97b1E50689ea6572DD74a46359aD9"};
-    const std::string ESR_URL{bzn::utils::ROPSTEN_URL + "/uvek7IebbbHoP8Bb9NkV"};
     {
-        const std::string SWARM_ID{"testnet-1"};
-        const std::string NODE_ID{
-                "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE1/Hdxl9+ey34mbYfRtgY44o+Q2jtXU+6QLUDvDGLvYqBMkZu1oKYo91MePry4GRNrQ4BPJP2QLRzZ6dtBwn83w=="};
-        const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, NODE_ID, ESR_CONTRACT, ESR_URL);
-
+        // testing that the ESR_CONTRACT can be given with the 0x prepended.
+        const std::string SWARM_ID{"debug-swarm"};
+        const std::string NODE_ID{"nodeuuid111111111111111111111111"};
+        const auto peer_info = bzn::utils::esr::get_peer_info(SWARM_ID, NODE_ID, "0x" + ESR_CONTRACT, ESR_URL);
         EXPECT_EQ(peer_info.uuid, NODE_ID);
-        EXPECT_EQ(peer_info.host, "13.57.199.69");
+        EXPECT_EQ(peer_info.host, "127.0.0.1");
         EXPECT_EQ(peer_info.port, 51010);
-        EXPECT_EQ(peer_info.name, "node_0_testnet-1");
+        EXPECT_EQ(peer_info.name, "node_1");
     }
 }
 
