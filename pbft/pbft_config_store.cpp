@@ -97,6 +97,10 @@ pbft_config_store::set_current(const hash_t& hash, uint64_t view)
     std::lock_guard<std::mutex> lock(this->lock);
     if (this->view_configs.find(view) != this->view_configs.end())
     {
+        if (this->view_configs[view].value() == hash)
+        {
+            return true;
+        }
         LOG(error) << "Attempt to set configuration for a view that already has one: " << view;
         return false;
     }

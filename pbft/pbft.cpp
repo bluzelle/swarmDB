@@ -582,6 +582,7 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
     reply.set_sequence(req_cp.first);
     reply.set_state_hash(req_cp.second);
     reply.set_state_data(*state);
+    reply.set_current_configuration(this->configurations->current()->to_string());
 
     // TODO: the latest stable checkpoint may have advanced by the time we pull it here, which will cause the receiver
     // to reject this message. This is innocuous, but we could avoid the awkwardness by requesting a specific checkpoint
@@ -637,12 +638,17 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
     if (msg.has_newview_msg())
     {
         pbft_msg newview;
-        if (newview.ParseFromString(msg.newview_msg().pbft()) && this->is_valid_newview_message(newview, msg.newview_msg()))
+        if (newview.ParseFromString(msg.newview_msg().pbft()))
         {
             this->view = newview.view();
             LOG(info) << "setting view to " << this->view.value();
         }
     }
+
+    pbft_configuration current_configuration;
+    current_configuration.from_string(msg.current_configuration());
+    this->configurations->add(std::make_shared<pbft_configuration>(current_configuration));
+    this->configurations->set_current(current_configuration.get_hash(), this->view.value());
 }
 
 void
@@ -792,6 +798,10 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     {
         LOG(debug) << "Found pending session for this operation";
         op->set_session(session->second);
+    }
+    else
+    {
+        LOG(debug) << "No pending session for this operation";
     }
 
     // commit new configuration if applicable
@@ -1322,10 +1332,29 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         ours_pbft.ParseFromString(ours.pre_prepare_messages(i).pbft());
         theirs_pbft.ParseFromString(theirs.pre_prepare_messages(i).pbft());
 
-        if (ours_pbft.type() != theirs_pbft.type() || theirs_pbft.type() != PBFT_MSG_PREPREPARE || ours_pbft.view() != theirs_pbft.view()
-            || ours_pbft.sequence() != theirs_pbft.sequence() || ours_pbft.request_hash() != theirs_pbft.request_hash())
+        if (ours_pbft.type() != theirs_pbft.type())
         {
-            LOG(error) << "is_valid_newview_message - type, view, sequence or request hash mismatch between our view change and their viewchange";
+            LOG(error) << "Invalid new view message: (ours_pbft.type() != theirs_pbft.type()): ours:[" <<  ours_pbft.type() << "] theirs:[" << theirs_pbft.type() << "]";
+            return false;
+        }
+        else if (theirs_pbft.type() != PBFT_MSG_PREPREPARE)
+        {
+            LOG(error) << "Invalid new view message: (theirs_pbft.type() != PBFT_MSG_PREPREPARE): [" << theirs_pbft.type() << "]";
+            return false;
+        }
+        else if (ours_pbft.view() != theirs_pbft.view())
+        {
+            LOG(error) << "Invalid new view message: (ours_pbft.view() != theirs_pbft.view()):  ours:[" << ours_pbft.view() << "] theirs:["  << theirs_pbft.view() << "]";
+            return false;
+        }
+        else if (ours_pbft.sequence() != theirs_pbft.sequence())
+        {
+            LOG(error) << "Invalid new view message: ours_pbft.sequence() != theirs_pbft.sequence(): ours sequence:[" << ours_pbft.sequence() << "]  theirs:[" << theirs_pbft.sequence() << "]" ;
+            return false;
+        }
+        else if (ours_pbft.request_hash() != theirs_pbft.request_hash())
+        {
+            LOG(error) << "Invalid new view message: ours_pbft.request_hash() != theirs_pbft.request_hash(): ours: [" << ours_pbft.request_hash() << "] theirs:[" << theirs_pbft.request_hash() << "]";
             return false;
         }
     }
@@ -1797,11 +1826,6 @@ pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_oper
 bool
 pbft::move_to_new_configuration(const hash_t& config_hash, uint64_t view)
 {
-    if (this->configurations->current()->get_hash() == config_hash)
-    {
-        return true;
-    }
-
     // TODO: garbage collect old configurations (KEP-1006)
     return this->configurations->set_current(config_hash, view);
 }
