@@ -102,7 +102,7 @@ message pbft_membership_msg
     // for set_state
     bytes state_data = 5;
     bzn_envelope newview_msg = 6;
-    bytes current_configuration = 8; // pass the current_config as bytes in pbft handle gete
+    bytes current_configuration = 8;
 }
 
 enum pbft_membership_msg_type
