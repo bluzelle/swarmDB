@@ -266,6 +266,7 @@ main(int argc, const char* argv[])
         // startup...
         auto monitor = std::make_shared<bzn::monitor>(options, io_context, std::make_shared<bzn::system_clock>());
         auto crypto = std::make_shared<bzn::crypto>(options, monitor);
+        crypto->bench();
         auto chaos = std::make_shared<bzn::chaos>(io_context, options);
         auto websocket = std::make_shared<bzn::beast::websocket>();
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options, monitor);

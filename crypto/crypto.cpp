@@ -17,6 +17,8 @@
 #include <openssl/err.h>
 #include <openssl/crypto.h>
 #include <utils/bytes_to_debug_string.hpp>
+#include <chrono>
+#include <ctime>
 
 using namespace bzn;
 
@@ -304,4 +306,43 @@ crypto::log_openssl_errors()
         ERR_error_string(last_error, buffer);
         LOG(error) << buffer;
     }
+}
+
+void
+crypto::bench()
+{
+    unsigned int junk = 0;
+
+    LOG(info) << "building test messages";
+    std::vector<bzn_envelope> messages(10000);
+    for(int i=0; i<10000; i++)
+    {
+        std::string data;
+        while(data.length() < 1024)
+        {
+            data += std::to_string(junk++);
+        }
+
+        messages[i].set_pbft(data);
+    }
+
+    LOG(info) << "signing messages...";
+    auto start = std::chrono::system_clock::now();
+    for(auto& msg : messages)
+    {
+        this->sign(msg);
+    }
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> delta = end-start;
+    LOG(info) << "signed 10000 1kb(ish) messages in " << delta.count() << " seconds";
+
+    LOG(info) << "verifying messages...";
+    start = std::chrono::system_clock::now();
+    for(const auto& msg : messages)
+    {
+        this->verify(msg);
+    }
+    end = std::chrono::system_clock::now();
+    delta = end-start;
+    LOG(info) << "verified 10000 1kb(ish) messages in " << delta.count() << " seconds";
 }

@@ -48,6 +48,8 @@ namespace bzn
          */
         virtual std::string hash(const bzn_envelope& msg) = 0;
 
+        virtual void bench() = 0;
+
         virtual ~crypto_base() = default;
     };
 }
