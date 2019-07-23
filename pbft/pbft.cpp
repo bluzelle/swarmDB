@@ -1469,8 +1469,14 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
             auto env = this->wrap_message(pre_prepare);
             if (pre_prepare.request_type() == pbft_request_type::PBFT_REQUEST_PAYLOAD)
             {
+                auto config = this->configurations->get(old_view);
+                if (!config)
+                {
+                    LOG(error) << "config not found for view " << old_view;
+                    continue;
+                }
                 auto op = this->operation_manager->find_or_construct(old_view, pre_prepare.sequence()
-                    , pre_prepare.request_hash(), this->configurations->get(old_view)->get_peers());
+                    , pre_prepare.request_hash(), config->get_peers());
                 *(env.add_piggybacked_requests()) = op->get_request();
             }
             pre_prepares[pre_prepare.sequence()] = env;
@@ -1544,9 +1550,14 @@ pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
 
                 const uint64_t& pre_prep_view{pp_msg.view()};
 
+                auto config = this->configurations->get(pre_prep_view);
+                if (!config)
+                {
+                    LOG(error) << "config not found for view " << pre_prep_view;
+                    continue;
+                }
                 auto op = this->operation_manager->find_or_construct(
-                        pre_prep_view, pp_msg.sequence(), pp_msg.request_hash(),
-                        this->configurations->get(pre_prep_view)->get_peers());
+                        pre_prep_view, pp_msg.sequence(), pp_msg.request_hash(), config->get_peers());
 
                 op->record_request(request_env);
             }
