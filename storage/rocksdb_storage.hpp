@@ -82,6 +82,8 @@ namespace bzn
         void do_if(const bzn::uuid_t& uuid, const bzn::key_t& first, const bzn::key_t& last,
             std::optional<std::function<bool(const bzn::key_t&, const bzn::value_t&)>> predicate,
             std::function<void(const bzn::key_t&, const bzn::value_t&)> action);
+
+        void db_flush() const;
     };
 
 } // bzn
