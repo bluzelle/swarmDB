@@ -102,10 +102,23 @@ rocksdb_storage::create(const bzn::uuid_t& uuid, const bzn::key_t& key, const bz
         this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size + value.size() + key.size());
         this->update_metadata_size(uuid, SIZE_KEY, key, value.size() + key.size());
 
+#ifdef __APPLE__
+        this->db_flush();
+#endif
+
         return bzn::storage_result::ok;
     }
 
     return bzn::storage_result::exists;
+}
+
+
+void
+rocksdb_storage::db_flush() const
+{
+    rocksdb::FlushOptions flush_options;
+    flush_options.wait = false;
+    db->Flush(flush_options);
 }
 
 
@@ -157,6 +170,10 @@ rocksdb_storage::update(const bzn::uuid_t& uuid, const bzn::key_t& key, const bz
         // update metadata...
         this->update_metadata_size(uuid, NAMESPACE_KEY, SIZE_KEY, ns_prev_size - prev_size + value.size() + key.size());
         this->update_metadata_size(uuid, SIZE_KEY, key, value.size() + key.size());
+
+#ifdef __APPLE__
+        this->db_flush();
+#endif
 
         return bzn::storage_result::ok;
     }
