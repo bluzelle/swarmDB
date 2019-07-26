@@ -61,6 +61,9 @@ simple_options::build_options()
                 (BOOTSTRAP_PEERS_URL.c_str(),
                         po::value<std::string>(),
                         "url for bootstrap peers list")
+                (PEERS_REFRESH_INTERVAL_SECONDS.c_str(),
+                        po::value<uint64_t>()->default_value(600),
+                        "interval at which to check for updates to the peers list")
                 (LISTENER_ADDRESS.c_str(),
                         po::value<std::string>()->required(),
                         "listener address for consensus node")
@@ -100,6 +103,9 @@ simple_options::build_options()
                 (SWARM_INFO_ESR_URL.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::ROPSTEN_URL),
                         "url of ESR Swarm Info contract server")
+                (IGNORE_ESR.c_str(),
+                        po::value<bool>()->default_value(false),
+                        "do not use esr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
                         "software stack used by swarm");

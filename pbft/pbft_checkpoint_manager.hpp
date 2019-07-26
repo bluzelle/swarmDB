@@ -17,7 +17,7 @@
 #include <storage/storage_base.hpp>
 #include <pbft/pbft_persistent_state.hpp>
 #include <node/node_base.hpp>
-#include <pbft/pbft_config_store.hpp>
+#include <peers_beacon/peers_beacon_base.hpp>
 #include <mutex>
 
 namespace bzn
@@ -37,7 +37,7 @@ class pbft_checkpoint_manager : public std::enable_shared_from_this<pbft_checkpo
     public:
         pbft_checkpoint_manager(std::shared_ptr<bzn::asio::io_context_base> io_context,
                 std::shared_ptr<bzn::storage_base> storage,
-                std::shared_ptr<bzn::pbft_config_store> config_store,
+                std::shared_ptr<bzn::peers_beacon_base> peers_beacon,
                 std::shared_ptr<bzn::node_base> node);
 
         void handle_checkpoint_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/ = nullptr);
@@ -63,7 +63,7 @@ class pbft_checkpoint_manager : public std::enable_shared_from_this<pbft_checkpo
 
         std::shared_ptr<bzn::asio::io_context_base> io_context;
         std::shared_ptr<bzn::storage_base> storage;
-        std::shared_ptr<bzn::pbft_config_store> config_store;
+        std::shared_ptr<bzn::peers_beacon_base> peers_beacon;
         std::shared_ptr<bzn::node_base> node;
 
         std::unique_ptr<bzn::asio::steady_timer_base> trigger_catchup_timer;

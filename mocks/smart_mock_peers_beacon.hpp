@@ -1,4 +1,4 @@
- // Copyright (C) 2018 Bluzelle
+// Copyright (C) 2019 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -10,16 +10,14 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include <string>
+#include <mocks/mock_peers_beacon_base.hpp>
 
-
-namespace bzn::utils::http
+namespace bzn
 {
-    // Performs an HTTP GET or POST and returns the body of the HTTP response
-    std::string sync_req(const std::string& url, const std::string& post = "");
-
-} // namespace bzn::http
+    std::shared_ptr<mock_peers_beacon_base> static_peers_beacon_for(peers_list_t peers);
+    std::shared_ptr<mock_peers_beacon_base> static_peers_beacon_for(std::vector<peer_address_t> peers);
+    std::shared_ptr<mock_peers_beacon_base> static_empty_peers_beacon();
+}

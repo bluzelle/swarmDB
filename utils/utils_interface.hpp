@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Bluzelle
+// Copyright (C) 2019 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -13,13 +13,19 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
-
-#include <boost/asio.hpp>
-#include <peers_beacon/peer_address.hpp>
+#include <utils/utils_interface_base.hpp>
 
 namespace bzn
 {
-    boost::asio::ip::tcp::endpoint
-    make_endpoint(const peer_address_t& peer);
+    class utils_interface : public utils_interface_base
+    {
+    public:
+        std::vector<std::string> get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url) const;
+        bzn::peer_address_t get_peer_info(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string& esr_address, const std::string& url) const;
+
+        // Performs an HTTP GET or POST and returns the body of the HTTP response
+        std::string sync_req(const std::string& url, const std::string& post = "") const;
+    };
 }
+
 

@@ -78,19 +78,29 @@ namespace bzn
         virtual void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) = 0;
 
         /**
-         * @return have we seen a preprepare for this operation
+         * @return has this operation moved to the prepare phase
          */
         virtual bool is_preprepared() const = 0;
 
         /**
-         * @return is this operation prepared (as defined in the pbft paper) at this node
+         * @return has this operation moved to the commit phase
          */
         virtual bool is_prepared() const = 0;
 
         /**
-         * @return is this operation committed-local (as defined in the pbft paper) at this node
+         * @return has this operation moved to the execute phase
          */
         virtual bool is_committed() const = 0;
+
+        /**
+         * @return is this operation ready to move to the commit phase
+         */
+        virtual bool is_ready_for_commit() const = 0;
+
+        /**
+         * @return is this operation ready to move to the execute phase
+         */
+        virtual bool is_ready_for_execute() const = 0;
 
         /**
          * record the request that this operation is for. caller is responsible for checking that the request's hash

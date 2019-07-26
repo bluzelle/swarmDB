@@ -17,16 +17,17 @@
 #include <pbft/operations/pbft_operation.hpp>
 #include <storage/storage_base.hpp>
 #include <proto/pbft.pb.h>
+#include <peers_beacon/peers_beacon_base.hpp>
 
 namespace bzn
 {
     class pbft_persistent_operation : public pbft_operation
     {
     public:
-        pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, size_t );
+        pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::peers_beacon_base> peers);
 
         // constructs operation already in storage
-        pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
+        pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::peers_beacon_base> peers);
 
         void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) override;
 
@@ -35,6 +36,9 @@ namespace bzn
         bool is_preprepared() const override;
         bool is_prepared() const override;
         bool is_committed() const override;
+
+        bool is_ready_for_commit() const override;
+        bool is_ready_for_execute() const override;
 
         void record_request(const bzn_envelope& encoded_request) override;
         bool has_request() const override;
@@ -52,7 +56,7 @@ namespace bzn
         static const std::string& get_uuid();
 
         static std::vector<std::shared_ptr<pbft_persistent_operation>> prepared_operations_in_range(
-            std::shared_ptr<bzn::storage_base> storage, uint64_t start, std::optional<uint64_t> end = std::nullopt);
+            std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::peers_beacon_base> peers, uint64_t start, std::optional<uint64_t> end = std::nullopt);
         static void remove_range(std::shared_ptr<bzn::storage_base> storage, uint64_t first, uint64_t last);
 
     private:
@@ -64,7 +68,7 @@ namespace bzn
         static bool parse_prefix(const std::string& prefix, uint64_t& view, uint64_t& sequence, bzn::hash_t& hash);
         std::string increment_prefix(const std::string& prefix) const;
 
-        const size_t peers_size;
+        const std::shared_ptr<bzn::peers_beacon_base> peers;
         const std::shared_ptr<bzn::storage_base> storage;
         const std::string prefix;
 

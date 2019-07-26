@@ -46,7 +46,7 @@ namespace bzn
                 {
                     if (operation == nullptr)
                     {
-                        operation = this->operation_manager->find_or_construct(this->view, msg.sequence(), msg.request_hash(), this->pbft->current_peers_ptr());
+                        operation = this->operation_manager->find_or_construct(this->view, msg.sequence(), msg.request_hash());
 
                         // the SUT needs the pre-prepare it sends to itself in order to execute state machine
                         this->send_preprepare(operation->get_sequence(), operation->get_request());
@@ -140,7 +140,7 @@ namespace bzn
         }
 
         // tell pbft that this operation has been executed
-        this->service_execute_handler(this->operation_manager->find_or_construct(this->view, sequence, request_hash, pbft->current_peers_ptr()));
+        this->service_execute_handler(this->operation_manager->find_or_construct(this->view, sequence, request_hash));
     }
 
     void

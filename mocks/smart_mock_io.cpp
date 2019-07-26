@@ -220,3 +220,9 @@ bzn::asio::smart_mock_io::yield_until_clear()
         sleep_time *= 2;
     }
 }
+
+void
+bzn::asio::smart_mock_io::trigger_timer(unsigned int timer_id)
+{
+    this->timer_callbacks.at(timer_id)(boost::system::error_code{});
+}

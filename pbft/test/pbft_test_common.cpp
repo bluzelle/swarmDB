@@ -84,16 +84,6 @@ namespace bzn::test
                                 [&]()
                                 { return std::move(this->audit_heartbeat_timer); }
                         ))
-                .WillOnce(
-                    Invoke(
-                        [&]()
-                        { return std::move(this->new_config_timer); }
-                    ))
-                .WillOnce(
-                    Invoke(
-                        [&]()
-                        { return std::move(this->join_retry_timer); }
-                    ))
                 .WillRepeatedly(
                     Invoke(
                         [&]()
@@ -152,6 +142,7 @@ namespace bzn::test
 
         preprepare_msg.set_request_hash(this->crypto->hash(this->request_msg));
         *(this->default_original_msg.add_piggybacked_requests()) = this->request_msg;
+        this->default_original_msg.set_sender("uuid0");
     }
 
     void
@@ -161,7 +152,7 @@ namespace bzn::test
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context
-                , TEST_PEER_LIST
+                , this->beacon
                 , this->options
                 , this->mock_service
                 , this->mock_failure_detector
@@ -202,6 +193,7 @@ namespace bzn::test
         }
 
         original.set_pbft(preprepare.SerializeAsString());
+        original.set_sender("uuid0");
 
         this->pbft->handle_message(preprepare, original);
     }

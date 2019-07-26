@@ -18,24 +18,24 @@
 #include <storage/storage_base.hpp>
 #include <optional>
 #include <mutex>
-#include <bootstrap/peer_address.hpp>
+#include <peers_beacon/peer_address.hpp>
+#include <peers_beacon/peers_beacon_base.hpp>
 
 namespace bzn
 {
     class pbft_operation_manager
     {
     public:
-        pbft_operation_manager(std::optional<std::shared_ptr<bzn::storage_base>> storage = std::nullopt);
+        pbft_operation_manager(std::shared_ptr<bzn::peers_beacon_base> peers, std::optional<std::shared_ptr<bzn::storage_base>> storage = std::nullopt);
 
         /*
          * Returns a (possibly freshly constructed) pbft_operation for a particular view/sequence/request_hash.
          * Guarenteed to consistently return the same pbft_operation instance over the lifetime of the
          * pbft_operations_manager - this is important because pbft_operation only stores sessions in memory
          */
-        std::shared_ptr<pbft_operation> find_or_construct(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash,
-                                                          std::shared_ptr<const std::vector<bzn::peer_address_t>> peers_list);
+        std::shared_ptr<pbft_operation> find_or_construct(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
 
-        std::shared_ptr<pbft_operation> find_or_construct(const pbft_msg& msg, std::shared_ptr<const std::vector<bzn::peer_address_t>> peers_list);
+        std::shared_ptr<pbft_operation> find_or_construct(const pbft_msg& msg);
 
         std::map<uint64_t, std::shared_ptr<pbft_operation>> prepared_operations_since(uint64_t sequence);
 
@@ -45,6 +45,7 @@ namespace bzn
 
     private:
         std::mutex pbft_lock;
+        std::shared_ptr<bzn::peers_beacon_base> peers;
         const std::optional<std::shared_ptr<bzn::storage_base>> storage;
 
         std::map<bzn::operation_key_t, std::shared_ptr<pbft_operation>> held_operations;
