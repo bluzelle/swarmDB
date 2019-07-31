@@ -176,6 +176,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
 
     if (this->node && !response.header().point_of_contact().empty())
     {
+        LOG(trace) << "Sending response via PoC: " << response.header().point_of_contact();
         try
         {
             this->node->send_signed_message(response.header().point_of_contact(), std::make_shared<bzn_envelope>(env));
