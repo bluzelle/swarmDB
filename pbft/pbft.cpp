@@ -224,7 +224,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 void
 pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    LOG(trace) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+    LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE) << "\nFrom: " << original_msg.sender();
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
@@ -364,7 +364,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (this->already_seen_request(request_env, hash))
     {
         // TODO: send error message to client
-        LOG(trace) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        LOG(debug) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
     this->saw_request(request_env, hash);
@@ -653,6 +653,7 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
     pbft_configuration current_configuration;
     current_configuration.from_string(msg.current_configuration());
     this->configurations->add(std::make_shared<pbft_configuration>(current_configuration));
+    this->configurations->set_committed(current_configuration.get_hash());
     this->configurations->set_current(current_configuration.get_hash(), this->view.value());
 }
 
@@ -1153,6 +1154,7 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
     if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
     {
         LOG(error) << "is_valid_prepared_proof - a pre prepare message has a bad envelope, or the sender is not in the peers list";
+        LOG(error) << "Sender: " << pre_prepare_envelope.sender() << " is " << (this->is_peer(pre_prepare_envelope.sender()) ? "" : "not ") << "a peer";
         return false;
     }
 
@@ -1172,6 +1174,7 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
         {
             LOG(error) << "is_valid_prepared_proof - a prepare message has a bad envelope, "
                           "the sender may not be in the peer list, or the envelope failed cryptographic verification";
+            LOG(error) << "Sender: " << pre_prepare_envelope.sender() << " is " << (this->is_peer(pre_prepare_envelope.sender()) ? "" : "not ") << "a peer";
             return false;
         }
 
@@ -1661,11 +1664,8 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
             this->move_to_new_configuration(hash, msg.view());
         }
 
-        if (!this->is_valid_newview_message(msg, original_msg))
-        {
-            LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message while waiting to join swarm";
-            return;
-        }
+        // KEP-1574: We're unable to do a full newview validation here as we don't have the requests yet.
+        // Since we're already assuming no byzantine nodes, skip the validation for now.
         this->in_swarm = swarm_status::joined;
     }
     else if (!this->is_valid_newview_message(msg, original_msg))
@@ -1867,6 +1867,8 @@ pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_oper
 bool
 pbft::move_to_new_configuration(const hash_t& config_hash, uint64_t view)
 {
+    LOG(debug) << "Moving to config hash: " << config_hash << " in view " << view;
+
     // TODO: garbage collect old configurations (KEP-1006)
     return this->configurations->set_current(config_hash, view);
 }
