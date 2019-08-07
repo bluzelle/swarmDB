@@ -1307,7 +1307,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
         viewchange_envelopes_from_senders[viewchange_env.sender()] = viewchange_env;
     }
 
-    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders);
+    pbft_msg ours = this->build_newview(theirs.view(), viewchange_envelopes_from_senders, false);
     if (ours.pre_prepare_messages_size() != theirs.pre_prepare_messages_size())
     {
         LOG(error) << "is_valid_newview_message - expected " << ours.pre_prepare_messages_size()
@@ -1425,7 +1425,8 @@ pbft::make_newview(
 }
 
 pbft_msg
-pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders) const
+pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders
+    , bool attach_reqs) const
 {
     //  Computing O (set of new preprepares for new-view message)
     std::map<uint64_t, bzn_envelope> pre_prepares;
@@ -1470,7 +1471,7 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
             }
 
             auto env = this->wrap_message(pre_prepare);
-            if (pre_prepare.request_type() == pbft_request_type::PBFT_REQUEST_PAYLOAD)
+            if (pre_prepare.request_type() == pbft_request_type::PBFT_REQUEST_PAYLOAD && attach_reqs)
             {
                 auto config = this->configurations->get(old_view);
                 if (!config)
@@ -1480,7 +1481,15 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
                 }
                 auto op = this->operation_manager->find_or_construct(old_view, pre_prepare.sequence()
                     , pre_prepare.request_hash(), config->get_peers());
-                *(env.add_piggybacked_requests()) = op->get_request();
+                if (op->has_request())
+                {
+                    *(env.add_piggybacked_requests()) = op->get_request();
+                }
+                else
+                {
+                    LOG(error) << "No request found for operation " << pre_prepare.sequence() << " in view "
+                            << old_view;
+                }
             }
             pre_prepares[pre_prepare.sequence()] = env;
         }
