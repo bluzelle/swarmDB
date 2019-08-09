@@ -13,6 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <pbft/pbft_failure_detector.hpp>
+#include <utils/bytes_to_debug_string.hpp>
 
 namespace
 {
@@ -41,7 +42,8 @@ pbft_failure_detector::handle_timeout(boost::system::error_code /*ec*/)
 
     if (this->completed_requests.count(this->ordered_requests.front())  == 0)
     {
-        LOG(error) << "Failure detector detected unexecuted request " << this->ordered_requests.front() << '\n';
+        LOG(error) << "Failure detector detected unexecuted request "
+            << bzn::bytes_to_debug_string(this->ordered_requests.front()) << '\n';
         this->ordered_requests.pop_front();
         if (this->ordered_requests.size() > 0)
         {
@@ -71,7 +73,7 @@ pbft_failure_detector::request_seen(const bzn::hash_t& req_hash)
 
     if (this->outstanding_requests.count(req_hash) == 0 && this->completed_requests.count(req_hash) == 0)
     {
-        LOG(debug) << "Failure detector recording new request " << req_hash << '\n';
+        LOG(debug) << "Failure detector recording new request " << bzn::bytes_to_debug_string(req_hash) << '\n';
         this->ordered_requests.emplace_back(req_hash);
         this->outstanding_requests.emplace(req_hash);
 

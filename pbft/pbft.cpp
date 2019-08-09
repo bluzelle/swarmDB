@@ -102,27 +102,29 @@ pbft::start()
                 {
                     fd->request_executed(op->get_request_hash());
 
-                    if (op->get_sequence() % CHECKPOINT_INTERVAL == 0)
+                    auto strong_this = weak_this.lock();
+                    if (strong_this)
                     {
-                        auto strong_this = weak_this.lock();
-                        if (strong_this)
+                        strong_this->last_executed_sequence_number = op->get_sequence();
+                        if (op->get_sequence() % CHECKPOINT_INTERVAL == 0)
                         {
                             // tell service to save the next checkpoint after this one
                             strong_this->service->save_service_state_at(op->get_sequence() + CHECKPOINT_INTERVAL);
 
-                            checkpoint_t chk{op->get_sequence(), strong_this->service->service_state_hash(op->get_sequence())};
+                            checkpoint_t chk{op->get_sequence(), strong_this->service->service_state_hash(
+                                op->get_sequence())};
                             strong_this->checkpoint_manager->local_checkpoint_reached(chk);
 
                             const auto safe_delete_bound = std::min(
-                                    strong_this->checkpoint_manager->get_latest_stable_checkpoint().first,
-                                    strong_this->checkpoint_manager->get_latest_local_checkpoint().first);
+                                strong_this->checkpoint_manager->get_latest_stable_checkpoint().first
+                                , strong_this->checkpoint_manager->get_latest_local_checkpoint().first);
 
                             strong_this->operation_manager->delete_operations_until(safe_delete_bound);
                         }
-                        else
-                        {
-                            throw std::runtime_error("pbft_service callback failed because pbft does not exist");
-                        }
+                    }
+                    else
+                    {
+                        throw std::runtime_error("pbft_service callback failed because pbft does not exist");
                     }
                 }
             );
@@ -594,7 +596,10 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
         *(reply.add_checkpoint_proof()) = checkpoint_claim;
     }
 
-    reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview));
+    if (this->saved_newview.payload_case() == bzn_envelope::kPbft)
+    {
+        reply.set_allocated_newview_msg(new bzn_envelope(this->saved_newview));
+    }
 
     auto msg_ptr = std::make_shared<bzn::encoded_message>(this->wrap_message(reply).SerializeAsString());
     session->send_message(msg_ptr);
@@ -867,10 +872,13 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     // TODO: this needs to be refactored to be service-agnostic
     if (op->has_db_request())
     {
+        LOG(debug) << "Posting operation " << op->get_sequence() << " for execution";
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, op));
     }
     else
     {
+        LOG(debug) << "No db_request for operation " << op->get_sequence();
+
         // the service needs sequentially sequenced operations. post a null request to fill in this hole
         database_msg msg;
         msg.mutable_nullmsg();
@@ -1707,8 +1715,21 @@ bzn::json_message
 pbft::get_status()
 {
     bzn::json_message status;
+    std::string status_str;
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    status_str += "my uuid: " + this->uuid + "\n";
+    status_str += "primary: " + this->get_primary(this->get_view()).uuid + "\n";
+    status_str += "view: " + std::to_string(this->get_view()) + "\n";
+    status_str += "last exec: "  + std::to_string(this->last_executed_sequence_number) + "\n";
+    status_str += "last local cp: "  + std::to_string(this->checkpoint_manager->get_latest_local_checkpoint().first) + "\n";
+    status_str += "last stable cp: "  + std::to_string(this->checkpoint_manager->get_latest_stable_checkpoint().first) + "\n";
+    if (this->is_primary())
+    {
+        status_str += "next seq: " + std::to_string(this->next_issued_sequence_number.value());
+    }
+    LOG(debug) << "status:\n" << status_str;
 
     status["outstanding_operations_count"] = uint64_t(this->operation_manager->held_operations_count());
     status["is_primary"] = this->is_primary();
