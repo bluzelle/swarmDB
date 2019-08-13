@@ -17,24 +17,21 @@
 using namespace blz;
 
 filesystem_peers_beacon::filesystem_peers_beacon(std::shared_ptr<bzn::options_base> opt)
-    : opt(std::move(opt))
+    : peers_beacon(opt)
 {
-}
-
-void
-filesystem_peers_beacon::start()
-{
-    this->refresh();
 }
 
 void
 filesystem_peers_beacon::force_refresh()
 {
-    this->refresh();
-}
+    std::ifstream file(this->options->get_bootstrap_peers_file());
+    if (file.fail())
+    {
+        LOG(error) << "Failed to read bootstrap peers file " << filename;
+        return false;
+    }
 
-void 
-filesystem_peers_beacon::refresh()
-{
-    
+    LOG(info) << "Reading peers from " << filename;
+
+    return parse_and_save_peers(file);
 }

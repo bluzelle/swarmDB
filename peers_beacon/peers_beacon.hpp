@@ -22,11 +22,13 @@ namespace bzn
     class peers_beacon
     {
     public:
-        // start internal timers
-        virtual void start() = 0;
+        peers_beacon(std::shared_ptr<bzn::options_base> opt);
+
+        // do an initial pull and start any necessary timers
+        void start() = 0;
 
         // the current peers list, which may change at any time
-        virtual const peers_list_t& current() const;
+        std::shared_ptr<const peers_list_t> current() const;
 
         // refresh from whatever source we are using
         virtual void force_refresh() = 0;
@@ -35,10 +37,13 @@ namespace bzn
 
     protected:
 
-        bool ingest_json(std::istream& source);
-        bool handle_json(const Json::Value& root);
+        bool parse_and_save_peers(std::istream& source);
+        peers_list_t build_peers_list(const Json::Value& root);
 
-        peers_list_t internal_current;
+        std::shared_ptr<bzn::options_base> options;
+
+        // this is kept as a shared ptr to avoid issues when a reader reads while the peers list changes
+        std::atomic<std::shared_ptr<const peers_list_t>> internal_current;
     };
 }
 

@@ -24,13 +24,9 @@ namespace bzn
     public:
         filesystem_peers_beacon(std::shared_ptr<bzn::options_base> opt);
 
-        void start() override;
-
         void force_refresh() override;
 
     private:
-        void refresh();
-
         std::shared_ptr<bzn::options_base> opt;
     };
 }

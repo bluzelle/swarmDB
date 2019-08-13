@@ -16,14 +16,25 @@
 
 using namespace bzn;
 
-const std::unordered_set<peer_address_t>&
+peers_beacon::peers_beacon(std::shared_ptr<bzn::options_base> opt)
+        : options(opt)
+{}
+
+void
+peers_beacon::start()
+{
+    this->force_refresh();
+    throw std::runtime_error("todo: timer");
+}
+
+const std::shared_ptr<const peers_list_t>
 peers_beacon::current() const
 {
     return this->internal_current;
 }
 
 bool
-peers_beacon::ingest_json(std::istream& source)
+peers_beacon::parse_and_save_peers(std::istream& source)
 {
     Json::Value root;
 
@@ -38,24 +49,72 @@ peers_beacon::ingest_json(std::istream& source)
         return false;
     }
 
-    size_t valid_addresses_read = this->initialize_peer_list(root, this->peer_addresses);
+    auto new_peers = this->build_peers_list(root);
 
-    size_t new_addresses = this->peer_addresses.size() - addresses_before;
-    size_t duplicate_addresses = new_addresses - valid_addresses_read;
-
-    LOG(info) << "Found " << new_addresses << " new peers";
-
-    if (duplicate_addresses > 0)
+    if (new_peers.size() == 0)
     {
-        LOG(warning) << "Ignored " << duplicate_addresses << " duplicate addresses";
+        LOG(error) << "Failed to read any peers";
+        if (this->internal_current->size() > 0)
+        {
+            LOG(error) << "Keeping old peer list";
+        }
+        else
+        {
+            LOG(error) << "Old peers list also empty";
+            throw std::runtime_error("failed to find a valid peers list");
+        }
+        return false;
     }
 
-    if (new_address == 0)
+    this->internal_current = std::make_shared<const peers_list_t>(new_peers);
+    return true;
+}
+
+peers_list_t
+peers_beacon::build_peers_list(const json::Value& root)
+{
+    peers_list_t result;
+
+    // Expect the read json to be an array of peer objects
+    for (const auto& peer : root)
     {
-        LOG(error) << "failed to read any peers";
-        LOG(error) << "Keeping old peer list";
+        std::string host;
+        std::string name;
+        std::string uuid;
+        uint16_t    port;
+
+        try
+        {
+            host = peer["host"].asString();
+            port = peer["port"].asUInt();
+            uuid = peer.isMember("uuid") ? peer["uuid"].asString() : "unknown";
+            name = peer.isMember("name") ? peer["name"].asString() : "unknown";
+        }
+        catch(std::exception& e)
+        {
+            LOG(warning) << "Ignoring malformed peer specification " << peer;
+            continue;
+        }
+
+        // port wasn't actually a 16 bit uint
+        if (peer["port"].asUInt() != port)
+        {
+            LOG(warning) << "Ignoring peer with bad port " << peer;
+            continue;
+        }
+
+        // peer didn't contain everything we need
+        if (host.empty() || port == 0)
+        {
+            LOG(warning) << "Ignoring underspecified peer (needs host and port) " << peer;
+            continue;
+        }
+
+        LOG(trace) << "Found peer " << host << ":" << port << " (" << name << ")";
+
+        result.emplace(host, port, name, uuid);
     }
 
-    return new_addresses > 0;
-
+    LOG(trace) << "Found " << result.size() << " well formed peers";
+    return result;
 }
