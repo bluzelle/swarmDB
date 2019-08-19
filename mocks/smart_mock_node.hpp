@@ -24,7 +24,7 @@ namespace bzn
     public:
         smart_mock_node();
 
-        void deliver(const bzn_envelope&);
+        void deliver(bzn_envelope&);
 
         std::unordered_map<bzn_envelope::PayloadCase, bzn::protobuf_handler> registrants;
 

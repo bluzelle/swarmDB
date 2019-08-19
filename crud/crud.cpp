@@ -253,14 +253,22 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
 
 void
-crud::handle_read(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_read(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
-    if (!this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    if (db_exists)
+    {
+        if (!this->is_caller_a_reader(caller_id, perms))
+        {
+            this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
+            return;
+        }
+    }
+    else
     {
         this->send_response(request, bzn::storage_result::db_not_found, database_response(), session);
-
         return;
     }
 
@@ -391,11 +399,20 @@ crud::handle_delete(const bzn::caller_id_t& caller_id, const database_msg& reque
 
 
 void
-crud::handle_ttl(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_ttl(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
-    bool has = this->storage->has(request.header().db_uuid(), request.ttl().key());
+    //bool has = this->storage->has(request.header().db_uuid(), request.ttl().key());
+    auto [has, perms] = this->get_database_permissions(request.header().db_uuid());
+    if (has)
+    {
+        if (!this->is_caller_a_reader(caller_id, perms))
+        {
+            this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
+            return;
+        }
+    }
 
     // exists and expired?
     if (has && this->expired(request.header().db_uuid(), request.ttl().key()))
@@ -434,7 +451,6 @@ crud::handle_persist(const bzn::caller_id_t& caller_id, const database_msg& requ
     std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
-
     if (db_exists)
     {
         if (!this->is_caller_a_writer(caller_id, perms))
@@ -480,7 +496,6 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
     std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
 
     const auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
-
     if (db_exists)
     {
         if (!this->is_caller_a_writer(caller_id, perms))
@@ -541,23 +556,33 @@ crud::handle_expire(const bzn::caller_id_t& caller_id, const database_msg& reque
 
 
 void
-crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_has(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     bzn::storage_result result{bzn::storage_result::ok};
 
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    if (db_exists)
+    {
+        if (!this->is_caller_a_reader(caller_id, perms))
+        {
+            this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
+            return;
+        }
+    }
+
     database_response response;
 
     response.mutable_has()->set_key(request.has().key());
 
-    if (this->expired(request.header().db_uuid(), request.has().key()))
+    if (db_exists && this->expired(request.header().db_uuid(), request.has().key()))
     {
         response.mutable_has()->set_has(false);
     }
     else
     {
-        if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+        if (db_exists)
         {
             response.mutable_has()->set_has(this->storage->has(request.header().db_uuid(), request.has().key()));
         }
@@ -572,15 +597,25 @@ crud::handle_has(const bzn::caller_id_t& /*caller_id*/, const database_msg& requ
 
 
 void
-crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_keys(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     bzn::storage_result result{bzn::storage_result::ok};
 
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    if (db_exists)
+    {
+        if (!this->is_caller_a_reader(caller_id, perms))
+        {
+            this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
+            return;
+        }
+    }
+
     database_response response;
 
-    if (this->storage->has(PERMISSION_UUID, request.header().db_uuid()))
+    if (db_exists)
     {
         const auto keys = this->storage->get_keys(request.header().db_uuid());
 
@@ -604,7 +639,7 @@ crud::handle_keys(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 
 
 void
-crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_size(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
@@ -614,6 +649,13 @@ crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
     {
         this->send_response(request, bzn::storage_result::db_not_found, database_response(), session);
 
+        return;
+    }
+
+    // TODO: is this correct?
+    if (!this->is_caller_a_reader(caller_id, perms))
+    {
+        this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
         return;
     }
 
@@ -635,8 +677,23 @@ crud::handle_size(const bzn::caller_id_t& /*caller_id*/, const database_msg& req
 
 
 void
-crud::handle_subscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
+crud::handle_subscribe(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    auto [db_exists, perms] = this->get_database_permissions(request.header().db_uuid());
+    if (db_exists)
+    {
+        if (!this->is_caller_a_reader(caller_id, perms))
+        {
+            this->send_response(request, bzn::storage_result::access_denied, database_response(), session);
+            return;
+        }
+    }
+    else
+    {
+        this->send_response(request, bzn::storage_result::db_not_found, database_response(), session);
+        return;
+    }
+
     if (session)
     {
         database_response response;
@@ -656,6 +713,7 @@ crud::handle_subscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg
 void
 crud::handle_unsubscribe(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    // TODO - should this have no access checks?
     if (session)
     {
         database_response response;
@@ -676,6 +734,7 @@ crud::handle_unsubscribe(const bzn::caller_id_t& /*caller_id*/, const database_m
 void
 crud::handle_create_db(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    // TODO: what to do with this?
     bzn::storage_result result{bzn::storage_result::ok};
 
     std::lock_guard<std::shared_mutex> lock(this->crud_lock); // lock for write access
@@ -803,6 +862,7 @@ crud::handle_delete_db(const bzn::caller_id_t& caller_id, const database_msg& re
 void
 crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    // TODO: Should this be authenticated?
     std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
     database_response response;
@@ -817,6 +877,7 @@ crud::handle_has_db(const bzn::caller_id_t& /*caller_id*/, const database_msg& r
 void
 crud::handle_writers(const bzn::caller_id_t& /*caller_id*/, const database_msg& request, std::shared_ptr<bzn::session_base> session)
 {
+    // TODO: is this authenticated? not seeing access denied
      bzn::storage_result result{bzn::storage_result::not_found};
      std::shared_lock<std::shared_mutex> lock(this->crud_lock); // lock for read access
 
@@ -911,6 +972,8 @@ crud::handle_remove_writers(const bzn::caller_id_t& caller_id, const database_ms
 std::pair<bool, Json::Value>
 crud::get_database_permissions(const bzn::uuid_t& uuid) const
 {
+    // TODO: should this be authenticated?
+
     // does the db exist?
     if (this->storage->has(PERMISSION_UUID, uuid))
     {
@@ -994,6 +1057,12 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
     return this->is_caller_owner(caller_id, perms);
 }
 
+bool
+crud::is_caller_a_reader(const bzn::caller_id_t& caller_id, const Json::Value& perms) const
+{
+    // for now, we aren't maintaining separate permissions for read vs. write
+    return this->is_caller_a_writer(caller_id, perms);
+}
 
 bool
 crud::uses_random_eviction_policy(const Json::Value& perms) const

@@ -132,7 +132,7 @@ node::do_accept()
 }
 
 void
-node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
+node::priv_protobuf_handler(bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
     std::shared_lock<std::shared_mutex> lock(this->message_map_mutex); // lock for read access
 
@@ -146,6 +146,10 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
+    }
+    else if (msg.sender().empty())
+    {
+        *msg.mutable_sender() = session->get_client();
     }
 
     if (auto it = this->protobuf_map.find(msg.payload_case()); it != this->protobuf_map.end())

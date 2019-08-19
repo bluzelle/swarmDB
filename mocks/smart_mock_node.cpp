@@ -42,7 +42,7 @@ bzn::smart_mock_node::smart_mock_node()
             }));
 }
 
-void bzn::smart_mock_node::deliver(const bzn_envelope& msg)
+void bzn::smart_mock_node::deliver(bzn_envelope& msg)
 {
     if (this->registrants.count(msg.payload_case()) == 0)
     {

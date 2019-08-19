@@ -26,7 +26,7 @@ namespace bzn
 
     using session_shutdown_handler = std::function<void()>;
     using message_handler = std::function<void(const bzn::json_message& msg, std::shared_ptr<bzn::session_base> session)>;
-    using protobuf_handler = std::function<void(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)>;
+    using protobuf_handler = std::function<void(bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)>;
 
     class session_base
     {
@@ -78,6 +78,11 @@ namespace bzn
          * @param handler
          */
         virtual void add_shutdown_handler(bzn::session_shutdown_handler handler) = 0;
+
+        /**
+         * Returns the client uuid for this session
+         */
+        virtual std::string get_client() const = 0;
     };
 
 } // bzn

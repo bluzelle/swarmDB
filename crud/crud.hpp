@@ -80,6 +80,7 @@ namespace bzn
         size_t get_swarm_storage_usage();
         bool is_caller_owner(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
+        bool is_caller_a_reader(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
         void remove_writers(const database_msg& request, Json::Value& perms);
         bool uses_random_eviction_policy(const Json::Value& perms) const;

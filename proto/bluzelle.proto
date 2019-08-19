@@ -34,5 +34,7 @@ message bzn_envelope
         bytes status_request = 17;
         bytes status_response = 18;
         bytes checkpoint_msg = 19;
+        bytes challenge_request = 20;
+        bytes challenge_response = 21;
     }
 }

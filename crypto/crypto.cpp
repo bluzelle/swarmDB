@@ -78,6 +78,14 @@ crypto::extract_payload(const bzn_envelope& msg)
         {
             return msg.status_response();
         }
+        case bzn_envelope::kChallengeRequest:
+        {
+            return msg.challenge_request();
+        }
+        case bzn_envelope::kChallengeResponse:
+        {
+            return msg.challenge_response();
+        }
         case bzn_envelope::kCheckpointMsg:
         {
             return msg.checkpoint_msg();

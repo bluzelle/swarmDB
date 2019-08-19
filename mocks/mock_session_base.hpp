@@ -39,6 +39,8 @@ namespace bzn {
             void(std::shared_ptr<bzn::beast::websocket_stream_base> ws));
         MOCK_METHOD1(add_shutdown_handler,
             void(bzn::session_shutdown_handler handler));
+        MOCK_CONST_METHOD0(get_client,
+            std::string());
 
     };
 }  // namespace bzn

@@ -64,12 +64,16 @@ namespace bzn
 
         void add_shutdown_handler(const bzn::session_shutdown_handler handler) override;
 
+        std::string get_client() const override;
 
     private:
         void do_read();
         void do_write();
 
         void start_idle_timeout();
+
+        void send_challenge();
+        bool handle_challenge(const bzn_envelope& msg);
 
         void private_close();
 
@@ -87,7 +91,10 @@ namespace bzn
 
         std::unique_ptr<bzn::asio::steady_timer_base> idle_timer;
         const std::chrono::milliseconds ws_idle_timeout;
+        std::string challenge;
+        std::string client;
 
+        std::atomic<bool> challenge_done = false;
         std::atomic<bool> writing = false;
         std::atomic<bool> reading = false;
         std::atomic<bool> closing = false;

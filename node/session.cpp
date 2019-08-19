@@ -16,6 +16,12 @@
 #include <node/node.hpp>
 #include <sstream>
 #include <boost/beast/websocket/error.hpp>
+#include <proto/challenge.pb.h>
+
+namespace
+{
+    uint64_t CHALLENGE_LENGTH{32};
+}
 
 using namespace bzn;
 
@@ -124,7 +130,6 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 
                         self->start_idle_timeout();
                         self->do_read();
-                        self->do_write();
                     }));
             }));
     });
@@ -151,12 +156,114 @@ session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
 
                             self->monitor->send_counter(statistic::session_opened);
                             self->start_idle_timeout();
-                            self->do_read();
-                            self->do_write();
+                            self->send_challenge();
                         }
                 )
        );
    });
+}
+
+void
+session::send_challenge()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist('0', 'z');
+    std::string chal;
+    for (size_t i = 0; i < CHALLENGE_LENGTH; i++)
+    {
+        chal += dist(gen);
+    }
+    this->challenge = chal;
+
+    challenge_request req;
+    req.set_challenge(chal);
+    auto env = std::make_shared<bzn_envelope>();
+    env->set_challenge_request(req.SerializeAsString());
+    env->set_swarm_id(this->options->get_swarm_id());
+    this->websocket->binary(true);
+    auto data = env->SerializeAsString();
+    this->write_buffer = boost::asio::buffer(data);
+    this->websocket->async_write(this->write_buffer,
+        this->strand->wrap([self = shared_from_this()](boost::system::error_code ec, auto /*bytes_transferred*/)
+        {
+            if (ec)
+            {
+                self->close();
+            }
+            else
+            {
+                self->do_write();
+                self->do_read();
+            }
+        }));
+
+    LOG(debug) << "Sent challenge request for session " << this->session_id;
+}
+
+bool
+session::handle_challenge(const bzn_envelope& msg)
+{
+    if (msg.payload_case() == bzn_envelope::kChallengeRequest)
+    {
+        challenge_request req;
+        if (req.ParseFromString(msg.challenge_request()))
+        {
+            challenge_response resp;
+            resp.set_response(req.challenge());
+
+            auto env = std::make_shared<bzn_envelope>();
+            env->set_challenge_response(resp.SerializeAsString());
+
+            env->set_swarm_id(this->options->get_swarm_id());
+            this->crypto->sign(*env);
+
+            this->websocket->binary(true);
+            auto data = env->SerializeAsString();
+            this->write_buffer = boost::asio::buffer(data);
+            this->websocket->async_write(this->write_buffer,
+                this->strand->wrap([self = shared_from_this(), msg](boost::system::error_code ec, auto /*bytes_transferred*/)
+                {
+                    if (ec)
+                    {
+                        self->close();
+                    }
+                    else
+                    {
+                        self->do_write();
+                    }
+                }));
+
+            LOG(debug) << "Sent response to challenge on session " << this->session_id;
+        }
+    }
+    else if (msg.payload_case() == bzn_envelope::kChallengeResponse)
+    {
+        challenge_response resp;
+        if (!resp.ParseFromString(msg.challenge_response()) || resp.response() != this->challenge
+            || msg.sender().empty() || !this->crypto->verify(msg))
+        {
+            LOG(warning) << "Invalid response to challenge on session " << this->session_id;
+            return false;
+        }
+
+        LOG(debug) << "Received valid response to challenge on session " << this->session_id;
+        this->client = msg.sender();
+    }
+    else
+    {
+        LOG(error) << "Message is not challenge/response";
+        return false;
+    }
+
+    this->challenge_done = true;
+    return true;
+}
+
+std::string
+session::get_client() const
+{
+    return this->client;
 }
 
 void
@@ -183,8 +290,9 @@ session::do_read()
     this->reading = true;
 
     this->websocket->async_read(*buffer,
-        this->strand->wrap([self = shared_from_this(), buffer](boost::system::error_code ec, auto /*bytes_transferred*/)
+        this->strand->wrap([self = shared_from_this(), buffer](boost::system::error_code ec, auto bytes_transferred)
         {
+            LOG(debug) << "Read " << bytes_transferred << " bytes on session " << self->session_id;
             self->activity = true;
 
             if(ec)
@@ -208,7 +316,19 @@ session::do_read()
 
             if (proto_msg.ParseFromIstream(&ss))
             {
-                self->io_context->post(std::bind(self->proto_handler, proto_msg, self));
+                // the first thing we read should be a challenge or a response to our challenge
+                if (!self->challenge_done)
+                {
+                    if (!self->handle_challenge(proto_msg))
+                    {
+                        self->close();
+                        return;
+                    }
+                }
+                else
+                {
+                    self->io_context->post(std::bind(self->proto_handler, proto_msg, self));
+                }
             }
             else
             {
@@ -226,7 +346,7 @@ session::do_write()
 {
     // assume we are invoked inside the strand
 
-    if(this->writing || !this->is_open() || this->write_queue.empty() || this->closing)
+    if(this->writing || !this->is_open() || this->write_queue.empty() || this->closing || !this->challenge_done)
     {
         return;
     }
@@ -238,6 +358,7 @@ session::do_write()
 
     this->websocket->binary(true);
     this->write_buffer = boost::asio::buffer(*msg);
+    LOG(debug) << "Sending " << this->write_buffer.size() << " bytes on session " << this->session_id;
     this->websocket->async_write(this->write_buffer,
         this->strand->wrap([self = shared_from_this(), msg](boost::system::error_code ec, auto bytes_transferred)
         {

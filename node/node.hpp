@@ -57,7 +57,7 @@ namespace bzn
 
         void do_accept();
 
-        void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+        void priv_protobuf_handler(bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void priv_session_shutdown_handler(const ep_key_t& ep_key);
 
         std::shared_ptr<bzn::pbft_base> pbft;

@@ -105,5 +105,6 @@ TEST(status_test, test_that_status_request_queries_status_providers)
             delete reader;
         }));
 
-    pbh(bzn_envelope(), mock_session);
+    bzn_envelope env;
+    pbh(env, mock_session);
 }

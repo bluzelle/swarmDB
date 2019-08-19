@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message challenge_request
+{
+    string challenge = 1;
+}
+
+message challenge_response
+{
+    string response = 1;
+}
