@@ -61,6 +61,9 @@ simple_options::build_options()
                 (BOOTSTRAP_PEERS_URL.c_str(),
                         po::value<std::string>(),
                         "url for bootstrap peers list")
+                (PEERS_REFRESH_INTERVAL_SECONDS.c_str(),
+                        po::value<uint64_t>()->default_value(600),
+                        "interval at which to check for updates to the peers list")
                 (LISTENER_ADDRESS.c_str(),
                         po::value<std::string>()->required(),
                         "listener address for consensus node")

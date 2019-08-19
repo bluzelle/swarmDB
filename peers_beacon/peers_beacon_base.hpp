@@ -12,26 +12,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include <peers_beacon/filesystem_peers_beacon.hpp>
+#pragma once
 
-using namespace blz;
-
-filesystem_peers_beacon::filesystem_peers_beacon(std::shared_ptr<bzn::options_base> opt)
-    : peers_beacon(std::move(opt))
+namespace bzn
 {
-}
-
-bool
-filesystem_peers_beacon::force_refresh()
-{
-    std::ifstream file(this->options->get_bootstrap_peers_file());
-    if (file.fail())
+    class peers_beacon_base
     {
-        LOG(error) << "Failed to read bootstrap peers file " << filename;
-        return false;
-    }
+        virtual void start() = 0;
 
-    LOG(info) << "Reading peers from " << filename;
+        // get a pointer to the current peers list (which won't change, but can be replaced at any time)
+        virtual std::shared_ptr<const peers_list_t> current() const = 0;
 
-    return parse_and_save_peers(file);
+        // refresh from whatever source we are using; return success
+        virtual bool refresh(bool first_run = false) = 0;
+
+        virtual ~peers_beacon();
+    };
 }
