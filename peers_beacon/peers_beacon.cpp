@@ -49,7 +49,7 @@ peers_beacon::parse_and_save_peers(std::istream& source)
         return false;
     }
 
-    auto new_peers = this->build_peers_list(root);
+    auto new_peers = this->build_peers_list_from_json(root);
 
     if (new_peers.size() == 0)
     {
@@ -71,7 +71,7 @@ peers_beacon::parse_and_save_peers(std::istream& source)
 }
 
 peers_list_t
-peers_beacon::build_peers_list(const json::Value& root)
+peers_beacon::build_peers_list_from_json(const json::Value& root)
 {
     peers_list_t result;
 
@@ -117,4 +117,59 @@ peers_beacon::build_peers_list(const json::Value& root)
 
     LOG(trace) << "Found " << result.size() << " well formed peers";
     return result;
+}
+
+bool
+peers_beacon::fetch_peers_from_file(const std::string& filename)
+{
+    std::ifstream file(filename);
+    if (file.fail())
+    {
+        LOG(error) << "Failed to read bootstrap peers file " << filename;
+        return false;
+    }
+
+    LOG(info) << "Reading peers from " << filename;
+
+    return parse_and_save_peers(file);
+}
+
+
+bool
+peers_beacon::fetch_peers_from_url(const std::string& url)
+{
+    std::string peers = bzn::utils::http::sync_req(url);
+
+    LOG(info) << "Downloaded peer list from " << url;
+
+    std::stringstream stream;
+    stream << peers;
+
+    return parse_and_save_peers(stream);
+}
+
+
+bool
+peers_beacon::fetch_peers_from_esr_contract(const std::string& esr_url, const std::string& esr_address, const bzn::uuid_t& swarm_id)
+{
+    /* TODO
+    auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address, esr_url);
+    for (const auto& peer_id : peer_ids)
+    {
+        bzn::peer_address_t peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address, esr_url)};
+        if (peer_info.host.empty()
+            || peer_info.port == 0
+            //|| peer_info.name.empty() // is it important that a peer have a name?
+            || peer_info.uuid.empty()
+                )
+        {
+            LOG(warning) << "Invalid peer information found in esr contract, ignoring info for peer: " << peer_id << " in swarm: " << swarm_id;
+        }
+        else
+        {
+            this->peer_addresses.emplace(peer_info);
+        }
+    }
+    return true;
+     */
 }

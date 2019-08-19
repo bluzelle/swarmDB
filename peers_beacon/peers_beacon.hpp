@@ -27,18 +27,18 @@ namespace bzn
         // do an initial pull and start any necessary timers
         void start() = 0;
 
-        // the current peers list, which may change at any time
+        // get a pointer to the current peers list (which won't change, but can be replaced at any time)
         std::shared_ptr<const peers_list_t> current() const;
 
         // refresh from whatever source we are using
-        virtual void force_refresh() = 0;
+        virtual bool force_refresh() = 0;
 
         virtual ~peers_beacon();
 
     protected:
 
         bool parse_and_save_peers(std::istream& source);
-        peers_list_t build_peers_list(const Json::Value& root);
+        peers_list_t build_peers_list_from_json(const Json::Value& root);
 
         std::shared_ptr<bzn::options_base> options;
 

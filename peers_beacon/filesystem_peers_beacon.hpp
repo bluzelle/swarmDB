@@ -15,7 +15,6 @@
 #pragma once
 
 #include <peers_beacon/peers_beacon.hpp>
-#include <options/options_base.hpp>
 
 namespace bzn
 {
@@ -24,9 +23,7 @@ namespace bzn
     public:
         filesystem_peers_beacon(std::shared_ptr<bzn::options_base> opt);
 
-        void force_refresh() override;
+        bool force_refresh() override;
 
-    private:
-        std::shared_ptr<bzn::options_base> opt;
     };
 }
