@@ -16,6 +16,7 @@
 #include <peers_beacon/peers_beacon.hpp>
 #include <utils/http_req.hpp>
 #include <utils/esr_peer_info.hpp>
+#include <include/bluzelle.hpp>
 
 using namespace bzn;
 
