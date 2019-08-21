@@ -12,7 +12,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <fstream>
 #include <peers_beacon/peers_beacon.hpp>
+#include <utils/http_req.hpp>
+#include <utils/esr_peer_info.hpp>
 
 using namespace bzn;
 
@@ -35,8 +38,12 @@ void
 peers_beacon::run_timer()
 {
     this->refresh_timer->cancel();
-    this->refresh_timer->expires_from_now(this->options->get_simple_options().get<uint64_t>(std::chrono::seconds{bzn::option_names::PEERS_REFRESH_INTERVAL_SECONDS}));
-    this->refresh_timer->async_wait([weak_self = weak_from_this()]()
+    this->refresh_timer->expires_from_now(
+            std::chrono::seconds{
+                this->options->get_simple_options().get<uint64_t>(bzn::option_names::PEERS_REFRESH_INTERVAL_SECONDS)
+            });
+
+    this->refresh_timer->async_wait([weak_self = weak_from_this()](auto /*reason*/)
                                     {
                                         auto self = weak_self.lock();
                                         if (self)
@@ -47,7 +54,7 @@ peers_beacon::run_timer()
                                     });
 }
 
-const std::shared_ptr<const peers_list_t>
+std::shared_ptr<const peers_list_t>
 peers_beacon::current() const
 {
     return this->internal_current;
@@ -100,7 +107,8 @@ peers_beacon::refresh(bool first_run)
 bool
 peers_beacon::fetch_from_file()
 {
-    std::ifstream file(this->options->get_bootstrap_peers_file());
+    auto filename = this->options->get_bootstrap_peers_file();
+    std::ifstream file(filename);
     if (file.fail())
     {
         LOG(error) << "Failed to read bootstrap peers file " << filename;
@@ -115,7 +123,8 @@ peers_beacon::fetch_from_file()
 bool
 peers_beacon::fetch_from_url()
 {
-    std::string peers = bzn::utils::http::sync_req(this->options->get_boostrap_peers_url());
+    auto url = this->options->get_bootstrap_peers_url();
+    std::string peers = bzn::utils::http::sync_req(url);
 
     LOG(info) << "Downloaded peer list from " << url;
 
@@ -132,7 +141,7 @@ peers_beacon::fetch_from_esr()
     auto esr_address = this->options->get_swarm_info_esr_address();
     auto esr_url = this->options->get_swarm_info_esr_url();
 
-    peer_list_t new_peers;
+    peers_list_t new_peers;
     auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address, esr_url);
     for (const auto& peer_id : peer_ids)
     {
@@ -189,7 +198,7 @@ peers_beacon::parse_and_save_peers(std::istream& source)
 
     try
     {
-        peers >> root;
+        source >> root;
     }
     catch (const std::exception& e)
     {
@@ -203,7 +212,7 @@ peers_beacon::parse_and_save_peers(std::istream& source)
 }
 
 peers_list_t
-peers_beacon::build_peers_list_from_json(const json::Value& root)
+peers_beacon::build_peers_list_from_json(const Json::Value& root)
 {
     peers_list_t result;
 

@@ -13,14 +13,13 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
+#include <options/options_base.hpp>
 #include <peers_beacon/peers_beacon_base.hpp>
 #include <peers_beacon/peer_address.hpp>
 
 namespace bzn
 {
-    using peers_list_t = std::unordered_set<bzn::peer_address_t>;
-
-    class peers_beacon : peers_beacon_base
+    class peers_beacon : peers_beacon_base, public std::enable_shared_from_this<peers_beacon>
     {
     public:
         peers_beacon(std::shared_ptr<bzn::options_base> opt);
@@ -52,7 +51,7 @@ namespace bzn
         std::shared_ptr<bzn::options_base> options;
 
         // this is kept as a shared ptr to avoid issues when a reader reads while the peers list changes
-        std::atomic<std::shared_ptr<const peers_list_t>> internal_current;
+        std::shared_ptr<const peers_list_t> internal_current;
 
         std::unique_ptr<bzn::asio::steady_timer_base> refresh_timer;
     };

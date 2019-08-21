@@ -13,11 +13,17 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
+#include <peers_beacon/peer_address.hpp>
+#include <memory>
+#include <unordered_set>
 
 namespace bzn
 {
+    using peers_list_t = std::unordered_set<bzn::peer_address_t>;
+
     class peers_beacon_base
     {
+    public:
         virtual void start() = 0;
 
         // get a pointer to the current peers list (which won't change, but can be replaced at any time)
@@ -26,6 +32,6 @@ namespace bzn
         // refresh from whatever source we are using; return success
         virtual bool refresh(bool first_run = false) = 0;
 
-        virtual ~peers_beacon();
+        virtual ~peers_beacon_base();
     };
 }

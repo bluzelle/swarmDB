@@ -15,7 +15,7 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <bootstrap/bootstrap_peers_base.hpp> //for bzn::peer_address_t
+#include <peers_beacon/peer_address.hpp>
 
 namespace bzn::utils::esr
 {

@@ -15,7 +15,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <bootstrap/peer_address.hpp>
+#include <peers_beacon/peer_address.hpp>
 
 namespace bzn
 {

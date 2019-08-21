@@ -45,3 +45,14 @@ namespace bzn
         const std::string uuid;
     };
 }
+
+namespace std
+{
+    template<> struct hash<bzn::peer_address_t>
+    {
+        size_t operator()(const bzn::peer_address_t& x) const noexcept
+        {
+            return std::hash<std::string>()(std::string{x.host} + std::to_string(x.port));
+        }
+    };
+}
