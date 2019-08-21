@@ -119,6 +119,20 @@ namespace bzn
 
 
         /**
+         * Get the websocket activity timeout
+         * @return seconds
+         */
+        virtual std::chrono::milliseconds get_fd_oper_timeout() const = 0;
+
+
+        /**
+         * Get the websocket activity timeout
+         * @return seconds
+         */
+        virtual std::chrono::milliseconds get_fd_fail_timeout() const = 0;
+
+
+        /**
          * Get the number of entries allowed to be stored in audit's datastructures
          * @return size
          */

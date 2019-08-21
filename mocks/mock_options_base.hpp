@@ -48,6 +48,10 @@ class mock_options_base : public options_base {
         bzn::swarm_id_t());
   MOCK_CONST_METHOD0(get_ws_idle_timeout,
       std::chrono::milliseconds());
+    MOCK_CONST_METHOD0(get_fd_oper_timeout,
+        std::chrono::milliseconds());
+    MOCK_CONST_METHOD0(get_fd_fail_timeout,
+        std::chrono::milliseconds());
   MOCK_CONST_METHOD0(get_audit_mem_size,
       size_t());
   MOCK_CONST_METHOD0(get_state_dir,

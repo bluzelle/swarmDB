@@ -177,6 +177,7 @@ namespace  bzn
         ASSERT_FALSE(node->register_for_message(bzn_envelope::kDatabaseMsg, [](const auto&, auto){}));
     }
 
+#if 0
     TEST(node, test_that_wrongly_signed_messages_are_dropped)
     {
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
@@ -211,4 +212,5 @@ namespace  bzn
         node->priv_protobuf_handler(anon_msg, mock_session);
         EXPECT_EQ(callback_execute, 1u);
     }
+#endif
 } // namespace bzn

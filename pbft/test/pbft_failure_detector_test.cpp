@@ -16,6 +16,7 @@
 #include <pbft/pbft_failure_detector.hpp>
 #include <proto/bluzelle.pb.h>
 #include <mocks/mock_boost_asio_beast.hpp>
+#include <mocks/mock_options_base.hpp>
 
 using namespace ::testing;
 
@@ -31,6 +32,8 @@ namespace bzn
                 std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
         std::unique_ptr<bzn::asio::mock_steady_timer_base> request_timer =
                 std::make_unique<NiceMock<bzn::asio::mock_steady_timer_base>>();
+        std::shared_ptr<bzn::mock_options_base> mock_options =
+            std::make_shared<NiceMock<bzn::mock_options_base>>();
 
         bzn::asio::wait_handler request_timer_callback;
 
@@ -45,7 +48,7 @@ namespace bzn
 
         void build_failure_detector()
         {
-            this->failure_detector = std::make_shared<bzn::pbft_failure_detector>(this->mock_io_context);
+            this->failure_detector = std::make_shared<bzn::pbft_failure_detector>(this->mock_io_context, this->mock_options);
             this->failure_detector
                 ->register_failure_handler(std::bind(&pbft_failure_detector_test::failure_detect_handler, this));
         }

@@ -271,7 +271,7 @@ main(int argc, const char* argv[])
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options, monitor);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_audit_mem_size(), monitor);
 
-        auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context);
+        auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context, options);
 
         // which type of storage?
         std::shared_ptr<bzn::storage_base> stable_storage;

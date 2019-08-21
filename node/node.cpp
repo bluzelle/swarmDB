@@ -142,12 +142,6 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
         return;
     }
 
-    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
-    {
-        LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
-        return;
-    }
-
     if (auto it = this->protobuf_map.find(msg.payload_case()); it != this->protobuf_map.end())
     {
         it->second(msg, std::move(session));

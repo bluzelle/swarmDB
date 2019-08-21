@@ -41,8 +41,8 @@ namespace
     const std::chrono::seconds NEW_CONFIG_INTERVAL{std::chrono::seconds(30)};
     const std::chrono::seconds JOIN_RETRY_INTERVAL{std::chrono::seconds(30)};
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
-    const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
-    const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
+    const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 200.0; //TODO: KEP-574
+    const uint64_t MAX_REQUEST_AGE_MS = 3600000; // 1 hour
     const std::string NOOP_REQUEST_HASH = "<no op request hash>";
 
     const std::string VIEW_KEY{"view"};
@@ -226,7 +226,7 @@ namespace bzn
         void join_swarm();
 
         // VIEWCHANGE/NEWVIEW Helper methods
-        void initiate_viewchange();
+        void initiate_viewchange(std::optional<uint64_t> opt_view = std::nullopt);
         std::shared_ptr<bzn_envelope> make_viewchange(uint64_t new_view, uint64_t n, const std::unordered_map<bzn::uuid_t, std::string>& stable_checkpoint_proof, const std::map<uint64_t, std::shared_ptr<bzn::pbft_operation>>& prepared_operations);
         pbft_msg make_newview(uint64_t new_view_index,  const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, const std::map<uint64_t, bzn_envelope>& pre_prepare_messages) const;
         pbft_msg build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& viewchange_envelopes_from_senders, bool attach_reqs = true) const;
