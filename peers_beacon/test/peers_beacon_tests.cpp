@@ -51,6 +51,11 @@ public:
     }
 };
 
+TEST(peers_beacon_test, test_empty)
+{
+
+}
+
 /*
 
 TEST_F(bootstrap_file_test, test_invalid_json)
