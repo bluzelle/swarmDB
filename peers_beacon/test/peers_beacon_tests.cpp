@@ -13,6 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <peers_beacon/peers_beacon.hpp>
+#include <mocks/mock_options_base.hpp>
 #include <fstream>
 #include <string>
 #include <gtest/gtest.h>
@@ -36,7 +37,16 @@ using namespace ::testing;
 class peers_beacon_test : public Test
 {
 public:
-    bzn::peers_beacon beacon;
+    std::shared_ptr<bzn::mock_options_base> opt = std::make_shared<bzn::mock_options_base>();
+    std::shared_ptr<bzn::peers_beacon> peers;
+
+    peers_beacon_test()
+    {
+        EXPECT_CALL(*opt, get_bootstrap_peers_file()).WillRepeatedly(Return(test_peers_filename));
+        EXPECT_CALL(*opt, get_bootstrap_peers_url()).WillRepeatedly(Return(""));
+        EXPECT_CALL(*opt, get_swarm_id()).WillRepeatedly(Return(""));
+        this->peers = std::make_shared<bzn::peers_beacon>(this->opt);
+    }
 
     void set_peers_file(const std::string& peers_data)
     {
@@ -51,55 +61,48 @@ public:
     }
 };
 
-TEST(peers_beacon_test, test_empty)
+TEST_F(peers_beacon_test, test_invalid_json)
 {
-
-}
-
-/*
-
-TEST_F(bootstrap_file_test, test_invalid_json)
-{
-    set_peers_data(invalid_json);
-    ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_TRUE(bootstrap_peers.get_peers().empty());
+    set_peers_file(invalid_json);
+    ASSERT_FALSE(peers->refresh());
+    ASSERT_TRUE(peers->current()->empty());
 }
 
 
-TEST_F(bootstrap_file_test, test_no_peers)
+TEST_F(peers_beacon_test, test_no_peers)
 {
-    set_peers_data(no_peers);
-    ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_TRUE(bootstrap_peers.get_peers().empty());
+    set_peers_file(no_peers);
+    ASSERT_FALSE(peers->refresh());
+    ASSERT_TRUE(peers->current()->empty());
 }
 
 
-TEST_F(bootstrap_file_test, test_underspecified_peer)
+TEST_F(peers_beacon_test, test_underspecified_peer)
 {
-    set_peers_data(underspecified_peer);
-    ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_TRUE(bootstrap_peers.get_peers().empty());
+    set_peers_file(underspecified_peer);
+    ASSERT_FALSE(peers->refresh());
+    ASSERT_TRUE(peers->current()->empty());
 }
 
 
-TEST_F(bootstrap_file_test, test_bad_port)
+TEST_F(peers_beacon_test, test_bad_port)
 {
-    set_peers_data(bad_port);
-    ASSERT_FALSE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_TRUE(bootstrap_peers.get_peers().empty());
+    set_peers_file(bad_port);
+    ASSERT_FALSE(peers->refresh());
+    ASSERT_TRUE(peers->current()->empty());
 }
 
 
-TEST_F(bootstrap_file_test, test_valid_peers)
+TEST_F(peers_beacon_test, test_valid_peers)
 {
-    set_peers_data(valid_peers);
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 2U);
+    set_peers_file(valid_peers);
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 2U);
 
     bool seen_peer1 = false;
     bool seen_peer2 = false;
 
-    for (const bzn::peer_address_t& p : bootstrap_peers.get_peers())
+    for (const bzn::peer_address_t& p : *(peers->current()))
     {
         if (p.port == 12345) seen_peer1 = true;
         if (p.port == 54321) seen_peer2 = true;
@@ -108,17 +111,16 @@ TEST_F(bootstrap_file_test, test_valid_peers)
     ASSERT_TRUE(seen_peer1 && seen_peer2);
 }
 
-
-TEST_F(bootstrap_file_test, test_unnamed_peers)
+TEST_F(peers_beacon_test, test_unnamed_peers)
 {
-    set_peers_data(valid_peers);
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 2U);
+    set_peers_file(valid_peers);
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 2U);
 
     bool seen_name1 = false;
     bool seen_name2 = false;
 
-    for (const bzn::peer_address_t& p : bootstrap_peers.get_peers())
+    for (const bzn::peer_address_t& p : *(peers->current()))
     {
         if (p.name == "peer1") seen_name1 = true;
         if (p.name == "unknown") seen_name2 = true;
@@ -128,12 +130,14 @@ TEST_F(bootstrap_file_test, test_unnamed_peers)
 }
 
 
-TEST_F(bootstrap_file_test, test_duplicate_peers)
+TEST_F(peers_beacon_test, test_duplicate_peers)
 {
-    set_peers_data(duplicate_peers);
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_file(test_peers_filename));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 1U);
+    set_peers_file(duplicate_peers);
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 1U);
 }
+
+/*
 
 // flaky tests...
 
@@ -162,5 +166,4 @@ TEST(bootstrap_net_test, DISABLED_test_fetch_peers_from_solidity)
     ASSERT_TRUE(bootstrap_peers.fetch_peers_from_esr_contract(bzn::utils::ROPSTEN_URL, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, swarm_id));
     ASSERT_EQ(bootstrap_peers.get_peers().size(), 7U);
 }
-
-*/
+ */

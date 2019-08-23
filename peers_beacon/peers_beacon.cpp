@@ -22,6 +22,7 @@ using namespace bzn;
 
 peers_beacon::peers_beacon(std::shared_ptr<bzn::options_base> opt)
         : options(opt)
+        , internal_current(std::make_shared<peers_list_t>())
 {}
 
 void
@@ -68,7 +69,7 @@ peers_beacon::refresh(bool first_run)
             && !this->options->get_swarm_info_esr_address().empty()
             && !this->options->get_swarm_info_esr_url().empty();
     bool has_file = !this->options->get_bootstrap_peers_file().empty();
-    bool has_url = !this->options->get_bootstrap_peers_file().empty();
+    bool has_url = !this->options->get_bootstrap_peers_url().empty();
 
     /* Here we chose not to fall back on another method if the first priority from our config is unavailable. This is
      * chosen so that if, eg, a url based peers list is briefly unavailable, we do not abruptly switch to a very old
@@ -177,7 +178,6 @@ peers_beacon::switch_peers_list(const peers_list_t& new_peers)
         else
         {
             LOG(error) << "Old peers list also empty";
-            throw std::runtime_error("failed to find a valid peers list");
         }
         return false;
     }

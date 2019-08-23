@@ -32,6 +32,6 @@ namespace bzn
         // refresh from whatever source we are using; return success
         virtual bool refresh(bool first_run = false) = 0;
 
-        virtual ~peers_beacon_base();
+        virtual ~peers_beacon_base() = default;
     };
 }

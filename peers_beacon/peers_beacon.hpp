@@ -33,8 +33,6 @@ namespace bzn
         // refresh from whatever source we are using
         bool refresh(bool first_run = false) override;
 
-        ~peers_beacon() override;
-
     private:
 
         bool fetch_from_esr();
