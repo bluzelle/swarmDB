@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <audit/audit.hpp>
-#include <bootstrap/bootstrap_peers.hpp>
+#include <peers_beacon/peers_beacon.hpp>
 #include <chaos/chaos.hpp>
 #include <crud/crud.hpp>
 #include <crud/subscription_manager.hpp>

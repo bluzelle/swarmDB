@@ -16,6 +16,7 @@
 #include <peers_beacon/peer_address.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
 #include <proto/pbft.pb.h>
+#include <mocks/smart_mock_peers_beacon.hpp>
 
 using namespace ::testing;
 
@@ -55,8 +56,8 @@ namespace
 
     TEST(pbft_operation_manager_test, returned_operation_matches_key)
     {
-        bzn::pbft_operation_manager manager;
-        auto op = manager.find_or_construct(1, 6, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op = manager.find_or_construct(1, 6, "hash");
         EXPECT_EQ(op->get_view(), 1u);
         EXPECT_EQ(op->get_sequence(), 6u);
         EXPECT_EQ(op->get_request_hash(), "hash");
@@ -64,10 +65,10 @@ namespace
 
     TEST(pbft_operation_manager_test, returns_same_operation_instance)
     {
-        bzn::pbft_operation_manager manager;
-        auto op1 = manager.find_or_construct(1, 6, "hash", peers_ptr);
-        auto op2 = manager.find_or_construct(2, 6, "hash", peers_ptr);
-        auto op3 = manager.find_or_construct(1, 6, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op1 = manager.find_or_construct(1, 6, "hash");
+        auto op2 = manager.find_or_construct(2, 6, "hash");
+        auto op3 = manager.find_or_construct(1, 6, "hash");
 
         EXPECT_NE(op1, op2);
         EXPECT_EQ(op1, op3);
@@ -75,9 +76,9 @@ namespace
 
     TEST(pbft_operation_manager_test, prepared_operations_since_only_prepared_ops)
     {
-        bzn::pbft_operation_manager manager;
-        auto op1 = manager.find_or_construct(1, 1, "hash", peers_ptr);
-        auto op2 = manager.find_or_construct(1, 2, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op1 = manager.find_or_construct(1, 1, "hash");
+        auto op2 = manager.find_or_construct(1, 2, "hash");
 
         make_prepared(op1);
 
@@ -88,9 +89,9 @@ namespace
 
     TEST(pbft_operation_manager_test, prepared_operations_since_prefers_prepared_ops_when_duplicate)
     {
-        bzn::pbft_operation_manager manager;
-        auto op1 = manager.find_or_construct(1, 1, "hash", peers_ptr);
-        auto op2 = manager.find_or_construct(2, 1, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op1 = manager.find_or_construct(1, 1, "hash");
+        auto op2 = manager.find_or_construct(2, 1, "hash");
 
         make_prepared(op2);
 
@@ -100,11 +101,11 @@ namespace
 
     TEST(pbft_operation_manager_test, prepared_operations_since_no_duplicates)
     {
-        bzn::pbft_operation_manager manager;
-        auto op1 = manager.find_or_construct(1, 1, "hash", peers_ptr);
-        auto op2 = manager.find_or_construct(2, 1, "hash", peers_ptr);
-        auto op3 = manager.find_or_construct(3, 1, "hash", peers_ptr);
-        auto op4 = manager.find_or_construct(4, 1, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op1 = manager.find_or_construct(1, 1, "hash");
+        auto op2 = manager.find_or_construct(2, 1, "hash");
+        auto op3 = manager.find_or_construct(3, 1, "hash");
+        auto op4 = manager.find_or_construct(4, 1, "hash");
 
         make_prepared(op1);
         make_prepared(op2);
@@ -116,11 +117,11 @@ namespace
 
     TEST(pbft_operation_manager_test, delete_clears_operations)
     {
-        bzn::pbft_operation_manager manager;
-        auto op1 = manager.find_or_construct(1, 1, "hash", peers_ptr);
-        auto op2 = manager.find_or_construct(2, 2, "hash", peers_ptr);
-        auto op3 = manager.find_or_construct(3, 3, "hash", peers_ptr);
-        auto op4 = manager.find_or_construct(4, 4, "hash", peers_ptr);
+        bzn::pbft_operation_manager manager{static_peers_beacon_for(TEST_PEER_LIST)};
+        auto op1 = manager.find_or_construct(1, 1, "hash");
+        auto op2 = manager.find_or_construct(2, 2, "hash");
+        auto op3 = manager.find_or_construct(3, 3, "hash");
+        auto op4 = manager.find_or_construct(4, 4, "hash");
 
         EXPECT_EQ(manager.held_operations_count(), 4u);
         manager.delete_operations_until(2);

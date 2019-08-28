@@ -18,4 +18,5 @@
 namespace bzn
 {
     std::shared_ptr<mock_peers_beacon_base> static_peers_beacon_for(peers_list_t peers);
+    std::shared_ptr<mock_peers_beacon_base> static_peers_beacon_for(std::vector<peer_address_t> peers);
 }

@@ -15,7 +15,8 @@
 
 using namespace ::testing;
 
-std::shared_ptr<bzn::mock_peers_beacon_base> bzn::static_peers_beacon_for(bzn::peers_list_t peers)
+std::shared_ptr<bzn::mock_peers_beacon_base>
+bzn::static_peers_beacon_for(bzn::peers_list_t peers)
 {
     auto res = std::make_shared<bzn::mock_peers_beacon_base>();
     auto list = std::make_shared<bzn::peers_list_t>(peers);
@@ -27,4 +28,15 @@ std::shared_ptr<bzn::mock_peers_beacon_base> bzn::static_peers_beacon_for(bzn::p
     EXPECT_CALL(*res, refresh(_)).Times(AnyNumber());
 
     return res;
+}
+
+std::shared_ptr<bzn::mock_peers_beacon_base>
+static_peers_beacon_for(std::vector<bzn::peer_address_t> peers)
+{
+    bzn::peers_list_t list;
+    std::for_each(peers.begin(), peers.end(),
+            [&](const auto& peer){list.insert(peer);}
+            );
+
+    return static_peers_beacon_for(list);
 }

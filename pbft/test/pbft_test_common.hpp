@@ -34,6 +34,7 @@
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
 #include <storage/mem_storage.hpp>
+#include <mocks/smart_mock_peers_beacon.hpp>
 
 using namespace ::testing;
 
@@ -80,8 +81,9 @@ namespace bzn::test
         std::shared_ptr<bzn::mock_session_base> mock_session =
                 std::make_shared<NiceMock<bzn::mock_session_base>>();
         std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
+
         std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
-                std::make_shared<bzn::pbft_operation_manager>(storage);
+                std::make_shared<bzn::pbft_operation_manager>(storage, static_peers_beacon_for(TEST_PEER_LIST));
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
