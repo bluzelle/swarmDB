@@ -20,7 +20,7 @@
 #include <pbft/dummy_pbft_service.hpp>
 #include <pbft/pbft_failure_detector.hpp>
 #include <storage/mem_storage.hpp>
-#include <bootstrap/bootstrap_peers.hpp>
+#include <peers_beacon/peer_address.hpp>
 #include <mocks/mock_node_base.hpp>
 #include <proto/bluzelle.pb.h>
 #include <json/json.h>

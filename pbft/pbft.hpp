@@ -145,8 +145,6 @@ namespace bzn
 
         static uint32_t generate_random_number(uint32_t min, uint32_t max);
 
-        std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const override;
-
         checkpoint_t latest_stable_checkpoint() const;
 
     private:

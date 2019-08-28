@@ -1442,7 +1442,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
 
     auto newview_msg = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
-    this->move_to_new_configuration(newview_msg.config_hash(), this->view.value() + 1);
     LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
     this->async_signed_broadcast(newview_msg);
 }
@@ -1450,32 +1449,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 void
 pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    // are we just now joining the swarm?
-    if (this->in_swarm == swarm_status::waiting)
-    {
-        auto newconfig = std::make_shared<pbft_configuration>();
-        if (!newconfig->from_string(msg.config()))
-        {
-            LOG(debug) << "newview received with invalid configuration";
-            return;
-        }
-
-        auto hash = newconfig->get_hash();
-        if (this->configurations->current()->get_hash() != hash)
-        {
-            this->configurations->add(newconfig);
-
-            // we need to switch to this configuration now so we have the peer info to validate the message
-            // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
-            // can't really trust this. We need to get the config from an external source.
-            this->move_to_new_configuration(hash, msg.view());
-        }
-
-        // KEP-1574: We're unable to do a full newview validation here as we don't have the requests yet.
-        // Since we're already assuming no byzantine nodes, skip the validation for now.
-        this->in_swarm = swarm_status::joined;
-    }
-    else if (!this->is_valid_newview_message(msg, original_msg))
+    if (!this->is_valid_newview_message(msg, original_msg))
     {
         LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message ";
         return;
@@ -1491,14 +1465,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     this->next_issued_sequence_number = viewchange.sequence() + 1;
 
     LOG(debug) << "handle_newview - received valid NEWVIEW message";
-
-    // validate requested configuration and switch to it
-    if (!this->is_configuration_acceptable_in_new_view(msg.config_hash()) ||
-        !this->move_to_new_configuration(msg.config_hash(), msg.view()))
-    {
-        LOG(debug) << "unable to switch to configuration in new view";
-        return;
-    }
 
     this->view = msg.view();
     this->view_is_valid = true;
@@ -1578,44 +1544,6 @@ pbft::get_status()
     return status;
 }
 
-bool
-pbft::initialize_configuration(const bzn::peers_list_t& peers)
-{
-    bool config_good = true;
-
-    if (!this->configurations->current())
-    {
-        auto config = std::make_shared<pbft_configuration>();
-        for (auto &p : peers)
-        {
-            config_good &= config->add_peer(p);
-        }
-
-        if (!config_good)
-        {
-            LOG(warning) << "One or more peers could not be added to configuration";
-            LOG(warning) << config->get_peers()->size() << " peers were added";
-        }
-
-        this->configurations->add(config);
-        this->configurations->set_current(config->get_hash(), this->view.value());
-    }
-
-    return config_good;
-}
-
-std::shared_ptr<const std::vector<bzn::peer_address_t>>
-pbft::current_peers_ptr() const
-{
-    auto config = this->configurations->current();
-    if (config)
-    {
-        return config->get_peers();
-    }
-
-    throw std::runtime_error("No current configuration!");
-}
-
 const std::vector<bzn::peer_address_t>&
 pbft::current_peers() const
 {
@@ -1635,55 +1563,6 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 
     // something went wrong. this uuid should exist
     throw std::runtime_error("peer missing from peers list");
-}
-
-void
-pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash)
-{
-    pbft_config_msg cfg_msg;
-    cfg_msg.set_configuration(config->to_string());
-    cfg_msg.set_join_request_hash(join_request_hash);
-    bzn_envelope req;
-    req.set_pbft_internal_request(cfg_msg.SerializeAsString());
-
-    auto op = this->setup_request_operation(req, this->crypto->hash(req));
-    this->do_preprepare(op);
-}
-
-bool
-pbft::is_configuration_acceptable_in_new_view(const hash_t& config_hash)
-{
-    return this->configurations->is_acceptable(config_hash);
-}
-
-void
-pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
-{
-    assert(op->has_config_request());
-    auto config = std::make_shared<pbft_configuration>();
-    if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(op->get_config_request().configuration()))
-    {
-        if (this->proposed_config_is_acceptable(config))
-        {
-            // store this configuration
-            this->configurations->add(config);
-        }
-    }
-}
-
-bool
-pbft::move_to_new_configuration(const hash_t& config_hash, uint64_t view)
-{
-    LOG(debug) << "Moving to config hash: " << config_hash << " in view " << view;
-
-    // TODO: garbage collect old configurations (KEP-1006)
-    return this->configurations->set_current(config_hash, view);
-}
-
-bool
-pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /*config*/)
-{
-    return true;
 }
 
 timestamp_t

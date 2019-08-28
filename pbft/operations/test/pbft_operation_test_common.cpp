@@ -15,7 +15,7 @@
 #include <include/bluzelle.hpp>
 #include <pbft/operations/pbft_memory_operation.hpp>
 #include <proto/bluzelle.pb.h>
-#include <bootstrap/peer_address.hpp>
+#include <peers_beacon/peer_address.hpp>
 #include <pbft/operations/pbft_persistent_operation.hpp>
 #include <storage/mem_storage.hpp>
 

@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <gtest/gtest.h>
-#include <bootstrap/bootstrap_peers_base.hpp>
+#include <peers_beacon/peer_address.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
 #include <proto/pbft.pb.h>
 
