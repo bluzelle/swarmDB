@@ -137,6 +137,30 @@ TEST_F(peers_beacon_test, test_duplicate_peers)
     ASSERT_EQ(peers->current()->size(), 1U);
 }
 
+TEST_F(peers_beacon_test, test_esr)
+{
+    throw std::runtime_error("not implemented");
+
+}
+
+TEST_F(peers_beacon_test, test_url)
+{
+    throw std::runtime_error("not implemented");
+
+}
+
+TEST_F(peers_beacon_test, test_changed_list)
+{
+    throw std::runtime_error("not implemented");
+
+}
+
+TEST_F(peers_beacon_test, test_automatic_refresh)
+{
+    throw std::runtime_error("not implemented");
+
+}
+
 /*
 
 // flaky tests...

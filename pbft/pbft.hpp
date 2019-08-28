@@ -20,7 +20,6 @@
 #include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_persistent_state.hpp>
-#include <pbft/pbft_config_store.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
 #include <pbft/pbft_checkpoint_manager.hpp>
 #include <storage/storage_base.hpp>
@@ -77,7 +76,7 @@ namespace bzn
         pbft(
             std::shared_ptr<bzn::node_base> node
             , std::shared_ptr<bzn::asio::io_context_base> io_context
-            , const bzn::peers_list_t& peers
+            , std::shared_ptr<bzn::peers_beacon_base> peers
             , std::shared_ptr<bzn::options_base> options
             , std::shared_ptr<pbft_service_base> service
             , std::shared_ptr<pbft_failure_detector_base> failure_detector
@@ -212,11 +211,6 @@ namespace bzn
         bool initialize_configuration(const bzn::peers_list_t& peers);
         const std::vector<bzn::peer_address_t>& current_peers() const;
 
-        void broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash);
-        bool is_configuration_acceptable_in_new_view(const hash_t& config_hash);
-        bool move_to_new_configuration(const hash_t& config_hash, uint64_t view);
-        bool proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> config);
-
         void maybe_record_request(const bzn_envelope &env, const std::shared_ptr<pbft_operation> &op);
 
         timestamp_t now() const;
@@ -289,7 +283,7 @@ namespace bzn
         bzn_envelope saved_newview;
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
-        std::shared_ptr<pbft_config_store> configurations;
+        std::shared_ptr<peers_beacon_base> peers_beacon;
         std::shared_ptr<bzn::pbft_checkpoint_manager> checkpoint_manager;
         std::shared_ptr<bzn::monitor_base> monitor;
 

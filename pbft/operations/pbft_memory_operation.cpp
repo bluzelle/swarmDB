@@ -18,7 +18,7 @@
 
 using namespace bzn;
 
-pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
+pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<peers_beacon_base> peers)
         : pbft_operation(view, sequence, request_hash)
         , peers(std::move(peers))
 {
@@ -135,22 +135,18 @@ pbft_memory_operation::is_preprepared() const
     return this->preprepare_seen;
 }
 
-size_t
-pbft_memory_operation::faulty_nodes_bound() const
-{
-    return (this->peers->size() - 1) / 3;
-}
-
 bool
 pbft_memory_operation::is_prepared() const
 {
-    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
+    throw std::runtime_error("TODO");
+    //return this->has_request() && this->is_preprepared() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 bool
 pbft_memory_operation::is_committed() const
 {
-    return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
+    throw std::runtime_error("TODO");
+    //return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
 }
 
 void

@@ -73,9 +73,9 @@ pbft_persistent_operation::get_uuid()
     return OPERATIONS_UUID;
 }
 
-pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, size_t peers_size)
+pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::peers_beacon_base> peers)
         : pbft_operation(view, sequence, request_hash)
-        , peers_size(peers_size)
+        , peers(std::move(peers))
         , storage(std::move(storage))
         , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
@@ -95,9 +95,9 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
 }
 
 // constructs operation already in storage without re-adding to storage
-pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash)
+pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::peers_beacon_base> peers)
     : pbft_operation(view, sequence, request_hash)
-    , peers_size(1) // TODO: move peers_size out of operation. for now, this allows is_* to succeed if stage is set appropriately
+    , peers(std::move(peers))
     , storage(std::move(storage))
     , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
@@ -178,23 +178,26 @@ bool
 pbft_persistent_operation::is_preprepared() const
 {
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPREPARE);
-    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size() > 0;
+    throw std::runtime_error("TODO: need to do this based on a saved state");
+    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size() > 0;
 }
 
 bool
 pbft_persistent_operation::is_prepared() const
 {
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE);
-    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        >= pbft::honest_majority_size(this->peers_size) && this->is_preprepared() && this->has_request();
+    throw std::runtime_error("TODO: need to do this based on a saved state");
+    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
+        //>= pbft::honest_majority_size(this->peers_size) && this->is_preprepared() && this->has_request();
 }
 
 bool
 pbft_persistent_operation::is_committed() const
 {
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_COMMIT);
-    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        >= pbft::honest_majority_size(this->peers_size) && this->is_prepared();
+    throw std::runtime_error("TODO: need to do this based on a saved state");
+    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
+        //>= pbft::honest_majority_size(this->peers_size) && this->is_prepared();
 }
 
 void
@@ -351,7 +354,7 @@ pbft_persistent_operation::get_prepares() const
 }
 
 std::vector<std::shared_ptr<pbft_persistent_operation>>
-pbft_persistent_operation::prepared_operations_in_range(std::shared_ptr<bzn::storage_base> storage, uint64_t start
+pbft_persistent_operation::prepared_operations_in_range(std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::peers_beacon_base> peers, uint64_t start
     , std::optional<uint64_t> end)
 {
     static const std::regex pattern(STAGE_KEY + "$");
@@ -378,7 +381,7 @@ pbft_persistent_operation::prepared_operations_in_range(std::shared_ptr<bzn::sto
             bzn::hash_t hash;
             if (parse_prefix(prefix, view, sequence, hash))
             {
-                auto op = std::make_shared<pbft_persistent_operation>(storage, view, sequence, hash);
+                auto op = std::make_shared<pbft_persistent_operation>(storage, view, sequence, hash, peers);
                 results.push_back(op);
             }
             else

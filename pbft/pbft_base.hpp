@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <bootstrap/bootstrap_peers.hpp>
-#include <bootstrap/peer_address.hpp>
+#include <peers_beacon/peer_address.hpp>
+#include <peers_beacon/peers_beacon_base.hpp>
 #include <node/node_base.hpp>
 #include <pbft/operations/pbft_operation.hpp>
 #include <proto/pbft.pb.h>

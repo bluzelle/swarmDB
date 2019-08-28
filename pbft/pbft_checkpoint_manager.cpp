@@ -30,12 +30,12 @@ using namespace bzn;
 pbft_checkpoint_manager::pbft_checkpoint_manager(
         std::shared_ptr<asio::io_context_base> io_context,
         std::shared_ptr<storage_base> storage,
-        std::shared_ptr<pbft_config_store> config_store,
+        std::shared_ptr<peers_beacon_base> peers_beacon,
         std::shared_ptr<node_base> node
 )
         : io_context(std::move(io_context))
         , storage(std::move(storage))
-        , config_store(std::move(config_store))
+        , peers_beacon(std::move(peers_beacon))
         , node(std::move(node))
 {
     this->init_persists();
@@ -86,7 +86,7 @@ pbft_checkpoint_manager::local_checkpoint_reached(const bzn::checkpoint_t& cp)
     msg.set_checkpoint_msg(cp_msg.SerializeAsString());
 
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
-    for (const auto& peer : *(this->config_store->current()->get_peers()))
+    for (const auto& peer : *(this->peers_beacon->current()))
     {
         this->node->send_signed_message(make_endpoint(peer), msg_ptr);
     }
@@ -158,7 +158,7 @@ pbft_checkpoint_manager::handle_checkpoint_message(const bzn_envelope& msg, std:
 void
 pbft_checkpoint_manager::maybe_stabilize_checkpoint(const checkpoint_t& cp)
 {
-    auto peers = this->config_store->current()->get_peers();
+    auto peers = this->peers_beacon->current();
 
     // how many messages do we have supporting this checkpoint from peers in the current config?
     size_t checkpoint_attestants = std::count_if(this->partial_checkpoint_proofs[cp].begin(), this->partial_checkpoint_proofs[cp].end(),
