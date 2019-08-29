@@ -31,7 +31,7 @@ bzn::static_peers_beacon_for(bzn::peers_list_t peers)
 }
 
 std::shared_ptr<bzn::mock_peers_beacon_base>
-static_peers_beacon_for(std::vector<bzn::peer_address_t> peers)
+bzn::static_peers_beacon_for(std::vector<bzn::peer_address_t> peers)
 {
     bzn::peers_list_t list;
     std::for_each(peers.begin(), peers.end(),
