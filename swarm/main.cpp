@@ -101,45 +101,6 @@ init_logging(const bzn::options& options)
 }
 
 
-bool
-init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url, const std::string& swarm_info_esr_url, const std::string& swarm_info_esr_address, const bzn::uuid_t& swarm_id)
-{
-    if (peers_file.empty() && peers_url.empty() && swarm_id.empty())
-    {
-        LOG(error) << "Bootstrap peers must be specified options (bootstrap_file, bootstrap_url or swarm_id)";
-        return false;
-    }
-
-    if (!swarm_id.empty())
-    {
-        peers.fetch_peers_from_esr_contract(swarm_info_esr_url, swarm_info_esr_address, swarm_id);
-        if (!peers.get_peers().empty())
-        {
-            return true;
-        }
-
-        LOG(warning) << "Ethereum Swarm Registry contained no peer listing for the swarm with id " << swarm_id << " checking other sources";
-    }
-
-    if (!peers_file.empty())
-    {
-        peers.fetch_peers_from_file(peers_file);
-    }
-
-    if (!peers_url.empty())
-    {
-        peers.fetch_peers_from_url(peers_url);
-    }
-
-    if (peers.get_peers().empty())
-    {
-        LOG(error) << "Failed to find any bootstrap peers";
-        return false;
-    }
-    return true;
-}
-
-
 boost::uintmax_t
 get_dir_size(const boost::filesystem::path& dir)
 {

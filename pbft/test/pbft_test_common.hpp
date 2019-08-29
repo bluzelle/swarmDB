@@ -83,7 +83,7 @@ namespace bzn::test
         std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
 
         std::shared_ptr<bzn::pbft_operation_manager> operation_manager =
-                std::make_shared<bzn::pbft_operation_manager>(storage, static_peers_beacon_for(TEST_PEER_LIST));
+                std::make_shared<bzn::pbft_operation_manager>(static_peers_beacon_for(TEST_PEER_LIST), storage);
 
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
