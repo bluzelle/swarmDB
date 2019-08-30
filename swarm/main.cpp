@@ -204,11 +204,11 @@ main(int argc, const char* argv[])
 
         init_logging(*options);
 
-        bzn::bootstrap_peers peers(options->peer_validation_enabled());
-        if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url(),
-                        options->get_swarm_info_esr_url(), options->get_swarm_info_esr_address(),
-                        options->get_swarm_id()))
-            throw std::runtime_error("Bootstrap peers initialization failed.");
+        auto peers = std::make_shared<bzn::peers_beacon>(options);
+        if (!peers->start())
+        {
+            throw std::runtime_error("could not find acceptable peers list");
+        }
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
 

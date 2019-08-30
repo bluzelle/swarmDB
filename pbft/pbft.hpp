@@ -147,6 +147,8 @@ namespace bzn
 
         checkpoint_t latest_stable_checkpoint() const;
 
+        std::shared_ptr<bzn::peers_beacon_base> peers() const override;
+
     private:
         bool preliminary_filter_msg(const pbft_msg& msg);
 

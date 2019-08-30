@@ -119,7 +119,7 @@ namespace bzn
         for (size_t view{0}; view < 100; ++view)
         {
             const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
-            const bzn::uuid_t accepted_uuid = this->pbft->current_peers()[view % this->pbft->current_peers().size()].uuid;
+            const bzn::uuid_t accepted_uuid = this->pbft->peers()->ordered()->at(view % this->pbft->peers()->ordered()->size()).uuid;
             EXPECT_EQ(uuid, accepted_uuid);
         }
     }

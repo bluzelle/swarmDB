@@ -4,7 +4,6 @@ set(test_srcs
     pbft_audit_test.cpp
     pbft_test_common.cpp
     pbft_checkpoint_tests.cpp
-    pbft_join_leave_test.cpp
     pbft_proto_test.cpp
     pbft_catchup_test.cpp
     pbft_timestamp_test.cpp

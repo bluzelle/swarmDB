@@ -46,6 +46,8 @@ namespace bzn
 
         virtual const peer_address_t& get_peer_by_uuid(const std::string& uuid) const = 0;
 
+        virtual std::shared_ptr<bzn::peers_beacon_base> peers() const = 0;
+
         virtual ~pbft_base() = default;
 
     };

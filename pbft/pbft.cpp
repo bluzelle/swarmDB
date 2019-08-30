@@ -1761,3 +1761,9 @@ pbft::latest_stable_checkpoint() const
 {
     return this->checkpoint_manager->get_latest_stable_checkpoint();
 }
+
+std::shared_ptr<bzn::peers_beacon_base>
+pbft::peers() const
+{
+    return this->peers_beacon;
+}

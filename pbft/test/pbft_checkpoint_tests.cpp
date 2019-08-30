@@ -36,18 +36,6 @@ namespace bzn::test
         checkpoint_t cp{100, "100"};
         checkpoint_t cp2{200, "200"};
 
-        pbft_checkpoint_test()
-        {
-            auto config = std::make_shared<pbft_configuration>();
-            for (auto &p : TEST_PEER_LIST)
-            {
-                config->add_peer(p);
-            }
-
-            this->configs->add(config);
-            this->configs->set_current(config->get_hash(), 0);
-        }
-
         void send_checkpoint_messages(const checkpoint_t& cp, size_t count = INT_MAX)
         {
             checkpoint_msg cp_msg;

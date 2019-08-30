@@ -33,7 +33,7 @@ public:
     MOCK_CONST_METHOD0(is_primary,
             bool());
     MOCK_CONST_METHOD1(get_primary,
-            const peer_address_t&(std::optional<uint64_t> view));
+            peer_address_t(std::optional<uint64_t> view));
     MOCK_CONST_METHOD0(get_uuid,
             const bzn::uuid_t&());
     MOCK_METHOD0(handle_failure,
