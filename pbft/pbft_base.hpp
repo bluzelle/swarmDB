@@ -38,15 +38,13 @@ namespace bzn
 
         virtual bool is_primary() const = 0;
 
-        virtual const peer_address_t& get_primary(std::optional<uint64_t> view) const = 0;
+        virtual peer_address_t get_primary(std::optional<uint64_t> view) const = 0;
 
         virtual const bzn::uuid_t& get_uuid() const = 0;
 
         virtual void handle_failure() = 0;
 
         virtual const peer_address_t& get_peer_by_uuid(const std::string& uuid) const = 0;
-
-        virtual std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const = 0;
 
         virtual ~pbft_base() = default;
 

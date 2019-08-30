@@ -543,7 +543,7 @@ pbft::broadcast(const bzn_envelope& msg)
 {
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
 
-    for (const auto& peer : this->current_peers())
+    for (const auto& peer : *this->peers_beacon->current())
     {
         this->node->send_signed_message(make_endpoint(peer), msg_ptr);
     }
@@ -579,7 +579,7 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
     msg_env->set_timestamp(this->now());
 
     auto targets = std::make_shared<std::vector<boost::asio::ip::tcp::endpoint>>();
-    for (const auto& peer : this->current_peers())
+    for (const auto& peer : *this->peers_beacon->current())
     {
         targets->emplace_back(bzn::make_endpoint(peer));
     }
@@ -736,10 +736,10 @@ pbft::is_primary() const
     return this->get_primary().uuid == this->uuid;
 }
 
-const peer_address_t&
+peer_address_t
 pbft::get_primary(std::optional<uint64_t> view) const
 {
-    return this->current_peers()[view.value_or(this->view.value()) % this->current_peers().size()];
+    return this->peers_beacon->ordered()->at(view.value_or(this->view.value()) % this->peers_beacon->current()->size());
 }
 
 bzn_envelope
@@ -853,7 +853,7 @@ pbft::quorum_size() const
 size_t
 pbft::max_faulty_nodes() const
 {
-    return this->current_peers().size()/3;
+    return this->peers_beacon->current()->size()/3;
 }
 
 void
@@ -936,10 +936,11 @@ pbft::get_node()
 bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {
-    return std::find_if (std::begin(this->current_peers()), std::end(this->current_peers()), [&](const auto& address)
+    auto ptr = this->peers_beacon->current();
+    return std::find_if (ptr->begin(), ptr->end(), [&](const auto& address)
     {
         return sender == address.uuid;
-    }) != this->current_peers().end();
+    }) != ptr->end();
 }
 
 std::map<bzn::checkpoint_t, std::set<bzn::uuid_t>>
@@ -962,7 +963,7 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     //  filter checkpoint_hashes to only those pairs (checkpoint, senders) such that |senders| >= 2f+1
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> retval;
     std::copy_if(checkpoint_hashes.begin(), checkpoint_hashes.end(), std::inserter(retval, retval.end())
-        , [&](const auto& h) {return h.second.size() >= this->honest_member_size(this->current_peers().size());});
+        , [&](const auto& h) {return h.second.size() >= this->honest_member_size(this->peers_beacon->current()->size());});
 
     return retval;
 }
@@ -1531,7 +1532,7 @@ pbft::get_status()
     status["view"] = this->view.value();
 
     status["peer_index"] = bzn::json_message();
-    for (const auto& p : this->current_peers())
+    for (const auto& p : *this->peers_beacon->current())
     {
         bzn::json_message peer;
         peer["host"] = p.host;
@@ -1544,16 +1545,10 @@ pbft::get_status()
     return status;
 }
 
-const std::vector<bzn::peer_address_t>&
-pbft::current_peers() const
-{
-    return *(this->current_peers_ptr());
-}
-
 const peer_address_t&
 pbft::get_peer_by_uuid(const std::string& uuid) const
 {
-    for (auto const& peer : this->current_peers())
+    for (auto const& peer : *this->peers_beacon->current())
     {
         if (peer.uuid == uuid)
         {
@@ -1680,24 +1675,26 @@ pbft::join_swarm()
     // is_peer checks against uuid only, we need to bail if the list contains a node with the same IP and port,
     // So, check the peers list for node with same ip and port and post error and bail if found.
     const auto bad_peer = std::find_if(
-            std::begin(this->current_peers())
-            , std::end(this->current_peers())
+            std::begin(*this->peers_beacon->current())
+            , std::end(*this->peers_beacon->current())
             , [&](const bzn::peer_address_t& address)
             {
                 return address.port == join_msg.peer_info().port() && address.host == join_msg.peer_info().host();
             });
 
-    if (bad_peer != std::end(this->current_peers()))
+    if (bad_peer != std::end(*this->peers_beacon->current()))
     {
         LOG (error) << "Bootstrap configuration file validation failure - peer with UUID: " << bad_peer->uuid << " hides local peer";
         throw std::runtime_error("Bad peer found in Bootstrap Configuration file");
     }
 
-    uint32_t selected = this->generate_random_number(0, this->current_peers().size() - 1);
+    uint32_t selected = this->generate_random_number(0, this->peers_beacon->current()->size() - 1);
 
-    LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
+    auto ptr = this->peers_beacon->ordered();
+
+    LOG(info) << "Sending request to join swarm to node " << ptr->at(selected).uuid;
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_signed_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
+    this->node->send_signed_message(make_endpoint(ptr->at(selected)), msg_ptr);
 
     this->in_swarm = swarm_status::joining;
     this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);

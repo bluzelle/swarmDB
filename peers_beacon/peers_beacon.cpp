@@ -62,6 +62,12 @@ peers_beacon::current() const
     return this->internal_current;
 }
 
+std::shared_ptr<const ordered_peers_list_t>
+peers_beacon::ordered() const
+{
+    return this->internal_current_ordered;
+}
+
 bool
 peers_beacon::refresh(bool first_run)
 {
@@ -187,7 +193,21 @@ peers_beacon::switch_peers_list(const peers_list_t& new_peers)
         LOG(info) << "Switching to new peers list with " << new_peers.size() << " peers";
     }
 
+    auto new_ordered = std::make_shared<ordered_peers_list_t>();
+    std::for_each(new_peers.begin(), new_peers.end(),
+        [&](const auto& peer)
+        {
+            new_ordered->push_back(peer);
+        });
+
+    std::sort(new_ordered->begin(), new_ordered->end(),
+        [](const auto& peer1, const auto& peer2)
+        {
+            return peer1.uuid.compare(peer2.uuid) < 0;
+        });
+
     this->internal_current = std::make_shared<const peers_list_t>(new_peers);
+    this->internal_current_ordered = new_ordered;
 
     return true;
 }

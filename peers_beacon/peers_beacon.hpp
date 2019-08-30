@@ -30,6 +30,8 @@ namespace bzn
         // get a pointer to the current peers list (which won't change, but can be replaced at any time)
         std::shared_ptr<const peers_list_t> current() const override;
 
+        std::shared_ptr<const ordered_peers_list_t> ordered() const override;
+
         // refresh from whatever source we are using
         bool refresh(bool first_run = false) override;
 
@@ -50,6 +52,7 @@ namespace bzn
 
         // this is kept as a shared ptr to avoid issues when a reader reads while the peers list changes
         std::shared_ptr<const peers_list_t> internal_current;
+        std::shared_ptr<const ordered_peers_list_t> internal_current_ordered;
 
         std::unique_ptr<bzn::asio::steady_timer_base> refresh_timer;
     };

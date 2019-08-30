@@ -29,6 +29,9 @@ namespace bzn {
         MOCK_CONST_METHOD0(current,
             std::shared_ptr<const peers_list_t>());
 
+        MOCK_CONST_METHOD0(ordered,
+                std::shared_ptr<const ordered_peers_list_t>());
+
         MOCK_METHOD1(refresh,
             bool(bool first_run));
 

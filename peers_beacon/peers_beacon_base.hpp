@@ -16,10 +16,12 @@
 #include <peers_beacon/peer_address.hpp>
 #include <memory>
 #include <unordered_set>
+#include <vector>
 
 namespace bzn
 {
     using peers_list_t = std::unordered_set<bzn::peer_address_t>;
+    using ordered_peers_list_t = std::vector<bzn::peer_address_t>;
 
     class peers_beacon_base
     {
@@ -28,6 +30,8 @@ namespace bzn
 
         // get a pointer to the current peers list (which won't change, but can be replaced at any time)
         virtual std::shared_ptr<const peers_list_t> current() const = 0;
+
+        virtual std::shared_ptr<const ordered_peers_list_t> ordered() const = 0;
 
         // refresh from whatever source we are using; return success
         virtual bool refresh(bool first_run = false) = 0;

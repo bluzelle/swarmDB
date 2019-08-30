@@ -96,7 +96,7 @@ namespace bzn
 
         bool is_primary() const override;
 
-        const peer_address_t& get_primary(std::optional<uint64_t> view = std::nullopt) const override;
+        peer_address_t get_primary(std::optional<uint64_t> view = std::nullopt) const override;
 
         const bzn::uuid_t& get_uuid() const override;
 
@@ -207,7 +207,6 @@ namespace bzn
 
         void initialize_persistent_state();
         bool initialize_configuration(const bzn::peers_list_t& peers);
-        const std::vector<bzn::peer_address_t>& current_peers() const;
 
         void maybe_record_request(const bzn_envelope &env, const std::shared_ptr<pbft_operation> &op);
 

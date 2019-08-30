@@ -39,10 +39,10 @@ namespace bzn
             return this->host == other.host && this->port == other.port && this->uuid == other.uuid;
         }
 
-        const std::string host;
-        const uint16_t    port;
-        const std::string name;
-        const std::string uuid;
+        std::string host;
+        uint16_t    port;
+        std::string name;
+        std::string uuid;
     };
 }
 

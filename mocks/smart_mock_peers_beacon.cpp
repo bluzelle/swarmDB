@@ -25,6 +25,21 @@ bzn::static_peers_beacon_for(bzn::peers_list_t peers)
 
     EXPECT_CALL(*res, current()).WillRepeatedly(Return(list));
 
+    auto ordered = std::make_shared<ordered_peers_list_t>();
+    std::for_each(peers.begin(), peers.end(),
+            [&](const auto& peer)
+            {
+                ordered->push_back(peer);
+            });
+
+    std::sort(ordered->begin(), ordered->end(),
+            [](const auto& peer1, const auto& peer2)
+            {
+                return peer1.uuid.compare(peer2.uuid) < 0;
+            });
+
+    EXPECT_CALL(*res, ordered()).WillRepeatedly(Return(ordered));
+
     EXPECT_CALL(*res, refresh(_)).Times(AnyNumber());
 
     return res;
