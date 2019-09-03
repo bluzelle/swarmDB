@@ -263,7 +263,8 @@ pbft_checkpoint_manager::send_delayed_state_request(const checkpoint_t& cp)
 
                 auto strong_this = weak_this.lock();
 
-                if (strong_this && strong_this->get_latest_stable_checkpoint() == cp)
+                // only request state if we are still behind the stable checkpoint
+                if (strong_this && strong_this->latest_local_checkpoint.value().first < cp.first)
                 {
                     std::lock_guard<std::mutex> lock(strong_this->lock);
                     strong_this->send_state_request();

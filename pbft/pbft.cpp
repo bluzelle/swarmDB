@@ -196,6 +196,12 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
+    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
+    {
+        LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        return;
+    }
+
     const auto hash = this->crypto->hash(msg);
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
@@ -230,6 +236,12 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     if (!this->preliminary_filter_msg(msg))
     {
+        return;
+    }
+
+    if ((!original_msg.sender().empty()) && (!this->crypto->verify(original_msg)))
+    {
+        LOG(error) << "Dropping message with invalid signature: " << original_msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
 
@@ -277,13 +289,6 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
         {
             LOG(debug) << boost::format("Dropping message because sequence number %1% <= %2%") % msg.sequence()
                 % this->get_low_water_mark();
-            return false;
-        }
-
-        if (msg.sequence() > this->get_high_water_mark())
-        {
-            LOG(debug) << boost::format("Dropping message because sequence number %1% greater than %2%") % msg.sequence()
-                % this->get_high_water_mark();
             return false;
         }
     }
@@ -367,6 +372,13 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         LOG(debug) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
     }
+
+    if ((!request_env.sender().empty()) && (!this->crypto->verify(request_env)))
+    {
+        LOG(error) << "Dropping message with invalid signature: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        return;
+    }
+
     this->saw_request(request_env, hash);
     auto op = setup_request_operation(request_env, hash);
     this->do_preprepare(op);
@@ -381,7 +393,10 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
 
-    this->failure_detector->request_seen(req_hash);
+    if (this->is_view_valid())
+    {
+        this->failure_detector->request_seen(req_hash);
+    }
 }
 
 
@@ -991,20 +1006,30 @@ pbft::handle_failure()
 }
 
 void
-pbft::initiate_viewchange()
+pbft::initiate_viewchange(std::optional<uint64_t> opt_view)
 {
-    pbft_msg view_change;
-    std::vector<bzn_envelope> requests;
+    uint64_t view_to_set = opt_view.has_value() ? *opt_view : this->view.value() + 1;
+    if (view_to_set > this->last_view_sent.value())
+    {
+        pbft_msg view_change;
+        std::vector<bzn_envelope> requests;
 
-    this->view_is_valid = false;
-    auto msg_env = pbft::make_viewchange(this->view.value() + 1
+        this->view_is_valid = false;
+        auto msg_env = pbft::make_viewchange(view_to_set
             , this->checkpoint_manager->get_latest_stable_checkpoint().first
             , this->checkpoint_manager->get_latest_stable_checkpoint_proof()
-            , this->operation_manager->prepared_operations_since(this->checkpoint_manager->get_latest_stable_checkpoint().first));
+            , this->operation_manager->prepared_operations_since(
+                this->checkpoint_manager->get_latest_stable_checkpoint().first));
 
-    LOG(debug) << "Sending VIEWCHANGE for view " << this->view.value() + 1;
+        LOG(debug) << "Sending VIEWCHANGE for view " << view_to_set << " (currently at " << this->view.value() << ")";
 
-    this->async_signed_broadcast(std::move(msg_env));
+        this->async_signed_broadcast(std::move(msg_env));
+        this->last_view_sent = view_to_set;
+    }
+    else
+    {
+        LOG(debug) << "Not sending VIEWCHANGE for view " << view_to_set;
+    }
 }
 
 std::shared_ptr<std::string>
@@ -1391,7 +1416,8 @@ pbft::fill_in_missing_pre_prepares(uint64_t max_checkpoint_sequence, uint64_t ne
 
             auto request = new bzn_envelope;
             request->set_database_msg(msg.SerializeAsString());
-            this->crypto->sign(*request);
+
+            // don't sign message as it doesn't have a valid sender
 
             pbft_msg msg2;
             msg2.set_view(new_view);
@@ -1609,8 +1635,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
         this->valid_viewchange_messages_for_view[msg.view()].size() == this->max_faulty_nodes() + 1 &&
         msg.view() > this->last_view_sent.value())
     {
-        this->last_view_sent = msg.view();
-        this->initiate_viewchange();
+        this->initiate_viewchange(msg.view());
     }
 
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin()
@@ -1698,6 +1723,7 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     this->new_config_in_flight = false;
 
     // after moving to the new view processes the preprepares
+    LOG(debug) << "Processing " << msg.pre_prepare_messages_size() << " pre-prepares";
     for (size_t i{0}; i < static_cast<size_t>(msg.pre_prepare_messages_size()); ++i)
     {
         const bzn_envelope original_msg2 = msg.pre_prepare_messages(i);

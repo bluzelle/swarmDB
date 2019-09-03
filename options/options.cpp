@@ -141,6 +141,22 @@ options::get_ws_idle_timeout() const
     return std::chrono::milliseconds(raw_opts.get<uint64_t>(WS_IDLE_TIMEOUT));
 }
 
+std::chrono::milliseconds
+options::get_fd_oper_timeout() const
+{
+    //TODO: Remove this?
+    return std::chrono::milliseconds(raw_opts.get<uint64_t>(FD_OPER_TIMEOUT));
+}
+
+
+std::chrono::milliseconds
+options::get_fd_fail_timeout() const
+{
+    //TODO: Remove this?
+    return std::chrono::milliseconds(raw_opts.get<uint64_t>(FD_FAIL_TIMEOUT));
+}
+
+
 
 size_t
 options::get_audit_mem_size() const

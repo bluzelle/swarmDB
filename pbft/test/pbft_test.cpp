@@ -225,16 +225,6 @@ namespace bzn::test
         service.apply_operation(op);
     }
 
-    TEST_F(pbft_test, messages_after_high_water_mark_dropped)
-    {
-        this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
-                .Times(Exactly(0));
-
-        this->preprepare_msg.set_sequence(pbft->get_high_water_mark() + 1);
-        pbft->handle_message(preprepare_msg, default_original_msg);
-    }
-
     TEST_F(pbft_test, messages_before_low_water_mark_dropped)
     {
         this->build_pbft();

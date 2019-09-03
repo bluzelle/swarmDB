@@ -17,6 +17,7 @@
 #include <pbft/pbft_failure_detector_base.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <pbft/operations/pbft_operation.hpp>
+#include <options/options_base.hpp>
 #include <unordered_set>
 #include <queue>
 #include <list>
@@ -30,7 +31,7 @@ namespace bzn
     class pbft_failure_detector : public std::enable_shared_from_this<pbft_failure_detector>, public bzn::pbft_failure_detector_base
     {
     public:
-        pbft_failure_detector(std::shared_ptr<bzn::asio::io_context_base>);
+        pbft_failure_detector(std::shared_ptr<bzn::asio::io_context_base>, std::shared_ptr<bzn::options_base> options);
 
         void request_seen(const bzn::hash_t& req_hash) override;
 
@@ -49,6 +50,7 @@ namespace bzn
         void add_completed_request_hash(const bzn::hash_t& request_hash);
 
         std::shared_ptr<bzn::asio::io_context_base> io_context;
+        std::shared_ptr<bzn::options_base> options;
 
         std::unique_ptr<bzn::asio::steady_timer_base> request_progress_timer;
 
@@ -60,6 +62,7 @@ namespace bzn
         std::function<void()> failure_handler;
 
         std::mutex lock;
+        bool in_recovery{false};
     };
 
 }
