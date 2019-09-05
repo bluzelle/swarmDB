@@ -10,7 +10,3 @@ if (UNIX AND NOT APPLE)
         add_subdirectory(debian)
     endif()
 endif()
-
-if (APPLE)
-    add_subdirectory(osx)
-endif()

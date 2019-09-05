@@ -23,22 +23,6 @@ If you want to deploy your swarm immediately you can use our docker-compose quic
 
 ## Getting started building from source
 
-### Installation - macOSX
-
-**Dependencies \(Protobuf, CMake\)**
-
-```text
-$ brew install protobuf openssl snappy lz4 git-lfs
-```
-
-**ccache \(Optional\)**
-
-If available, cmake will attempt to use ccache \([https://ccache.samba.org](https://ccache.samba.org)\) to _drastically_ speed up compilation.
-
-```text
-$ brew install ccache
-```
-
 ### Installation - Ubuntu
 
 **CMake (Ver. 3.10 or greater) etc.**
