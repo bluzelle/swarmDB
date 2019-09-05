@@ -37,12 +37,6 @@ matrix:
         - CMAKE_URL="https://cmake.org/files/v3.12/cmake-3.12.1-Linux-x86_64.tar.gz"
         - CMAKE_COMMAND="$HOME/.local/bin/cmake -DPMD_EXE=$HOME/pmd-bin-6.6.0/bin/run.sh ${CMAKE_OPTIONS}"
 
-    - os: osx
-      osx_image: xcode10.2
-      env:
-        - MATRIX_EVAL="brew unlink python && brew install snappy lz4 git-lfs && brew uninstall --ignore-dependencies boost"
-        - CMAKE_COMMAND="cmake ${CMAKE_OPTIONS}"
-
 cache:
   directories:
     - $HOME/.local
@@ -51,27 +45,23 @@ before_install:
     - eval "${MATRIX_EVAL}"
     - mkdir -p $HOME/.local
     - |
-      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        pip install --user cpp-coveralls
-        if [ ! -e $HOME/.local/bin/cmake ]; then
-          echo "CMake not found in the cache, get and extract it..."
-          travis_retry curl -L ${CMAKE_URL} \
-            | tar -xz -C $HOME/.local --strip-components=1
-        else
-          echo "Using cached CMake"
-        fi
+      pip install --user cpp-coveralls
+      if [ ! -e $HOME/.local/bin/cmake ]; then
+        echo "CMake not found in the cache, get and extract it..."
+        travis_retry curl -L ${CMAKE_URL} \
+          | tar -xz -C $HOME/.local --strip-components=1
+      else
+        echo "Using cached CMake"
       fi
     - |
-      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        if [ ! -e $HOME/pmd-bin-6.6.0/bin/run.sh ]; then
-          echo "PMD not found in the cache, get and extract it..."
-          cd $HOME
-          travis_retry curl -OL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F6.6.0/pmd-bin-6.6.0.zip"
-          unzip pmd-bin-6.6.0.zip
-          rm pmd-bin-6.6.0.zip
-        else
-          echo "Using cached PMD"
-        fi
+      if [ ! -e $HOME/pmd-bin-6.6.0/bin/run.sh ]; then
+        echo "PMD not found in the cache, get and extract it..."
+        cd $HOME
+        travis_retry curl -OL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F6.6.0/pmd-bin-6.6.0.zip"
+        unzip pmd-bin-6.6.0.zip
+        rm pmd-bin-6.6.0.zip
+      else
+        echo "Using cached PMD"
       fi
 
 compiler:
@@ -99,25 +89,12 @@ script:
   - make package
 
 after_success:
-  - |
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/boost' -e 'build/openssl' -e 'build/rocksdb' -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'chaos/test' -e 'crud/test' -e 'crypto/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
-    fi
+  - coveralls -r ${TRAVIS_BUILD_DIR} -e 'build/boost' -e 'build/openssl' -e 'build/rocksdb' -e 'build/jsoncpp' -e 'build/googletest' -e 'build/proto' -e 'build/CMakeFiles' -e 'build/swarm_version.hpp' -e 'audit/test' -e 'bootstrap/test' -e 'chaos/test' -e 'crud/test' -e 'crypto/test' -e 'ethereum/test' -e 'http/test' -e 'mocks' -e 'node/test' -e 'options/test' -e 'pbft/test' -e 'status/test' -e 'storage/test' -e 'swarm' -e 'include' -e 'utils/test' --gcov-options '\-lp'
   - echo ${TRAVIS_BRANCH}
   - if [ "$TRAVIS_BRANCH" = "master" ] ; then PACKAGE_COMPONENT="stable" ; else PACKAGE_COMPONENT="unstable" ; fi
   - |
     if [ "$TRAVIS_BRANCH" = "master" ] || [ "$TRAVIS_BRANCH" = "devel" ] || [[ $TRAVIS_BRANCH == *"release"* ]]; then
-      if [ "$TRAVIS_OS_NAME" = "linux"  ]; then
-        travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=all;deb.component=${PACKAGE_COMPONENT};deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
-      fi
-      if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        if [ "$TRAVIS_BRANCH" = "master" ]; then
-          travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_OSX} "https://bluzelle.jfrog.io/bluzelle/OSX/${PACKAGE_NAME_OSX}"
-        fi
-        if [ "$TRAVIS_BRANCH" = "devel" ]; then
-          travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_OSX} "https://bluzelle.jfrog.io/bluzelle/osx-dev/${PACKAGE_COMPONENT}-${PACKAGE_NAME_OSX}"
-        fi
-      fi
+      travis_retry curl -u${REPO_USER}:${REPO_PASSWORD} -XPUT "https://bluzelle.jfrog.io/bluzelle/debian-local/pool/${PACKAGE_NAME_DEB};deb.distribution=all;deb.component=${PACKAGE_COMPONENT};deb.architecture=${PACKAGE_ARCHITECTURE}" -T ${TRAVIS_BUILD_DIR}/build/${PACKAGE_NAME_DEB}
     fi
     if [ "$TRAVIS_BRANCH" = "master" ] ; then
       git lfs fetch --all
