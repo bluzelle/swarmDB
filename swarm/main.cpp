@@ -29,6 +29,7 @@
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
 #include <monitor/monitor.hpp>
+#include <utils/utils_interface.hpp>
 
 #ifdef __APPLE__
 #pragma GCC diagnostic push
@@ -205,8 +206,9 @@ main(int argc, const char* argv[])
         init_logging(*options);
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
+        auto utils = std::make_shared<bzn::utils_interface>();
 
-        auto peers = std::make_shared<bzn::peers_beacon>(io_context, options);
+        auto peers = std::make_shared<bzn::peers_beacon>(io_context, utils, options);
         peers->start();
 
         // setup signal handler...

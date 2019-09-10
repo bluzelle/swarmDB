@@ -54,7 +54,7 @@ public:
         this->inner_opt.set(bzn::option_names::PEERS_REFRESH_INTERVAL_SECONDS, "60");
         EXPECT_CALL(*opt, get_simple_options()).WillRepeatedly(ReturnRef(this->inner_opt));
 
-        this->peers = std::make_shared<bzn::peers_beacon>(this->io, this->opt);
+        this->peers = std::make_shared<bzn::peers_beacon>(this->io, this->utils, this->opt);
     }
 
     void set_peers_file(const std::string& peers_data)

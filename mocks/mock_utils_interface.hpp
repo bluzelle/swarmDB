@@ -10,7 +10,12 @@ namespace bzn {
         MOCK_CONST_METHOD4(get_peer_info,
                 bzn::peer_address_t(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string& esr_address, const std::string& url));
         MOCK_CONST_METHOD2(sync_req,
-                std::string(std::string, std::string));
+                std::string(const std::string& url, const std::string& post));
+
+        std::string sync_req(const std::string& url) const
+        {
+            return this->sync_req(url, "");
+        }
     };
 
 }  // namespace bzn
