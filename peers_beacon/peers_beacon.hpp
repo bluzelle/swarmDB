@@ -16,13 +16,14 @@
 #include <options/options_base.hpp>
 #include <peers_beacon/peers_beacon_base.hpp>
 #include <peers_beacon/peer_address.hpp>
+#include <include/boost_asio_beast.hpp>
 
 namespace bzn
 {
     class peers_beacon : public peers_beacon_base, public std::enable_shared_from_this<peers_beacon>
     {
     public:
-        peers_beacon(std::shared_ptr<bzn::options_base> opt);
+        peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::options_base> opt);
 
         // do an initial pull and start any necessary timers
         void start() override;

@@ -204,10 +204,10 @@ main(int argc, const char* argv[])
 
         init_logging(*options);
 
-        auto peers = std::make_shared<bzn::peers_beacon>(options);
-        peers->start();
-
         auto io_context = std::make_shared<bzn::asio::io_context>();
+
+        auto peers = std::make_shared<bzn::peers_beacon>(io_context, options);
+        peers->start();
 
         // setup signal handler...
         boost::asio::signal_set signals(io_context->get_io_context(), SIGINT, SIGTERM);

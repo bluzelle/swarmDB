@@ -20,9 +20,10 @@
 
 using namespace bzn;
 
-peers_beacon::peers_beacon(std::shared_ptr<bzn::options_base> opt)
+peers_beacon::peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::options_base> opt)
         : options(opt)
         , internal_current(std::make_shared<peers_list_t>())
+        , refresh_timer(io->make_unique_steady_timer())
 {}
 
 void

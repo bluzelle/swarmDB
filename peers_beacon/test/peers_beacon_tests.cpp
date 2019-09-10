@@ -14,6 +14,7 @@
 
 #include <peers_beacon/peers_beacon.hpp>
 #include <mocks/mock_options_base.hpp>
+#include <mocks/smart_mock_io.hpp>
 #include <fstream>
 #include <string>
 #include <gtest/gtest.h>
@@ -23,6 +24,7 @@ namespace
     const std::string invalid_json = "[{\"Some key\": 124}, }}[} oh noes I broke it";
     const std::string no_peers = "[]";
     const std::string valid_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"host\": \"nonamepeer.com\", \"port\": 54321}]";
+    const std::string different_valid_peer = "[{\"name\": \"peer3\", \"host\": \"peer3.com\", \"port\": 12345, \"http_port\" : 8080}]";
     const std::string duplicate_peers = "[{\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345, \"http_port\" : 8080}, {\"name\": \"peer1\", \"host\": \"peer1.com\", \"port\": 12345}]";
     const std::string underspecified_peer = "[{\"name\": \"peer1\", \"port\": 1024}]";
     const std::string bad_port = "[{\"name\": \"peer1\", \"host\": \"127.0.0.1\", \"port\": 70000}]";
@@ -38,6 +40,8 @@ class peers_beacon_test : public Test
 {
 public:
     std::shared_ptr<bzn::mock_options_base> opt = std::make_shared<bzn::mock_options_base>();
+    bzn::simple_options inner_opt;
+    std::shared_ptr<bzn::asio::smart_mock_io> io = std::make_shared<bzn::asio::smart_mock_io>();
     std::shared_ptr<bzn::peers_beacon> peers;
 
     peers_beacon_test()
@@ -45,7 +49,10 @@ public:
         EXPECT_CALL(*opt, get_bootstrap_peers_file()).WillRepeatedly(Return(test_peers_filename));
         EXPECT_CALL(*opt, get_bootstrap_peers_url()).WillRepeatedly(Return(""));
         EXPECT_CALL(*opt, get_swarm_id()).WillRepeatedly(Return(""));
-        this->peers = std::make_shared<bzn::peers_beacon>(this->opt);
+        this->inner_opt.set(bzn::option_names::PEERS_REFRESH_INTERVAL_SECONDS, "60");
+        EXPECT_CALL(*opt, get_simple_options()).WillRepeatedly(ReturnRef(this->inner_opt));
+
+        this->peers = std::make_shared<bzn::peers_beacon>(this->io, this->opt);
     }
 
     void set_peers_file(const std::string& peers_data)
@@ -137,6 +144,31 @@ TEST_F(peers_beacon_test, test_duplicate_peers)
     ASSERT_EQ(peers->current()->size(), 1U);
 }
 
+TEST_F(peers_beacon_test, test_changed_list)
+{
+    set_peers_file(valid_peers);
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 2U);
+
+    set_peers_file(different_valid_peer);
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 1U);
+}
+
+TEST_F(peers_beacon_test, test_automatic_refresh)
+{
+    set_peers_file(valid_peers);
+    peers->start();
+    ASSERT_EQ(peers->current()->size(), 2U);
+
+    set_peers_file(different_valid_peer);
+    this->io->trigger_timer(0);
+
+    ASSERT_EQ(peers->current()->size(), 1U);
+
+}
+
+
 TEST_F(peers_beacon_test, test_esr)
 {
     throw std::runtime_error("not implemented");
@@ -144,18 +176,6 @@ TEST_F(peers_beacon_test, test_esr)
 }
 
 TEST_F(peers_beacon_test, test_url)
-{
-    throw std::runtime_error("not implemented");
-
-}
-
-TEST_F(peers_beacon_test, test_changed_list)
-{
-    throw std::runtime_error("not implemented");
-
-}
-
-TEST_F(peers_beacon_test, test_automatic_refresh)
 {
     throw std::runtime_error("not implemented");
 
