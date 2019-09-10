@@ -13,8 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <options/options.hpp>
-#include <utils/http_req.hpp>
-#include <utils/esr_peer_info.hpp>
+#include <utils/utils_interface.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
 #include <json/json.h>
@@ -339,30 +338,29 @@ namespace
     }
 }
 
-
+// TODO: replace this with a function that uses the ABI to create the request data
+// data_string_for_get_peer_info has been moved out of the anonymous namespace to make it possible to
+// unit test directly.
 namespace bzn::utils::esr
 {
-    // TODO: replace this with a function that uses the ABI to create the request data
-    // data_string_for_get_peer_info has been moved out of the anonymous namespace to make it possible to
-    // unit test directly.
     const std::string
     data_string_for_get_peer_info(const std::string& swarm_id, const std::string& peer_id)
     {
 
         const std::string SWARM_ID_PARAMETER {
-            size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
-            + pad_str_to_mod_64(string_to_hex(swarm_id))    // swarm id parameter
+                size_type_to_hex(swarm_id.size(), 64)           // size of variable parameter
+                + pad_str_to_mod_64(string_to_hex(swarm_id))    // swarm id parameter
         };
 
         const std::string PEER_ID_PARAMETER {
-            size_type_to_hex(peer_id.size(), 64)
-            + pad_str_to_mod_64(string_to_hex(peer_id))
+                size_type_to_hex(peer_id.size(), 64)
+                + pad_str_to_mod_64(string_to_hex(peer_id))
         };
 
         const std::string PREAMBLE {
-            GET_PEER_INFO_SIGNATURE
-            + size_type_to_hex( PARAMETER_OFFSET, 64)
-            + size_type_to_hex( PARAMETER_OFFSET + SWARM_ID_PARAMETER.size() / 2, 64)
+                GET_PEER_INFO_SIGNATURE
+                + size_type_to_hex( PARAMETER_OFFSET, 64)
+                + size_type_to_hex( PARAMETER_OFFSET + SWARM_ID_PARAMETER.size() / 2, 64)
         };
 
         return std::string{
@@ -371,28 +369,29 @@ namespace bzn::utils::esr
                 + PEER_ID_PARAMETER
         };
     }
+}
+
+using namespace bzn;
+
+std::vector<std::string>
+utils_interface::get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url) const
+{
+    const auto DATA{data_string_for_get_peers(swarm_id)};
+    const auto REQUEST{make_request( esr_address, DATA)};
+    const auto response{this->sync_req(url, REQUEST)};
+    const auto json_response{str_to_json(response)};
+    const auto result{json_response["result"].asCString() + 2}; // + 2 skips the '0x'
+    return parse_get_peers_result_to_vector(result);
+}
 
 
-    std::vector<std::string>
-    get_peer_ids(const bzn::uuid_t& swarm_id, const std::string& esr_address, const std::string& url)
-    {
-        const auto DATA{data_string_for_get_peers(swarm_id)};
-        const auto REQUEST{make_request( esr_address, DATA)};
-        const auto response{bzn::utils::http::sync_req(url, REQUEST)};
-        const auto json_response{str_to_json(response)};
-        const auto result{json_response["result"].asCString() + 2}; // + 2 skips the '0x'
-        return parse_get_peers_result_to_vector(result);
-    }
-
-
-    bzn::peer_address_t
-    get_peer_info(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string& esr_address, const std::string& url)
-    {
-        const auto DATA{data_string_for_get_peer_info(swarm_id, peer_id)};
-        const auto REQUEST{make_request( esr_address, DATA)};
-        const auto response{bzn::utils::http::sync_req(url, REQUEST)};
-        const auto json_response{str_to_json(response)};
-        const auto result{json_response["result"].asCString() + 2};
-        return parse_get_peer_info_result_to_peer_address(peer_id, result);
-    }
+bzn::peer_address_t
+utils_interface::get_peer_info(const bzn::uuid_t& swarm_id, const std::string& peer_id, const std::string& esr_address, const std::string& url) const
+{
+    const auto DATA{utils::esr::data_string_for_get_peer_info(swarm_id, peer_id)};
+    const auto REQUEST{make_request( esr_address, DATA)};
+    const auto response{this->sync_req(url, REQUEST)};
+    const auto json_response{str_to_json(response)};
+    const auto result{json_response["result"].asCString() + 2};
+    return parse_get_peer_info_result_to_peer_address(peer_id, result);
 }

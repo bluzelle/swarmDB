@@ -17,13 +17,14 @@
 #include <peers_beacon/peers_beacon_base.hpp>
 #include <peers_beacon/peer_address.hpp>
 #include <include/boost_asio_beast.hpp>
+#include <utils/utils_interface_base.hpp>
 
 namespace bzn
 {
     class peers_beacon : public peers_beacon_base, public std::enable_shared_from_this<peers_beacon>
     {
     public:
-        peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::options_base> opt);
+        peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::utils_interface_base> utils, std::shared_ptr<bzn::options_base> opt);
 
         // do an initial pull and start any necessary timers
         void start() override;
@@ -50,6 +51,7 @@ namespace bzn
         void run_timer();
 
         std::shared_ptr<bzn::options_base> options;
+        std::shared_ptr<bzn::utils_interface_base> utils;
 
         // this is kept as a shared ptr to avoid issues when a reader reads while the peers list changes
         std::shared_ptr<const peers_list_t> internal_current;

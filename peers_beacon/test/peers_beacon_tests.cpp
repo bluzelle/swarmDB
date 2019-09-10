@@ -15,6 +15,7 @@
 #include <peers_beacon/peers_beacon.hpp>
 #include <mocks/mock_options_base.hpp>
 #include <mocks/smart_mock_io.hpp>
+#include <mocks/mock_utils_interface.hpp>
 #include <fstream>
 #include <string>
 #include <gtest/gtest.h>
@@ -43,6 +44,7 @@ public:
     bzn::simple_options inner_opt;
     std::shared_ptr<bzn::asio::smart_mock_io> io = std::make_shared<bzn::asio::smart_mock_io>();
     std::shared_ptr<bzn::peers_beacon> peers;
+    std::shared_ptr<bzn::mock_utils_interface_base> utils = std::make_shared<bzn::mock_utils_interface_base>();
 
     peers_beacon_test()
     {

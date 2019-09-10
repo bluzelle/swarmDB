@@ -14,14 +14,13 @@
 
 #include <fstream>
 #include <peers_beacon/peers_beacon.hpp>
-#include <utils/http_req.hpp>
-#include <utils/esr_peer_info.hpp>
 #include <include/bluzelle.hpp>
 
 using namespace bzn;
 
-peers_beacon::peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::options_base> opt)
+peers_beacon::peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::utils_interface_base> utils, std::shared_ptr<bzn::options_base> opt)
         : options(opt)
+        , utils(utils)
         , internal_current(std::make_shared<peers_list_t>())
         , refresh_timer(io->make_unique_steady_timer())
 {}
@@ -133,7 +132,7 @@ bool
 peers_beacon::fetch_from_url()
 {
     auto url = this->options->get_bootstrap_peers_url();
-    std::string peers = bzn::utils::http::sync_req(url);
+    std::string peers = this->utils->sync_req(url);
 
     LOG(info) << "Downloaded peer list from " << url;
 
@@ -151,10 +150,10 @@ peers_beacon::fetch_from_esr()
     auto esr_url = this->options->get_swarm_info_esr_url();
 
     peers_list_t new_peers;
-    auto peer_ids = bzn::utils::esr::get_peer_ids(swarm_id, esr_address, esr_url);
+    auto peer_ids = this->utils->get_peer_ids(swarm_id, esr_address, esr_url);
     for (const auto& peer_id : peer_ids)
     {
-        bzn::peer_address_t peer_info{bzn::utils::esr::get_peer_info(swarm_id, peer_id, esr_address, esr_url)};
+        bzn::peer_address_t peer_info{this->utils->get_peer_info(swarm_id, peer_id, esr_address, esr_url)};
         if (peer_info.host.empty()
             || peer_info.port == 0
             //|| peer_info.name.empty() // is it important that a peer have a name?
