@@ -27,6 +27,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
+#include <mocks/smart_mock_peers_beacon.hpp>
 
 using namespace ::testing;
 
@@ -143,7 +144,7 @@ namespace
         auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
         EXPECT_CALL(*mock_pbft,
-                    current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+                    peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
         crud->start(mock_pbft);
         return crud;
     }
@@ -422,7 +423,7 @@ TEST(crud, test_that_create_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -528,7 +529,7 @@ TEST(crud, test_that_point_of_contact_create_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -667,7 +668,7 @@ TEST(crud, test_that_read_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -786,7 +787,7 @@ TEST(crud, test_that_point_of_contact_read_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -902,7 +903,7 @@ TEST(crud, test_that_update_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
@@ -987,7 +988,7 @@ TEST(crud, test_that_point_of_contact_update_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
@@ -1075,7 +1076,7 @@ TEST(crud, test_that_delete_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
@@ -1137,7 +1138,7 @@ TEST(crud, test_that_point_of_contact_delete_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     EXPECT_CALL(*mock_subscription_manager, start());
 
@@ -1216,7 +1217,7 @@ TEST(crud, test_that_has_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1297,7 +1298,7 @@ TEST(crud, test_that_point_of_contact_has_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1377,7 +1378,7 @@ TEST(crud, test_that_keys_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1454,7 +1455,7 @@ TEST(crud, test_that_point_of_contact_keys_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1544,7 +1545,7 @@ TEST(crud, test_that_size_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1610,7 +1611,7 @@ TEST(crud, test_that_point_of_contact_size_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1691,7 +1692,7 @@ TEST(crud, test_that_subscribe_request_calls_subscription_manager)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1734,7 +1735,7 @@ TEST(crud, test_that_unsubscribe_request_calls_subscription_manager)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1775,7 +1776,7 @@ TEST(crud, test_that_create_db_request_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1814,7 +1815,7 @@ TEST(crud, test_that_point_of_contact_create_db_request_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1869,7 +1870,7 @@ TEST(crud, test_that_has_db_request_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1926,7 +1927,7 @@ TEST(crud, test_that_point_of_contact_has_db_request_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -1991,7 +1992,7 @@ TEST(crud, test_that_delete_db_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillOnce(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2058,7 +2059,7 @@ TEST(crud, test_that_point_of_contact_delete_db_sends_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2451,7 +2452,7 @@ TEST(crud, test_that_key_with_expire_set_is_deleted_by_timer_callback)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     bzn::uuid_t node_uuid{"node-uuid"};
     EXPECT_CALL(*mock_pbft, get_uuid()).WillOnce(ReturnRef(node_uuid));
@@ -2514,7 +2515,7 @@ TEST(crud, test_that_key_with_expiration_can_be_made_persistent)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2572,7 +2573,7 @@ TEST(crud, test_that_create_db_uses_bluzelle_key_to_validate)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2607,7 +2608,7 @@ TEST(crud, test_that_create_db_with_incorrect_bluzelle_key_fails_to_validate)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2642,7 +2643,7 @@ TEST(crud, test_that_delete_db_uses_bluzelle_key_to_validate)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2698,7 +2699,7 @@ TEST(crud, test_that_delete_db_with_incorrect_bluzelle_key_fails_to_validate)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -2769,7 +2770,7 @@ TEST(crud, test_that_create_and_updates_which_exceed_db_limit_send_proper_respon
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
     auto crud = std::make_shared<bzn::crud>(mock_io_context, std::make_shared<bzn::mem_storage>(), mock_subscription_manager, nullptr);
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 
@@ -3176,7 +3177,7 @@ TEST(crud, test_that_expire_send_proper_response)
 
     auto mock_pbft = std::make_shared<bzn::mock_pbft_base>();
 
-    EXPECT_CALL(*mock_pbft, current_peers_ptr()).WillRepeatedly(Return(std::make_shared<const std::vector<bzn::peer_address_t>>()));
+    EXPECT_CALL(*mock_pbft, peers()).WillRepeatedly(Return(bzn::static_empty_peers_beacon()));
 
     crud->start(mock_pbft);
 

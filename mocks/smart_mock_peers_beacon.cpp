@@ -55,3 +55,9 @@ bzn::static_peers_beacon_for(std::vector<bzn::peer_address_t> peers)
 
     return static_peers_beacon_for(list);
 }
+
+std::shared_ptr<bzn::mock_peers_beacon_base>
+bzn::static_empty_peers_beacon()
+{
+    return static_peers_beacon_for(std::vector<peer_address_t>{});
+}

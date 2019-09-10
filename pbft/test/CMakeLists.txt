@@ -12,6 +12,6 @@ set(test_srcs
     pbft_newview_test.cpp
     pbft_persistent_state_test.cpp
     pbft_viewchange_test.cpp)
-set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} bootstrap storage ${ROCKSDB_LIBRARIES} smart_mocks)
+set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} storage ${ROCKSDB_LIBRARIES} smart_mocks)
 
 add_gmock_test(pbft)

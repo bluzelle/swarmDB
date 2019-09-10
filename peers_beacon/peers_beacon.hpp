@@ -19,7 +19,7 @@
 
 namespace bzn
 {
-    class peers_beacon : peers_beacon_base, public std::enable_shared_from_this<peers_beacon>
+    class peers_beacon : public peers_beacon_base, public std::enable_shared_from_this<peers_beacon>
     {
     public:
         peers_beacon(std::shared_ptr<bzn::options_base> opt);

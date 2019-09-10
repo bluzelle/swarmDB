@@ -205,10 +205,7 @@ main(int argc, const char* argv[])
         init_logging(*options);
 
         auto peers = std::make_shared<bzn::peers_beacon>(options);
-        if (!peers->start())
-        {
-            throw std::runtime_error("could not find acceptable peers list");
-        }
+        peers->start();
 
         auto io_context = std::make_shared<bzn::asio::io_context>();
 
@@ -254,9 +251,9 @@ main(int argc, const char* argv[])
         }
 
         auto crud = std::make_shared<bzn::crud>(io_context, stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node, options->get_owner_public_key());
-        auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(unstable_storage);
+        auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(peers, unstable_storage);
 
-        auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
+        auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers, options,
             std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, monitor, options->get_uuid())
             ,failure_detector, crypto, operation_manager, unstable_storage, monitor);
 

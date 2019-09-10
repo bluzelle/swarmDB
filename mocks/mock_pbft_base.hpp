@@ -40,8 +40,8 @@ public:
             void());
     MOCK_CONST_METHOD1(get_peer_by_uuid,
             const peer_address_t&(const std::string& uuid));
-    MOCK_CONST_METHOD0(current_peers_ptr,
-        std::shared_ptr<const std::vector<bzn::peer_address_t>>());
+    MOCK_CONST_METHOD0(peers,
+        std::shared_ptr<bzn::peers_beacon_base>());
 };
 
 }  // namespace bzn
