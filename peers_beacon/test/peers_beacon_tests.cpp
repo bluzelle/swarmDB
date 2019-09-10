@@ -170,13 +170,6 @@ TEST_F(peers_beacon_test, test_automatic_refresh)
 
 }
 
-
-TEST_F(peers_beacon_test, test_esr)
-{
-    throw std::runtime_error("not implemented");
-
-}
-
 TEST_F(peers_beacon_test, test_url)
 {
     const std::string test_url = "some fake url";
@@ -188,33 +181,31 @@ TEST_F(peers_beacon_test, test_url)
     ASSERT_EQ(peers->current()->size(), 2U);
 }
 
-/*
-
-// flaky tests...
-
-TEST(bootstrap_net_test, DISABLED_test_fetch_data)
+TEST_F(peers_beacon_test, test_esr)
 {
-    bzn::bootstrap_peers bootstrap_peers;
-    // I don't like this test dependancy, but mocking out the http stuff
-    // would mean mocking out all the meaningful code that this touches
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_url(sample_peers_url));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 1U);
+    bzn::peer_address_t alice("alice.com", 8080, "alice", "alice's key");
+
+    bzn::uuid_t swarm_id = "foo";
+    std::string esr_address = "bar";
+    std::string esr_url = "example.tld";
+
+    EXPECT_CALL(*(this->opt), get_bootstrap_peers_url()).WillRepeatedly(Return(""));
+    EXPECT_CALL(*(this->opt), get_bootstrap_peers_file()).WillRepeatedly(Return(""));
+
+    EXPECT_CALL(*(this->opt), get_swarm_id()).WillRepeatedly(Return(swarm_id));
+    EXPECT_CALL(*(this->opt), get_swarm_info_esr_address()).WillRepeatedly(Return(esr_address));
+    EXPECT_CALL(*(this->opt), get_swarm_info_esr_url()).WillRepeatedly(Return(esr_url));
+
+    EXPECT_CALL(*(this->utils), get_peer_ids(swarm_id, esr_address, esr_url)).WillRepeatedly(Return(std::vector<std::string>{"alice"}));
+    EXPECT_CALL(*(this->utils), get_peer_info(swarm_id, "alice", esr_address, esr_url)).WillRepeatedly(Invoke(
+            [&](auto, auto, auto, auto)
+            {
+                return alice;
+            }
+            ));
+
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 1U);
+    ASSERT_EQ(peers->ordered()->front().name, "alice");
 }
 
-
-TEST(bootstrap_net_test, DISABLED_test_fetch_data_with_protocol)
-{
-    bzn::bootstrap_peers bootstrap_peers;
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_url(sample_peers_url_with_protocol));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 1U);
-}
-
-
-TEST(bootstrap_net_test, DISABLED_test_fetch_peers_from_solidity)
-{
-    bzn::bootstrap_peers bootstrap_peers;
-    bzn::uuid_t swarm_id{"BluzelleSwarm"};
-    ASSERT_TRUE(bootstrap_peers.fetch_peers_from_esr_contract(bzn::utils::ROPSTEN_URL, bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, swarm_id));
-    ASSERT_EQ(bootstrap_peers.get_peers().size(), 7U);
-}
- */
