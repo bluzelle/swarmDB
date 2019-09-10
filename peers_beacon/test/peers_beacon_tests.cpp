@@ -179,8 +179,13 @@ TEST_F(peers_beacon_test, test_esr)
 
 TEST_F(peers_beacon_test, test_url)
 {
-    throw std::runtime_error("not implemented");
+    const std::string test_url = "some fake url";
+    EXPECT_CALL(*(this->opt), get_bootstrap_peers_url()).WillRepeatedly(Return(test_url));
+    EXPECT_CALL(*(this->opt), get_bootstrap_peers_file()).WillRepeatedly(Return(""));
+    EXPECT_CALL(*(this->utils), sync_req(test_url, "")).WillRepeatedly(Return(valid_peers));
 
+    ASSERT_TRUE(peers->refresh());
+    ASSERT_EQ(peers->current()->size(), 2U);
 }
 
 /*
