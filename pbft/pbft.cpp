@@ -59,7 +59,7 @@ pbft::pbft(
     , checkpoint_manager(std::make_shared<pbft_checkpoint_manager>(this->io_context, this->storage, this->peers_beacon, this->node))
     , monitor(std::move(monitor))
 {
-    if (peers->current()->empty())
+    if (this->peers_beacon->current()->empty())
     {
         throw std::runtime_error("No peers found!");
     }
