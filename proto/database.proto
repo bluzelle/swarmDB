@@ -69,6 +69,7 @@ message database_create_db
     {
         NONE = 0;
         RANDOM = 1;
+        VOLATILE_TTL = 2;
     }
 
     uint64 max_size = 1;
