@@ -590,12 +590,12 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
 void
 pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
-    if (op->get_stage() == pbft_operation_stage::prepare && op->is_prepared())
+    if (op->get_stage() == pbft_operation_stage::prepare && op->is_ready_for_commit())
     {
         this->do_prepared(op);
     }
 
-    if (op->get_stage() == pbft_operation_stage::commit && op->is_committed())
+    if (op->get_stage() == pbft_operation_stage::commit && op->is_ready_for_execute())
     {
         this->do_committed(op);
     }

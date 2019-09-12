@@ -34,6 +34,9 @@ namespace bzn
         bool is_prepared() const override;
         bool is_committed() const override;
 
+        bool is_ready_for_commit() const override;
+        bool is_ready_for_execute() const override;
+
         void advance_operation_stage(pbft_operation_stage new_stage) override;
 
         void record_request(const bzn_envelope& encoded_request) override;

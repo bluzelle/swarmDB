@@ -15,6 +15,7 @@
 #include <pbft/operations/pbft_memory_operation.hpp>
 #include <boost/format.hpp>
 #include <string>
+#include <pbft/pbft.hpp>
 
 using namespace bzn;
 
@@ -136,17 +137,27 @@ pbft_memory_operation::is_preprepared() const
 }
 
 bool
+pbft_memory_operation::is_ready_for_commit() const
+{
+    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
+}
+
+bool
+pbft_memory_operation::is_ready_for_execute() const
+{
+    return this->is_prepared() && this->commits_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
+}
+
+bool
 pbft_memory_operation::is_prepared() const
 {
-    throw std::runtime_error("TODO");
-    //return this->has_request() && this->is_preprepared() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
+    return this->stage != pbft_operation_stage::prepare;
 }
 
 bool
 pbft_memory_operation::is_committed() const
 {
-    throw std::runtime_error("TODO");
-    //return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
+    return this->stage == pbft_operation_stage::execute;
 }
 
 void
@@ -157,13 +168,13 @@ pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_sta
         case pbft_operation_stage::prepare :
             throw std::runtime_error("cannot advance to initial stage");
         case pbft_operation_stage::commit :
-            if (!this->is_preprepared() || this->stage != pbft_operation_stage::prepare)
+            if (!this->is_ready_for_commit() || this->stage != pbft_operation_stage::prepare)
             {
                 throw std::runtime_error("illegal move to commit phase");
             }
             break;
         case pbft_operation_stage::execute :
-            if (!this->is_committed() || this->stage != pbft_operation_stage::commit)
+            if (!this->is_ready_for_execute() || this->stage != pbft_operation_stage::commit)
             {
                 throw std::runtime_error("illegal move to execute phase");
             }

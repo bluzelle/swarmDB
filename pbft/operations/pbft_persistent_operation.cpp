@@ -151,13 +151,13 @@ pbft_persistent_operation::advance_operation_stage(pbft_operation_stage new_stag
         case pbft_operation_stage::prepare :
             throw std::runtime_error("cannot advance to initial stage");
         case pbft_operation_stage::commit :
-            if (!this->is_prepared() || this->get_stage() != pbft_operation_stage::prepare)
+            if (!this->is_ready_for_commit() || this->get_stage() != pbft_operation_stage::prepare)
             {
                 throw std::runtime_error("illegal move to commit phase");
             }
             break;
         case pbft_operation_stage::execute :
-            if (!this->is_committed() || this->get_stage() != pbft_operation_stage::commit)
+            if (!this->is_ready_for_execute() || this->get_stage() != pbft_operation_stage::commit)
             {
                 throw std::runtime_error("illegal move to execute phase");
             }
@@ -177,27 +177,38 @@ pbft_persistent_operation::advance_operation_stage(pbft_operation_stage new_stag
 bool
 pbft_persistent_operation::is_preprepared() const
 {
+    // TODO: maybe check if the sender of the preprepare is still in the peers list
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPREPARE);
-    throw std::runtime_error("TODO: need to do this based on a saved state");
-    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size() > 0;
+    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size() > 0;
 }
 
 bool
 pbft_persistent_operation::is_prepared() const
 {
-    auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE);
-    throw std::runtime_error("TODO: need to do this based on a saved state");
-    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        //>= pbft::honest_majority_size(this->peers_size) && this->is_preprepared() && this->has_request();
+    return this->get_stage() != pbft_operation_stage::prepare;
 }
 
 bool
 pbft_persistent_operation::is_committed() const
 {
+    return this->get_stage() == pbft_operation_stage::execute;
+}
+
+bool
+pbft_persistent_operation::is_ready_for_commit() const
+{
+    auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE);
+    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
+        >= pbft::honest_majority_size(this->peers->current()->size()) && this->is_preprepared() && this->has_request();
+}
+
+bool
+pbft_persistent_operation::is_ready_for_execute() const
+{
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_COMMIT);
     throw std::runtime_error("TODO: need to do this based on a saved state");
-    //return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        //>= pbft::honest_majority_size(this->peers_size) && this->is_prepared();
+    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
+        >= pbft::honest_majority_size(this->peers->current()->size()) && this->is_prepared();
 }
 
 void
