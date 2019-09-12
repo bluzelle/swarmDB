@@ -206,7 +206,6 @@ bool
 pbft_persistent_operation::is_ready_for_execute() const
 {
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_COMMIT);
-    throw std::runtime_error("TODO: need to do this based on a saved state");
     return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
         >= pbft::honest_majority_size(this->peers->current()->size()) && this->is_prepared();
 }

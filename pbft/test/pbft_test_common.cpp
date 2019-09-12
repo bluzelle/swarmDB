@@ -84,16 +84,6 @@ namespace bzn::test
                                 [&]()
                                 { return std::move(this->audit_heartbeat_timer); }
                         ))
-                .WillOnce(
-                    Invoke(
-                        [&]()
-                        { return std::move(this->new_config_timer); }
-                    ))
-                .WillOnce(
-                    Invoke(
-                        [&]()
-                        { return std::move(this->join_retry_timer); }
-                    ))
                 .WillRepeatedly(
                     Invoke(
                         [&]()
