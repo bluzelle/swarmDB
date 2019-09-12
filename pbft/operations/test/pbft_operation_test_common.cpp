@@ -95,7 +95,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_TRUE(op->is_prepared());
+            EXPECT_TRUE(op->is_ready_for_commit());
         }
     }
 
@@ -112,7 +112,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_prepared());
+            EXPECT_FALSE(op->is_ready_for_commit());
         }
     }
 
@@ -128,7 +128,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_prepared());
+            EXPECT_FALSE(op->is_ready_for_commit());
         }
     }
 
@@ -146,7 +146,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_prepared());
+            EXPECT_FALSE(op->is_ready_for_commit());
         }
     }
 
@@ -165,7 +165,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_TRUE(op->is_prepared());
+            EXPECT_TRUE(op->is_ready_for_commit());
         }
     }
 
@@ -218,7 +218,7 @@ namespace
             op->record_pbft_msg(this->prepare, env);
 
             EXPECT_EQ(op->get_prepares().size(), 2u);
-            EXPECT_FALSE(op->is_prepared());
+            EXPECT_FALSE(op->is_ready_for_commit());
         }
     }
 }

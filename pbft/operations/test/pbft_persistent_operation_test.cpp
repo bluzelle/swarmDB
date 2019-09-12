@@ -84,16 +84,16 @@ namespace
         record_pbft_messages(0, 4, PBFT_MSG_PREPARE, this->operation);
         this->operation->advance_operation_stage(bzn::pbft_operation_stage::commit);
 
-        EXPECT_TRUE(this->operation->is_prepared());
+        EXPECT_TRUE(this->operation->is_ready_for_commit());
         EXPECT_EQ(this->operation->get_stage(), bzn::pbft_operation_stage::commit);
 
         this->operation = nullptr;
         auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, static_peers_beacon_for(TEST_PEER_LIST));
-        EXPECT_TRUE(op2->is_prepared());
+        EXPECT_TRUE(op2->is_ready_for_commit());
         EXPECT_EQ(op2->get_stage(), bzn::pbft_operation_stage::commit);
 
         auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence+1, this->request_hash, this->storage, static_peers_beacon_for(TEST_PEER_LIST));
-        EXPECT_FALSE(op3->is_prepared());
+        EXPECT_FALSE(op3->is_ready_for_commit());
         EXPECT_EQ(op3->get_stage(), bzn::pbft_operation_stage::prepare);
     }
 
@@ -130,11 +130,11 @@ namespace
         EXPECT_TRUE(op2->has_request());
 
         record_pbft_messages(2, 4, PBFT_MSG_PREPARE, op2);
-        EXPECT_TRUE(op2->is_prepared());
+        EXPECT_TRUE(op2->is_ready_for_commit());
         op2->advance_operation_stage(bzn::pbft_operation_stage::commit);
 
         record_pbft_messages(0, 4, PBFT_MSG_COMMIT, op2);
-        EXPECT_TRUE(op2->is_committed());
+        EXPECT_TRUE(op2->is_ready_for_execute());
         op2->advance_operation_stage(bzn::pbft_operation_stage::execute);
     }
 
@@ -157,9 +157,9 @@ namespace
 
         op4->advance_operation_stage(bzn::pbft_operation_stage::commit);
 
-        EXPECT_FALSE(op2->is_prepared());
-        EXPECT_FALSE(op3->is_prepared());
-        EXPECT_TRUE(op4->is_prepared());
+        EXPECT_FALSE(op2->is_ready_for_commit());
+        EXPECT_FALSE(op3->is_ready_for_commit());
+        EXPECT_TRUE(op4->is_ready_for_commit());
     }
 
     TEST_F(persistent_operation_test, remembers_messages_after_rehydrate)
@@ -174,7 +174,7 @@ namespace
         record_pbft_messages(2, 4, PBFT_MSG_PREPARE, op2);
         op2->advance_operation_stage(bzn::pbft_operation_stage::commit);
 
-        EXPECT_TRUE(op2->is_prepared());
+        EXPECT_TRUE(op2->is_ready_for_commit());
         EXPECT_EQ(op2->get_preprepare().sender(), UUIDS.at(0));
         EXPECT_EQ(op2->get_prepares().size(), 4u);
     }
@@ -195,7 +195,7 @@ namespace
             }
         }
 
-        EXPECT_EQ(bzn::pbft_persistent_operation::prepared_operations_in_range(this->storage, 0, 100).size(), 50u);
+        EXPECT_EQ(bzn::pbft_persistent_operation::prepared_operations_in_range(this->storage, static_peers_beacon_for(TEST_PEER_LIST), 0, 100).size(), 50u);
     }
 
     TEST_F(persistent_operation_test, test_remove_range)
