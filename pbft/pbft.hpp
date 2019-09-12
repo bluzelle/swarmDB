@@ -260,8 +260,6 @@ namespace bzn
         const std::shared_ptr<bzn::asio::io_context_base> io_context;
 
         std::unique_ptr<bzn::asio::steady_timer_base> audit_heartbeat_timer;
-        std::unique_ptr<bzn::asio::steady_timer_base> new_config_timer;
-        std::unique_ptr<bzn::asio::steady_timer_base> join_retry_timer;
 
         bool audit_enabled = true;
 

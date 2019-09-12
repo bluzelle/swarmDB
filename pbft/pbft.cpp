@@ -807,7 +807,6 @@ pbft::handle_failure()
     LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: "
         << this->view.value() + 1;
     this->notify_audit_failure_detected();
-    this->new_config_timer->cancel();
     this->initiate_viewchange();
 }
 
@@ -1659,6 +1658,8 @@ pbft::honest_majority_size(size_t swarm_size)
 void
 pbft::join_swarm()
 {
+    // TODO
+    /*
     // are we already in the peers list?
     if (this->is_peer(this->uuid))
     {
@@ -1700,11 +1701,14 @@ pbft::join_swarm()
     this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);
     this->join_retry_timer->async_wait(
         std::bind(&pbft::handle_join_retry_timeout, shared_from_this(), std::placeholders::_1));
+        */
 }
 
 void
-pbft::handle_join_retry_timeout(const boost::system::error_code& ec)
+pbft::handle_join_retry_timeout(const boost::system::error_code& /*ec*/)
 {
+    // TODO
+    /*
     if (ec == boost::asio::error::operation_aborted)
     {
         return;
@@ -1717,6 +1721,7 @@ pbft::handle_join_retry_timeout(const boost::system::error_code& ec)
     }
 
     this->join_swarm();
+     */
 }
 
 uint32_t
