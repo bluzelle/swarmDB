@@ -136,8 +136,6 @@ pbft::start()
                     }
                 }
                 );
-
-            this->join_swarm();
         });
 }
 
@@ -711,23 +709,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
     }
-}
-
-void
-pbft::handle_new_config_timeout(const boost::system::error_code& ec)
-{
-    if (ec == boost::asio::error::operation_aborted)
-    {
-        return;
-    }
-
-    if (ec)
-    {
-        LOG(error) << "handle_new_config_timeout error: " << ec.message();
-        return;
-    }
-
-    this->initiate_viewchange();
 }
 
 bool
@@ -1468,7 +1449,6 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     this->view = msg.view();
     this->view_is_valid = true;
-    this->new_config_in_flight = false;
 
     // after moving to the new view processes the preprepares
     for (size_t i{0}; i < static_cast<size_t>(msg.pre_prepare_messages_size()); ++i)
@@ -1653,75 +1633,6 @@ size_t
 pbft::honest_majority_size(size_t swarm_size)
 {
     return pbft::faulty_nodes_bound(swarm_size) * 2 + 1;
-}
-
-void
-pbft::join_swarm()
-{
-    // TODO
-    /*
-    // are we already in the peers list?
-    if (this->is_peer(this->uuid))
-    {
-        this->in_swarm = swarm_status::joined;
-        return;
-    }
-
-    pbft_membership_msg join_msg;
-    join_msg.set_type(PBFT_MMSG_JOIN);
-    join_msg.mutable_peer_info()->set_host(this->options->get_listener().address().to_string());
-    join_msg.mutable_peer_info()->set_port(this->options->get_listener().port());
-    join_msg.mutable_peer_info()->set_uuid(this->uuid);
-
-    // is_peer checks against uuid only, we need to bail if the list contains a node with the same IP and port,
-    // So, check the peers list for node with same ip and port and post error and bail if found.
-    const auto bad_peer = std::find_if(
-            std::begin(*this->peers_beacon->current())
-            , std::end(*this->peers_beacon->current())
-            , [&](const bzn::peer_address_t& address)
-            {
-                return address.port == join_msg.peer_info().port() && address.host == join_msg.peer_info().host();
-            });
-
-    if (bad_peer != std::end(*this->peers_beacon->current()))
-    {
-        LOG (error) << "Bootstrap configuration file validation failure - peer with UUID: " << bad_peer->uuid << " hides local peer";
-        throw std::runtime_error("Bad peer found in Bootstrap Configuration file");
-    }
-
-    uint32_t selected = this->generate_random_number(0, this->peers_beacon->current()->size() - 1);
-
-    auto ptr = this->peers_beacon->ordered();
-
-    LOG(info) << "Sending request to join swarm to node " << ptr->at(selected).uuid;
-    auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_signed_message(make_endpoint(ptr->at(selected)), msg_ptr);
-
-    this->in_swarm = swarm_status::joining;
-    this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);
-    this->join_retry_timer->async_wait(
-        std::bind(&pbft::handle_join_retry_timeout, shared_from_this(), std::placeholders::_1));
-        */
-}
-
-void
-pbft::handle_join_retry_timeout(const boost::system::error_code& /*ec*/)
-{
-    // TODO
-    /*
-    if (ec == boost::asio::error::operation_aborted)
-    {
-        return;
-    }
-
-    if (ec)
-    {
-        LOG(error) << "handle_new_join_retry_timeout error: " << ec.message();
-        return;
-    }
-
-    this->join_swarm();
-     */
 }
 
 uint32_t

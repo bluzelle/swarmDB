@@ -37,8 +37,6 @@
 namespace
 {
     const std::chrono::milliseconds HEARTBEAT_INTERVAL{std::chrono::milliseconds(5000)};
-    const std::chrono::seconds NEW_CONFIG_INTERVAL{std::chrono::seconds(30)};
-    const std::chrono::seconds JOIN_RETRY_INTERVAL{std::chrono::seconds(30)};
     const uint64_t CHECKPOINT_INTERVAL = 100; //TODO: KEP-574
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 2.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 300000; // 5 minutes
@@ -157,8 +155,6 @@ namespace bzn
         void handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg);
         void handle_checkpoint(const pbft_msg& msg, const bzn_envelope& original_msg);
-        void handle_join_or_leave(const bzn_envelope& env, const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session, const std::string& msg_hash);
-        void handle_join_response(const pbft_membership_msg& msg);
         void handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::session_base> session) const;
         void handle_set_state(const pbft_membership_msg& msg);
         void handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op);
@@ -196,8 +192,6 @@ namespace bzn
 
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
-        void handle_new_config_timeout(const boost::system::error_code& ec);
-        void handle_join_retry_timeout(const boost::system::error_code& ec);
 
         void notify_audit_failure_detected();
 
@@ -208,15 +202,12 @@ namespace bzn
         size_t max_faulty_nodes() const;
 
         void initialize_persistent_state();
-        bool initialize_configuration(const bzn::peers_list_t& peers);
 
         void maybe_record_request(const bzn_envelope &env, const std::shared_ptr<pbft_operation> &op);
 
         timestamp_t now() const;
         bool already_seen_request(const bzn_envelope& msg, const request_hash_t& hash) const;
         void saw_request(const bzn_envelope& msg, const request_hash_t& hash);
-
-        void join_swarm();
 
         // VIEWCHANGE/NEWVIEW Helper methods
         void initiate_viewchange();
@@ -263,11 +254,6 @@ namespace bzn
 
         bool audit_enabled = true;
 
-        enum class swarm_status {not_joined, joining, waiting, joined};
-        swarm_status in_swarm = swarm_status::not_joined;
-
-        bool new_config_in_flight = false;
-
         std::multimap<timestamp_t, std::pair<bzn::uuid_t, request_hash_t>> recent_requests;
 
         std::shared_ptr<crypto_base> crypto;
@@ -312,7 +298,6 @@ namespace bzn
         FRIEND_TEST(bzn::test::pbft_test, ensure_save_all_requests_records_requests);
 
         friend class pbft_proto_test;
-        friend class pbft_join_leave_test;
         friend class pbft_viewchange_test;
 
         std::map<bzn::hash_t, std::shared_ptr<bzn::session_base>> sessions_waiting_on_forwarded_requests;
