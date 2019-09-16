@@ -142,6 +142,7 @@ namespace bzn::test
 
         preprepare_msg.set_request_hash(this->crypto->hash(this->request_msg));
         *(this->default_original_msg.add_piggybacked_requests()) = this->request_msg;
+        this->default_original_msg.set_sender("uuid0");
     }
 
     void
@@ -192,6 +193,7 @@ namespace bzn::test
         }
 
         original.set_pbft(preprepare.SerializeAsString());
+        original.set_sender("uuid0");
 
         this->pbft->handle_message(preprepare, original);
     }

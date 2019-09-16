@@ -216,6 +216,18 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
+    auto peers = this->peers_beacon->current();
+    auto find = std::find_if(peers->begin(), peers->end(),
+            [&](const auto& peer)
+            {
+                return peer.uuid == original_msg.sender();
+            });
+    if (find == std::end(*peers))
+    {
+        LOG(debug) << "Dropping message because it is not from a peer";
+        return;
+    }
+
     if (!this->preliminary_filter_msg(msg))
     {
         return;
@@ -247,6 +259,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
+
     if (!this->is_view_valid() && !(msg.type() == PBFT_MSG_VIEWCHANGE || msg.type() == PBFT_MSG_NEWVIEW))
     {
         LOG(debug) << "Dropping message because local view is invalid";
