@@ -875,7 +875,7 @@ pbft::quorum_size() const
 size_t
 pbft::max_faulty_nodes() const
 {
-    return this->peers_beacon->current()->size()/3;
+    return (this->peers_beacon->current()->size()-1)/3;
 }
 
 void

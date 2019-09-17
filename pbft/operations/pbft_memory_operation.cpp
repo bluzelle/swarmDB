@@ -139,12 +139,14 @@ pbft_memory_operation::is_preprepared() const
 bool
 pbft_memory_operation::is_ready_for_commit() const
 {
+    // TODO: may have to count based only on uuids that are still in the peers list
     return this->has_request() && this->is_preprepared() && this->prepares_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
 }
 
 bool
 pbft_memory_operation::is_ready_for_execute() const
 {
+    // TODO: may have to count based only on uuids that are still in the peers list
     return this->is_prepared() && this->commits_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
 }
 
