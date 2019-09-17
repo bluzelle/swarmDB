@@ -38,7 +38,9 @@ namespace bzn
 
         virtual bool is_primary() const = 0;
 
-        virtual peer_address_t get_primary(std::optional<uint64_t> view) const = 0;
+        virtual std::optional<peer_address_t> get_current_primary() const = 0;
+
+        virtual std::optional<peer_address_t> predict_primary(uint64_t view) const = 0;
 
         virtual const bzn::uuid_t& get_uuid() const = 0;
 

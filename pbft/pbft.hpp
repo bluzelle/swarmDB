@@ -94,7 +94,9 @@ namespace bzn
 
         bool is_primary() const override;
 
-        peer_address_t get_primary(std::optional<uint64_t> view = std::nullopt) const override;
+        std::optional<peer_address_t> get_current_primary() const override;
+
+        std::optional<peer_address_t> predict_primary(uint64_t view) const override;
 
         const bzn::uuid_t& get_uuid() const override;
 
@@ -225,6 +227,7 @@ namespace bzn
         std::map<bzn::hash_t, int> map_request_to_hash(const bzn_envelope& original_msg);
         void save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg);
 
+        void set_primary_from_newview(const bzn_envelope& env);
 
         std::shared_ptr<bzn::storage_base> storage;
 
@@ -264,6 +267,8 @@ namespace bzn
 
         std::map<uint64_t,std::map<bzn::uuid_t, persistent<bzn_envelope>>> valid_viewchange_messages_for_view; // set of bzn_envelope, strings since we cannot have a set<bzn_envelope>
         bzn_envelope saved_newview;
+
+        std::optional<peer_address_t> pinned_primary;
 
         std::shared_ptr<pbft_operation_manager> operation_manager;
         std::shared_ptr<peers_beacon_base> peers_beacon;

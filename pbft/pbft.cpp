@@ -136,6 +136,9 @@ pbft::start()
                     }
                 }
                 );
+
+            auto peers = this->peers_beacon->ordered();
+            this->pinned_primary = peers->at(this->view.value() % peers->size());
         });
 }
 
@@ -376,8 +379,15 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
+    auto primary = this->get_current_primary();
+    if (!primary.has_value())
+    {
+        LOG(error) << "Would forward request to primary, but we don't know the primary so we can't";
+        return;
+    }
+
     this->node
-        ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
+        ->send_signed_message(bzn::make_endpoint(primary.value()), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
@@ -545,6 +555,7 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
         {
             this->view = newview.view();
             LOG(info) << "setting view to " << this->view.value();
+            this->set_primary_from_newview(msg.newview_msg());
         }
     }
 }
@@ -727,13 +738,31 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 bool
 pbft::is_primary() const
 {
-    return this->get_primary().uuid == this->uuid;
+    auto primary = this->get_current_primary();
+    return primary.has_value() && primary.value().uuid == this->uuid;
 }
 
-peer_address_t
-pbft::get_primary(std::optional<uint64_t> view) const
+std::optional<peer_address_t>
+pbft::get_current_primary() const
 {
-    return this->peers_beacon->ordered()->at(view.value_or(this->view.value()) % this->peers_beacon->current()->size());
+    return this->pinned_primary;
+}
+
+std::optional<peer_address_t>
+pbft::predict_primary(uint64_t view) const
+{
+    if (view == this->view.value())
+    {
+        return this->get_current_primary();
+    }
+
+    auto peers = this->peers_beacon->ordered();
+    if (peers->size() == 0)
+    {
+        return std::nullopt;
+    }
+
+    return peers->at(view % peers->size());
 }
 
 bzn_envelope
@@ -1089,6 +1118,19 @@ pbft::get_sequences_and_request_hashes_from_proofs(
 bool
 pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const
 {
+    auto expected_primary = this->predict_primary(theirs.view());
+    if (!expected_primary.has_value())
+    {
+        LOG(error) << "rejecting newview because we have no peers list";
+        return false;
+    }
+
+    if (original_theirs.sender() != expected_primary.value().uuid)
+    {
+        LOG(error) << "rejecting newview because it is not from the primary of that view";
+        return false;
+    }
+
     // - does it contain 2f+1 viewchange messages
     if (static_cast<size_t>(theirs.viewchange_messages_size()) < 2 * this->max_faulty_nodes() + 1)
     {
@@ -1417,9 +1459,10 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin()
         , this->valid_viewchange_messages_for_view.end(), [&](const auto& p)
         {
-            return ((this->get_primary(p.first).uuid == this->get_uuid()) &&
+            auto predicted = this->predict_primary(p.first);
+            return predicted.has_value() && predicted.value().uuid == this->get_uuid() &&
                 (p.first > this->view.value()) &&
-                (p.second.size() == 2 * this->max_faulty_nodes() + 1));
+                (p.second.size() == 2 * this->max_faulty_nodes() + 1);
         });
 
     if (viewchange == this->valid_viewchange_messages_for_view.end())
@@ -1458,6 +1501,8 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     // initially set next sequence from viewchange then update from preprepares later
     this->next_issued_sequence_number = viewchange.sequence() + 1;
 
+    this->set_primary_from_newview(original_msg);
+
     LOG(debug) << "handle_newview - received valid NEWVIEW message";
 
     this->view = msg.view();
@@ -1495,7 +1540,21 @@ pbft::get_status()
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
     status_str += "my uuid: " + this->uuid + "\n";
-    status_str += "primary: " + this->get_primary(this->get_view()).uuid + "\n";
+
+    auto primary = this->get_current_primary();
+    if (primary.has_value())
+    {
+        status_str += "primary: " + primary.value().uuid + "\n";
+        status["primary"]["host"] = primary.value().host;
+        status["primary"]["host_port"] = primary.value().port;
+        status["primary"]["name"] = primary.value().name;
+        status["primary"]["uuid"] = primary.value().uuid;
+    }
+    else
+    {
+        status_str += "primary unknown\n";
+    }
+
     status_str += "view: " + std::to_string(this->get_view()) + "\n";
     status_str += "last exec: "  + std::to_string(this->last_executed_sequence_number) + "\n";
     status_str += "last local cp: "  + std::to_string(this->checkpoint_manager->get_latest_local_checkpoint().first) + "\n";
@@ -1508,12 +1567,6 @@ pbft::get_status()
 
     status["outstanding_operations_count"] = uint64_t(this->operation_manager->held_operations_count());
     status["is_primary"] = this->is_primary();
-
-    auto primary = this->get_primary();
-    status["primary"]["host"] = primary.host;
-    status["primary"]["host_port"] = primary.port;
-    status["primary"]["name"] = primary.name;
-    status["primary"]["uuid"] = primary.uuid;
 
     status["latest_stable_checkpoint"]["sequence_number"] = this->checkpoint_manager->get_latest_stable_checkpoint().first;
     status["latest_stable_checkpoint"]["hash"] = this->checkpoint_manager->get_latest_stable_checkpoint().second;
@@ -1695,4 +1748,25 @@ std::shared_ptr<bzn::peers_beacon_base>
 pbft::peers() const
 {
     return this->peers_beacon;
+}
+
+void
+pbft::set_primary_from_newview(const bzn_envelope& new_view)
+{
+    auto peers = this->peers_beacon->current();
+    auto find = std::find_if(peers->begin(), peers->end(),
+            [&](const auto& peer)
+            {
+                return peer.uuid == new_view.sender();
+            });
+
+    if (find == std::end(*peers))
+    {
+        LOG(error) << "Cannot operate in this view because its primary is not in my peers list; voting for view change";
+        this->pinned_primary = std::nullopt;
+        this->initiate_viewchange();
+        return;
+    }
+
+    this->pinned_primary = *find;
 }
