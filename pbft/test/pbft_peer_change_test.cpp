@@ -39,14 +39,23 @@ namespace
                                         , {"127.0.0.1", 8085, "name5", "uuid5"}};
 
     using peer_switch_t = std::pair<bzn::peers_list_t, bzn::peers_list_t>;
-    const peer_switch_t add_peer = std::make_pair(PEER_LIST_A, PEER_LIST_A_PLUS);
-    const peer_switch_t remove_peer = std::make_pair(PEER_LIST_A_PLUS, PEER_LIST_A);
-    const peer_switch_t replace_peer = std::make_pair(PEER_LIST_A, PEER_LIST_B);
 
-    // which switch point are we using, how many are there total, before peers list, after peers list
-    // the second int is passed through so that the test can verify that the callsite has the correct (updated)
-    // total number of switch points
-    using test_param_t = std::tuple<unsigned int, unsigned int, peer_switch_t>;
+    std::map<std::string, peer_switch_t> peer_cases{
+        std::make_pair("add_peer", std::make_pair(PEER_LIST_A, PEER_LIST_A_PLUS)),
+        std::make_pair("remove_peer", std::make_pair(PEER_LIST_A_PLUS, PEER_LIST_A)),
+        std::make_pair("replace_peer", std::make_pair(PEER_LIST_A, PEER_LIST_B))
+    };
+
+    /*
+     * Which switch point are we using, how many are there in total, and what peers lists are we switching between
+     *
+     * The second param is passed so that the common test code can verify that the callsite has the correct (potentially updated)
+     * total number of switch points
+     *
+     * The third parameter is passed as a string that's a key in the global map instead of passing the lists
+     * directly in order to avoid filling the test names with junk
+     */
+    using test_param_t = std::tuple<unsigned int, unsigned int, std::string>;
 }
 
 using namespace ::testing;
@@ -90,13 +99,13 @@ protected:
 
     bzn::peers_list_t before_list()
     {
-        auto pair = std::get<2>(GetParam());
+        auto pair = peer_cases.at(std::get<2>(GetParam()));
         return pair.first;
     }
 
     bzn::peers_list_t after_list()
     {
-        auto pair = std::get<2>(GetParam());
+        auto pair = peer_cases.at(std::get<2>(GetParam()));
         return pair.second;
     }
 
@@ -146,32 +155,53 @@ private:
     unsigned int potential_switch_points_hit = 0;
 };
 
-TEST_P(changeover_test, perform_pbft_operations)
+//gtest is going to want to apply our parameter set over an entire test suite, and we would rather not have that because
+//the number of possible changeover points varies per-test. Therefore, we define a test suite per test.
+
+class changeover_test_operations : public changeover_test
+{};
+
+TEST_P(changeover_test_operations, perform_pbft_operations)
 {
     switch_here();
     EXPECT_FALSE(true);
 }
 
-TEST_P(changeover_test, perform_checkpoinnt)
-{
-    switch_here();
-    EXPECT_FALSE(true);
-}
-
-TEST_P(changeover_test, perform_viewchange)
-{
-    switch_here();
-    EXPECT_FALSE(true);
-}
-
-// going to have to either
-// - run some redundant tests
-// - create a test suite for each test
-
-INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test,
+INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_operations,
         testing::Combine(
                 Range(0u, 1u),
                 Values(1u),
-                Values(add_peer, remove_peer, replace_peer)
+                Values("add_peer", "remove_peer", "replace_peer")
         ),);
 
+class changeover_test_checkpoints : public changeover_test
+{};
+
+TEST_P(changeover_test_checkpoints, perform_checkpoinnt)
+{
+    switch_here();
+    EXPECT_FALSE(true);
+}
+
+INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_checkpoints,
+        testing::Combine(
+                Range(0u, 1u),
+                Values(1u),
+                Values("add_peer", "remove_peer", "replace_peer")
+        ),);
+
+class changeover_test_viewchange : public changeover_test
+{};
+
+TEST_P(changeover_test_viewchange, perform_viewchange)
+{
+    switch_here();
+    EXPECT_FALSE(true);
+}
+
+INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_viewchange,
+        testing::Combine(
+                Range(0u, 1u),
+                Values(1u),
+                Values("add_peer", "remove_peer", "replace_peer")
+        ),);
