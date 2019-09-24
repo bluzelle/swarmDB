@@ -31,6 +31,7 @@
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_monitor.hpp>
 #include <mocks/smart_mock_node.hpp>
+#include <mocks/smart_mock_peers_beacon.hpp>
 #include <crypto/crypto.hpp>
 #include <options/options.hpp>
 #include <storage/mem_storage.hpp>
@@ -88,6 +89,8 @@ namespace bzn::test
         std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
         std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
         std::shared_ptr<bzn::crypto_base> crypto = std::make_shared<bzn::crypto>(options, monitor);
+
+        std::shared_ptr<bzn::mock_peers_beacon_base> beacon = bzn::static_peers_beacon_for(bzn::test::TEST_PEER_LIST);
 
         std::shared_ptr<bzn::pbft> pbft;
 

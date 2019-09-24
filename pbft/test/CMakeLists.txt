@@ -11,7 +11,8 @@ set(test_srcs
     pbft_proto_test.cpp
     pbft_newview_test.cpp
     pbft_persistent_state_test.cpp
-    pbft_viewchange_test.cpp)
+    pbft_viewchange_test.cpp
+    pbft_peer_change_test.cpp)
 set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} storage ${ROCKSDB_LIBRARIES} smart_mocks)
 
 add_gmock_test(pbft)

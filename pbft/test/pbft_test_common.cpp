@@ -152,7 +152,7 @@ namespace bzn::test
         this->pbft = std::make_shared<bzn::pbft>(
                 this->mock_node
                 , this->mock_io_context
-                , static_peers_beacon_for(TEST_PEER_LIST)
+                , this->beacon
                 , this->options
                 , this->mock_service
                 , this->mock_failure_detector
