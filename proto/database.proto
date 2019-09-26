@@ -57,7 +57,7 @@ message database_msg
 
 message database_header
 {
-    string db_uuid = 1;
+    bytes db_uuid = 1;
     uint64 nonce = 2 [jstype = JS_STRING];
     string point_of_contact = 3;
     bytes  request_hash = 4;
@@ -77,48 +77,48 @@ message database_create_db
 
 message database_create
 {
-    string key = 1;
+    bytes key = 1;
     bytes value = 2;
     uint64 expire = 3;
 }
 
 message database_read
 {
-    string key = 1;
+    bytes key = 1;
 }
 
 message database_update
 {
-    string key = 1;
+    bytes key = 1;
     bytes value = 2;
     uint64 expire = 3;
 }
 
 message database_expire
 {
-    string key = 1;
+    bytes key = 1;
     uint64 expire = 2;
 }
 
 message database_delete
 {
-    string key = 1;
+    bytes key = 1;
 }
 
 message database_subscribe
 {
-    string key = 1;
+    bytes key = 1;
 }
 
 message database_unsubscribe
 {
-    string key = 1;
+    bytes key = 1;
     uint64 nonce = 2;
 }
 
 message database_has
 {
-    string key = 1;
+    bytes key = 1;
 }
 
 message database_has_db {}
@@ -136,7 +136,7 @@ message database_subscription_update
         DELETE = 1;
     }
 
-    string key = 1;
+    bytes key = 1;
     bytes value = 2;
     operation_type operation = 3;
     uint64 seq = 4;
@@ -154,13 +154,13 @@ message database_redirect_response
 
 message database_has_response
 {
-    string key = 1;
+    bytes key = 1;
     bool has = 2;
 }
 
 message database_has_db_response
 {
-    string uuid = 1;
+    bytes uuid = 1;
     bool has = 2;
 }
 
@@ -171,13 +171,13 @@ message database_keys_response
 
 message database_read_response
 {
-    string key = 1;
+    bytes key = 1;
     bytes value = 2;
 }
 
 message database_quick_read_response
 {
-    string key = 1;
+    bytes key = 1;
     bytes value = 2;
     string error = 3;
 }
@@ -194,13 +194,13 @@ message database_request {}
 
 message database_writers_response
 {
-    string owner = 1;
-    repeated string writers = 2;
+    bytes owner = 1;
+    repeated bytes writers = 2;
 }
 
 message database_ttl_response
 {
-    string key = 1;
+    bytes key = 1;
     uint64 ttl = 2;
 }
 
