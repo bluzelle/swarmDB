@@ -74,6 +74,7 @@ public:
     ~changeover_test()
     {
         EXPECT_EQ(this->potential_switch_points_hit, this->max_change_point());
+        EXPECT_LT(this->this_change_point(), this->potential_switch_points_hit);
     }
 
 protected:
@@ -108,6 +109,8 @@ protected:
         auto pair = peer_cases.at(std::get<2>(GetParam()));
         return pair.second;
     }
+
+    std::shared_ptr<bzn::peers_list_t> current_peers_list;
 
 private:
     void do_switch()
@@ -150,9 +153,14 @@ private:
         this->beacon = changing_beacon;
     }
 
-    std::shared_ptr<bzn::peers_list_t> current_peers_list;
-
     unsigned int potential_switch_points_hit = 0;
+};
+
+auto test_namer = [](const ::testing::TestParamInfo<test_param_t>& info)
+{
+    std::stringstream res;
+    res << std::get<0>(info.param) << "_out_of_" << std::get<1>(info.param) << "_" << std::get<2>(info.param);
+    return res.str();
 };
 
 //gtest is going to want to apply our parameter set over an entire test suite, and we would rather not have that because
@@ -161,18 +169,44 @@ private:
 class changeover_test_operations : public changeover_test
 {};
 
-TEST_P(changeover_test_operations, perform_pbft_operations)
+TEST_P(changeover_test_operations, perform_pbft_operation)
 {
+    EXPECT_CALL(*(this->mock_io_context), post(_)).Times(Exactly(1));
+
+    this->build_pbft();
+
     switch_here();
-    EXPECT_FALSE(true);
+
+    pbft_msg preprepare = pbft_msg(this->preprepare_msg);
+    preprepare.set_sequence(1);
+    this->pbft->handle_message(preprepare, default_original_msg);
+
+    switch_here();
+
+    for (const auto& peer : *(this->current_peers_list))
+    {
+        pbft_msg prepare = pbft_msg(preprepare);
+        prepare.set_type(PBFT_MSG_PREPARE);
+        this->pbft->handle_message(prepare, bzn::test::from(peer.uuid));
+    }
+
+    switch_here();
+
+    for (const auto& peer : *(this->current_peers_list))
+    {
+        pbft_msg commit = pbft_msg(preprepare);
+        commit.set_type(PBFT_MSG_COMMIT);
+        this->pbft->handle_message(commit, bzn::test::from(peer.uuid));
+    }
+
 }
 
 INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_operations,
         testing::Combine(
-                Range(0u, 1u),
-                Values(1u),
+                Range(0u, 3u),
+                Values(3u),
                 Values("add_peer", "remove_peer", "replace_peer")
-        ),);
+        ), );
 
 class changeover_test_checkpoints : public changeover_test
 {};
@@ -188,7 +222,7 @@ INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_checkpoints,
                 Range(0u, 1u),
                 Values(1u),
                 Values("add_peer", "remove_peer", "replace_peer")
-        ),);
+        ), );
 
 class changeover_test_viewchange : public changeover_test
 {};
@@ -204,4 +238,4 @@ INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_viewchange,
                 Range(0u, 1u),
                 Values(1u),
                 Values("add_peer", "remove_peer", "replace_peer")
-        ),);
+        ), );
