@@ -66,6 +66,7 @@ namespace bzn::option_names
 
     const std::string SWARM_INFO_ESR_ADDRESS = "swarm_info_esr_address";
     const std::string SWARM_INFO_ESR_URL = "swarm_info_esr_url";
+    const std::string IGNORE_ESR = "ignore_esr";
 
     const std::string STACK = "stack";
 }

@@ -73,7 +73,8 @@ peers_beacon::refresh(bool first_run)
 {
     bool has_esr = !this->options->get_swarm_id().empty()
             && !this->options->get_swarm_info_esr_address().empty()
-            && !this->options->get_swarm_info_esr_url().empty();
+            && !this->options->get_swarm_info_esr_url().empty()
+            && !this->options->get_simple_options().get<bool>(bzn::option_names::IGNORE_ESR);
     bool has_file = !this->options->get_bootstrap_peers_file().empty();
     bool has_url = !this->options->get_bootstrap_peers_url().empty();
 

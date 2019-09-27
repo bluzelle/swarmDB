@@ -97,6 +97,12 @@ simple_options::build_options()
                 (SWARM_INFO_ESR_URL.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::ROPSTEN_URL),
                         "url of ESR Swarm Info contract server")
+                (SWARM_INFO_ESR_URL.c_str(),
+                        po::value<std::string>()->default_value(bzn::utils::ROPSTEN_URL),
+                        "url of ESR Swarm Info contract server")
+                (IGNORE_ESR.c_str(),
+                        po::value<bool>()->default_value(false),
+                        "do not use esr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
                         "software stack used by swarm");
