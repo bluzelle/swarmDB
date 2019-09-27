@@ -213,14 +213,41 @@ class changeover_test_checkpoints : public changeover_test
 
 TEST_P(changeover_test_checkpoints, perform_checkpoinnt)
 {
+    std::shared_ptr<bzn::pbft_checkpoint_manager> cp_manager = std::make_shared<bzn::pbft_checkpoint_manager>(this->mock_io_context, storage, this->beacon, this->mock_node);
+    const bzn::hash_t cp_hash = "a very hashy hash";
+    const uint64_t cp_seq = 42;
+    const std::pair<uint64_t, bzn::hash_t> cp{cp_seq, cp_hash};
+
     switch_here();
-    EXPECT_FALSE(true);
+
+    cp_manager->local_checkpoint_reached(cp);
+
+    switch_here();
+
+    for (const auto& peer : *(this->current_peers_list))
+    {
+        checkpoint_msg cp_msg;
+        cp_msg.set_state_hash(cp_hash);
+        cp_msg.set_sequence(cp_seq);
+        bzn_envelope env;
+        env.set_checkpoint_msg(cp_msg.SerializeAsString());
+        env.set_sender(peer.uuid);
+        cp_manager->handle_checkpoint_message(env);
+    }
+
+    EXPECT_EQ(cp_manager->get_latest_stable_checkpoint(), cp);
+    EXPECT_EQ(cp_manager->get_latest_local_checkpoint(), cp);
+
+    switch_here();
+
+    EXPECT_EQ(cp_manager->get_latest_stable_checkpoint(), cp);
+    EXPECT_EQ(cp_manager->get_latest_local_checkpoint(), cp);
 }
 
 INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_checkpoints,
         testing::Combine(
-                Range(0u, 1u),
-                Values(1u),
+                Range(0u, 3u),
+                Values(3u),
                 Values("add_peer", "remove_peer", "replace_peer")
         ), );
 
