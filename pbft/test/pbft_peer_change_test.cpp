@@ -250,19 +250,3 @@ INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_checkpoints,
                 Values(3u),
                 Values("add_peer", "remove_peer", "replace_peer")
         ), );
-
-class changeover_test_viewchange : public changeover_test
-{};
-
-TEST_P(changeover_test_viewchange, perform_viewchange)
-{
-    switch_here();
-    EXPECT_FALSE(true);
-}
-
-INSTANTIATE_TEST_CASE_P(changeover_test_set, changeover_test_viewchange,
-        testing::Combine(
-                Range(0u, 1u),
-                Values(1u),
-                Values("add_peer", "remove_peer", "replace_peer")
-        ), );
