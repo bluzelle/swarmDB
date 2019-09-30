@@ -274,7 +274,6 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
 bool
 pbft::preliminary_filter_msg(const pbft_msg& msg)
 {
-
     if (!this->is_view_valid() && !(msg.type() == PBFT_MSG_VIEWCHANGE || msg.type() == PBFT_MSG_NEWVIEW))
     {
         LOG(debug) << "Dropping message because local view is invalid";
@@ -399,7 +398,7 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
     }
 
     this->node
-        ->send_signed_message(bzn::make_endpoint(primary.value()), std::make_shared<bzn_envelope>(request_env));
+        ->send_signed_message(bzn::make_endpoint(*primary), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
@@ -754,7 +753,7 @@ bool
 pbft::is_primary() const
 {
     auto primary = this->get_current_primary();
-    return primary.has_value() && primary.value().uuid == this->uuid;
+    return primary.has_value() && (*primary).uuid == this->uuid;
 }
 
 std::optional<peer_address_t>
