@@ -49,7 +49,7 @@ namespace
 
         op->record_request(outer);
 
-        op->advance_operation_stage(bzn::pbft_operation_stage::commit);
+        op->advance_operation_stage(bzn::pbft_operation_stage::commit, static_peers_beacon_for(TEST_PEER_LIST));
         EXPECT_TRUE(op->is_prepared());
     }
 

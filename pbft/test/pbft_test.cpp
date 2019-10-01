@@ -216,7 +216,7 @@ namespace bzn::test
         EXPECT_CALL(*mock_session, send_message(A<std::shared_ptr<std::string>>())).Times(Exactly(1));
 
         std::vector<bzn::peer_address_t> peers;
-        auto op = std::make_shared<pbft_memory_operation>(1, 1, "somehash", static_peers_beacon_for(peers));
+        auto op = std::make_shared<pbft_memory_operation>(1, 1, "somehash");
         op->set_session(mock_session);
 
         dummy_pbft_service service(this->mock_io_context);

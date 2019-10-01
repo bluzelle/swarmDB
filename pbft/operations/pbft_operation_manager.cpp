@@ -45,11 +45,11 @@ pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, cons
         std::shared_ptr<pbft_operation> op;
         if (this->storage)
         {
-            op = std::make_shared<pbft_persistent_operation>(view, sequence, request_hash, *(this->storage), this->peers);
+            op = std::make_shared<pbft_persistent_operation>(view, sequence, request_hash, *(this->storage));
         }
         else
         {
-            op = std::make_shared<pbft_memory_operation>(view, sequence, request_hash, this->peers);
+            op = std::make_shared<pbft_memory_operation>(view, sequence, request_hash);
         }
 
         bool added;
@@ -117,7 +117,7 @@ pbft_operation_manager::prepared_operations_since(uint64_t sequence)
 
     if (this->storage)
     {
-        for (const auto& op : pbft_persistent_operation::prepared_operations_in_range(*this->storage, this->peers, sequence + 1))
+        for (const auto& op : pbft_persistent_operation::prepared_operations_in_range(*this->storage, sequence + 1))
         {
             maybe_store(op);
         }

@@ -626,12 +626,12 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
 void
 pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
-    if (op->get_stage() == pbft_operation_stage::prepare && op->is_ready_for_commit())
+    if (op->get_stage() == pbft_operation_stage::prepare && op->is_ready_for_commit(this->peers_beacon))
     {
         this->do_prepared(op);
     }
 
-    if (op->get_stage() == pbft_operation_stage::commit && op->is_ready_for_execute())
+    if (op->get_stage() == pbft_operation_stage::commit && op->is_ready_for_execute(this->peers_beacon))
     {
         this->do_committed(op);
     }
@@ -686,7 +686,7 @@ void
 pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Entering commit phase for operation " << op->get_sequence();
-    op->advance_operation_stage(pbft_operation_stage::commit);
+    op->advance_operation_stage(pbft_operation_stage::commit, this->peers_beacon);
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
@@ -697,7 +697,7 @@ void
 pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Operation " << op->get_sequence() << " " << bzn::bytes_to_debug_string(op->get_request_hash()) << " is committed-local";
-    op->advance_operation_stage(pbft_operation_stage::execute);
+    op->advance_operation_stage(pbft_operation_stage::execute, this->peers_beacon);
 
     // If we have a pending session for this request, attach to the operation just before we pass off to the service.
     // If we were to do that before this moment, then maybe the pbft_operation we attached it to never gets executed and
@@ -743,7 +743,7 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         bzn_envelope request;
         request.set_database_msg(msg.SerializeAsString());
         auto new_op = std::make_shared<pbft_memory_operation>(op->get_view(), op->get_sequence()
-            , this->crypto->hash(request), nullptr);
+            , this->crypto->hash(request));
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
     }

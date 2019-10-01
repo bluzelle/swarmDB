@@ -16,7 +16,6 @@
 
 #include <pbft/operations/pbft_operation.hpp>
 #include <peers_beacon/peer_address.hpp>
-#include <peers_beacon/peers_beacon_base.hpp>
 
 namespace bzn
 {
@@ -24,7 +23,7 @@ namespace bzn
     {
     public:
 
-        pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::peers_beacon_base> peers);
+        pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
 
         pbft_operation_stage get_stage() const override;
 
@@ -34,10 +33,10 @@ namespace bzn
         bool is_prepared() const override;
         bool is_committed() const override;
 
-        bool is_ready_for_commit() const override;
-        bool is_ready_for_execute() const override;
+        bool is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const override;
+        bool is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const override;
 
-        void advance_operation_stage(pbft_operation_stage new_stage) override;
+        void advance_operation_stage(pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers) override;
 
         void record_request(const bzn_envelope& encoded_request) override;
         bool has_request() const override;

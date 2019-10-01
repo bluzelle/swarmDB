@@ -47,12 +47,13 @@ namespace
         bzn::hash_t request_hash = "somehash";
         uint64_t view = 6;
         uint64_t sequence = 19;
+        std::shared_ptr<bzn::peers_beacon_base> static_beacon = static_peers_beacon_for(TEST_PEER_LIST);
 
         std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
 
         std::vector<std::shared_ptr<bzn::pbft_operation>> operations{
-            std::make_shared<bzn::pbft_memory_operation>(view, sequence, request_hash, static_peers_beacon_for(TEST_PEER_LIST)),
-            std::make_shared<bzn::pbft_persistent_operation>(view, sequence, request_hash, storage, static_peers_beacon_for(TEST_PEER_LIST))
+            std::make_shared<bzn::pbft_memory_operation>(view, sequence, request_hash),
+            std::make_shared<bzn::pbft_persistent_operation>(view, sequence, request_hash, this->storage)
         };
 
         bzn_envelope empty_original_msg;
@@ -95,7 +96,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_TRUE(op->is_ready_for_commit());
+            EXPECT_TRUE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 
@@ -112,7 +113,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_ready_for_commit());
+            EXPECT_FALSE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 
@@ -128,7 +129,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_ready_for_commit());
+            EXPECT_FALSE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 
@@ -146,7 +147,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_FALSE(op->is_ready_for_commit());
+            EXPECT_FALSE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 
@@ -165,7 +166,7 @@ namespace
                 op->record_pbft_msg(this->prepare, msg);
             }
 
-            EXPECT_TRUE(op->is_ready_for_commit());
+            EXPECT_TRUE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 
@@ -218,7 +219,7 @@ namespace
             op->record_pbft_msg(this->prepare, env);
 
             EXPECT_EQ(op->get_prepares().size(), 2u);
-            EXPECT_FALSE(op->is_ready_for_commit());
+            EXPECT_FALSE(op->is_ready_for_commit(this->static_beacon));
         }
     }
 }

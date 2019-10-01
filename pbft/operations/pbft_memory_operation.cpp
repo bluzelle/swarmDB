@@ -19,9 +19,8 @@
 
 using namespace bzn;
 
-pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<peers_beacon_base> peers)
+pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash)
         : pbft_operation(view, sequence, request_hash)
-        , peers(std::move(peers))
 {
 }
 
@@ -137,17 +136,17 @@ pbft_memory_operation::is_preprepared() const
 }
 
 bool
-pbft_memory_operation::is_ready_for_commit() const
+pbft_memory_operation::is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
 {
     // TODO: may have to count based only on uuids that are still in the peers list
-    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
+    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() >= pbft::honest_majority_size(peers->current()->size());
 }
 
 bool
-pbft_memory_operation::is_ready_for_execute() const
+pbft_memory_operation::is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
 {
     // TODO: may have to count based only on uuids that are still in the peers list
-    return this->is_prepared() && this->commits_seen.size() >= pbft::honest_majority_size(this->peers->current()->size());
+    return this->is_prepared() && this->commits_seen.size() >= pbft::honest_majority_size(peers->current()->size());
 }
 
 bool
@@ -163,20 +162,20 @@ pbft_memory_operation::is_committed() const
 }
 
 void
-pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_stage)
+pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers)
 {
     switch(new_stage)
     {
         case pbft_operation_stage::prepare :
             throw std::runtime_error("cannot advance to initial stage");
         case pbft_operation_stage::commit :
-            if (!this->is_ready_for_commit() || this->stage != pbft_operation_stage::prepare)
+            if (!this->is_ready_for_commit(peers) || this->stage != pbft_operation_stage::prepare)
             {
                 throw std::runtime_error("illegal move to commit phase");
             }
             break;
         case pbft_operation_stage::execute :
-            if (!this->is_ready_for_execute() || this->stage != pbft_operation_stage::commit)
+            if (!this->is_ready_for_execute(peers) || this->stage != pbft_operation_stage::commit)
             {
                 throw std::runtime_error("illegal move to execute phase");
             }
