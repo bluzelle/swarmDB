@@ -18,6 +18,7 @@
 #include <peers_beacon/peer_address.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <utils/utils_interface_base.hpp>
+#include <shared_mutex>
 
 namespace bzn
 {
@@ -58,6 +59,8 @@ namespace bzn
         std::shared_ptr<const ordered_peers_list_t> internal_current_ordered;
 
         std::unique_ptr<bzn::asio::steady_timer_base> refresh_timer;
+
+        mutable std::shared_mutex lock;
     };
 }
 

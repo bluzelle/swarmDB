@@ -59,12 +59,14 @@ peers_beacon::run_timer()
 std::shared_ptr<const peers_list_t>
 peers_beacon::current() const
 {
+    std::shared_lock lock(this->lock);
     return this->internal_current;
 }
 
 std::shared_ptr<const ordered_peers_list_t>
 peers_beacon::ordered() const
 {
+    std::shared_lock lock(this->lock);
     return this->internal_current_ordered;
 }
 
@@ -175,6 +177,8 @@ peers_beacon::fetch_from_esr()
 bool
 peers_beacon::switch_peers_list(const peers_list_t& new_peers)
 {
+    std::unique_lock lock(this->lock);
+
     if (new_peers.size() == 0)
     {
         LOG(error) << "Failed to read any peers";
