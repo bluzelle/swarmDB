@@ -71,6 +71,12 @@ node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_h
     return true;
 }
 
+void
+node::register_error_handler(std::function<void(const boost::asio::ip::tcp::endpoint& ep
+    , const boost::system::error_code&)> error_handler)
+{
+    this->error_callback = error_handler;
+}
 
 void
 node::do_accept()
@@ -186,7 +192,13 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , this->monitor
                 , this->options
                 , std::nullopt);
-        session->open(this->websocket);
+        session->open(this->websocket, [this, ep](const boost::system::error_code& ec)
+        {
+            if (ec && this->error_callback)
+            {
+                this->error_callback(ep, ec);
+            }
+        });
         this->sessions.insert_or_assign(key, session);
     }
     return session;

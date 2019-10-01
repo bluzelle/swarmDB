@@ -39,7 +39,6 @@ pbft::pbft(
     , const bzn::peers_list_t& peers
     , std::shared_ptr<bzn::options_base> options
     , std::shared_ptr<pbft_service_base> service
-    , std::shared_ptr<pbft_failure_detector_base> failure_detector
     , std::shared_ptr<bzn::crypto_base> crypto
     , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
     , std::shared_ptr<bzn::storage_base> storage
@@ -50,7 +49,6 @@ pbft::pbft(
     , uuid(options->get_uuid())
     , options(options)
     , service(std::move(service))
-    , failure_detector(std::move(failure_detector))
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
     , new_config_timer(this->io_context->make_unique_steady_timer())
@@ -90,6 +88,17 @@ pbft::start()
             this->node->register_for_message(bzn_envelope::kDatabaseResponse,
                 std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
+            this->node->register_error_handler([weak_this = this->weak_from_this()](const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code& ec)
+            {
+                if (auto strong_this = weak_this.lock())
+                {
+                    if (ec && ep == bzn::make_endpoint(strong_this->get_primary()))
+                    {
+                        strong_this->handle_failure();
+                    }
+                }
+            });
+
             this->checkpoint_manager->start();
 
             this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
@@ -97,11 +106,9 @@ pbft::start()
                 std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 
             this->service->register_execute_handler(
-                [weak_this = this->weak_from_this(), fd = this->failure_detector]
+                [weak_this = this->weak_from_this()]
                 (std::shared_ptr<pbft_operation> op)
                 {
-                    fd->request_executed(op->get_request_hash());
-
                     auto strong_this = weak_this.lock();
                     if (strong_this)
                     {
@@ -128,17 +135,6 @@ pbft::start()
                     }
                 }
             );
-
-            this->failure_detector->register_failure_handler(
-                [weak_this = this->weak_from_this()]()
-                {
-                    auto strong_this = weak_this.lock();
-                    if (strong_this)
-                    {
-                        strong_this->handle_failure();
-                    }
-                }
-                );
 
             this->join_swarm();
         });
@@ -392,11 +388,6 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
-
-    if (this->is_view_valid())
-    {
-        this->failure_detector->request_seen(req_hash);
-    }
 }
 
 
@@ -839,9 +830,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
                 this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
                 this->new_config_timer->async_wait(
                     std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
-
-                // the hash registered with the failure detector was the internal request
-                this->failure_detector->request_executed(op->get_config_request().join_request_hash());
 
                 // send response to new node
                 auto session_it = this->sessions_waiting_on_forwarded_requests.find(

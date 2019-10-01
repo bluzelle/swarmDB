@@ -18,7 +18,6 @@
 #include <pbft/pbft_base.hpp>
 #include <pbft/pbft.hpp>
 #include <pbft/dummy_pbft_service.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <storage/mem_storage.hpp>
 #include <bootstrap/bootstrap_peers.hpp>
 #include <mocks/mock_node_base.hpp>
@@ -26,7 +25,6 @@
 #include <json/json.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <mocks/mock_boost_asio_beast.hpp>
-#include <mocks/mock_pbft_failure_detector.hpp>
 #include <mocks/mock_pbft_service_base.hpp>
 #include <mocks/mock_session_base.hpp>
 #include <mocks/mock_monitor.hpp>
@@ -73,8 +71,6 @@ namespace bzn::test
         std::shared_ptr<bzn::asio::mock_io_context_base> mock_io_context =
                 std::make_shared<NiceMock<bzn::asio::mock_io_context_base >>();
         std::shared_ptr<bzn::smart_mock_node> mock_node = std::make_shared<bzn::smart_mock_node>();
-        std::shared_ptr<bzn::mock_pbft_failure_detector_base> mock_failure_detector =
-                std::make_shared<NiceMock<bzn::mock_pbft_failure_detector_base >>();
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
         std::shared_ptr<bzn::mock_session_base> mock_session =

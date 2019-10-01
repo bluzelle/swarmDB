@@ -26,6 +26,8 @@ class mock_node_base : public node_base {
  public:
   MOCK_METHOD2(register_for_message,
       bool(const bzn_envelope::PayloadCase msg_type, bzn::protobuf_handler message_handler));
+  MOCK_METHOD1(register_error_handler,
+      void(std::function<void(const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code&)> error_callback));
   MOCK_METHOD1(start,
       void(std::shared_ptr<bzn::pbft_base> pbft));
   MOCK_METHOD2(send_signed_message,

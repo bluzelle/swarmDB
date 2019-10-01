@@ -17,7 +17,6 @@
 #include <include/bluzelle.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <pbft/pbft_base.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_persistent_state.hpp>
 #include <pbft/pbft_config_store.hpp>
@@ -31,7 +30,6 @@
 #include <mutex>
 #include <gtest/gtest_prod.h>
 #include <options/options_base.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <limits>
 
@@ -80,7 +78,6 @@ namespace bzn
             , const bzn::peers_list_t& peers
             , std::shared_ptr<bzn::options_base> options
             , std::shared_ptr<pbft_service_base> service
-            , std::shared_ptr<pbft_failure_detector_base> failure_detector
             , std::shared_ptr<bzn::crypto_base> crypto
             , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
             , std::shared_ptr<bzn::storage_base> storage
@@ -255,8 +252,6 @@ namespace bzn
         std::shared_ptr<bzn::options_base> options;
 
         std::shared_ptr<pbft_service_base> service;
-
-        std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex pbft_lock;
 

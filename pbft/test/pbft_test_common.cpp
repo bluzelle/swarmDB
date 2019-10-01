@@ -164,7 +164,6 @@ namespace bzn::test
                 , TEST_PEER_LIST
                 , this->options
                 , this->mock_service
-                , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
                 , this->storage

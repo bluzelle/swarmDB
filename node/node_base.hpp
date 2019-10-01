@@ -38,6 +38,14 @@ namespace bzn
         virtual bool register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler) = 0;
 
         /**
+         * Register for a callback to be executed when a connection error occurs
+         * @param ep                endpoint we tried to connect to
+         * @param ec                error that occurred
+         * @param error_callback    callback to invoke
+         */
+        virtual void register_error_handler(std::function<void(const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code&)> error_callback) = 0;
+
+        /**
          * Start server's listener etc.
          */
         virtual void start(std::shared_ptr<bzn::pbft_base> pbft) = 0;

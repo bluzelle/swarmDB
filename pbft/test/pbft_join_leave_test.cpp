@@ -397,7 +397,7 @@ namespace bzn
         EXPECT_CALL(*mock_options, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
         auto pbft2 = std::make_shared<bzn::pbft>(mock_node2, mock_io_context2, TEST_PEER_LIST, mock_options, mock_service2,
-            this->mock_failure_detector, this->crypto, manager2, storage2, monitor);
+            this->crypto, manager2, storage2, monitor);
         pbft2->set_audit_enabled(false);
         pbft2->start();
 
@@ -520,7 +520,7 @@ namespace bzn
         EXPECT_CALL(*mock_options3, get_uuid()).WillRepeatedly(Return("uuid3"));
         EXPECT_CALL(*mock_options3, get_simple_options()).WillRepeatedly(ReturnRef(this->options->get_simple_options()));
         auto pbft3 = std::make_shared<bzn::pbft>(mock_node3, mock_io_context3, TEST_PEER_LIST, mock_options3, mock_service3,
-            this->mock_failure_detector, this->crypto, manager3, storage3, monitor);
+            this->crypto, manager3, storage3, monitor);
         pbft3->set_audit_enabled(false);
         pbft3->start();
 
@@ -710,7 +710,6 @@ namespace bzn
                 , GOOD_TEST_PEER_LIST
                 , this->options
                 , this->mock_service
-                , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
                 , this->storage
@@ -733,7 +732,6 @@ namespace bzn
                 , BAD_TEST_PEER_LIST_0
                 , this->options
                 , this->mock_service
-                , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
                 , this->storage

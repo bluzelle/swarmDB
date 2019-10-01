@@ -186,7 +186,7 @@ namespace bzn
         io2->tcp_connect_works = false;
 
         auto session = std::make_shared<bzn::session>(io2, 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT, std::list<bzn::session_shutdown_handler>{[](){}}, nullptr, this->monitor, nullptr, std::nullopt);
-        session->open(io2->websocket);
+        session->open(io2->websocket, nullptr);
 
         this->yield();
 
@@ -209,7 +209,7 @@ namespace bzn
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});
 
-            session->open(io2->websocket);
+            session->open(io2->websocket, nullptr);
 
             io2->yield_until_clear();
 
