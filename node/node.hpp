@@ -41,6 +41,8 @@ namespace bzn
 
         bool register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler) override;
 
+        void register_error_handler(std::function<void(const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code&)> error_callback) override;
+
         void start(std::shared_ptr<bzn::pbft_base> pbft) override;
 
         void send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg) override;
@@ -87,6 +89,8 @@ namespace bzn
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::options_base> options;
         std::shared_ptr<bzn::monitor_base> monitor;
+
+        std::function<void(const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code&)> error_callback;
 
         std::shared_ptr<boost::asio::ssl::context> server_ctx;
         std::shared_ptr<boost::asio::ssl::context> client_ctx;

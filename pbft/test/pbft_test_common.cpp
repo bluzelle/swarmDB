@@ -77,6 +77,9 @@ namespace bzn::test
                         ));
 
 
+        EXPECT_CALL(*(this->mock_node), register_error_handler(_))
+            .Times(Exactly(1));
+
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
                 .Times(AnyNumber())
                 .WillOnce(
@@ -155,7 +158,6 @@ namespace bzn::test
                 , this->beacon
                 , this->options
                 , this->mock_service
-                , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
                 , this->storage

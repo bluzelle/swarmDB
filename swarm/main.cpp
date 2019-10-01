@@ -24,7 +24,6 @@
 #include <options/simple_options.hpp>
 #include <pbft/pbft.hpp>
 #include <pbft/database_pbft_service.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <status/status.hpp>
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
@@ -231,8 +230,6 @@ main(int argc, const char* argv[])
         auto node = std::make_shared<bzn::node>(io_context, websocket, chaos, boost::asio::ip::tcp::endpoint{options->get_listener()}, crypto, options, monitor);
         auto audit = std::make_shared<bzn::audit>(io_context, node, options->get_audit_mem_size(), monitor);
 
-        auto failure_detector = std::make_shared<bzn::pbft_failure_detector>(io_context, options);
-
         // which type of storage?
         std::shared_ptr<bzn::storage_base> stable_storage;
         std::shared_ptr<bzn::storage_base> unstable_storage;
@@ -257,7 +254,7 @@ main(int argc, const char* argv[])
 
         auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers, options,
             std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, monitor, options->get_uuid())
-            ,failure_detector, crypto, operation_manager, unstable_storage, monitor);
+            , crypto, operation_manager, unstable_storage, monitor);
 
         pbft->set_audit_enabled(options->get_simple_options().get<bool>(bzn::option_names::AUDIT_ENABLED));
 

@@ -5,9 +5,6 @@ add_library(pbft STATIC
     dummy_pbft_service.cpp
     dummy_pbft_service.hpp
     pbft_service_base.hpp
-    pbft_failure_detector.cpp
-    pbft_failure_detector.hpp
-    pbft_failure_detector_base.hpp
     pbft_checkpoint_manager.cpp
     pbft_checkpoint_manager.hpp
     database_pbft_service.cpp

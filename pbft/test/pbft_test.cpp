@@ -235,16 +235,6 @@ namespace bzn::test
         pbft->handle_message(preprepare_msg, default_original_msg);
     }
 
-    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
-        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
-
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-        EXPECT_FALSE(pbft->is_primary());
-        pbft->handle_database_message(this->request_msg, this->mock_session);
-    }
-
     MATCHER(operation_ptr_has_session, "")
     {
         return arg->has_session();
