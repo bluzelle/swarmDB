@@ -19,7 +19,7 @@
 
 namespace bzn::policy
 {
-    std::set<std::string>
+    std::set<bzn::key_t>
     random::keys_to_evict(const database_msg &request, size_t max_size)
     {
         const auto KEY_VALUE_SIZE{
@@ -34,7 +34,6 @@ namespace bzn::policy
             : ""
         };
 
-        std::vector<bzn::key_t> keys_to_evict;
         const auto size{this->storage->get_size(request.header().db_uuid()).second};
         size_t storage_to_free{KEY_VALUE_SIZE - (max_size - size)};
 
@@ -42,6 +41,7 @@ namespace bzn::policy
         std::hash<std::string> hasher;
         boost::random::mt19937 mt(hasher(request.header().request_hash()));
 
+        std::vector<bzn::key_t> keys_to_evict;
         auto available_keys = this->storage->get_keys(request.header().db_uuid());
         while (storage_to_free && !available_keys.empty())
         {
@@ -53,10 +53,15 @@ namespace bzn::policy
             const auto it = std::next(available_keys.begin(), dist(mt));
             if (*it != IGNORE_KEY)
             {
-                if (const auto evicted_size = this->storage->get_key_size(request.header().db_uuid(), *it))
+                const auto evicted_size = this->storage->get_key_size(request.header().db_uuid(), *it);
+                if (evicted_size.has_value())
                 {
                     std::move(it, std::next(it,1), std::back_inserter(keys_to_evict));
                     storage_to_free -= *evicted_size < storage_to_free ? *evicted_size : storage_to_free;
+                }
+                else
+                {
+                    LOG(warning) << "While searching for keys to evict, the key " << *it << " was not found in the database " <<  request.header().db_uuid();
                 }
             }
             available_keys.erase(it, std::next(it,1));

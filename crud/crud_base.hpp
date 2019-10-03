@@ -16,10 +16,7 @@
 
 #include <include/bluzelle.hpp>
 #include <node/session_base.hpp>
-#include <policy/eviction_policy_base.hpp>
 #include <proto/database.pb.h>
-#include <storage/storage_base.hpp>
-
 
 namespace bzn
 {

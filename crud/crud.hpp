@@ -21,11 +21,11 @@
 #include <node/node_base.hpp>
 #include <options/options_base.hpp>
 #include <pbft/pbft_base.hpp>
+#include <policy/eviction_base.hpp>
 #include <status/status_provider_base.hpp>
 #include <storage/storage_base.hpp>
 #include <shared_mutex>
 #include <gtest/gtest_prod.h>
-
 
 namespace bzn
 {
@@ -95,7 +95,7 @@ namespace bzn
         std::optional<uint64_t> get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const;
 
         // cache replacement policy
-        std::shared_ptr<policy::eviction_policy_base> get_eviction_policy(const Json::Value& perms);
+        std::shared_ptr<policy::eviction_base> get_eviction_policy(const Json::Value& perms);
         bool do_eviction(const database_msg& request, size_t max_size);
 
         std::shared_ptr<bzn::storage_base> storage;

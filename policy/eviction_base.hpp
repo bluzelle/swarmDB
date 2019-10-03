@@ -16,21 +16,20 @@
 
 #include <include/bluzelle.hpp>
 #include <proto/database.pb.h>
-#include <set>
 #include <storage/storage_base.hpp>
-
+#include <set>
 
 namespace bzn::policy
 {
 
-    class eviction_policy_base
+    class eviction_base
     {
     public:
-        eviction_policy_base(std::shared_ptr<bzn::storage_base> storage) : storage{std::move(storage)} {}
+        eviction_base(std::shared_ptr<bzn::storage_base> storage) : storage{std::move(storage)} {}
 
-        virtual ~eviction_policy_base() = default;
+        virtual ~eviction_base() = default;
 
-        virtual std::set<bzn::key_t> keys_to_evict(const database_msg &request, size_t max_size) = 0;
+        virtual std::set<bzn::key_t> keys_to_evict(const database_msg& request, size_t max_size) = 0;
 
         std::shared_ptr<bzn::storage_base> storage;
     };

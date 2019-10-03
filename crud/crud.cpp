@@ -993,7 +993,7 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
 }
 
 
-std::shared_ptr<policy::eviction_policy_base>
+std::shared_ptr<policy::eviction_base>
 crud::get_eviction_policy(const Json::Value& perms)
 {
     // TODO: As we add more policies we may want to turn this into the strategy pattern and use
@@ -1356,11 +1356,11 @@ crud::do_eviction(const database_msg& request, size_t max_size)
             return false;
         }
 
-        std::for_each( keys_to_evict.begin(), keys_to_evict.end()
-                , [&](const auto& key)
-                       {
-                           this->storage->remove(request.header().db_uuid(), key);
-                       });
+        std::for_each( keys_to_evict.begin(), keys_to_evict.end(),
+            [&](const auto& key)
+            {
+                this->storage->remove(request.header().db_uuid(), key);
+            });
 
         return true;
     }

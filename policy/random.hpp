@@ -14,17 +14,17 @@
 
 #pragma once
 
-#include <policy/eviction_policy_base.hpp>
+#include <policy/eviction_base.hpp>
 
 namespace bzn::policy
 {
-    class random : public eviction_policy_base
+    class random : public eviction_base
     {
     public:
-        random(std::shared_ptr<bzn::storage_base> storage) : eviction_policy_base{storage}
+        random(std::shared_ptr<bzn::storage_base> storage) : eviction_base{storage}
         {
         }
 
-        std::set<bzn::key_t> keys_to_evict(const database_msg &request, size_t max_size);
+        std::set<bzn::key_t> keys_to_evict(const database_msg& request, size_t max_size);
     };
 }

@@ -1,5 +1,5 @@
 add_library(policy STATIC
-        eviction_policy_base.hpp
+        eviction_base.hpp
         random.cpp
         volatile_ttl.cpp
         )

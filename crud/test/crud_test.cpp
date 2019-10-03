@@ -3410,7 +3410,7 @@ TEST(crud, test_that_create_exceeding_max_swarm_storage_sends_proper_response)
         request.mutable_header()->set_db_uuid("uuid2");
         request.mutable_header()->set_nonce(uint64_t(123));
         request.mutable_update_db()->set_max_size(2048);
-        request.mutable_update_db()->set_eviction_policy(database_create_db::NONE);
+        request.mutable_update_db()->set_eviction_policy(database_create_db::VOLATILE_TTL);
 
         expect_signed_response(session, "uuid2", uint64_t(123), database_response::RESPONSE_NOT_SET);
         crud->handle_request("caller_id", request, session);
