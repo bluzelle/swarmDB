@@ -281,3 +281,9 @@ options::get_wss_server_dh_params_file() const
 {
     return this->raw_opts.get<std::string>(WSS_SERVER_DH_PARAMS_FILE);
 }
+
+size_t
+options::get_admission_window() const
+{
+    return this->raw_opts.get<size_t>(ADMISSION_WINDOW);
+}

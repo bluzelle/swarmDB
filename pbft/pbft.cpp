@@ -1,4 +1,4 @@
-// Copyrigh (C) 2018 Bluzelle 
+// Copyrigh (C) 2018 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -284,13 +284,6 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
             LOG(debug) << "Dropping message because it has the wrong view number";
             return false;
         }
-
-        if (msg.sequence() <= this->get_low_water_mark())
-        {
-            LOG(debug) << boost::format("Dropping message because sequence number %1% <= %2%") % msg.sequence()
-                % this->get_low_water_mark();
-            return false;
-        }
     }
 
     return true;
@@ -362,6 +355,13 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (!this->is_primary())
     {
         this->forward_request_to_primary(request_env);
+        return;
+    }
+
+    if ((this->next_issued_sequence_number.value()) - this->last_executed_sequence_number > this->options->get_admission_window())
+    {
+        // TODO: send error message (KEP-1760)
+        LOG(debug) << "Dropping request because we're too busy";
         return;
     }
 

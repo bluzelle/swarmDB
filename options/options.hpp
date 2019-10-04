@@ -82,6 +82,8 @@ namespace bzn
         std::string get_wss_server_dh_params_file() const override;
 
 
+        size_t get_admission_window() const override;
+
     private:
         size_t parse_size(const std::string& key) const;
 

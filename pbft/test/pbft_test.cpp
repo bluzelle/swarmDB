@@ -347,4 +347,22 @@ namespace bzn::test
 
         this->pbft->handle_database_message(this->request_msg, this->mock_session);
     }
+
+    TEST_F(pbft_test, test_admission_control)
+    {
+        const size_t reqs{5};
+        this->options->get_mutable_simple_options().set("admission_window", std::to_string(reqs));
+        this->build_pbft();
+        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size() * reqs));
+
+        this->request_msg.set_timestamp(now());
+        for (size_t i = 0; i < reqs + 1; i++)
+        {
+            pbft->handle_database_message(this->request_msg, this->mock_session);
+            this->request_msg.set_timestamp(this->request_msg.timestamp() + 1);
+        }
+
+        // TODO: check for error response after doing KEP-1760
+    }
 }

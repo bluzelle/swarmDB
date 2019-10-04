@@ -102,7 +102,10 @@ simple_options::build_options()
                         "do not use esr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
-                        "software stack used by swarm");
+                        "software stack used by swarm")
+                (ADMISSION_WINDOW.c_str(),
+                    po::value<size_t>()->default_value(30),
+                    "admission control request window");
 
     po::options_description logging("Logging");
     logging.add_options()

@@ -239,5 +239,11 @@ namespace bzn
 
         // todo: enable/disable peer validation
 
+
+        /**
+         * Get the number of entries allowed to be stored in audit's datastructures
+         * @return size
+         */
+        virtual size_t get_admission_window() const = 0;
     };
 } // bzn
