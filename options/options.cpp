@@ -253,3 +253,9 @@ options::get_stack() const
 {
     return this->raw_opts.get<std::string>(STACK);
 }
+
+size_t
+options::get_admission_window() const
+{
+    return this->raw_opts.get<size_t>(ADMISSION_WINDOW);
+}

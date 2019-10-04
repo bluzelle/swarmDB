@@ -206,5 +206,11 @@ namespace bzn
          * @return string stack name
          */
         virtual std::string get_stack() const = 0;
+
+        /**
+         * Get the number of entries allowed to be stored in audit's datastructures
+         * @return size
+         */
+        virtual size_t get_admission_window() const = 0;
     };
 } // bzn

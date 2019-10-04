@@ -42,7 +42,6 @@ namespace
     const double HIGH_WATER_INTERVAL_IN_CHECKPOINTS = 200.0; //TODO: KEP-574
     const uint64_t MAX_REQUEST_AGE_MS = 3600000; // 1 hour
     const std::string NOOP_REQUEST_HASH = "<no op request hash>";
-    const uint64_t REQUEST_WINDOW = 30;
 
     const std::string VIEW_KEY{"view"};
     const std::string NEXT_ISSUED_SEQUENCE_NUMBER_KEY{"next_issued_sequence_number"};

@@ -354,7 +354,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
-    if (this->next_issued_sequence_number.value() - this->last_executed_sequence_number >= REQUEST_WINDOW)
+    if (this->next_issued_sequence_number.value() - this->last_executed_sequence_number >= this->options->get_admission_window())
     {
         // TODO: send error message (KEP-1760)
         LOG(debug) << "Dropping request because we're too busy";
