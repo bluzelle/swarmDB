@@ -15,27 +15,22 @@
 #pragma once
 
 #include <include/bluzelle.hpp>
-#include <node/session_base.hpp>
 #include <proto/database.pb.h>
+#include <storage/storage_base.hpp>
+#include <set>
 
-namespace bzn
+namespace bzn::policy
 {
-    class pbft_base;
 
-    class crud_base
+    class eviction_base
     {
     public:
-        virtual ~crud_base() = default;
+        eviction_base(std::shared_ptr<bzn::storage_base> storage) : storage{std::move(storage)} {}
 
-        virtual void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) = 0;
+        virtual ~eviction_base() = default;
 
-        virtual void start(std::shared_ptr<bzn::pbft_base> pbft, size_t max_storage) = 0;
+        virtual std::set<bzn::key_t> keys_to_evict(const database_msg& request, size_t max_size) = 0;
 
-        virtual bool save_state() = 0;
-
-        virtual std::shared_ptr<std::string> get_saved_state() = 0;
-
-        virtual bool load_state(const std::string& state) = 0;
+        std::shared_ptr<bzn::storage_base> storage;
     };
-
-} // namespace bzn
+} // namespace bzn::crud::eviction

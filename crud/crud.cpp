@@ -13,6 +13,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <crud/crud.hpp>
+#include <policy/random.hpp>
+#include <policy/volatile_ttl.hpp>
 #include <utils/make_endpoint.hpp>
 #include <functional>
 #include <boost/algorithm/string/trim_all.hpp>
@@ -210,6 +212,14 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
         else
         {
+            // bail on key value pairs that are too large right away!
+            if (this->max_database_size(perms) && request.create().key().length() + request.create().value().length() > this->max_database_size(perms))
+            {
+                this->send_response(request, bzn::storage_result::value_too_large, database_response(), session);
+
+                return;
+            }
+
             if (this->expired(request.header().db_uuid(), request.create().key()))
             {
                 this->send_response(request, bzn::storage_result::delete_pending, database_response(), session);
@@ -219,16 +229,7 @@ crud::handle_create(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (this->operation_exceeds_available_space(request, perms))
             {
-                const auto key_value_size{request.create().key().length() + request.create().value().length()};
-
-                // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
-                // replacement policy
-                if (this->uses_random_eviction_policy(perms) && key_value_size < this->max_database_size(perms))
-                {
-                    // TODO: at present there is only one policy, later refactor this to use the strategy pattern
-                    this->random_cache_replacement(request, key_value_size, this->max_database_size(perms));
-                }
-                else
+                if (!this->do_eviction(request, this->max_database_size(perms)))
                 {
                     this->send_response(request, bzn::storage_result::db_full, database_response(), session);
 
@@ -313,6 +314,14 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
         }
         else
         {
+            // bail on key value pairs that are too large right away!
+            if (this->max_database_size(perms) && request.create().key().length() + request.create().value().length() > this->max_database_size(perms))
+            {
+                this->send_response(request, bzn::storage_result::value_too_large, database_response(), session);
+
+                return;
+            }
+
             // expired?
             if (this->expired(request.header().db_uuid(), request.update().key()))
             {
@@ -323,19 +332,8 @@ crud::handle_update(const bzn::caller_id_t& caller_id, const database_msg& reque
 
             if (this->operation_exceeds_available_space(request, perms))
             {
-                // since this is an update, we do not change the key, so it's length can be ignored.
-                const auto key_value_size{request.update().value().length()};
-
-                // Bail if the size of the key/value pair is larger than the database! If not, then check for a cache
-                // replacement policy
-                if (this->uses_random_eviction_policy(perms) && key_value_size < this->max_database_size(perms))
-                {
-                    // TODO: at present there is only one policy, later refactor this to use the strategy pattern
-                    // Since this is an update, we need to ensure that the key we are updating does not get randomly
-                    // selected for eviction, so we need to tell the policy what key that is.
-                    this->random_cache_replacement(request, key_value_size, this->max_database_size(perms), request.update().key());
-                }
-                else
+                // let's try evicting some key/value pairs
+                if (!this->do_eviction(request, this->max_database_size(perms)))
                 {
                     this->send_response(request, bzn::storage_result::db_full, database_response(), session);
 
@@ -995,10 +993,21 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
 }
 
 
-bool
-crud::uses_random_eviction_policy(const Json::Value& perms) const
+std::shared_ptr<policy::eviction_base>
+crud::get_eviction_policy(const Json::Value& perms)
 {
-    return perms[EVICTION_POLICY_KEY] == database_create_db::RANDOM;
+    // TODO: As we add more policies we may want to turn this into the strategy pattern and use
+    // a registry based approach here
+    if (perms[EVICTION_POLICY_KEY] == database_create_db::RANDOM)
+    {
+        return std::make_shared<policy::random>(this->storage);
+    }
+    else if (perms[EVICTION_POLICY_KEY] == database_create_db::VOLATILE_TTL)
+    {
+        return std::make_shared<policy::volatile_ttl>(this->storage);
+    }
+
+    return nullptr;
 }
 
 
@@ -1103,7 +1112,7 @@ crud::update_expiration_entry(const bzn::key_t& generated_key, uint64_t expire)
 
         if (result == bzn::storage_result::ok)
         {
-            LOG(debug) << "created ttl entry for: " << generated_key;
+            LOG(debug) << "created ttl entry [" << expires << "] for: " << generated_key;
 
             return;
         }
@@ -1335,46 +1344,28 @@ crud::get_swarm_storage_usage()
 }
 
 
-size_t
-crud::evict_key(const bzn::uuid_t& db_uuid, const bzn::key_t&  key)
+bool
+crud::do_eviction(const database_msg& request, size_t max_size)
 {
-    const auto pair_size = this->storage->get_key_size(db_uuid, key);
-    if (pair_size)
+    const auto PERMS{this->get_database_permissions(request.header().db_uuid()).second};
+    if (auto eviction_policy = this->get_eviction_policy(PERMS))
     {
-        return this->storage->remove(db_uuid, key) == bzn::storage_result::ok ? *pair_size : 0;
-    }
-    return 0;
-}
-
-
-void
-crud::random_cache_replacement(const database_msg& request, size_t key_value_size, size_t max_size, const bzn::key_t& key_exception)
-{
-    const auto [keys, size]{this->storage->get_size(request.header().db_uuid())};
-
-    uint64_t storage_to_free = key_value_size - (max_size - size);
-
-    // We may need to remove one or more key/value pairs to make room for the new one
-    std::hash<std::string> hasher;
-    size_t random_seed = hasher(request.header().request_hash());
-
-    boost::random::mt19937 mt(random_seed);
-    const boost::random::uniform_int_distribution<> dist(0, keys - 1);
-
-    std::vector<bzn::key_t> keys_to_evict;
-
-    const auto available_keys = this->storage->get_keys(request.header().db_uuid());
-    while (storage_to_free)
-    {
-        const auto key_index = dist(mt);
-        const auto key_to_evict = this->storage->get_keys(request.header().db_uuid())[key_index];
-        if ((key_to_evict != key_exception) && (keys_to_evict.end() == std::find(keys_to_evict.begin(), keys_to_evict.end(), key_to_evict)))
+        auto keys_to_evict {eviction_policy->keys_to_evict(request, max_size)};
+        if (keys_to_evict.empty())
         {
-            const size_t evicted_size = evict_key(request.header().db_uuid(), key_to_evict);
-            storage_to_free -= evicted_size < storage_to_free ? evicted_size : storage_to_free;
-            keys_to_evict.emplace_back(key_to_evict);
+            return false;
         }
+
+        std::for_each( keys_to_evict.begin(), keys_to_evict.end(),
+            [&](const auto& key)
+            {
+                this->storage->remove(request.header().db_uuid(), key);
+            });
+
+        return true;
     }
+
+    return false;
 }
 
 

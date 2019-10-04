@@ -21,19 +21,20 @@
 #include <node/node_base.hpp>
 #include <options/options_base.hpp>
 #include <pbft/pbft_base.hpp>
+#include <policy/eviction_base.hpp>
 #include <status/status_provider_base.hpp>
 #include <storage/storage_base.hpp>
 #include <shared_mutex>
 #include <gtest/gtest_prod.h>
-
 
 namespace bzn
 {
     class crud final : public bzn::crud_base, public bzn::status_provider_base, public std::enable_shared_from_this<crud>
     {
     public:
-        crud(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::storage_base> storage, std::shared_ptr<bzn::subscription_manager_base> subscription_manager,
-            std::shared_ptr<bzn::node_base> node, bzn::key_t owner_public_key = "");
+        crud(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_ptr<bzn::storage_base> storage
+                , std::shared_ptr<bzn::subscription_manager_base> subscription_manager
+                , std::shared_ptr<bzn::node_base> node, bzn::key_t owner_public_key = "");
 
         void handle_request(const bzn::caller_id_t& caller_id, const database_msg& request, std::shared_ptr<bzn::session_base> session) override;
 
@@ -82,7 +83,6 @@ namespace bzn
         bool is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& perms) const;
         void add_writers(const database_msg& request, Json::Value& perms);
         void remove_writers(const database_msg& request, Json::Value& perms);
-        bool uses_random_eviction_policy(const Json::Value& perms) const;
         uint64_t max_database_size(const Json::Value& perms) const;
         bool operation_exceeds_available_space(const database_msg& request, const Json::Value& perms);
 
@@ -95,8 +95,8 @@ namespace bzn
         std::optional<uint64_t> get_ttl(const bzn::uuid_t& uuid, const bzn::key_t& key) const;
 
         // cache replacement policy
-        size_t evict_key(const bzn::uuid_t& db_uuid, const bzn::key_t&  key);
-        void random_cache_replacement(const database_msg& request, size_t key_value_size, size_t max_size, const bzn::key_t& key_exception = "");
+        std::shared_ptr<policy::eviction_base> get_eviction_policy(const Json::Value& perms);
+        bool do_eviction(const database_msg& request, size_t max_size);
 
         std::shared_ptr<bzn::storage_base> storage;
         std::shared_ptr<bzn::subscription_manager_base> subscription_manager;

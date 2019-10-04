@@ -36,7 +36,7 @@ add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 # todo: remove -Wno-implicit-fallthrough once CI moves past gcc 7.4.0...
 set(warnings "-Wno-deprecated-declarations -Wall -Wextra -Werror -Wpedantic -Wno-implicit-fallthrough")
 if (APPLE)
-    set(warnings "${warnings} -Wno-extended-offsetof")
+    set(warnings "${warnings} -Wno-invalid-offsetof")
 else()
     # for beast and gcc release builds...
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -98,6 +98,7 @@ add_subdirectory(chaos)
 add_subdirectory(crypto)
 add_subdirectory(monitor)
 add_subdirectory(mocks)
+add_subdirectory(policy)
 
 include(cmake/static_analysis.cmake)
 

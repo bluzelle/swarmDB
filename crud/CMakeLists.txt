@@ -7,7 +7,7 @@ add_library(crud STATIC
     crud.hpp
     )
 
-target_link_libraries(crud proto)
+target_link_libraries(crud proto policy)
 add_dependencies(crud boost jsoncpp openssl)
 target_include_directories(crud PRIVATE ${BLUZELLE_STD_INCLUDES})
 add_subdirectory(test)

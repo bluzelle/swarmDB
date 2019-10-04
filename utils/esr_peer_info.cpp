@@ -41,8 +41,7 @@ namespace
     str_to_json(const std::string &json_str)
     {
         bzn::json_message json_msg;
-        Json::CharReaderBuilder builder;
-        Json::CharReader* reader = builder.newCharReader();
+        std::unique_ptr<Json::CharReader> reader{ Json::CharReaderBuilder().newCharReader() };
         std::string errors;
         if(!reader->parse(
                 json_str.c_str()
