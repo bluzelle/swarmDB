@@ -47,10 +47,6 @@ namespace bzn
 
         std::chrono::milliseconds get_ws_idle_timeout() const override;
 
-        std::chrono::milliseconds get_fd_oper_timeout() const override;
-
-        std::chrono::milliseconds get_fd_fail_timeout() const override;
-
         size_t get_audit_mem_size() const override;
 
         std::string get_state_dir() const override;
