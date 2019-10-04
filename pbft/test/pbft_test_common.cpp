@@ -77,6 +77,9 @@ namespace bzn::test
                         ));
 
 
+        EXPECT_CALL(*(this->mock_node), register_error_handler(_))
+            .Times(Exactly(1));
+
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
                 .Times(AnyNumber())
                 .WillOnce(
