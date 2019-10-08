@@ -38,6 +38,8 @@ namespace bzn
         // refresh from whatever source we are using
         bool refresh(bool first_run = false) override;
 
+        void check_removal();
+
     private:
 
         bool fetch_from_esr();
@@ -50,6 +52,10 @@ namespace bzn
         bool switch_peers_list(const peers_list_t& new_peers);
 
         void run_timer();
+
+        bool ever_been_in_swarm = false;
+
+        std::shared_ptr<bzn::asio::io_context_base> io;
 
         std::shared_ptr<bzn::options_base> options;
         std::shared_ptr<bzn::utils_interface_base> utils;

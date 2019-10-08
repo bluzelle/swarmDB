@@ -31,6 +31,10 @@ namespace
     const std::string bad_port = "[{\"name\": \"peer1\", \"host\": \"127.0.0.1\", \"port\": 70000}]";
     const std::string test_peers_filename = "peers.json";
 
+    const std::string our_uuid = "alice";
+    const std::string peers_with_us = "[{\"host\": \"peer1.com\", \"port\": 12345, \"uuid\" : \"alice\"}]";
+    const std::string peers_without_us = "[{\"host\": \"peer1.com\", \"port\": 12345, \"uuid\" : \"not alice\"}]";
+
     const std::string sample_peers_url = "pastebin.com/raw/KvbcVhfZ";
     const std::string sample_peers_url_with_protocol = "http://www.pastebin.com/raw/KvbcVhfZ";
 }
@@ -53,6 +57,7 @@ public:
         EXPECT_CALL(*opt, get_swarm_id()).WillRepeatedly(Return(""));
         this->inner_opt.set(bzn::option_names::PEERS_REFRESH_INTERVAL_SECONDS, "60");
         EXPECT_CALL(*opt, get_simple_options()).WillRepeatedly(ReturnRef(this->inner_opt));
+        EXPECT_CALL(*opt, get_uuid()).WillRepeatedly(Return(our_uuid));
 
         this->peers = std::make_shared<bzn::peers_beacon>(this->io, this->utils, this->opt);
     }
@@ -207,5 +212,26 @@ TEST_F(peers_beacon_test, test_esr)
     ASSERT_TRUE(peers->refresh());
     ASSERT_EQ(peers->current()->size(), 1U);
     ASSERT_EQ(peers->ordered()->front().name, "alice");
+}
+
+TEST_F(peers_beacon_test, test_halt)
+{
+    EXPECT_CALL(*(this->io), stop()).Times(Exactly(0));
+    set_peers_file(peers_without_us);
+
+    ASSERT_TRUE(peers->refresh());
+    peers->check_removal();
+
+    set_peers_file(peers_with_us);
+
+    ASSERT_TRUE(peers->refresh());
+    peers->check_removal();
+
+
+    set_peers_file(peers_without_us);
+    EXPECT_CALL(*(this->io), stop()).Times(Exactly(1));
+
+    ASSERT_TRUE(peers->refresh());
+    peers->check_removal();
 }
 

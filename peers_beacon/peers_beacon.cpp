@@ -19,7 +19,8 @@
 using namespace bzn;
 
 peers_beacon::peers_beacon(std::shared_ptr<bzn::asio::io_context_base> io, std::shared_ptr<bzn::utils_interface_base> utils, std::shared_ptr<bzn::options_base> opt)
-        : options(opt)
+        : io(io)
+        , options(opt)
         , utils(utils)
         , internal_current(std::make_shared<peers_list_t>())
         , refresh_timer(io->make_unique_steady_timer())
@@ -51,6 +52,7 @@ peers_beacon::run_timer()
                                         if (self)
                                         {
                                             self->refresh();
+                                            self->check_removal();
                                             self->run_timer();
                                         }
                                     });
@@ -68,6 +70,30 @@ peers_beacon::ordered() const
 {
     std::shared_lock lock(this->lock);
     return this->internal_current_ordered;
+}
+
+void
+peers_beacon::check_removal()
+{
+    auto peers = this->current();
+    auto uuid = this->options->get_uuid();
+
+    bool in_swarm = peers->end() != std::find_if(peers->begin(), peers->end(),
+            [&uuid](const auto& peer)
+            {
+                return peer.uuid == uuid;
+            });
+
+    LOG(debug) << "We are " << (in_swarm ? "" : "not ") << "in this peers list";
+
+
+    this->ever_been_in_swarm = this->ever_been_in_swarm || in_swarm;
+
+    if (!in_swarm && ever_been_in_swarm)
+    {
+        LOG(info) << "we seem to have been removed from the swarm; exiting";
+        this->io->stop();
+    }
 }
 
 bool
