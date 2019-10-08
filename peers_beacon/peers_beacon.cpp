@@ -203,8 +203,6 @@ peers_beacon::fetch_from_esr()
 bool
 peers_beacon::switch_peers_list(const peers_list_t& new_peers)
 {
-    std::unique_lock lock(this->lock);
-
     if (new_peers.size() == 0)
     {
         LOG(error) << "Failed to read any peers";
@@ -236,6 +234,8 @@ peers_beacon::switch_peers_list(const peers_list_t& new_peers)
         {
             return peer1.uuid.compare(peer2.uuid) < 0;
         });
+
+    std::unique_lock lock(this->lock);
 
     this->internal_current = std::make_shared<const peers_list_t>(new_peers);
     this->internal_current_ordered = new_ordered;
