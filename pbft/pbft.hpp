@@ -52,6 +52,8 @@ namespace
     const std::string SAVED_NEWVIEW_KEY{"saved_newview"};
     const std::string TIMESTAMP_ERROR_MSG{"INVALID TIMESTAMP"};
     const std::string TOO_LARGE_ERROR_MSG{"REQUEST TOO LARGE"};
+    const std::string TOO_BUSY_ERROR_MSG{"SERVER TOO BUSY"};
+    const std::string DUPLICATE_ERROR_MSG{"DUPLICATE REQUEST"};
 }
 
 

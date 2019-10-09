@@ -380,6 +380,13 @@ namespace bzn::test
         return msg.type() == PBFT_MSG_NEWVIEW;
     }
 
+    bool
+    is_swarm_error(std::shared_ptr<std::string> msg)
+    {
+        bzn_envelope env;
+        return env.ParseFromString(*msg) && env.payload_case() == bzn_envelope::kSwarmError;
+    }
+
     bzn_envelope
     from(uuid_t uuid)
     {

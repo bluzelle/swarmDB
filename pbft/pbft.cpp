@@ -303,11 +303,13 @@ pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr
     database_msg req;
     if (session && req.ParseFromString(request_env.database_msg()))
     {
-        database_response resp;
-        *resp.mutable_header() = req.header();
-        resp.mutable_error()->set_message(msg);
+        swarm_error err;
+        *err.mutable_message() = msg;
+        *err.mutable_data() = req.header().nonce();
 
-        session->send_message(std::make_shared<std::string>(this->wrap_message(resp).SerializeAsString()));
+        bzn_envelope response;
+        response.set_swarm_error(err.SerializeAsString());
+        return session->send_message(std::make_shared<std::string>(this->wrap_message(response).SerializeAsString()));
     }
 }
 
@@ -356,16 +358,16 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 
     if ((this->next_issued_sequence_number.value()) - this->last_executed_sequence_number > this->options->get_admission_window())
     {
-        // TODO: send error message (KEP-1760)
-        LOG(debug) << "Dropping request because we're too busy";
+        LOG(debug) << "Rejecting request because we're too busy";
+        this->send_error_response(request_env, session, TOO_BUSY_ERROR_MSG);
         return;
     }
 
     // keep track of what requests we've seen based on timestamp and only send preprepares once
     if (this->already_seen_request(request_env, hash))
     {
-        // TODO: send error message to client
         LOG(debug) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        this->send_error_response(request_env, session, DUPLICATE_ERROR_MSG);
         return;
     }
 
