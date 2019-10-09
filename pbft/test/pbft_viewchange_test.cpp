@@ -309,6 +309,9 @@ namespace bzn
         std::shared_ptr<bzn::mock_pbft_service_base> mock_service2 =
                 std::make_shared<NiceMock<bzn::mock_pbft_service_base>>();
 
+        EXPECT_CALL(*(mock_node2), register_error_handler(_))
+            .Times(Exactly(1));
+
         EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
             .Times(AtMost(4)).WillOnce(Invoke([&]()
             { return std::move(audit_heartbeat_timer2); }))
@@ -344,7 +347,7 @@ namespace bzn
         run_transaction_through_primary();
         this->stabilize_checkpoint(100);
 
-        for (size_t i = 0; i < 50; i++)
+        for (size_t i = 0; i < 20; i++)
         {
             run_transaction_through_primary(false);
         }
@@ -382,7 +385,7 @@ namespace bzn
                     if (p.uuid == TEST_NODE_UUID)
                    {
                        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
-                               .Times(Exactly(50 * TEST_PEER_LIST.size()));
+                               .Times(Exactly(20 * TEST_PEER_LIST.size()));
                        pbft_msg msg;
                        ASSERT_TRUE(msg.ParseFromString(wmsg->pbft()));
                        wmsg->set_sender("uuid2");

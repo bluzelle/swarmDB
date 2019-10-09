@@ -225,16 +225,6 @@ namespace bzn::test
         service.apply_operation(op);
     }
 
-    TEST_F(pbft_test, messages_before_low_water_mark_dropped)
-    {
-        this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
-                .Times(Exactly(0));
-
-        this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
-        pbft->handle_message(preprepare_msg, default_original_msg);
-    }
-
     MATCHER(operation_ptr_has_session, "")
     {
         return arg->has_session();
@@ -357,12 +347,44 @@ namespace bzn::test
             .Times(Exactly(TEST_PEER_LIST.size() * reqs));
 
         this->request_msg.set_timestamp(now());
-        for (size_t i = 0; i < reqs + 1; i++)
+        for (size_t i = 0; i < reqs; i++)
         {
             pbft->handle_database_message(this->request_msg, this->mock_session);
             this->request_msg.set_timestamp(this->request_msg.timestamp() + 1);
         }
 
-        // TODO: check for error response after doing KEP-1760
+        EXPECT_CALL(*mock_session, send_message(_))
+            .Times(Exactly(1))
+            .WillOnce(Invoke([&](auto& msg)
+        {
+            bzn_envelope env;
+            ASSERT_TRUE(env.ParseFromString(*msg));
+            ASSERT_EQ(env.payload_case(), bzn_envelope::kSwarmError);
+
+            swarm_error err;
+            ASSERT_TRUE(err.ParseFromString(env.swarm_error()));
+            ASSERT_EQ(err.message(), "SERVER TOO BUSY");
+        }));
+
+        pbft->handle_database_message(this->request_msg, this->mock_session);
+
     }
+
+    TEST_F(pbft_test, too_big_request_generates_error)
+    {
+        this->build_pbft();
+
+        database_msg dmsg;
+        dmsg.mutable_create()->set_key(std::string("key"));
+        dmsg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE + 1, 'a'));
+
+        bzn_envelope request;
+        request.set_database_msg(dmsg.SerializeAsString());
+        request.set_sender(TEST_NODE_UUID);
+
+        EXPECT_CALL(*this->mock_session, send_message(ResultOf(test::is_swarm_error, Eq(true))));
+        pbft->handle_database_message(request, this->mock_session);
+    }
+
+
 }

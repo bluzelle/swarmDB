@@ -49,6 +49,8 @@ namespace
     const std::string SAVED_NEWVIEW_KEY{"saved_newview"};
     const std::string TIMESTAMP_ERROR_MSG{"INVALID TIMESTAMP"};
     const std::string TOO_LARGE_ERROR_MSG{"REQUEST TOO LARGE"};
+    const std::string TOO_BUSY_ERROR_MSG{"SERVER TOO BUSY"};
+    const std::string DUPLICATE_ERROR_MSG{"DUPLICATE REQUEST"};
 }
 
 
@@ -88,6 +90,8 @@ namespace bzn
         void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) override;
 
         void handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+
+        void handle_swarm_error_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
 
         bool is_primary() const override;
 
@@ -187,7 +191,7 @@ namespace bzn
         void broadcast(const bzn_envelope& message);
 
         void send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
-            , const std::string& msg) const;
+            , const std::string& hash, const std::string& msg) const;
 
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);

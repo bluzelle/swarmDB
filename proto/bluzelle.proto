@@ -14,6 +14,14 @@
 
 syntax = "proto3";
 
+message swarm_error
+{
+    string message = 1;
+    bytes data = 2;
+    bytes hash = 3;
+}
+
+
 message bzn_envelope
 {
     string swarm_id = 1;
@@ -34,5 +42,6 @@ message bzn_envelope
         bytes status_request = 17;
         bytes status_response = 18;
         bytes checkpoint_msg = 19;
+        bytes swarm_error = 20;
     }
 }
