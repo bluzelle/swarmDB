@@ -305,11 +305,16 @@ pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr
     {
         swarm_error err;
         *err.mutable_message() = msg;
-        *err.mutable_data() = req.header().nonce();
+        *err.mutable_data() = std::to_string(req.header().nonce());
 
         bzn_envelope response;
         response.set_swarm_error(err.SerializeAsString());
-        return session->send_message(std::make_shared<std::string>(this->wrap_message(response).SerializeAsString()));
+
+        response.set_sender(this->uuid);
+        response.set_timestamp(this->now());
+        response.set_swarm_id(this->options->get_swarm_id());
+
+        return session->send_message(std::make_shared<std::string>(response.SerializeAsString()));
     }
 }
 
