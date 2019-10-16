@@ -18,6 +18,7 @@ message swarm_error
 {
     string message = 1;
     bytes data = 2;
+    bytes hash = 3;
 }
 
 

@@ -88,6 +88,9 @@ pbft::start()
             this->node->register_for_message(bzn_envelope::kDatabaseResponse,
                 std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
+            this->node->register_for_message(bzn_envelope::kSwarmError,
+                std::bind(&pbft::handle_swarm_error_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+
             this->node->register_error_handler([weak_this = this->weak_from_this()](const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code& ec)
             {
                 if (auto strong_this = weak_this.lock())
@@ -298,7 +301,7 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 
 void
 pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
-    , const std::string& msg) const
+    , const std::string& hash, const std::string& msg) const
 {
     database_msg req;
     if (session && req.ParseFromString(request_env.database_msg()))
@@ -306,6 +309,7 @@ pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr
         swarm_error err;
         *err.mutable_message() = msg;
         *err.mutable_data() = std::to_string(req.header().nonce());
+        *err.mutable_hash() = hash;
 
         bzn_envelope response;
         response.set_swarm_error(err.SerializeAsString());
@@ -321,9 +325,11 @@ pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr
 void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    const auto hash = this->crypto->hash(request_env);
+
     if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
-        this->send_error_response(request_env, session, TIMESTAMP_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, TIMESTAMP_ERROR_MSG);
 
         LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
                 << request_env.ShortDebugString();
@@ -337,13 +343,11 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     const size_t OVERHEAD_SIZE{512};
     if (!request_env.database_msg().empty() && request_env.database_msg().size() >= (bzn::MAX_VALUE_SIZE - OVERHEAD_SIZE))
     {
-        this->send_error_response(request_env, session, TOO_LARGE_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, TOO_LARGE_ERROR_MSG);
 
         LOG(warning) << "Rejecting request because it is too large [" << request_env.database_msg().size() << " bytes]";
         return;
     }
-
-    const auto hash = this->crypto->hash(request_env);
 
     if (session)
     {
@@ -364,7 +368,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if ((this->next_issued_sequence_number.value()) - this->last_executed_sequence_number > this->options->get_admission_window())
     {
         LOG(debug) << "Rejecting request because we're too busy";
-        this->send_error_response(request_env, session, TOO_BUSY_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, TOO_BUSY_ERROR_MSG);
         return;
     }
 
@@ -372,7 +376,7 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     if (this->already_seen_request(request_env, hash))
     {
         LOG(debug) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
-        this->send_error_response(request_env, session, DUPLICATE_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, DUPLICATE_ERROR_MSG);
         return;
     }
 
@@ -1100,6 +1104,30 @@ pbft::handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<
     }
 
     LOG(error) << "failed to read database response";
+}
+
+void
+pbft::handle_swarm_error_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
+{
+    swarm_error err;
+
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    if (err.ParseFromString(msg.swarm_error()))
+    {
+        if (const auto session_it = this->sessions_waiting_on_forwarded_requests.find(err.hash());
+            session_it != this->sessions_waiting_on_forwarded_requests.end())
+        {
+            session_it->second->send_message(std::make_shared<bzn::encoded_message>(msg.SerializeAsString()));
+            this->monitor->finish_timer(bzn::statistic::request_latency, err.hash());
+            return;
+        }
+
+        LOG(warning) << "session not found for swarm error response";
+        return;
+    }
+
+    LOG(error) << "failed to read swarm error response";
 }
 
 uint64_t
