@@ -111,7 +111,7 @@ namespace bzn
         this->build_pbft();
 
         // node shouldn't be sending any checkpoint messages right now
-        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_checkpoint, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_checkpoint, Eq(true))))
             .Times((Exactly(0)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -124,7 +124,7 @@ namespace bzn
 
         // one more checkpoint message and the node should request state from a random node
         auto primary = this->pbft->get_current_primary().value();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         bzn::peer_address_t node(*nodes++);
@@ -144,7 +144,7 @@ namespace bzn
         }
 
         // since the node has this checkpoint it should NOT request state for it
-        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(0)));
         stabilize_checkpoint(100);
         EXPECT_EQ(this->cp_manager_timer_callback_count, 0u);
@@ -176,7 +176,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_current_primary().value();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();
@@ -210,7 +210,7 @@ namespace bzn
 
         // get the node to request state
         auto primary = this->pbft->get_current_primary().value();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
         auto nodes = TEST_PEER_LIST.begin();

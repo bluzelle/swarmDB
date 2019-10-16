@@ -34,7 +34,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_requests_fire_preprepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft->handle_database_message(this->request_msg, this->mock_session);
@@ -71,7 +71,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_different_requests_get_different_sequences)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).WillRepeatedly(Invoke(save_sequences));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).WillRepeatedly(Invoke(save_sequences));
 
         database_msg req, req2;
         req.mutable_header()->set_nonce(5);
@@ -86,7 +86,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_preprepare_triggers_prepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -95,7 +95,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(0));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_view(6);
@@ -106,7 +106,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_request_hash("some other hash");
@@ -118,9 +118,9 @@ namespace bzn::test
     TEST_F(pbft_test, test_commit_messages_sent)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_commit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -343,7 +343,7 @@ namespace bzn::test
         const size_t reqs{5};
         this->options->get_mutable_simple_options().set("admission_window", std::to_string(reqs));
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size() * reqs));
 
         this->request_msg.set_timestamp(now());

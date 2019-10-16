@@ -86,6 +86,8 @@ class mock_options_base : public options_base {
       std::string());
   MOCK_CONST_METHOD0(get_admission_window,
       size_t());
+  MOCK_CONST_METHOD0(get_peer_message_signing,
+      bool());
 };
 
 }  // namespace bzn

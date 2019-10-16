@@ -50,6 +50,7 @@ namespace bzn::option_names
     const std::string SIGNED_KEY = "signed_key";
     const std::string OWNER_PUBLIC_KEY = "owner_public_key";
     const std::string ADMISSION_WINDOW = "admission_window";
+    const std::string PEER_MESSAGE_SIGNING = "peer_message_signing";
 
     const std::string CHAOS_ENABLED = "chaos_testing_enabled";
     const std::string CHAOS_NODE_FAILURE_SHAPE = "chaos_node_failure_shape";

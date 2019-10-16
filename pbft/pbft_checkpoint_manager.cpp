@@ -88,7 +88,7 @@ pbft_checkpoint_manager::local_checkpoint_reached(const bzn::checkpoint_t& cp)
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
     for (const auto& peer : *(this->peers_beacon->current()))
     {
-        this->node->send_signed_message(make_endpoint(peer), msg_ptr);
+        this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);
     }
 
     if (cp.first == this->latest_local_checkpoint.value().first && cp.second != this->latest_local_checkpoint.value().second)
@@ -291,7 +291,7 @@ pbft_checkpoint_manager::send_state_request()
     auto msg_ptr = std::make_shared<bzn_envelope>();
     msg_ptr->set_pbft_membership(msg.SerializeAsString());
 
-    this->node->send_signed_message(selected_peer, msg_ptr);
+    this->node->send_maybe_signed_message(selected_peer, msg_ptr);
 }
 
 void

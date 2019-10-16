@@ -85,8 +85,13 @@ pbft::start()
             this->node->register_for_message(bzn_envelope::kDatabaseResponse,
                 std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-            this->node->register_for_message(bzn_envelope::kSwarmError,
-                std::bind(&pbft::handle_swarm_error_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+            this->node->register_for_message(bzn_envelope::kSwarmError, [weak_this = weak_from_this()](auto msg, auto session)
+                {
+                    if (auto strong_this = weak_this.lock())
+                    {
+                        strong_this->handle_swarm_error_response_message(msg, session);
+                    }
+                });
 
             this->node->register_error_handler([weak_this = this->weak_from_this()](const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code& ec)
             {
@@ -194,7 +199,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
-    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
+    if ((!msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -242,7 +247,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    if ((!original_msg.sender().empty()) && (!this->crypto->verify(original_msg)))
+    if ((!original_msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(original_msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << original_msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -317,12 +322,11 @@ pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr
 
         bzn_envelope response;
         response.set_swarm_error(err.SerializeAsString());
-
         response.set_sender(this->uuid);
         response.set_timestamp(this->now());
         response.set_swarm_id(this->options->get_swarm_id());
 
-        return session->send_message(std::make_shared<std::string>(response.SerializeAsString()));
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()));
     }
 }
 
@@ -584,7 +588,7 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : *this->peers_beacon->current())
     {
-        this->node->send_signed_message(make_endpoint(peer), msg_ptr);
+        this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);
     }
 }
 
@@ -623,7 +627,7 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
         targets->emplace_back(bzn::make_endpoint(peer));
     }
 
-    this->node->multicast_signed_message(std::move(targets), msg_env);
+    this->node->multicast_maybe_signed_message(std::move(targets), msg_env);
 }
 
 void
@@ -1025,7 +1029,8 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
         const bzn_envelope& envelope{viewchange_message.checkpoint_messages(i)};
         checkpoint_msg checkpoint_message;
 
-        if (!this->crypto->verify(envelope) || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
+        if ((this->options->get_peer_message_signing() && !this->crypto->verify(envelope))
+            || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
         {
             LOG (error) << "Checkpoint validation failure - unable to verify envelope";
             continue;
@@ -1046,7 +1051,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
 {
     const bzn_envelope& pre_prepare_envelope{proof.pre_prepare()};
 
-    if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
+    if (!this->is_peer(pre_prepare_envelope.sender())
+        || (this->options->get_peer_message_signing() && !this->crypto->verify(pre_prepare_envelope)))
     {
         LOG(error) << "is_valid_prepared_proof - a pre prepare message has a bad envelope, or the sender is not in the peers list";
         LOG(error) << "Sender: " << pre_prepare_envelope.sender() << " is " << (this->is_peer(pre_prepare_envelope.sender()) ? "" : "not ") << "a peer";
@@ -1065,7 +1071,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
     for (int j{0}; j < proof.prepare_size(); ++j)
     {
         bzn_envelope prepare_envelope{proof.prepare(j)};
-        if (!this->is_peer(prepare_envelope.sender()) || !this->crypto->verify(prepare_envelope))
+        if (!this->is_peer(prepare_envelope.sender()) ||
+            (this->options->get_peer_message_signing() && !this->crypto->verify(prepare_envelope)))
         {
             LOG(error) << "is_valid_prepared_proof - a prepare message has a bad envelope, "
                           "the sender may not be in the peer list, or the envelope failed cryptographic verification";
@@ -1233,7 +1240,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
 
     for (int i{0};i < theirs.pre_prepare_messages_size();++i)
     {
-        if (!this->crypto->verify(theirs.pre_prepare_messages(i)))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(theirs.pre_prepare_messages(i)))
         {
             LOG(error) <<  "is_valid_newview_message - unable to verify thier pre prepare message";
             return false;
@@ -1415,7 +1422,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
     {
         const bzn_envelope& original_checkpoint{msg.checkpoint_messages(i)};
 
-        if (!this->crypto->verify(original_checkpoint))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(original_checkpoint))
         {
             LOG(error) << "ignoring invalid checkpoint message";
             continue;

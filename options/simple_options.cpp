@@ -105,7 +105,10 @@ simple_options::build_options()
                         "software stack used by swarm")
                 (ADMISSION_WINDOW.c_str(),
                     po::value<size_t>()->default_value(30),
-                    "admission control request window");
+                    "admission control request window")
+                (PEER_MESSAGE_SIGNING.c_str(),
+                    po::value<bool>()->default_value(false),
+                    "should peer messages be signed/verified");
 
     po::options_description logging("Logging");
     logging.add_options()

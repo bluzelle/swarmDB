@@ -168,6 +168,7 @@ crud::send_response(const database_msg& request, const bzn::storage_result resul
         }
         else
         {
+            LOG(trace) << "Sending response via session";
             session->send_signed_message(std::make_shared<bzn_envelope>(env));
         }
     }

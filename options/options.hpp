@@ -84,6 +84,8 @@ namespace bzn
 
         size_t get_admission_window() const override;
 
+        bool get_peer_message_signing() const override;
+
     private:
         size_t parse_size(const std::string& key) const;
 

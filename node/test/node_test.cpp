@@ -229,7 +229,7 @@ namespace  bzn
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
         auto options = std::make_shared<bzn::options>();
-        options->get_mutable_simple_options).set(bzn::option_names::CRYPTO_ENABLED_INCOMING, "true");
+        options->get_mutable_simple_options().set(bzn::option_names::CRYPTO_ENABLED_INCOMING, "true");
         auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
         auto crypto = std::make_shared<bzn::crypto>(options, monitor);
         auto mock_session = std::make_shared<bzn::mock_session_base>();
