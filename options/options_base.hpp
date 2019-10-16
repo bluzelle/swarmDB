@@ -212,5 +212,11 @@ namespace bzn
          * @return size
          */
         virtual size_t get_admission_window() const = 0;
+
+        /**
+         * Get whether we should sign/verify messages to peers
+         * @return true/false
+         */
+        virtual bool get_peer_message_signing() const = 0;
     };
 } // bzn

@@ -195,7 +195,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
-    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
+    if ((!msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -238,7 +238,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    if ((!original_msg.sender().empty()) && (!this->crypto->verify(original_msg)))
+    if ((!original_msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(original_msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << original_msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -1178,7 +1178,8 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
         const bzn_envelope& envelope{viewchange_message.checkpoint_messages(i)};
         checkpoint_msg checkpoint_message;
 
-        if (!this->crypto->verify(envelope) || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
+        if ((this->options->get_peer_message_signing() && !this->crypto->verify(envelope))
+            || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
         {
             LOG (error) << "Checkpoint validation failure - unable to verify envelope";
             continue;
@@ -1199,7 +1200,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
 {
     const bzn_envelope& pre_prepare_envelope{proof.pre_prepare()};
 
-    if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
+    if (!this->is_peer(pre_prepare_envelope.sender())
+        || (this->options->get_peer_message_signing() && !this->crypto->verify(pre_prepare_envelope)))
     {
         LOG(error) << "is_valid_prepared_proof - a pre prepare message has a bad envelope, or the sender is not in the peers list";
         LOG(error) << "Sender: " << pre_prepare_envelope.sender() << " is " << (this->is_peer(pre_prepare_envelope.sender()) ? "" : "not ") << "a peer";
@@ -1218,7 +1220,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
     for (int j{0}; j < proof.prepare_size(); ++j)
     {
         bzn_envelope prepare_envelope{proof.prepare(j)};
-        if (!this->is_peer(prepare_envelope.sender()) || !this->crypto->verify(prepare_envelope))
+        if (!this->is_peer(prepare_envelope.sender()) ||
+            (this->options->get_peer_message_signing() && !this->crypto->verify(prepare_envelope)))
         {
             LOG(error) << "is_valid_prepared_proof - a prepare message has a bad envelope, "
                           "the sender may not be in the peer list, or the envelope failed cryptographic verification";
@@ -1373,7 +1376,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
 
     for (int i{0};i < theirs.pre_prepare_messages_size();++i)
     {
-        if (!this->crypto->verify(theirs.pre_prepare_messages(i)))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(theirs.pre_prepare_messages(i)))
         {
             LOG(error) <<  "is_valid_newview_message - unable to verify thier pre prepare message";
             return false;
@@ -1563,7 +1566,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
     {
         const bzn_envelope& original_checkpoint{msg.checkpoint_messages(i)};
 
-        if (!this->crypto->verify(original_checkpoint))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(original_checkpoint))
         {
             LOG(error) << "ignoring invalid checkpoint message";
             continue;
