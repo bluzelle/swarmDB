@@ -60,6 +60,8 @@ namespace bzn
         void priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
         void priv_session_shutdown_handler(const ep_key_t& ep_key);
 
+        void initialize_ssl_contexts();
+
         std::shared_ptr<bzn::pbft_base> pbft;
 
         std::shared_ptr<bzn::session_base> find_session(const boost::asio::ip::tcp::endpoint& ep);
@@ -85,6 +87,10 @@ namespace bzn
         std::shared_ptr<bzn::crypto_base> crypto;
         std::shared_ptr<bzn::options_base> options;
         std::shared_ptr<bzn::monitor_base> monitor;
+
+        std::shared_ptr<boost::asio::ssl::context> server_ctx;
+        std::shared_ptr<boost::asio::ssl::context> client_ctx;
+
     };
 
 } // bzn

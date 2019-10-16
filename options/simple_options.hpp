@@ -69,6 +69,11 @@ namespace bzn::option_names
     const std::string SWARM_INFO_ESR_URL = "swarm_info_esr_url";
 
     const std::string STACK = "stack";
+
+    const std::string WSS_ENABLED = "wss_enabled";
+    const std::string WSS_SERVER_CERTIFICATE_FILE = "wss_server_certificate_file";
+    const std::string WSS_SERVER_PRIVATE_KEY_FILE = "wss_server_private_key_file";
+    const std::string WSS_SERVER_DH_PARAMS_FILE = "wss_server_dh_params_file";
 }
 
 namespace bzn

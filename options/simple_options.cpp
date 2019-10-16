@@ -180,8 +180,24 @@ simple_options::build_options()
                          po::value<bool>()->default_value(true),
                         "verify own signatures as a sanity check");
 
-
     this->options_root.add(crypto);
+
+    po::options_description wss("Websocket Secure");
+    wss.add_options()
+                (WSS_ENABLED.c_str(),
+                    po::value<bool>()->default_value(false),
+                    "enable websocket secure")
+                (WSS_SERVER_CERTIFICATE_FILE.c_str(),
+                    po::value<std::string>()->default_value(".state/wss-cert.pem"),
+                    "wss server certificate")
+                (WSS_SERVER_PRIVATE_KEY_FILE.c_str(),
+                    po::value<std::string>()->default_value(".state/wss-private-key.pem"),
+                    "wss server private key")
+                (WSS_SERVER_DH_PARAMS_FILE.c_str(),
+                    po::value<std::string>(),
+                    "Diffie–Hellman params");
+
+    this->options_root.add(wss);
 
     po::options_description chaos("Chaos testing");
     chaos.add_options()
