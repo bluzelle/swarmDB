@@ -386,6 +386,15 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
+//    if ((!request_env.sender().empty()) && (!this->is_peer(request_env.sender()) || this->options->get_peer_message_signing()))
+//    {
+//        if (!this->crypto->verify(request_env))
+//        {
+//            LOG(error) << "Dropping message with invalid signature: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+//            return;
+//        }
+//    }
+
     this->saw_request(request_env, hash);
     auto op = setup_request_operation(request_env, hash);
     this->do_preprepare(op);
@@ -394,8 +403,10 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
+    auto msg_ptr = std::make_shared<bzn_envelope>(request_env);
+
     this->node
-        ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
+        ->send_signed_message(bzn::make_endpoint(this->get_primary()), msg_ptr);
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
@@ -681,7 +692,7 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : this->current_peers())
     {
-        this->node->send_signed_message(make_endpoint(peer), msg_ptr);
+        this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);
     }
 }
 
@@ -720,7 +731,7 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
         targets->emplace_back(bzn::make_endpoint(peer));
     }
 
-    this->node->multicast_signed_message(std::move(targets), msg_env);
+    this->node->multicast_maybe_signed_message(std::move(targets), msg_env);
 }
 
 void
@@ -2063,7 +2074,7 @@ pbft::join_swarm()
 
     LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
     auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_signed_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
+    this->node->send_maybe_signed_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
 
     this->in_swarm = swarm_status::joining;
     this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);

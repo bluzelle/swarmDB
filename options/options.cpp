@@ -263,5 +263,5 @@ options::get_admission_window() const
 bool
 options::get_peer_message_signing() const
 {
-    return this->raw_opts.get<size_t>(PEER_MESSAGE_SIGNING);
+    return this->raw_opts.get<bool>(PEER_MESSAGE_SIGNING);
 }
