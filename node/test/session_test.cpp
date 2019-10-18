@@ -155,7 +155,7 @@ namespace bzn
     {
         this->session->send_message(std::make_shared<std::string>("hihi"));
 
-        this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
+        this->session->accept(this->mock_io->websocket->make_websocket_stream(
                                 this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
         this->yield();
         this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
@@ -167,7 +167,7 @@ namespace bzn
 
     TEST_F(session_test2, idle_timeout_closes_session)
     {
-        this->session->accept(this->mock_io->websocket->make_unique_websocket_stream(
+        this->session->accept(this->mock_io->websocket->make_websocket_stream(
                                 this->mock_io->make_unique_tcp_socket()->get_tcp_socket()));
         this->yield();
         this->mock_io->ws_accept_handlers.at(0)(boost::system::error_code{});
@@ -200,11 +200,13 @@ namespace bzn
 
         std::vector<uint8_t> handler_counters { 0,0,0 };
         {
+            auto options = std::make_shared<bzn::options>();
+
             auto session = std::make_shared<bzn::session>(io2
                     , 0, TEST_ENDPOINT, this->mock_chaos, [](auto, auto){}, TEST_TIMEOUT
                     , std::list<bzn::session_shutdown_handler>{[&handler_counters]() {
                         ++handler_counters[0];
-                    }}, nullptr, this->monitor, nullptr, std::nullopt);
+                    }}, nullptr, this->monitor, options, std::nullopt);
 
             session->add_shutdown_handler([&handler_counters](){++handler_counters[1];});
             session->add_shutdown_handler([&handler_counters](){++handler_counters[2];});

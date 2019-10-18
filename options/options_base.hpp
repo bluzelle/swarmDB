@@ -215,10 +215,43 @@ namespace bzn
          */
         virtual std::string get_swarm_info_esr_url() const = 0;
 
+
         /**
          * Retrieve the name of the stack the swarm is using
          * @return string stack name
          */
         virtual std::string get_stack() const = 0;
+
+
+        /**
+         * Retrieve if we should be using tls or not
+         * @return true if ssl should be used
+         */
+        virtual bool get_wss_enabled() const = 0;
+
+
+        /**
+         *
+         * @return certificate file
+         */
+        virtual std::string get_wss_server_certificate_file() const = 0;
+
+
+        /**
+         *
+         * @return private key file
+         */
+        virtual std::string get_wss_server_private_key_file() const = 0;
+
+
+        /**
+         *
+         * @return dh params file
+         */
+        virtual std::string get_wss_server_dh_params_file() const = 0;
+
+
+        // todo: enable/disable peer validation
+
     };
 } // bzn

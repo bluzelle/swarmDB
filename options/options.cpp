@@ -269,3 +269,31 @@ options::get_stack() const
 {
     return this->raw_opts.get<std::string>(STACK);
 }
+
+
+bool
+options::get_wss_enabled() const
+{
+    return this->raw_opts.get<bool>(WSS_ENABLED);
+}
+
+
+std::string
+options::get_wss_server_certificate_file() const
+{
+    return this->raw_opts.get<std::string>(WSS_SERVER_CERTIFICATE_FILE);
+}
+
+
+std::string
+options::get_wss_server_private_key_file() const
+{
+    return this->raw_opts.get<std::string>(WSS_SERVER_PRIVATE_KEY_FILE);
+}
+
+
+std::string
+options::get_wss_server_dh_params_file() const
+{
+    return this->raw_opts.get<std::string>(WSS_SERVER_DH_PARAMS_FILE);
+}

@@ -77,6 +77,15 @@ namespace bzn
 
         std::string get_stack() const override;
 
+        bool get_wss_enabled() const override;
+
+        std::string get_wss_server_certificate_file() const override;
+
+        std::string get_wss_server_private_key_file() const override;
+
+        std::string get_wss_server_dh_params_file() const override;
+
+
     private:
         size_t parse_size(const std::string& key) const;
 

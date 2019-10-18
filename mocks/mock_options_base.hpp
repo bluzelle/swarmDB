@@ -79,7 +79,15 @@ class mock_options_base : public options_base {
   MOCK_CONST_METHOD0(get_swarm_info_esr_url,
       std::string());
   MOCK_CONST_METHOD0(get_stack,
-        std::string());
+      std::string());
+  MOCK_CONST_METHOD0(get_wss_enabled,
+      bool());
+  MOCK_CONST_METHOD0(get_wss_server_certificate_file,
+      std::string());
+  MOCK_CONST_METHOD0(get_wss_server_private_key_file,
+      std::string());
+  MOCK_CONST_METHOD0(get_wss_server_dh_params_file,
+      std::string());
 };
 
 }  // namespace bzn

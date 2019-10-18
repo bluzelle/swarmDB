@@ -162,9 +162,10 @@ namespace  bzn
     {
         auto mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
         auto mock_io_context = std::make_shared<NiceMock<bzn::asio::mock_io_context_base>>();
-        auto options = std::shared_ptr<bzn::options>();
+        auto options = std::make_shared<bzn::options>();
         auto crypto = std::shared_ptr<bzn::crypto>();
         auto monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+
         auto node = std::make_shared<bzn::node>(mock_io_context, nullptr, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
 
         // test that nulls are rejected...

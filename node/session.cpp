@@ -30,7 +30,8 @@ session::session(
         std::shared_ptr<bzn::crypto_base> crypto,
         std::shared_ptr<bzn::monitor_base> monitor,
         std::shared_ptr<bzn::options_base> options,
-        std::optional<std::shared_ptr<bzn::asio::strand_base>> strand_opt
+        std::optional<std::shared_ptr<bzn::asio::strand_base>> strand_opt,
+        std::optional<std::shared_ptr<boost::asio::ssl::context>> ctx_opt
 )
         : session_id(session_id)
         , ep(std::move(ep))
@@ -45,10 +46,12 @@ session::session(
         , monitor(std::move(monitor))
         , options(std::move(options))
         , strand(strand_opt.has_value() ? *strand_opt : this->io_context->make_unique_strand())
+        , ctx(ctx_opt.has_value() ? *ctx_opt : nullptr)
 
 {
     LOG(debug) << "creating session " << std::to_string(session_id);
 }
+
 
 void
 session::start_idle_timeout()
@@ -76,6 +79,7 @@ session::start_idle_timeout()
         });
 }
 
+
 void
 session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
 {
@@ -93,7 +97,7 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                     return;
                 }
 
-                // we've completed the handshake...
+                // we've completed the connect...
                 
                 // set tcp_nodelay option
                 boost::system::error_code option_ec;
@@ -109,7 +113,10 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
                     LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
                 }
 #endif
-                self->websocket = ws_factory->make_unique_websocket_stream(socket->get_tcp_socket());
+                // ctx will always be valid if 'use_wss' is true, otherwise we would not of started...
+                self->websocket = (self->options->get_wss_enabled()) ? ws_factory->make_websocket_secure_stream(socket->get_tcp_socket(), *self->ctx) :
+                                  ws_factory->make_websocket_stream(socket->get_tcp_socket());
+
                 self->websocket->async_handshake(self->ep.address().to_string(), "/",
                     self->strand->wrap([self, ws_factory](const boost::system::error_code& ec)
                     {
@@ -130,34 +137,35 @@ session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
     });
 }
 
+
 void
 session::accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws)
 {
     this->strand->post([self = shared_from_this(), ws]()
     {
-
         self->websocket = std::move(ws);
         self->websocket->async_accept(
-                self->strand->wrap(
-                        [self](boost::system::error_code ec)
-                        {
-                            self->activity = true;
+            self->strand->wrap(
+                [self](boost::system::error_code ec)
+                {
+                    self->activity = true;
 
-                            if (ec)
-                            {
-                                LOG(error) << "websocket accept failed: " << ec.message();
-                                return;
-                            }
+                    if (ec)
+                    {
+                        LOG(error) << "websocket accept failed: " << ec.message();
+                        return;
+                    }
 
-                            self->monitor->send_counter(statistic::session_opened);
-                            self->start_idle_timeout();
-                            self->do_read();
-                            self->do_write();
-                        }
-                )
+                    self->monitor->send_counter(statistic::session_opened);
+                    self->start_idle_timeout();
+                    self->do_read();
+                    self->do_write();
+                }
+            )
        );
    });
 }
+
 
 void
 session::add_shutdown_handler(const bzn::session_shutdown_handler handler)
@@ -167,6 +175,7 @@ session::add_shutdown_handler(const bzn::session_shutdown_handler handler)
         self->shutdown_handlers.push_back(handler);
     });
 }
+
 
 void
 session::do_read()
@@ -221,6 +230,7 @@ session::do_read()
     );
 }
 
+
 void
 session::do_write()
 {
@@ -270,6 +280,7 @@ session::do_write()
         }));
 }
 
+
 void
 session::send_signed_message(std::shared_ptr<bzn_envelope> msg)
 {
@@ -281,6 +292,7 @@ session::send_signed_message(std::shared_ptr<bzn_envelope> msg)
 
     this->send_message(std::make_shared<std::string>(msg->SerializeAsString()));
 }
+
 
 void
 session::send_message(std::shared_ptr<bzn::encoded_message> msg)
@@ -305,11 +317,13 @@ session::send_message(std::shared_ptr<bzn::encoded_message> msg)
     });
 }
 
+
 void
 session::close()
 {
     this->strand->post(std::bind(&session::private_close, shared_from_this()));
 }
+
 
 void
 session::private_close()
@@ -345,11 +359,13 @@ session::private_close()
     this->idle_timer->cancel();
 }
 
+
 bool
 session::is_open() const
 {
     return this->websocket && this->websocket->is_open() && !this->closing;
 }
+
 
 session::~session()
 {
@@ -358,4 +374,3 @@ session::~session()
         LOG(warning) << "dropping session with " << this->write_queue.size() << " messages left in its write queue";
     }
 }
-

@@ -45,7 +45,8 @@ namespace bzn
                 std::shared_ptr<bzn::crypto_base> crypto,
                 std::shared_ptr<bzn::monitor_base> monitor,
                 std::shared_ptr<bzn::options_base> options,
-                std::optional<std::shared_ptr<bzn::asio::strand_base>> strand
+                std::optional<std::shared_ptr<bzn::asio::strand_base>> strand,
+                std::optional<std::shared_ptr<boost::asio::ssl::context>> ctx_opt = std::nullopt
                 );
 
         ~session();
@@ -100,6 +101,8 @@ namespace bzn
         std::shared_ptr<bzn::options_base> options;
         
         std::shared_ptr<bzn::asio::strand_base> strand;
+
+        std::shared_ptr<boost::asio::ssl::context> ctx; // for wss
     };
 
 } // blz

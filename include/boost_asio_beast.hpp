@@ -14,8 +14,12 @@
 
 #pragma once
 
+#include <include/bluzelle.hpp>
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket/ssl.hpp>
+
 
 // todo: this file needs a better name!
 
@@ -408,8 +412,6 @@ namespace bzn::beast
     public:
         virtual ~websocket_stream_base() = default;
 
-        virtual boost::beast::websocket::stream<boost::asio::ip::tcp::socket>& get_websocket() = 0;
-
         virtual void async_accept(bzn::asio::accept_handler handler) = 0;
 
         virtual void async_read(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler) = 0;
@@ -435,11 +437,6 @@ namespace bzn::beast
         explicit websocket_stream(boost::asio::ip::tcp::socket socket)
             : websocket(std::move(socket))
         {
-        }
-
-        boost::beast::websocket::stream<boost::asio::ip::tcp::socket>& get_websocket() override
-        {
-            return this->websocket;
         }
 
         void async_accept(bzn::asio::accept_handler handler) override
@@ -486,6 +483,92 @@ namespace bzn::beast
         boost::beast::websocket::stream<boost::asio::ip::tcp::socket> websocket;
     };
 
+
+
+    class websocket_secure_stream final : public websocket_stream_base, public std::enable_shared_from_this<websocket_secure_stream>
+    {
+    public:
+        explicit websocket_secure_stream(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context& ctx)
+            : websocket(std::move(socket), ctx)
+        {
+            // todo: add peer validation
+        }
+
+        void async_accept(bzn::asio::accept_handler handler) override
+        {
+            boost::beast::get_lowest_layer(this->websocket).expires_after(std::chrono::seconds(30));
+
+            this->websocket.next_layer().async_handshake(
+                boost::asio::ssl::stream_base::server,
+                [self = shared_from_this(), handler](auto ec)
+                {
+                    if (ec)
+                    {
+                        LOG(error) << "server ssl handshake failed: " << ec.message();
+                        return;
+                    }
+
+                    boost::beast::get_lowest_layer(self->websocket).expires_never();
+
+                    self->websocket.async_accept(handler);
+                });
+        }
+
+        void async_read(boost::beast::multi_buffer& buffer, bzn::asio::read_handler handler) override
+        {
+            this->websocket.async_read(buffer, handler);
+        }
+
+        void async_write(const boost::asio::mutable_buffers_1& buffer, bzn::asio::write_handler handler) override
+        {
+            this->websocket.async_write(buffer, handler);
+        }
+
+        size_t write(const boost::asio::mutable_buffers_1& buffer, boost::beast::error_code& ec) override
+        {
+            return this->websocket.write(buffer, ec);
+        }
+
+        void async_close(boost::beast::websocket::close_code reason, bzn::beast::close_handler handler) override
+        {
+            this->websocket.async_close(reason, handler);
+        }
+
+        void async_handshake(const std::string& host, const std::string& target, bzn::beast::handshake_handler handler) override
+        {
+            boost::beast::get_lowest_layer(this->websocket).expires_after(std::chrono::seconds(30));
+
+            this->websocket.next_layer().async_handshake(
+                boost::asio::ssl::stream_base::client,
+                [self = shared_from_this(), host, target, handler](auto ec)
+                {
+                    if (ec)
+                    {
+                        LOG(error) << "client ssl handshake failed: " << ec.message();
+                        return;
+                    }
+
+                    boost::beast::get_lowest_layer(self->websocket).expires_never();
+
+                    self->websocket.async_handshake(host, target, handler);
+                });
+        }
+
+        bool is_open() override
+        {
+            return this->websocket.is_open();
+        }
+
+        void binary(bool bin) override
+        {
+            this->websocket.binary(bin);
+        }
+
+    private:
+        boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> websocket;
+    };
+    //
+
     ///////////////////////////////////////////////////////////////////////////
 
     class websocket_base
@@ -493,7 +576,10 @@ namespace bzn::beast
     public:
         virtual ~websocket_base() = default;
 
-        virtual std::unique_ptr<bzn::beast::websocket_stream_base> make_unique_websocket_stream(boost::asio::ip::tcp::socket& socket) = 0;
+        virtual std::unique_ptr<bzn::beast::websocket_stream_base> make_websocket_stream(boost::asio::ip::tcp::socket& socket) = 0;
+
+        virtual std::shared_ptr<bzn::beast::websocket_stream_base> make_websocket_secure_stream(boost::asio::ip::tcp::socket& socket,
+            boost::asio::ssl::context& ctx) = 0;
     };
 
     ///////////////////////////////////////////////////////////////////////////
@@ -501,9 +587,15 @@ namespace bzn::beast
     class websocket final : public websocket_base
     {
     public:
-        std::unique_ptr<bzn::beast::websocket_stream_base> make_unique_websocket_stream(boost::asio::ip::tcp::socket& socket) override
+        std::unique_ptr<bzn::beast::websocket_stream_base> make_websocket_stream(boost::asio::ip::tcp::socket& socket) override
         {
             return std::make_unique<bzn::beast::websocket_stream>(std::move(socket));
+        }
+
+        std::shared_ptr<bzn::beast::websocket_stream_base> make_websocket_secure_stream(boost::asio::ip::tcp::socket& socket,
+            boost::asio::ssl::context& ctx) override
+        {
+            return std::make_shared<bzn::beast::websocket_secure_stream>(std::move(socket), ctx);
         }
     };
 
