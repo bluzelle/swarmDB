@@ -88,8 +88,13 @@ pbft::start()
             this->node->register_for_message(bzn_envelope::kDatabaseResponse,
                 std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
-            this->node->register_for_message(bzn_envelope::kSwarmError,
-                std::bind(&pbft::handle_swarm_error_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+            this->node->register_for_message(bzn_envelope::kSwarmError, [weak_this = weak_from_this()](auto msg, auto session)
+                {
+                    if (auto strong_this = weak_this.lock())
+                    {
+                        strong_this->handle_swarm_error_response_message(msg, session);
+                    }
+                });
 
             this->node->register_error_handler([weak_this = this->weak_from_this()](const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code& ec)
             {

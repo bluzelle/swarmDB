@@ -75,7 +75,7 @@ void
 node::register_error_handler(std::function<void(const boost::asio::ip::tcp::endpoint& ep
     , const boost::system::error_code&)> error_handler)
 {
-    this->error_callback = error_handler;
+    this->error_callback = std::move(error_handler);
 }
 
 void

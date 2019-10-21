@@ -64,6 +64,7 @@ namespace bzn::test
                 bzn_envelope env;
                 env.set_checkpoint_msg(cp_msg.SerializeAsString());
                 env.set_sender(peer.uuid);
+
                 this->cp_manager->handle_checkpoint_message(env);
             }
         }
@@ -74,7 +75,7 @@ namespace bzn::test
     {
         for (const auto& peer : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*node, send_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
+            EXPECT_CALL(*node, send_maybe_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
         }
 
         this->cp_manager->local_checkpoint_reached(this->cp);
@@ -92,7 +93,7 @@ namespace bzn::test
     {
         for (const auto& peer : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*node, send_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
+            EXPECT_CALL(*node, send_maybe_signed_message(make_endpoint(peer), ResultOf(is_checkpoint, Eq(true))));
         }
 
         this->cp_manager->local_checkpoint_reached(this->cp);

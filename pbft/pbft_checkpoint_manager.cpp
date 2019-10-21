@@ -86,7 +86,6 @@ pbft_checkpoint_manager::local_checkpoint_reached(const bzn::checkpoint_t& cp)
     msg.set_checkpoint_msg(cp_msg.SerializeAsString());
 
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
-    //msg_ptr->set_sender(this->options->get_uuid());
     for (const auto& peer : *(this->config_store->current()->get_peers()))
     {
         this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);

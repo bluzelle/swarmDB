@@ -119,7 +119,7 @@ namespace bzn
             for (auto const &p : TEST_PEER_LIST)
             {
                 EXPECT_CALL(*(mock_node),
-                    send_signed_message(bzn::make_endpoint(p),
+                    send_maybe_signed_message(bzn::make_endpoint(p),
                         AllOf(
                                 message_has_correct_req_hash(expect_hash) ,
                                 message_has_correct_pbft_type(PBFT_MSG_PREPARE))))
@@ -243,7 +243,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_signed_message(bzn::make_endpoint(p),
+                send_maybe_signed_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
                         message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
@@ -281,7 +281,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_signed_message(bzn::make_endpoint(p),
+                send_maybe_signed_message(bzn::make_endpoint(p),
                     AllOf(message_has_req_with_correct_type(bzn_envelope::kPbftInternalRequest),
                         message_has_correct_pbft_type(PBFT_MSG_PREPREPARE))))
                 .Times(Exactly(1));
@@ -357,7 +357,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(mock_node),
-                send_signed_message(bzn::make_endpoint(p),
+                send_maybe_signed_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
                         message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
@@ -387,6 +387,8 @@ namespace bzn
         auto mock_options = std::make_shared<bzn::mock_options_base>();
         auto storage2 = std::make_shared<bzn::mem_storage>();
         auto manager2 = std::make_shared<bzn::pbft_operation_manager>(storage2);
+        EXPECT_CALL(*(mock_options), get_peer_message_signing()).Times(AnyNumber());
+        EXPECT_CALL(*(mock_node2), register_error_handler(_)).Times(Exactly(1));
         EXPECT_CALL(*(mock_io_context2), make_unique_steady_timer())
             .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer2);}))
             .WillOnce(Invoke([&](){return std::move(new_config_timer2);}))
@@ -422,7 +424,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(mock_node),
-                send_signed_message(bzn::make_endpoint(p),
+                send_maybe_signed_message(bzn::make_endpoint(p),
                     AllOf(message_has_correct_req_hash(msg.request_hash()),
                         message_has_correct_pbft_type(PBFT_MSG_COMMIT))))
                 .Times(Exactly(1));
@@ -462,7 +464,7 @@ namespace bzn
         // when timer callback is called, pbft should broadcast viewchange message
         for (auto const &p : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*mock_node, send_signed_message(bzn::make_endpoint(p), ResultOf(is_viewchange, Eq(true))))
+            EXPECT_CALL(*mock_node, send_maybe_signed_message(bzn::make_endpoint(p), ResultOf(is_viewchange, Eq(true))))
                 .Times((Exactly(1)))
                 .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
@@ -475,7 +477,7 @@ namespace bzn
         }
 
         // once second pbft gets f+1 viewchanges it will broadcast a viewchange message
-        EXPECT_CALL(*mock_node2, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_viewchange, Eq(true))))
+        EXPECT_CALL(*mock_node2, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_viewchange, Eq(true))))
             .Times((Exactly(TEST_PEER_LIST.size())))
             .WillRepeatedly(Invoke([&](auto, auto wmsg)
             {
@@ -485,7 +487,7 @@ namespace bzn
 
         auto newview_env = std::make_shared<bzn_envelope>();
         // second pbft should send a newview with the new configuration
-        EXPECT_CALL(*mock_node2, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_newview, Eq(true))))
+        EXPECT_CALL(*mock_node2, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_newview, Eq(true))))
             .Times((Exactly(TEST_PEER_LIST.size() + 1)))
             .WillRepeatedly(Invoke([&](auto, auto wmsg) {
                 pbft_msg msg;
@@ -511,6 +513,7 @@ namespace bzn
         auto mock_options3 = std::make_shared<bzn::mock_options_base>();
         auto storage3 = std::make_shared<bzn::mem_storage>();
         auto manager3 = std::make_shared<bzn::pbft_operation_manager>(storage3);
+        EXPECT_CALL(*(mock_node3), register_error_handler(_)).Times(Exactly(1));
         EXPECT_CALL(*(mock_io_context3), make_unique_steady_timer())
             .Times(AtMost(3)).WillOnce(Invoke([&](){return std::move(audit_heartbeat_timer3);}))
             .WillOnce(Invoke([&](){return std::move(new_config_timer3);}))
@@ -527,7 +530,7 @@ namespace bzn
         // simulate that the new pbft has just joined the swarm and is waiting for a new_view
         this->set_swarm_status_waiting(pbft3);
         EXPECT_CALL(*(mock_node3),
-            send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
+            send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size() + 1));
         this->handle_newview(pbft3, *newview_env);
         EXPECT_TRUE(this->is_in_swarm(pbft3));
@@ -552,7 +555,7 @@ namespace bzn
     TEST_F(pbft_join_leave_test, node_not_in_swarm_asks_to_join)
     {
         this->uuid = "somenode";
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
             .Times(Exactly(1))
             .WillOnce(Invoke([&](auto, auto)
             {
@@ -567,7 +570,7 @@ namespace bzn
 
     TEST_F(pbft_join_leave_test, node_in_swarm_doesnt_ask_to_join)
     {
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_join, Eq(true))))
             .Times(Exactly(0));
         this->build_pbft();
     }
@@ -580,7 +583,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_signed_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true))))
+                send_maybe_signed_message(bzn::make_endpoint(p), ResultOf(test::is_preprepare, Eq(true))))
                 .Times(Exactly(1))
                 .WillOnce(Invoke([&](auto, auto &envelope)
                 {
@@ -593,7 +596,7 @@ namespace bzn
                     if (p.uuid == TEST_NODE_UUID)
                     {
                         EXPECT_CALL(*(mock_node),
-                            send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
+                            send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
                             .Times(Exactly(TEST_PEER_LIST.size()));
 
                         // reflect the pre-prepare back
@@ -617,7 +620,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_signed_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true))))
+                send_maybe_signed_message(bzn::make_endpoint(p), ResultOf(test::is_commit, Eq(true))))
                 .Times(Exactly(1))
                 .WillOnce(Invoke([&](auto, auto &wmsg)
                 {

@@ -23,6 +23,7 @@ namespace bzn
     {
     public:
         smart_mock_node();
+        ~smart_mock_node() {}
 
         void deliver(const bzn_envelope&);
 
@@ -32,3 +33,4 @@ namespace bzn
 
     };
 }
+

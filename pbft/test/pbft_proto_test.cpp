@@ -37,7 +37,7 @@ namespace bzn
     {
         // after request is sent, SUT will send out pre-prepares to all nodes
         auto operation = std::shared_ptr<pbft_operation>();
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()))
             .WillRepeatedly(Invoke([&](auto, auto wmsg)
             {
@@ -74,7 +74,7 @@ namespace bzn
     pbft_proto_test::send_preprepare(uint64_t sequence, const bzn_envelope& request)
     {
         // after preprepare is sent, SUT will send out prepares to all nodes
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_prepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 
         auto peer = *(TEST_PEER_LIST.begin());
@@ -103,7 +103,7 @@ namespace bzn
     pbft_proto_test::send_prepares(uint64_t sequence, const bzn::hash_t& request_hash)
     {
         // after prepares are sent, SUT will send out commits to all nodes
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_commit, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_commit, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
 
         for (const auto& peer : TEST_PEER_LIST)
@@ -154,7 +154,7 @@ namespace bzn
             }));
 
         // after enough commits are sent, SUT will send out checkpoint message to all nodes
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_checkpoint, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_checkpoint, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
     }
 
