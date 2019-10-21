@@ -23,6 +23,12 @@ using namespace bzn;
 namespace
 {
     const std::string BZN_API_KEY = "bzn-api";
+
+    /* todo: add to generate_key?
+     *
+        openssl dhparam -out dh.pem 2048
+        openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 10000 -out cert.pem -subj "//C=US\ST=CA\L=Los Angeles\O=Beast\CN=www.example.com"
+    */
 }
 
 
@@ -36,7 +42,9 @@ node::node(std::shared_ptr<bzn::asio::io_context_base> io_context, std::shared_p
     , options(std::move(options))
     , monitor(std::move(monitor))
 {
+    this->initialize_ssl_contexts();
 }
+
 
 void
 node::start(std::shared_ptr<bzn::pbft_base> pbft)
@@ -47,6 +55,7 @@ node::start(std::shared_ptr<bzn::pbft_base> pbft)
             this->do_accept();
         });
 }
+
 
 bool
 node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_handler msg_handler)
@@ -104,8 +113,9 @@ node::do_accept()
                     LOG(warning) << "failed to set socket option TCP_QUICKACK: " << errno;
                 }
 #endif
-                std::shared_ptr<bzn::beast::websocket_stream_base> ws = self->websocket->make_unique_websocket_stream(
-                    self->acceptor_socket->get_tcp_socket());
+                std::shared_ptr<bzn::beast::websocket_stream_base> ws =
+                    (!self->options->get_wss_enabled()) ? self->websocket->make_websocket_stream(self->acceptor_socket->get_tcp_socket()) :
+                    self->websocket->make_websocket_secure_stream(self->acceptor_socket->get_tcp_socket(), *self->server_ctx);
 
                 auto session = std::make_shared<bzn::session>(
                         self->io_context
@@ -131,6 +141,7 @@ node::do_accept()
         });
 }
 
+
 void
 node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session)
 {
@@ -152,6 +163,7 @@ node::priv_protobuf_handler(const bzn_envelope& msg, std::shared_ptr<bzn::sessio
     }
 }
 
+
 void
 node::priv_session_shutdown_handler(const ep_key_t& ep_key)
 {
@@ -164,6 +176,7 @@ node::priv_session_shutdown_handler(const ep_key_t& ep_key)
     }
     this->sessions.erase(ep_key);
 }
+
 
 std::shared_ptr<bzn::session_base>
 node::find_session(const boost::asio::ip::tcp::endpoint& ep)
@@ -185,12 +198,14 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , this->crypto
                 , this->monitor
                 , this->options
-                , std::nullopt);
+                , std::nullopt
+                , this->client_ctx);
         session->open(this->websocket);
         this->sessions.insert_or_assign(key, session);
     }
     return session;
 }
+
 
 void
 node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn::encoded_message> msg)
@@ -198,11 +213,13 @@ node::send_message_str(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr
     this->find_session(ep)->send_message(msg);
 }
 
+
 void
 node::send_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
 {
     this->find_session(ep)->send_signed_message(msg);
 }
+
 
 void
 node::multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
@@ -222,11 +239,13 @@ node::multicast_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp:
             });
 }
 
+
 ep_key_t
 node::key_from_ep(const boost::asio::ip::tcp::endpoint& ep)
 {
     return ep.address().to_string() + ":" + std::to_string(ep.port());
 }
+
 
 void
 node::send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg)
@@ -241,4 +260,42 @@ node::send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope>
     {
         LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
     }
+}
+
+
+void
+node::initialize_ssl_contexts()
+{
+    if (!this->options->get_wss_enabled())
+    {
+        // nothing to do...
+        LOG(info) << "WSS disabled";
+        return;
+    }
+
+    LOG(info) << "WSS enabled";
+
+    this->server_ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12_server);
+
+    // server (inbound)
+    this->server_ctx->set_options(
+        boost::asio::ssl::context::default_workarounds |
+        boost::asio::ssl::context::no_sslv2 |
+        boost::asio::ssl::context::single_dh_use);
+
+    this->server_ctx->use_certificate_chain_file(this->options->get_wss_server_certificate_file());
+
+    this->server_ctx->use_private_key_file(this->options->get_wss_server_private_key_file(),
+        boost::asio::ssl::context::file_format::pem);
+
+    if (!this->options->get_wss_server_dh_params_file().empty())
+    {
+        this->server_ctx->use_tmp_dh_file(this->options->get_wss_server_dh_params_file());
+    }
+
+    // client (outbound)
+    this->client_ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12_client);
+
+    // set default paths for finding CA certificates...
+    //this->client_ctx.set_default_verify_paths();
 }

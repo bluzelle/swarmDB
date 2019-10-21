@@ -102,7 +102,7 @@ bzn::asio::smart_mock_io::smart_mock_io()
                 return mock_acceptor;
             }));
 
-    EXPECT_CALL(*(this->websocket), make_unique_websocket_stream(_)).WillRepeatedly(Invoke(
+    EXPECT_CALL(*(this->websocket), make_websocket_stream(_)).WillRepeatedly(Invoke(
             [&](auto& socket)
             {
                 auto id = this->socket_id_map.at(socket.native_handle());

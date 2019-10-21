@@ -47,7 +47,11 @@ namespace
         "  \"owner_public_key\" : \"MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==\","
         "  \"mem_storage\" : false,"
         "  \"swarm_info_esr_address\" : \"this_would_be_a_good_ESR_address\","
-        "  \"swarm_info_esr_url\" : \"192.0.0.1:41000\"";
+        "  \"swarm_info_esr_url\" : \"192.0.0.1:41000\","
+        "  \"wss_enabled\" : false,"
+        "  \"wss_server_certificate_file\" : \"cert.pem\","
+        "  \"wss_server_private_key_file\" : \"key.pem\","
+        "  \"wss_server_dh_params_file\" : \"dhparams.pem\"";
 
     const std::string DEFAULT_CONFIG_DATA = "{" + DEFAULT_CONFIG_CONTENT + "}";
 
@@ -157,6 +161,10 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
     EXPECT_EQ("MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAKb7PX3Pr+LgaqIAyhcXgTMCAwEAAQ==", options.get_owner_public_key());
     EXPECT_EQ("this_would_be_a_good_ESR_address", options.get_swarm_info_esr_address());
     EXPECT_EQ("192.0.0.1:41000", options.get_swarm_info_esr_url());
+    EXPECT_EQ(false, options.get_wss_enabled());
+    EXPECT_EQ("cert.pem", options.get_wss_server_certificate_file());
+    EXPECT_EQ("key.pem", options.get_wss_server_private_key_file());
+    EXPECT_EQ("dhparams.pem", options.get_wss_server_dh_params_file());
 
     // defaults..
     {
@@ -174,6 +182,10 @@ TEST_F(options_file_test, test_that_loading_of_default_config_file)
         EXPECT_EQ("", options0.get_swarm_id());
         EXPECT_EQ(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS, options0.get_swarm_info_esr_address());
         EXPECT_EQ(bzn::utils::ROPSTEN_URL, options0.get_swarm_info_esr_url());
+        EXPECT_EQ(false, options0.get_wss_enabled());
+        EXPECT_EQ(".state/wss-cert.pem", options0.get_wss_server_certificate_file());
+        EXPECT_EQ(".state/wss-private-key.pem", options0.get_wss_server_private_key_file());
+        EXPECT_EQ("", options0.get_wss_server_dh_params_file());
     }
 }
 
