@@ -115,7 +115,7 @@ namespace bzn
             .Times((Exactly(0)));
 
         auto nodes = TEST_PEER_LIST.begin();
-        size_t req_nodes = 2 * this->faulty_nodes_bound();
+        size_t req_nodes = this->faulty_nodes_bound();
         for (size_t i = 0; i < req_nodes; i++)
         {
             bzn::peer_address_t node(*nodes++);
@@ -123,7 +123,7 @@ namespace bzn
         }
 
         // one more checkpoint message and the node should request state from a random node
-        auto primary = this->pbft->get_primary();
+        auto primary = this->pbft->get_current_primary().value();
         EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
@@ -175,7 +175,7 @@ namespace bzn
         this->build_pbft();
 
         // get the node to request state
-        auto primary = this->pbft->get_primary();
+        auto primary = this->pbft->get_current_primary().value();
         EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 
@@ -209,7 +209,7 @@ namespace bzn
         this->build_pbft();
 
         // get the node to request state
-        auto primary = this->pbft->get_primary();
+        auto primary = this->pbft->get_current_primary().value();
         EXPECT_CALL(*mock_node, send_signed_message(A<const bzn::uuid_t&>(), ResultOf(is_get_state, Eq(true))))
             .Times((Exactly(1)));
 

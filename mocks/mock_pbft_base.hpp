@@ -32,16 +32,18 @@ public:
             void(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session));
     MOCK_CONST_METHOD0(is_primary,
             bool());
-    MOCK_CONST_METHOD1(get_primary,
-            const peer_address_t&(std::optional<uint64_t> view));
+    MOCK_CONST_METHOD0(get_current_primary,
+            std::optional<peer_address_t>());
+    MOCK_CONST_METHOD1(predict_primary,
+            std::optional<peer_address_t>(uint64_t view));
     MOCK_CONST_METHOD0(get_uuid,
             const bzn::uuid_t&());
     MOCK_METHOD0(handle_failure,
             void());
     MOCK_CONST_METHOD1(get_peer_by_uuid,
             const peer_address_t&(const std::string& uuid));
-    MOCK_CONST_METHOD0(current_peers_ptr,
-        std::shared_ptr<const std::vector<bzn::peer_address_t>>());
+    MOCK_CONST_METHOD0(peers,
+        std::shared_ptr<bzn::peers_beacon_base>());
 };
 
 }  // namespace bzn

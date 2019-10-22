@@ -4,9 +4,6 @@ set(test_srcs
     pbft_audit_test.cpp
     pbft_test_common.cpp
     pbft_checkpoint_tests.cpp
-    pbft_configuration_test.cpp
-    pbft_config_store_test.cpp
-    pbft_join_leave_test.cpp
     pbft_proto_test.cpp
     pbft_catchup_test.cpp
     pbft_timestamp_test.cpp
@@ -14,7 +11,8 @@ set(test_srcs
     pbft_proto_test.cpp
     pbft_newview_test.cpp
     pbft_persistent_state_test.cpp
-    pbft_viewchange_test.cpp)
-set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} bootstrap storage ${ROCKSDB_LIBRARIES} smart_mocks)
+    pbft_viewchange_test.cpp
+    pbft_peer_change_test.cpp)
+set(test_libs pbft pbft_operations crypto options ${Protobuf_LIBRARIES} storage ${ROCKSDB_LIBRARIES} smart_mocks)
 
 add_gmock_test(pbft)

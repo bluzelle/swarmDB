@@ -13,7 +13,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <audit/audit.hpp>
-#include <bootstrap/bootstrap_peers.hpp>
+#include <peers_beacon/peers_beacon.hpp>
 #include <chaos/chaos.hpp>
 #include <crud/crud.hpp>
 #include <crud/subscription_manager.hpp>
@@ -29,6 +29,7 @@
 #include <storage/mem_storage.hpp>
 #include <storage/rocksdb_storage.hpp>
 #include <monitor/monitor.hpp>
+#include <utils/utils_interface.hpp>
 
 #ifdef __APPLE__
 #pragma GCC diagnostic push
@@ -98,45 +99,6 @@ init_logging(const bzn::options& options)
 
         boost::log::core::get()->set_filter(boost::log::trivial::severity > boost::log::trivial::debug);
     }
-}
-
-
-bool
-init_peers(bzn::bootstrap_peers& peers, const std::string& peers_file, const std::string& peers_url, const std::string& swarm_info_esr_url, const std::string& swarm_info_esr_address, const bzn::uuid_t& swarm_id)
-{
-    if (peers_file.empty() && peers_url.empty() && swarm_id.empty())
-    {
-        LOG(error) << "Bootstrap peers must be specified options (bootstrap_file, bootstrap_url or swarm_id)";
-        return false;
-    }
-
-    if (!swarm_id.empty())
-    {
-        peers.fetch_peers_from_esr_contract(swarm_info_esr_url, swarm_info_esr_address, swarm_id);
-        if (!peers.get_peers().empty())
-        {
-            return true;
-        }
-
-        LOG(warning) << "Ethereum Swarm Registry contained no peer listing for the swarm with id " << swarm_id << " checking other sources";
-    }
-
-    if (!peers_file.empty())
-    {
-        peers.fetch_peers_from_file(peers_file);
-    }
-
-    if (!peers_url.empty())
-    {
-        peers.fetch_peers_from_url(peers_url);
-    }
-
-    if (peers.get_peers().empty())
-    {
-        LOG(error) << "Failed to find any bootstrap peers";
-        return false;
-    }
-    return true;
 }
 
 
@@ -243,13 +205,11 @@ main(int argc, const char* argv[])
 
         init_logging(*options);
 
-        bzn::bootstrap_peers peers(options->peer_validation_enabled());
-        if (!init_peers(peers, options->get_bootstrap_peers_file(), options->get_bootstrap_peers_url(),
-                        options->get_swarm_info_esr_url(), options->get_swarm_info_esr_address(),
-                        options->get_swarm_id()))
-            throw std::runtime_error("Bootstrap peers initialization failed.");
-
         auto io_context = std::make_shared<bzn::asio::io_context>();
+        auto utils = std::make_shared<bzn::utils_interface>();
+
+        auto peers = std::make_shared<bzn::peers_beacon>(io_context, utils, options);
+        peers->start();
 
         // setup signal handler...
         boost::asio::signal_set signals(io_context->get_io_context(), SIGINT, SIGTERM);
@@ -293,9 +253,9 @@ main(int argc, const char* argv[])
         }
 
         auto crud = std::make_shared<bzn::crud>(io_context, stable_storage, std::make_shared<bzn::subscription_manager>(io_context), node, options->get_owner_public_key());
-        auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(unstable_storage);
+        auto operation_manager = std::make_shared<bzn::pbft_operation_manager>(peers, unstable_storage);
 
-        auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers.get_peers(), options,
+        auto pbft = std::make_shared<bzn::pbft>(node, io_context, peers, options,
             std::make_shared<bzn::database_pbft_service>(io_context, unstable_storage, crud, monitor, options->get_uuid())
             ,failure_detector, crypto, operation_manager, unstable_storage, monitor);
 

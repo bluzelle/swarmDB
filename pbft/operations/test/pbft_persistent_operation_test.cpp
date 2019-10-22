@@ -19,12 +19,17 @@
 #include <pbft/operations/pbft_persistent_operation.hpp>
 #include <pbft/operations/pbft_operation.hpp>
 #include <boost/range/irange.hpp>
+#include <mocks/smart_mock_peers_beacon.hpp>
 
 using namespace ::testing;
 
 namespace
 {
     const std::vector<bzn::uuid_t> UUIDS{"alice", "bob", "cindy", "dave"};
+    const std::vector<bzn::peer_address_t> TEST_PEER_LIST{{  "127.0.0.1", 8081, "name1", "alice"}
+                                                          , {"127.0.0.1", 8082, "name2", "bob"}
+                                                          , {"127.0.0.1", 8083, "name3", "cindy"}
+                                                          , {"127.0.0.1", 8084, "name4", "dave"}};
 
     void record_pbft_messages(int from, int until, pbft_msg_type type, std::shared_ptr<bzn::pbft_operation> op)
     {
@@ -67,8 +72,10 @@ namespace
         const std::string request_hash = "a very hashy hash";
         const size_t peers_size = 4;
 
+        std::shared_ptr<bzn::peers_beacon_base> static_beacon = static_peers_beacon_for(TEST_PEER_LIST);
+
         std::shared_ptr<bzn::storage_base> storage = std::make_shared<bzn::mem_storage>();
-        std::shared_ptr<bzn::pbft_operation> operation = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
+        std::shared_ptr<bzn::pbft_operation> operation = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
 
     };
 
@@ -77,18 +84,18 @@ namespace
         record_request(this->operation);
         record_pbft_messages(0, 1, PBFT_MSG_PREPREPARE, this->operation);
         record_pbft_messages(0, 4, PBFT_MSG_PREPARE, this->operation);
-        this->operation->advance_operation_stage(bzn::pbft_operation_stage::commit);
+        this->operation->advance_operation_stage(bzn::pbft_operation_stage::commit, static_peers_beacon_for(TEST_PEER_LIST));
 
-        EXPECT_TRUE(this->operation->is_prepared());
+        EXPECT_TRUE(this->operation->is_ready_for_commit(this->static_beacon));
         EXPECT_EQ(this->operation->get_stage(), bzn::pbft_operation_stage::commit);
 
         this->operation = nullptr;
-        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
-        EXPECT_TRUE(op2->is_prepared());
+        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
+        EXPECT_TRUE(op2->is_ready_for_commit(this->static_beacon));
         EXPECT_EQ(op2->get_stage(), bzn::pbft_operation_stage::commit);
 
-        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence+1, this->request_hash, this->storage, this->peers_size);
-        EXPECT_FALSE(op3->is_prepared());
+        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence+1, this->request_hash, this->storage);
+        EXPECT_FALSE(op3->is_ready_for_commit(this->static_beacon));
         EXPECT_EQ(op3->get_stage(), bzn::pbft_operation_stage::prepare);
     }
 
@@ -99,11 +106,11 @@ namespace
         EXPECT_EQ(this->operation->get_database_msg().header().nonce(), 9999u);
 
         this->operation = nullptr;
-        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
+        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
         EXPECT_TRUE(op2->has_db_request());
         EXPECT_EQ(op2->get_database_msg().header().nonce(), 9999u);
 
-        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view+1, this->sequence, this->request_hash, this->storage, this->peers_size);
+        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view+1, this->sequence, this->request_hash, this->storage);
         EXPECT_FALSE(op3->has_db_request());
     }
 
@@ -118,26 +125,26 @@ namespace
         EXPECT_TRUE(this->operation->has_request());
 
         this->operation = nullptr;
-        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
+        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
 
         EXPECT_EQ(op2->get_stage(), bzn::pbft_operation_stage::prepare);
         EXPECT_TRUE(op2->is_preprepared());
         EXPECT_TRUE(op2->has_request());
 
         record_pbft_messages(2, 4, PBFT_MSG_PREPARE, op2);
-        EXPECT_TRUE(op2->is_prepared());
-        op2->advance_operation_stage(bzn::pbft_operation_stage::commit);
+        EXPECT_TRUE(op2->is_ready_for_commit(this->static_beacon));
+        op2->advance_operation_stage(bzn::pbft_operation_stage::commit, this->static_beacon);
 
         record_pbft_messages(0, 4, PBFT_MSG_COMMIT, op2);
-        EXPECT_TRUE(op2->is_committed());
-        op2->advance_operation_stage(bzn::pbft_operation_stage::execute);
+        EXPECT_TRUE(op2->is_ready_for_execute(this->static_beacon));
+        op2->advance_operation_stage(bzn::pbft_operation_stage::execute, this->static_beacon);
     }
 
     TEST_F(persistent_operation_test, no_contamination_from_different_request)
     {
-        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
-        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view+1, this->sequence, this->request_hash, this->storage, this->peers_size);
-        auto op4 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash+"xx", this->storage, this->peers_size);
+        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
+        auto op3 = std::make_shared<bzn::pbft_persistent_operation>(this->view+1, this->sequence, this->request_hash, this->storage);
+        auto op4 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash+"xx", this->storage);
 
         //op2 gets just a preprepare, op3 gets 2f prepares, op4 gets 2f+1 prepares
 
@@ -150,11 +157,11 @@ namespace
         record_pbft_messages(0, 2, PBFT_MSG_PREPARE, op3);
         record_pbft_messages(0, 3, PBFT_MSG_PREPARE, op4);
 
-        op4->advance_operation_stage(bzn::pbft_operation_stage::commit);
+        op4->advance_operation_stage(bzn::pbft_operation_stage::commit, this->static_beacon);
 
-        EXPECT_FALSE(op2->is_prepared());
-        EXPECT_FALSE(op3->is_prepared());
-        EXPECT_TRUE(op4->is_prepared());
+        EXPECT_FALSE(op2->is_ready_for_commit(this->static_beacon));
+        EXPECT_FALSE(op3->is_ready_for_commit(this->static_beacon));
+        EXPECT_TRUE(op4->is_ready_for_commit(this->static_beacon));
     }
 
     TEST_F(persistent_operation_test, remembers_messages_after_rehydrate)
@@ -164,12 +171,12 @@ namespace
         record_pbft_messages(0, 2, PBFT_MSG_PREPARE, this->operation);
 
         this->operation = nullptr;
-        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage, this->peers_size);
+        auto op2 = std::make_shared<bzn::pbft_persistent_operation>(this->view, this->sequence, this->request_hash, this->storage);
 
         record_pbft_messages(2, 4, PBFT_MSG_PREPARE, op2);
-        op2->advance_operation_stage(bzn::pbft_operation_stage::commit);
+        op2->advance_operation_stage(bzn::pbft_operation_stage::commit, this->static_beacon);
 
-        EXPECT_TRUE(op2->is_prepared());
+        EXPECT_TRUE(op2->is_ready_for_commit(this->static_beacon));
         EXPECT_EQ(op2->get_preprepare().sender(), UUIDS.at(0));
         EXPECT_EQ(op2->get_prepares().size(), 4u);
     }
@@ -178,7 +185,7 @@ namespace
     {
         for (auto i : boost::irange(0, 100))
         {
-            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage, 4);
+            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage);
             record_request(op);
             record_pbft_messages(0, 1, PBFT_MSG_PREPREPARE, op);
 
@@ -186,7 +193,7 @@ namespace
             record_pbft_messages(0, (i % 4) + 1, PBFT_MSG_PREPARE, op);
             if ((i % 4 + 1) > 2)
             {
-                op->advance_operation_stage(bzn::pbft_operation_stage::commit);
+                op->advance_operation_stage(bzn::pbft_operation_stage::commit, this->static_beacon);
             }
         }
 
@@ -197,7 +204,7 @@ namespace
     {
         for (auto i : boost::irange(0, 100))
         {
-            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage, 4);
+            auto op = std::make_shared<bzn::pbft_persistent_operation>(1, i, "some_hash", this->storage);
             record_request(op);
             record_pbft_messages(0, 1, PBFT_MSG_PREPREPARE, op);
         }

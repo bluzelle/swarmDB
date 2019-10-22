@@ -75,7 +75,7 @@ TEST(database_pbft_service, test_that_failed_storing_of_operation_does_not_throw
     EXPECT_CALL(*mock_storage, create(_, _, _)).WillOnce(Return(bzn::storage_result::exists));
     EXPECT_CALL(*mock_storage, update(_, _, _)).WillOnce(Return(bzn::storage_result::ok));
 
-    auto operation = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehash", nullptr);
+    auto operation = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehash");
     database_msg dmsg;
     bzn_envelope request;
     request.set_database_msg(dmsg.SerializeAsString());
@@ -98,7 +98,7 @@ TEST(database_pbft_service, test_that_executed_operation_fires_callback_with_ope
 
     bzn::database_pbft_service dps(mock_io_context, mem_storage, mock_crud, mock_monitor, TEST_UUID);
 
-    auto operation = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehash", nullptr);
+    auto operation = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehash");
     bool execute_handler_called_with_operation = false;
 
     database_msg msg;
@@ -179,7 +179,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_create()->set_key("key2");
     msg.mutable_create()->set_value("value2");
 
-    auto operation2 = std::make_shared<bzn::pbft_memory_operation>(0, 2, "somehasha", nullptr);
+    auto operation2 = std::make_shared<bzn::pbft_memory_operation>(0, 2, "somehasha");
     bzn_envelope env;
     env.set_database_msg(msg.SerializeAsString());
     operation2->record_request(env);
@@ -194,7 +194,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
 
     auto mock_session = std::make_shared<bzn::mock_session_base>();
     EXPECT_CALL(*mock_session, is_open()).WillRepeatedly(Return(true));
-    auto operation3 = std::make_shared<bzn::pbft_memory_operation>(0, 3, "somehashb", nullptr);
+    auto operation3 = std::make_shared<bzn::pbft_memory_operation>(0, 3, "somehashb");
     env.set_database_msg(msg.SerializeAsString());
     operation3->record_request(env);
     operation3->set_session(mock_session);
@@ -207,7 +207,7 @@ TEST(database_pbft_service, test_that_stored_operation_is_executed_in_order_and_
     msg.mutable_create()->set_key("key1");
     msg.mutable_create()->set_value("value1");
 
-    auto operation1 = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehashc", nullptr);
+    auto operation1 = std::make_shared<bzn::pbft_memory_operation>(0, 1, "somehashc");
     env.set_database_msg(msg.SerializeAsString());
     operation1->record_request(env);
     auto session2 = std::make_shared<bzn::mock_session_base>();
@@ -265,7 +265,7 @@ namespace test
         msg.mutable_create()->set_key("key" + std::to_string(seq));
         msg.mutable_create()->set_value("value" + std::to_string(seq));
 
-        auto operation = std::make_shared<bzn::pbft_memory_operation>(0, seq, "somehash" + std::to_string(seq), nullptr);
+        auto operation = std::make_shared<bzn::pbft_memory_operation>(0, seq, "somehash" + std::to_string(seq));
         bzn_envelope env;
         env.set_database_msg(msg.SerializeAsString());
         operation->record_request(env);

@@ -36,7 +36,7 @@ using namespace bzn;
 pbft::pbft(
     std::shared_ptr<bzn::node_base> node
     , std::shared_ptr<bzn::asio::io_context_base> io_context
-    , const bzn::peers_list_t& peers
+    , std::shared_ptr<bzn::peers_beacon_base> peers
     , std::shared_ptr<bzn::options_base> options
     , std::shared_ptr<pbft_service_base> service
     , std::shared_ptr<pbft_failure_detector_base> failure_detector
@@ -53,21 +53,18 @@ pbft::pbft(
     , failure_detector(std::move(failure_detector))
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
-    , new_config_timer(this->io_context->make_unique_steady_timer())
-    , join_retry_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
     , operation_manager(std::move(operation_manager))
-    , configurations(std::make_shared<pbft_config_store>(storage))
-    , checkpoint_manager(std::make_shared<pbft_checkpoint_manager>(this->io_context, this->storage, this->configurations, this->node))
+    , peers_beacon(std::move(peers))
+    , checkpoint_manager(std::make_shared<pbft_checkpoint_manager>(this->io_context, this->storage, this->peers_beacon, this->node))
     , monitor(std::move(monitor))
 {
-    if (peers.empty())
+    if (this->peers_beacon->current()->empty())
     {
         throw std::runtime_error("No peers found!");
     }
 
     this->initialize_persistent_state();
-    this->initialize_configuration(peers);
 
     this->service->save_service_state_at(((this->next_issued_sequence_number.value() / CHECKPOINT_INTERVAL) + 1) * CHECKPOINT_INTERVAL);
 }
@@ -140,7 +137,8 @@ pbft::start()
                 }
                 );
 
-            this->join_swarm();
+            auto peers = this->peers_beacon->ordered();
+            this->pinned_primary = peers->at(this->view.value() % peers->size());
         });
 }
 
@@ -208,18 +206,11 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
 
     switch (inner_msg.type())
     {
-        case PBFT_MMSG_JOIN:
-        case PBFT_MMSG_LEAVE:
-            this->handle_join_or_leave(msg, inner_msg, session, hash);
-            break;
         case PBFT_MMSG_GET_STATE:
             this->handle_get_state(inner_msg, std::move(session));
             break;
         case PBFT_MMSG_SET_STATE:
             this->handle_set_state(inner_msg);
-            break;
-        case PBFT_MMSG_JOIN_RESPONSE:
-            this->handle_join_response(inner_msg);
             break;
         default:
             LOG(error) << "Invalid membership message received "
@@ -233,6 +224,18 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
     LOG(debug) << "Received message: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE) << "\nFrom: " << original_msg.sender();
 
     std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    auto peers = this->peers_beacon->current();
+    auto find = std::find_if(peers->begin(), peers->end(),
+            [&](const auto& peer)
+            {
+                return peer.uuid == original_msg.sender();
+            });
+    if (find == std::end(*peers))
+    {
+        LOG(debug) << "Dropping message because it is not from a peer";
+        return;
+    }
 
     if (!this->preliminary_filter_msg(msg))
     {
@@ -301,7 +304,7 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 {
     const uint64_t request_seq = this->next_issued_sequence_number.value();
     this->next_issued_sequence_number = request_seq + 1;
-    auto op = this->operation_manager->find_or_construct(this->view.value(), request_seq, request_hash, this->current_peers_ptr());
+    auto op = this->operation_manager->find_or_construct(this->view.value(), request_seq, request_hash);
     op->record_request(request_env);
 
     return op;
@@ -387,8 +390,15 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
 void
 pbft::forward_request_to_primary(const bzn_envelope& request_env)
 {
+    auto primary = this->get_current_primary();
+    if (!primary.has_value())
+    {
+        LOG(error) << "Would forward request to primary, but we don't know the primary so we can't";
+        return;
+    }
+
     this->node
-        ->send_signed_message(bzn::make_endpoint(this->get_primary()), std::make_shared<bzn_envelope>(request_env));
+        ->send_signed_message(bzn::make_endpoint(*primary), std::make_shared<bzn_envelope>(request_env));
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
@@ -428,7 +438,7 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
     else
     {
-        auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
+        auto op = this->operation_manager->find_or_construct(msg);
         auto env_copy{original_msg};
         env_copy.clear_piggybacked_requests();
         op->record_pbft_msg(msg, env_copy);
@@ -444,11 +454,6 @@ pbft::handle_preprepare(const pbft_msg& msg, const bzn_envelope& original_msg)
             , ACCEPTED_PREPREPARES_KEY, log_key};
 
 
-        if (op->has_config_request())
-        {
-            this->handle_config_message(msg, op);
-        }
-
         this->do_preprepared(op);
         this->maybe_advance_operation_state(op);
     }
@@ -458,7 +463,7 @@ void
 pbft::handle_prepare(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Prepare messages are never rejected, assuming the sanity checks passed
-    auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
+    auto op = this->operation_manager->find_or_construct(msg);
 
     op->record_pbft_msg(msg, original_msg);
     this->maybe_advance_operation_state(op);
@@ -468,107 +473,10 @@ void
 pbft::handle_commit(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
     // Commit messages are never rejected, assuming  the sanity checks passed
-    auto op = this->operation_manager->find_or_construct(msg, this->current_peers_ptr());
+    auto op = this->operation_manager->find_or_construct(msg);
 
     op->record_pbft_msg(msg, original_msg);
     this->maybe_advance_operation_state(op);
-}
-
-void
-pbft::handle_join_or_leave(const bzn_envelope& env
-        , const pbft_membership_msg& msg
-        , std::shared_ptr<bzn::session_base> session
-        , const std::string& msg_hash)
-{
-    if (msg.has_peer_info())
-    {
-        // build a peer_address_t from the message
-        auto const &peer_info = msg.peer_info();
-        bzn::peer_address_t peer(peer_info.host(), static_cast<uint16_t>(peer_info.port()),
-            peer_info.name(), peer_info.uuid());
-
-        // test for re-join of existing swarm member
-        if (msg.type() == PBFT_MMSG_JOIN && this->is_peer(peer_info.uuid()))
-        {
-            // send response
-            if (session && session->is_open())
-            {
-                pbft_membership_msg response;
-                response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-                auto env = this->wrap_message(response);
-                LOG(debug) << "Sending JOIN_RESPONSE to " << peer_info.uuid();
-                session->send_message(std::make_shared<std::string>(env.SerializeAsString()));
-            }
-
-            return;
-        }
-
-        if (this->new_config_in_flight)
-        {
-            if (session)
-            {
-                session->close();
-            }
-
-            return;
-        }
-
-        this->add_session_to_sessions_waiting(msg_hash, session);
-
-        if (!this->is_primary())
-        {
-            this->forward_request_to_primary(env);
-            return;
-        }
-
-        auto config = std::make_shared<pbft_configuration>(*(this->configurations->get(this->configurations->newest_committed())));
-        if (msg.type() == PBFT_MMSG_JOIN)
-        {
-            // see if we can add this peer
-            if (!config->add_peer(peer))
-            {
-                LOG(debug) << "Can't add new peer due to conflict";
-
-                if (session)
-                {
-                    session->close();
-                }
-
-                return;
-            }
-        }
-        else if (msg.type() == PBFT_MMSG_LEAVE)
-        {
-            if (!config->remove_peer(peer))
-            {
-                LOG(debug) << "Couldn't remove requested peer";
-                return;
-            }
-        }
-
-        this->configurations->add(config);
-        this->new_config_in_flight = true;
-        this->broadcast_new_configuration(config, msg.type() == PBFT_MMSG_JOIN ? msg_hash : "");
-    }
-    else
-    {
-        LOG(debug) << "Malformed join/leave message";
-    }
-}
-
-void
-pbft::handle_join_response(const pbft_membership_msg& /*msg*/)
-{
-    if (this->in_swarm == swarm_status::joining)
-    {
-        this->join_retry_timer->cancel();
-        this->in_swarm = swarm_status::waiting;
-        LOG(debug) << "Successfully joined the swarm, waiting for NEW_VIEW message...";
-    }
-    else
-    {
-        LOG(debug) << "Received JOIN response, ignoring";
-    }
 }
 
 void
@@ -599,7 +507,6 @@ pbft::handle_get_state(const pbft_membership_msg& msg, std::shared_ptr<bzn::sess
     reply.set_sequence(req_cp.first);
     reply.set_state_hash(req_cp.second);
     reply.set_state_data(*state);
-    reply.set_current_configuration(this->configurations->current()->to_string());
 
     // TODO: the latest stable checkpoint may have advanced by the time we pull it here, which will cause the receiver
     // to reject this message. This is innocuous, but we could avoid the awkwardness by requesting a specific checkpoint
@@ -662,14 +569,9 @@ pbft::handle_set_state(const pbft_membership_msg& msg)
         {
             this->view = newview.view();
             LOG(info) << "setting view to " << this->view.value();
+            this->set_primary_from_newview(msg.newview_msg());
         }
     }
-
-    pbft_configuration current_configuration;
-    current_configuration.from_string(msg.current_configuration());
-    this->configurations->add(std::make_shared<pbft_configuration>(current_configuration));
-    this->configurations->set_committed(current_configuration.get_hash());
-    this->configurations->set_current(current_configuration.get_hash(), this->view.value());
 }
 
 void
@@ -677,7 +579,7 @@ pbft::broadcast(const bzn_envelope& msg)
 {
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
 
-    for (const auto& peer : this->current_peers())
+    for (const auto& peer : *this->peers_beacon->current())
     {
         this->node->send_signed_message(make_endpoint(peer), msg_ptr);
     }
@@ -713,7 +615,7 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
     msg_env->set_timestamp(this->now());
 
     auto targets = std::make_shared<std::vector<boost::asio::ip::tcp::endpoint>>();
-    for (const auto& peer : this->current_peers())
+    for (const auto& peer : *this->peers_beacon->current())
     {
         targets->emplace_back(bzn::make_endpoint(peer));
     }
@@ -724,12 +626,12 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
 void
 pbft::maybe_advance_operation_state(const std::shared_ptr<pbft_operation>& op)
 {
-    if (op->get_stage() == pbft_operation_stage::prepare && op->is_prepared())
+    if (op->get_stage() == pbft_operation_stage::prepare && op->is_ready_for_commit(this->peers_beacon))
     {
         this->do_prepared(op);
     }
 
-    if (op->get_stage() == pbft_operation_stage::commit && op->is_committed())
+    if (op->get_stage() == pbft_operation_stage::commit && op->is_ready_for_execute(this->peers_beacon))
     {
         this->do_committed(op);
     }
@@ -783,18 +685,8 @@ pbft::do_preprepared(const std::shared_ptr<pbft_operation>& op)
 void
 pbft::do_prepared(const std::shared_ptr<pbft_operation>& op)
 {
-    // accept new configuration if applicable
-    if (op->has_config_request())
-    {
-        pbft_configuration config;
-        if (config.from_string(op->get_config_request().configuration()))
-        {
-            this->configurations->set_prepared(config.get_hash());
-        }
-    }
-
     LOG(debug) << "Entering commit phase for operation " << op->get_sequence();
-    op->advance_operation_stage(pbft_operation_stage::commit);
+    op->advance_operation_stage(pbft_operation_stage::commit, this->peers_beacon);
 
     pbft_msg msg = this->common_message_setup(op, PBFT_MSG_COMMIT);
 
@@ -805,7 +697,7 @@ void
 pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
 {
     LOG(debug) << "Operation " << op->get_sequence() << " " << bzn::bytes_to_debug_string(op->get_request_hash()) << " is committed-local";
-    op->advance_operation_stage(pbft_operation_stage::execute);
+    op->advance_operation_stage(pbft_operation_stage::execute, this->peers_beacon);
 
     // If we have a pending session for this request, attach to the operation just before we pass off to the service.
     // If we were to do that before this moment, then maybe the pbft_operation we attached it to never gets executed and
@@ -823,56 +715,6 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
     else
     {
         LOG(debug) << "No pending session for this operation";
-    }
-
-    // commit new configuration if applicable
-    if (op->has_config_request())
-    {
-        pbft_configuration config;
-        if (config.from_string(op->get_config_request().configuration()))
-        {
-            if (this->configurations->current()->get_hash() != config.get_hash())
-            {
-                this->configurations->set_committed(config.get_hash());
-
-                this->new_config_timer->cancel();
-                this->new_config_timer->expires_from_now(NEW_CONFIG_INTERVAL);
-                this->new_config_timer->async_wait(
-                    std::bind(&pbft::handle_new_config_timeout, shared_from_this(), std::placeholders::_1));
-
-                // the hash registered with the failure detector was the internal request
-                this->failure_detector->request_executed(op->get_config_request().join_request_hash());
-
-                // send response to new node
-                auto session_it = this->sessions_waiting_on_forwarded_requests.find(
-                    op->get_config_request().join_request_hash());
-                if (session_it != this->sessions_waiting_on_forwarded_requests.end())
-                {
-                    if (session_it->second->is_open())
-                    {
-                        pbft_membership_msg response;
-                        response.set_type(PBFT_MMSG_JOIN_RESPONSE);
-                        LOG(debug) << "Sending JOIN_RESPONSE";
-                        auto env = this->wrap_message(response);
-                        session_it->second->send_message(std::make_shared<std::string>(env.SerializeAsString()));
-
-                    }
-
-                    this->sessions_waiting_on_forwarded_requests.erase(session_it);
-                }
-                else
-                {
-                    LOG(debug) << "Unable to send join response, session is not valid";
-                }
-            }
-            else
-            {
-                LOG(debug) << "Skipping re-applying current configuration";
-            }
-        }
-
-        // now this config is committed we can accept join requests again
-        this->new_config_in_flight = false;
     }
 
     if (this->audit_enabled)
@@ -901,39 +743,40 @@ pbft::do_committed(const std::shared_ptr<pbft_operation>& op)
         bzn_envelope request;
         request.set_database_msg(msg.SerializeAsString());
         auto new_op = std::make_shared<pbft_memory_operation>(op->get_view(), op->get_sequence()
-            , this->crypto->hash(request), nullptr);
+            , this->crypto->hash(request));
         new_op->record_request(request);
         this->io_context->post(std::bind(&pbft_service_base::apply_operation, this->service, new_op));
     }
 }
 
-void
-pbft::handle_new_config_timeout(const boost::system::error_code& ec)
-{
-    if (ec == boost::asio::error::operation_aborted)
-    {
-        return;
-    }
-
-    if (ec)
-    {
-        LOG(error) << "handle_new_config_timeout error: " << ec.message();
-        return;
-    }
-
-    this->initiate_viewchange();
-}
-
 bool
 pbft::is_primary() const
 {
-    return this->get_primary().uuid == this->uuid;
+    auto primary = this->get_current_primary();
+    return primary.has_value() && (*primary).uuid == this->uuid;
 }
 
-const peer_address_t&
-pbft::get_primary(std::optional<uint64_t> view) const
+std::optional<peer_address_t>
+pbft::get_current_primary() const
 {
-    return this->current_peers()[view.value_or(this->view.value()) % this->current_peers().size()];
+    return this->pinned_primary;
+}
+
+std::optional<peer_address_t>
+pbft::predict_primary(uint64_t view) const
+{
+    if (view == this->view.value())
+    {
+        return this->get_current_primary();
+    }
+
+    auto peers = this->peers_beacon->ordered();
+    if (peers->size() == 0)
+    {
+        return std::nullopt;
+    }
+
+    return peers->at(view % peers->size());
 }
 
 bzn_envelope
@@ -1001,7 +844,6 @@ pbft::handle_failure()
     LOG (error) << "handle_failure - PBFT failure - invalidating current view and sending VIEWCHANGE to view: "
         << this->view.value() + 1;
     this->notify_audit_failure_detected();
-    this->new_config_timer->cancel();
     this->initiate_viewchange();
 }
 
@@ -1057,7 +899,7 @@ pbft::quorum_size() const
 size_t
 pbft::max_faulty_nodes() const
 {
-    return this->current_peers().size()/3;
+    return (this->peers_beacon->current()->size()-1)/3;
 }
 
 void
@@ -1140,10 +982,11 @@ pbft::get_node()
 bool
 pbft::is_peer(const bzn::uuid_t& sender) const
 {
-    return std::find_if (std::begin(this->current_peers()), std::end(this->current_peers()), [&](const auto& address)
+    auto ptr = this->peers_beacon->current();
+    return std::find_if (ptr->begin(), ptr->end(), [&](const auto& address)
     {
         return sender == address.uuid;
-    }) != this->current_peers().end();
+    }) != ptr->end();
 }
 
 std::map<bzn::checkpoint_t, std::set<bzn::uuid_t>>
@@ -1166,7 +1009,7 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
     //  filter checkpoint_hashes to only those pairs (checkpoint, senders) such that |senders| >= 2f+1
     std::map<bzn::checkpoint_t , std::set<bzn::uuid_t>> retval;
     std::copy_if(checkpoint_hashes.begin(), checkpoint_hashes.end(), std::inserter(retval, retval.end())
-        , [&](const auto& h) {return h.second.size() >= this->honest_member_size(this->current_peers().size());});
+        , [&](const auto& h) {return h.second.size() >= this->honest_member_size(this->peers_beacon->current()->size());});
 
     return retval;
 }
@@ -1299,6 +1142,19 @@ pbft::get_sequences_and_request_hashes_from_proofs(
 bool
 pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& original_theirs) const
 {
+    auto expected_primary = this->predict_primary(theirs.view());
+    if (!expected_primary.has_value())
+    {
+        LOG(error) << "rejecting newview because we have no peers list";
+        return false;
+    }
+
+    if (original_theirs.sender() != expected_primary.value().uuid)
+    {
+        LOG(error) << "rejecting newview because it is not from the primary of that view";
+        return false;
+    }
+
     // - does it contain 2f+1 viewchange messages
     if (static_cast<size_t>(theirs.viewchange_messages_size()) < 2 * this->max_faulty_nodes() + 1)
     {
@@ -1441,8 +1297,6 @@ pbft::make_newview(
     pbft_msg newview;
     newview.set_type(PBFT_MSG_NEWVIEW);
     newview.set_view(new_view_index);
-    newview.set_config_hash(this->configurations->newest_prepared());
-    newview.set_config(this->configurations->get(this->configurations->newest_prepared())->to_string());
 
     // V is the set of 2f+1 view change messages
     for (const auto &sender_viewchange_envelope: viewchange_envelopes_from_senders)
@@ -1507,14 +1361,8 @@ pbft::build_newview(uint64_t new_view, const std::map<uuid_t,bzn_envelope>& view
             auto env = this->wrap_message(pre_prepare);
             if (pre_prepare.request_type() == pbft_request_type::PBFT_REQUEST_PAYLOAD && attach_reqs)
             {
-                auto config = this->configurations->get(old_view);
-                if (!config)
-                {
-                    LOG(error) << "config not found for view " << old_view;
-                    continue;
-                }
                 auto op = this->operation_manager->find_or_construct(old_view, pre_prepare.sequence()
-                    , pre_prepare.request_hash(), config->get_peers());
+                    , pre_prepare.request_hash());
                 if (op->has_request())
                 {
                     *(env.add_piggybacked_requests()) = op->get_request();
@@ -1596,14 +1444,8 @@ pbft::save_all_requests(const pbft_msg& msg, const bzn_envelope& original_msg)
 
                 const uint64_t& pre_prep_view{pp_msg.view()};
 
-                auto config = this->configurations->get(pre_prep_view);
-                if (!config)
-                {
-                    LOG(error) << "config not found for view " << pre_prep_view;
-                    continue;
-                }
                 auto op = this->operation_manager->find_or_construct(
-                        pre_prep_view, pp_msg.sequence(), pp_msg.request_hash(), config->get_peers());
+                        pre_prep_view, pp_msg.sequence(), pp_msg.request_hash());
 
                 op->record_request(request_env);
             }
@@ -1641,9 +1483,10 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     const auto viewchange = std::find_if(this->valid_viewchange_messages_for_view.begin()
         , this->valid_viewchange_messages_for_view.end(), [&](const auto& p)
         {
-            return ((this->get_primary(p.first).uuid == this->get_uuid()) &&
+            auto predicted = this->predict_primary(p.first);
+            return predicted.has_value() && predicted.value().uuid == this->get_uuid() &&
                 (p.first > this->view.value()) &&
-                (p.second.size() == 2 * this->max_faulty_nodes() + 1));
+                (p.second.size() == 2 * this->max_faulty_nodes() + 1);
         });
 
     if (viewchange == this->valid_viewchange_messages_for_view.end())
@@ -1660,7 +1503,6 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
     }
 
     auto newview_msg = this->build_newview(viewchange->first, viewchange_envelopes_from_senders);
-    this->move_to_new_configuration(newview_msg.config_hash(), this->view.value() + 1);
     LOG(debug) << "Sending NEWVIEW for view " << this->view.value() + 1;
     this->async_signed_broadcast(newview_msg);
 }
@@ -1668,32 +1510,7 @@ pbft::handle_viewchange(const pbft_msg& msg, const bzn_envelope& original_msg)
 void
 pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
 {
-    // are we just now joining the swarm?
-    if (this->in_swarm == swarm_status::waiting)
-    {
-        auto newconfig = std::make_shared<pbft_configuration>();
-        if (!newconfig->from_string(msg.config()))
-        {
-            LOG(debug) << "newview received with invalid configuration";
-            return;
-        }
-
-        auto hash = newconfig->get_hash();
-        if (this->configurations->current()->get_hash() != hash)
-        {
-            this->configurations->add(newconfig);
-
-            // we need to switch to this configuration now so we have the peer info to validate the message
-            // TODO: since the config tells us how to validate the NEW_VIEW, but the NEW_VIEW contains the config, we
-            // can't really trust this. We need to get the config from an external source.
-            this->move_to_new_configuration(hash, msg.view());
-        }
-
-        // KEP-1574: We're unable to do a full newview validation here as we don't have the requests yet.
-        // Since we're already assuming no byzantine nodes, skip the validation for now.
-        this->in_swarm = swarm_status::joined;
-    }
-    else if (!this->is_valid_newview_message(msg, original_msg))
+    if (!this->is_valid_newview_message(msg, original_msg))
     {
         LOG (debug) << "handle_newview - ignoring invalid NEWVIEW message ";
         return;
@@ -1708,19 +1525,12 @@ pbft::handle_newview(const pbft_msg& msg, const bzn_envelope& original_msg)
     // initially set next sequence from viewchange then update from preprepares later
     this->next_issued_sequence_number = viewchange.sequence() + 1;
 
-    LOG(debug) << "handle_newview - received valid NEWVIEW message";
+    this->set_primary_from_newview(original_msg);
 
-    // validate requested configuration and switch to it
-    if (!this->is_configuration_acceptable_in_new_view(msg.config_hash()) ||
-        !this->move_to_new_configuration(msg.config_hash(), msg.view()))
-    {
-        LOG(debug) << "unable to switch to configuration in new view";
-        return;
-    }
+    LOG(debug) << "handle_newview - received valid NEWVIEW message";
 
     this->view = msg.view();
     this->view_is_valid = true;
-    this->new_config_in_flight = false;
 
     // after moving to the new view processes the preprepares
     LOG(debug) << "Processing " << msg.pre_prepare_messages_size() << " pre-prepares";
@@ -1755,7 +1565,21 @@ pbft::get_status()
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
     status_str += "my uuid: " + this->uuid + "\n";
-    status_str += "primary: " + this->get_primary(this->get_view()).uuid + "\n";
+
+    auto primary = this->get_current_primary();
+    if (primary.has_value())
+    {
+        status_str += "primary: " + primary.value().uuid + "\n";
+        status["primary"]["host"] = primary.value().host;
+        status["primary"]["host_port"] = primary.value().port;
+        status["primary"]["name"] = primary.value().name;
+        status["primary"]["uuid"] = primary.value().uuid;
+    }
+    else
+    {
+        status_str += "primary unknown\n";
+    }
+
     status_str += "view: " + std::to_string(this->get_view()) + "\n";
     status_str += "last exec: "  + std::to_string(this->last_executed_sequence_number) + "\n";
     status_str += "last local cp: "  + std::to_string(this->checkpoint_manager->get_latest_local_checkpoint().first) + "\n";
@@ -1769,12 +1593,6 @@ pbft::get_status()
     status["outstanding_operations_count"] = uint64_t(this->operation_manager->held_operations_count());
     status["is_primary"] = this->is_primary();
 
-    auto primary = this->get_primary();
-    status["primary"]["host"] = primary.host;
-    status["primary"]["host_port"] = primary.port;
-    status["primary"]["name"] = primary.name;
-    status["primary"]["uuid"] = primary.uuid;
-
     status["latest_stable_checkpoint"]["sequence_number"] = this->checkpoint_manager->get_latest_stable_checkpoint().first;
     status["latest_stable_checkpoint"]["hash"] = this->checkpoint_manager->get_latest_stable_checkpoint().second;
     status["latest_checkpoint"]["sequence_number"] = this->checkpoint_manager->get_latest_local_checkpoint().first;
@@ -1784,7 +1602,7 @@ pbft::get_status()
     status["view"] = this->view.value();
 
     status["peer_index"] = bzn::json_message();
-    for (const auto& p : this->current_peers())
+    for (const auto& p : *this->peers_beacon->current())
     {
         bzn::json_message peer;
         peer["host"] = p.host;
@@ -1797,54 +1615,10 @@ pbft::get_status()
     return status;
 }
 
-bool
-pbft::initialize_configuration(const bzn::peers_list_t& peers)
-{
-    bool config_good = true;
-
-    if (!this->configurations->current())
-    {
-        auto config = std::make_shared<pbft_configuration>();
-        for (auto &p : peers)
-        {
-            config_good &= config->add_peer(p);
-        }
-
-        if (!config_good)
-        {
-            LOG(warning) << "One or more peers could not be added to configuration";
-            LOG(warning) << config->get_peers()->size() << " peers were added";
-        }
-
-        this->configurations->add(config);
-        this->configurations->set_current(config->get_hash(), this->view.value());
-    }
-
-    return config_good;
-}
-
-std::shared_ptr<const std::vector<bzn::peer_address_t>>
-pbft::current_peers_ptr() const
-{
-    auto config = this->configurations->current();
-    if (config)
-    {
-        return config->get_peers();
-    }
-
-    throw std::runtime_error("No current configuration!");
-}
-
-const std::vector<bzn::peer_address_t>&
-pbft::current_peers() const
-{
-    return *(this->current_peers_ptr());
-}
-
 const peer_address_t&
 pbft::get_peer_by_uuid(const std::string& uuid) const
 {
-    for (auto const& peer : this->current_peers())
+    for (auto const& peer : *this->peers_beacon->current())
     {
         if (peer.uuid == uuid)
         {
@@ -1854,55 +1628,6 @@ pbft::get_peer_by_uuid(const std::string& uuid) const
 
     // something went wrong. this uuid should exist
     throw std::runtime_error("peer missing from peers list");
-}
-
-void
-pbft::broadcast_new_configuration(pbft_configuration::shared_const_ptr config, const std::string& join_request_hash)
-{
-    pbft_config_msg cfg_msg;
-    cfg_msg.set_configuration(config->to_string());
-    cfg_msg.set_join_request_hash(join_request_hash);
-    bzn_envelope req;
-    req.set_pbft_internal_request(cfg_msg.SerializeAsString());
-
-    auto op = this->setup_request_operation(req, this->crypto->hash(req));
-    this->do_preprepare(op);
-}
-
-bool
-pbft::is_configuration_acceptable_in_new_view(const hash_t& config_hash)
-{
-    return this->configurations->is_acceptable(config_hash);
-}
-
-void
-pbft::handle_config_message(const pbft_msg& msg, const std::shared_ptr<pbft_operation>& op)
-{
-    assert(op->has_config_request());
-    auto config = std::make_shared<pbft_configuration>();
-    if (msg.type() == PBFT_MSG_PREPREPARE && config->from_string(op->get_config_request().configuration()))
-    {
-        if (this->proposed_config_is_acceptable(config))
-        {
-            // store this configuration
-            this->configurations->add(config);
-        }
-    }
-}
-
-bool
-pbft::move_to_new_configuration(const hash_t& config_hash, uint64_t view)
-{
-    LOG(debug) << "Moving to config hash: " << config_hash << " in view " << view;
-
-    // TODO: garbage collect old configurations (KEP-1006)
-    return this->configurations->set_current(config_hash, view);
-}
-
-bool
-pbft::proposed_config_is_acceptable(std::shared_ptr<pbft_configuration> /*config*/)
-{
-    return true;
 }
 
 timestamp_t
@@ -2001,67 +1726,6 @@ pbft::honest_majority_size(size_t swarm_size)
     return pbft::faulty_nodes_bound(swarm_size) * 2 + 1;
 }
 
-void
-pbft::join_swarm()
-{
-    // are we already in the peers list?
-    if (this->is_peer(this->uuid))
-    {
-        this->in_swarm = swarm_status::joined;
-        return;
-    }
-
-    pbft_membership_msg join_msg;
-    join_msg.set_type(PBFT_MMSG_JOIN);
-    join_msg.mutable_peer_info()->set_host(this->options->get_listener().address().to_string());
-    join_msg.mutable_peer_info()->set_port(this->options->get_listener().port());
-    join_msg.mutable_peer_info()->set_uuid(this->uuid);
-
-    // is_peer checks against uuid only, we need to bail if the list contains a node with the same IP and port,
-    // So, check the peers list for node with same ip and port and post error and bail if found.
-    const auto bad_peer = std::find_if(
-            std::begin(this->current_peers())
-            , std::end(this->current_peers())
-            , [&](const bzn::peer_address_t& address)
-            {
-                return address.port == join_msg.peer_info().port() && address.host == join_msg.peer_info().host();
-            });
-
-    if (bad_peer != std::end(this->current_peers()))
-    {
-        LOG (error) << "Bootstrap configuration file validation failure - peer with UUID: " << bad_peer->uuid << " hides local peer";
-        throw std::runtime_error("Bad peer found in Bootstrap Configuration file");
-    }
-
-    uint32_t selected = this->generate_random_number(0, this->current_peers().size() - 1);
-
-    LOG(info) << "Sending request to join swarm to node " << this->current_peers()[selected].uuid;
-    auto msg_ptr = std::make_shared<bzn_envelope>(this->wrap_message(join_msg));
-    this->node->send_signed_message(make_endpoint(this->current_peers()[selected]), msg_ptr);
-
-    this->in_swarm = swarm_status::joining;
-    this->join_retry_timer->expires_from_now(JOIN_RETRY_INTERVAL);
-    this->join_retry_timer->async_wait(
-        std::bind(&pbft::handle_join_retry_timeout, shared_from_this(), std::placeholders::_1));
-}
-
-void
-pbft::handle_join_retry_timeout(const boost::system::error_code& ec)
-{
-    if (ec == boost::asio::error::operation_aborted)
-    {
-        return;
-    }
-
-    if (ec)
-    {
-        LOG(error) << "handle_new_join_retry_timeout error: " << ec.message();
-        return;
-    }
-
-    this->join_swarm();
-}
-
 uint32_t
 pbft::generate_random_number(uint32_t min, uint32_t max)
 {
@@ -2103,4 +1767,31 @@ checkpoint_t
 pbft::latest_stable_checkpoint() const
 {
     return this->checkpoint_manager->get_latest_stable_checkpoint();
+}
+
+std::shared_ptr<bzn::peers_beacon_base>
+pbft::peers() const
+{
+    return this->peers_beacon;
+}
+
+void
+pbft::set_primary_from_newview(const bzn_envelope& new_view)
+{
+    auto peers = this->peers_beacon->current();
+    auto find = std::find_if(peers->begin(), peers->end(),
+            [&](const auto& peer)
+            {
+                return peer.uuid == new_view.sender();
+            });
+
+    if (find == std::end(*peers))
+    {
+        LOG(error) << "Cannot operate in this view because its primary is not in my peers list; voting for view change";
+        this->pinned_primary = std::nullopt;
+        this->initiate_viewchange();
+        return;
+    }
+
+    this->pinned_primary = *find;
 }

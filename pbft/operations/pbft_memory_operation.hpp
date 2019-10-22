@@ -15,7 +15,7 @@
 #pragma once
 
 #include <pbft/operations/pbft_operation.hpp>
-#include <bootstrap/bootstrap_peers_base.hpp>
+#include <peers_beacon/peer_address.hpp>
 
 namespace bzn
 {
@@ -23,7 +23,7 @@ namespace bzn
     {
     public:
 
-        pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers);
+        pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash);
 
         pbft_operation_stage get_stage() const override;
 
@@ -33,7 +33,10 @@ namespace bzn
         bool is_prepared() const override;
         bool is_committed() const override;
 
-        void advance_operation_stage(pbft_operation_stage new_stage) override;
+        bool is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const override;
+        bool is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const override;
+
+        void advance_operation_stage(pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers) override;
 
         void record_request(const bzn_envelope& encoded_request) override;
         bool has_request() const override;
@@ -48,8 +51,6 @@ namespace bzn
         std::map<uuid_t, bzn_envelope> get_prepares() const override;
 
     private:
-        size_t faulty_nodes_bound() const;
-
         bzn_envelope preprepare_message;
         std::map<bzn::uuid_t, bzn_envelope> prepare_messages;
 
@@ -65,6 +66,6 @@ namespace bzn
 
         bool request_saved = false;
 
-        const std::shared_ptr<const std::vector<peer_address_t>> peers;
+        const std::shared_ptr<peers_beacon_base> peers;
     };
 }

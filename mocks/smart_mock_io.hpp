@@ -27,6 +27,8 @@ namespace bzn::asio
 
         void yield_until_clear();
 
+        void trigger_timer(unsigned int timer_id);
+
         std::shared_ptr<bzn::asio::io_context_base> real_io_context = std::make_shared<bzn::asio::io_context>();
         std::shared_ptr<bzn::beast::mock_websocket_base> websocket = std::make_shared<bzn::beast::mock_websocket_base>();
 

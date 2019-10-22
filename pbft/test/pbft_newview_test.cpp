@@ -108,18 +108,17 @@ namespace bzn
         build_pbft();
 
         // the pbft sut must be the current view's primay
-        EXPECT_EQ(this->uuid, this->pbft->get_primary().uuid);
+        EXPECT_EQ(this->uuid, this->pbft->get_current_primary().value().uuid);
 
-        this->pbft->view = this->pbft->view.value() + 1;
-        EXPECT_FALSE(this->uuid == this->pbft->get_primary().uuid);
+        EXPECT_NE(this->uuid, this->pbft->predict_primary(this->pbft->view.value() + 1).value().uuid);
 
         // given a view, get_primary must provide the address of a primary
 
         // TODO: this is a pretty sketchy test.
         for (size_t view{0}; view < 100; ++view)
         {
-            const bzn::uuid_t uuid = this->pbft->get_primary(view).uuid;
-            const bzn::uuid_t accepted_uuid = this->pbft->current_peers()[view % this->pbft->current_peers().size()].uuid;
+            const bzn::uuid_t uuid = this->pbft->predict_primary(view).value().uuid;
+            const bzn::uuid_t accepted_uuid = this->pbft->peers()->ordered()->at(view % this->pbft->peers()->ordered()->size()).uuid;
             EXPECT_EQ(uuid, accepted_uuid);
         }
     }

@@ -15,12 +15,12 @@
 #include <pbft/operations/pbft_memory_operation.hpp>
 #include <boost/format.hpp>
 #include <string>
+#include <pbft/pbft.hpp>
 
 using namespace bzn;
 
-pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<const std::vector<peer_address_t>> peers)
+pbft_memory_operation::pbft_memory_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash)
         : pbft_operation(view, sequence, request_hash)
-        , peers(std::move(peers))
 {
 }
 
@@ -135,39 +135,47 @@ pbft_memory_operation::is_preprepared() const
     return this->preprepare_seen;
 }
 
-size_t
-pbft_memory_operation::faulty_nodes_bound() const
+bool
+pbft_memory_operation::is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
 {
-    return (this->peers->size() - 1) / 3;
+    // TODO: may have to count based only on uuids that are still in the peers list
+    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() >= pbft::honest_majority_size(peers->current()->size());
+}
+
+bool
+pbft_memory_operation::is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
+{
+    // TODO: may have to count based only on uuids that are still in the peers list
+    return this->is_prepared() && this->commits_seen.size() >= pbft::honest_majority_size(peers->current()->size());
 }
 
 bool
 pbft_memory_operation::is_prepared() const
 {
-    return this->has_request() && this->is_preprepared() && this->prepares_seen.size() > 2 * this->faulty_nodes_bound();
+    return this->stage != pbft_operation_stage::prepare;
 }
 
 bool
 pbft_memory_operation::is_committed() const
 {
-    return this->is_prepared() && this->commits_seen.size() > 2 * this->faulty_nodes_bound();
+    return this->stage == pbft_operation_stage::execute;
 }
 
 void
-pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_stage)
+pbft_memory_operation::advance_operation_stage(bzn::pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers)
 {
     switch(new_stage)
     {
         case pbft_operation_stage::prepare :
             throw std::runtime_error("cannot advance to initial stage");
         case pbft_operation_stage::commit :
-            if (!this->is_preprepared() || this->stage != pbft_operation_stage::prepare)
+            if (!this->is_ready_for_commit(peers) || this->stage != pbft_operation_stage::prepare)
             {
                 throw std::runtime_error("illegal move to commit phase");
             }
             break;
         case pbft_operation_stage::execute :
-            if (!this->is_committed() || this->stage != pbft_operation_stage::commit)
+            if (!this->is_ready_for_execute(peers) || this->stage != pbft_operation_stage::commit)
             {
                 throw std::runtime_error("illegal move to execute phase");
             }

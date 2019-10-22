@@ -981,7 +981,8 @@ crud::is_caller_a_writer(const bzn::caller_id_t& caller_id, const Json::Value& p
     }
 
     // A node may be issuing an operation such as delete for key expiration...
-    for (const auto& peer_uuid : *this->pbft->current_peers_ptr())
+    // TODO: this may need to compare against all recent peers, not just current ones
+    for (const auto& peer_uuid : *this->pbft->peers()->current())
     {
         if (peer_uuid.uuid == boost::trim_copy(caller_id))
         {

@@ -13,10 +13,10 @@
 
 #include <mocks/smart_mock_node.hpp>
 #include <mocks/smart_mock_io.hpp>
+#include <mocks/smart_mock_peers_beacon.hpp>
 #include <boost/range/irange.hpp>
 #include <pbft/operations/pbft_memory_operation.hpp>
 #include <storage/mem_storage.hpp>
-#include <pbft/pbft_config_store.hpp>
 #include <pbft/pbft_checkpoint_manager.hpp>
 #include <pbft/test/pbft_test_common.hpp>
 #include <utils/make_endpoint.hpp>
@@ -30,24 +30,11 @@ namespace bzn::test
     public:
         std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
         std::shared_ptr<bzn::mem_storage> storage = std::make_shared<bzn::mem_storage>();
-        std::shared_ptr<bzn::pbft_config_store> configs = std::make_shared<bzn::pbft_config_store>(storage);
         std::shared_ptr<bzn::smart_mock_node> node = std::make_shared<bzn::smart_mock_node>();
-        std::shared_ptr<bzn::pbft_checkpoint_manager> cp_manager = std::make_shared<bzn::pbft_checkpoint_manager>(mock_io, storage, configs, node);
+        std::shared_ptr<bzn::pbft_checkpoint_manager> cp_manager = std::make_shared<bzn::pbft_checkpoint_manager>(mock_io, storage, static_peers_beacon_for(TEST_PEER_LIST), node);
 
         checkpoint_t cp{100, "100"};
         checkpoint_t cp2{200, "200"};
-
-        pbft_checkpoint_test()
-        {
-            auto config = std::make_shared<pbft_configuration>();
-            for (auto &p : TEST_PEER_LIST)
-            {
-                config->add_peer(p);
-            }
-
-            this->configs->add(config);
-            this->configs->set_current(config->get_hash(), 0);
-        }
 
         void send_checkpoint_messages(const checkpoint_t& cp, size_t count = INT_MAX)
         {
