@@ -21,6 +21,7 @@
 #
 
 import websocket
+import ssl
 import sys
 import random
 from argparse import ArgumentParser
@@ -65,7 +66,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
     global CRUD_SCRIPT_SENDER_ID
 
     if not ws:
-        ws = websocket.create_connection("ws://" + node)
+        ws = websocket.create_connection("wss://" + node)
     msg.header.db_uuid = uuid
 
     # hack!
@@ -102,7 +103,7 @@ def send_request(node, uuid, msg, loop=False, ws=None):
 
 
 def send_status_request(node):
-    ws = websocket.create_connection("ws://" + args.node)
+    ws = websocket.create_connection("wss://" + args.node,  sslopt={"cert_reqs": ssl.CERT_NONE})
     msg_outer = bluzelle_pb2.bzn_envelope()
     msg_inner = status_pb2.status_request()
     msg_outer.swarm_id = CRUD_SCRIPT_SWARM_ID
