@@ -73,9 +73,8 @@ pbft_persistent_operation::get_uuid()
     return OPERATIONS_UUID;
 }
 
-pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage, size_t peers_size)
+pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash, std::shared_ptr<bzn::storage_base> storage)
         : pbft_operation(view, sequence, request_hash)
-        , peers_size(peers_size)
         , storage(std::move(storage))
         , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
@@ -97,7 +96,6 @@ pbft_persistent_operation::pbft_persistent_operation(uint64_t view, uint64_t seq
 // constructs operation already in storage without re-adding to storage
 pbft_persistent_operation::pbft_persistent_operation(std::shared_ptr<bzn::storage_base> storage, uint64_t view, uint64_t sequence, const bzn::hash_t& request_hash)
     : pbft_operation(view, sequence, request_hash)
-    , peers_size(1) // TODO: move peers_size out of operation. for now, this allows is_* to succeed if stage is set appropriately
     , storage(std::move(storage))
     , prefix(pbft_persistent_operation::generate_prefix(view, sequence, request_hash))
 {
@@ -144,20 +142,20 @@ pbft_persistent_operation::get_stage() const
 }
 
 void
-pbft_persistent_operation::advance_operation_stage(pbft_operation_stage new_stage)
+pbft_persistent_operation::advance_operation_stage(pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers)
 {
     switch (new_stage)
     {
         case pbft_operation_stage::prepare :
             throw std::runtime_error("cannot advance to initial stage");
         case pbft_operation_stage::commit :
-            if (!this->is_prepared() || this->get_stage() != pbft_operation_stage::prepare)
+            if (!this->is_ready_for_commit(peers) || this->get_stage() != pbft_operation_stage::prepare)
             {
                 throw std::runtime_error("illegal move to commit phase");
             }
             break;
         case pbft_operation_stage::execute :
-            if (!this->is_committed() || this->get_stage() != pbft_operation_stage::commit)
+            if (!this->is_ready_for_execute(peers) || this->get_stage() != pbft_operation_stage::commit)
             {
                 throw std::runtime_error("illegal move to execute phase");
             }
@@ -177,6 +175,7 @@ pbft_persistent_operation::advance_operation_stage(pbft_operation_stage new_stag
 bool
 pbft_persistent_operation::is_preprepared() const
 {
+    // TODO: maybe check if the sender of the preprepare is still in the peers list
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPREPARE);
     return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size() > 0;
 }
@@ -184,17 +183,29 @@ pbft_persistent_operation::is_preprepared() const
 bool
 pbft_persistent_operation::is_prepared() const
 {
-    auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE);
-    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        >= pbft::honest_majority_size(this->peers_size) && this->is_preprepared() && this->has_request();
+    return this->get_stage() != pbft_operation_stage::prepare;
 }
 
 bool
 pbft_persistent_operation::is_committed() const
 {
+    return this->get_stage() == pbft_operation_stage::execute;
+}
+
+bool
+pbft_persistent_operation::is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
+{
+    auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_PREPARE);
+    return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
+        >= pbft::honest_majority_size(peers->current()->size()) && this->is_preprepared() && this->has_request();
+}
+
+bool
+pbft_persistent_operation::is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const
+{
     auto prefix = this->typed_prefix(pbft_msg_type::PBFT_MSG_COMMIT);
     return this->storage->get_keys_if(get_uuid(), prefix, this->increment_prefix(prefix)).size()
-        >= pbft::honest_majority_size(this->peers_size) && this->is_prepared();
+        >= pbft::honest_majority_size(peers->current()->size()) && this->is_prepared();
 }
 
 void

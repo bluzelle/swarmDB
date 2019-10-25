@@ -1,6 +1,4 @@
 add_library(utils STATIC
-    http_req.cpp
-    http_req.hpp
     blacklist.cpp
     blacklist.hpp
     make_endpoint.hpp
@@ -9,8 +7,11 @@ add_library(utils STATIC
     bytes_to_debug_string.hpp
     crypto.cpp
     crypto.hpp
+    utils_interface_base.hpp
+    utils_interface.hpp
     esr_peer_info.cpp
-    esr_peer_info.hpp)
+    http_req.cpp
+)
 
 target_link_libraries(utils ${JSONCPP_LIBRARIES} ${OPENSSL_LIBRARIES})
 

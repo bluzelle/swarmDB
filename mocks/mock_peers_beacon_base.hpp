@@ -14,34 +14,31 @@
 
 #pragma once
 
-#include <string>
+#include <peers_beacon/peers_beacon_base.hpp>
+#include <gmock/gmock.h>
 
 
-namespace bzn
-{
-    struct peer_address_t
+namespace bzn {
+
+    class mock_peers_beacon_base : public peers_beacon_base
     {
-        peer_address_t(std::string host, uint16_t port, std::string name, std::string uuid)
-            : host(std::move(host))
-            , port(port)
-            , name(std::move(name))
-            , uuid(std::move(uuid))
-        {
-        };
+    public:
+        MOCK_METHOD0(start,
+            void());
 
-        bool operator==(const peer_address_t& other) const
-        {
-            if (&other == this)
-            {
-                return true;
-            }
+        MOCK_CONST_METHOD0(current,
+            std::shared_ptr<const peers_list_t>());
 
-            return this->host == other.host && this->port == other.port && this->uuid == other.uuid;
+        MOCK_CONST_METHOD0(ordered,
+                std::shared_ptr<const ordered_peers_list_t>());
+
+        MOCK_METHOD1(refresh,
+            bool(bool first_run));
+
+        bool refresh()
+        {
+            return this->refresh(false);
         }
-
-        const std::string host;
-        const uint16_t    port;
-        const std::string name;
-        const std::string uuid;
     };
+
 }

@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <bootstrap/bootstrap_peers.hpp>
-#include <bootstrap/peer_address.hpp>
+#include <peers_beacon/peer_address.hpp>
+#include <peers_beacon/peers_beacon_base.hpp>
 #include <node/node_base.hpp>
 #include <pbft/operations/pbft_operation.hpp>
 #include <proto/pbft.pb.h>
@@ -38,7 +38,9 @@ namespace bzn
 
         virtual bool is_primary() const = 0;
 
-        virtual const peer_address_t& get_primary(std::optional<uint64_t> view) const = 0;
+        virtual std::optional<peer_address_t> get_current_primary() const = 0;
+
+        virtual std::optional<peer_address_t> predict_primary(uint64_t view) const = 0;
 
         virtual const bzn::uuid_t& get_uuid() const = 0;
 
@@ -46,7 +48,7 @@ namespace bzn
 
         virtual const peer_address_t& get_peer_by_uuid(const std::string& uuid) const = 0;
 
-        virtual std::shared_ptr<const std::vector<bzn::peer_address_t>> current_peers_ptr() const = 0;
+        virtual std::shared_ptr<bzn::peers_beacon_base> peers() const = 0;
 
         virtual ~pbft_base() = default;
 

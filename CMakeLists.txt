@@ -89,7 +89,7 @@ add_subdirectory(proto)
 
 set(BLUZELLE_STD_INCLUDES ${Boost_INCLUDE_DIRS} ${GTEST_INCLUDE_DIR} ${JSONCPP_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${PROTO_INCLUDE_DIRS} ${ROCKSDB_INCLUDE_DIRS})
 
-add_subdirectory(bootstrap)
+add_subdirectory(peers_beacon)
 add_subdirectory(crud)
 add_subdirectory(node)
 add_subdirectory(options)

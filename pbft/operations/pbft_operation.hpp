@@ -17,6 +17,7 @@
 #include <proto/database.pb.h>
 #include <proto/pbft.pb.h>
 #include <cstdint>
+#include <peers_beacon/peers_beacon_base.hpp>
 
 namespace bzn
 {
@@ -78,19 +79,29 @@ namespace bzn
         virtual void record_pbft_msg(const pbft_msg& msg, const bzn_envelope& encoded_msg) = 0;
 
         /**
-         * @return have we seen a preprepare for this operation
+         * @return has this operation moved to the prepare phase
          */
         virtual bool is_preprepared() const = 0;
 
         /**
-         * @return is this operation prepared (as defined in the pbft paper) at this node
+         * @return has this operation moved to the commit phase
          */
         virtual bool is_prepared() const = 0;
 
         /**
-         * @return is this operation committed-local (as defined in the pbft paper) at this node
+         * @return has this operation moved to the execute phase
          */
         virtual bool is_committed() const = 0;
+
+        /**
+         * @return is this operation ready to move to the commit phase
+         */
+        virtual bool is_ready_for_commit(const std::shared_ptr<bzn::peers_beacon_base>& peers) const = 0;
+
+        /**
+         * @return is this operation ready to move to the execute phase
+         */
+        virtual bool is_ready_for_execute(const std::shared_ptr<bzn::peers_beacon_base>& peers) const = 0;
 
         /**
          * record the request that this operation is for. caller is responsible for checking that the request's hash
@@ -103,7 +114,7 @@ namespace bzn
          * advance the operation to the next stage, checking that doing so is legal
          * @param new_stage
          */
-        virtual void advance_operation_stage(pbft_operation_stage new_stage) = 0;
+        virtual void advance_operation_stage(pbft_operation_stage new_stage, const std::shared_ptr<bzn::peers_beacon_base>& peers) = 0;
 
         /**
          * @return do we know the full request associated with this operation?

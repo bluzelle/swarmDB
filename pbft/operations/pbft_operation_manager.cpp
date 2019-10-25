@@ -20,8 +20,9 @@
 
 using namespace bzn;
 
-pbft_operation_manager::pbft_operation_manager(std::optional<std::shared_ptr<bzn::storage_base>> storage)
-    : storage(storage)
+pbft_operation_manager::pbft_operation_manager(std::shared_ptr<bzn::peers_beacon_base> peers, std::optional<std::shared_ptr<bzn::storage_base>> storage)
+    : peers(peers)
+    , storage(storage)
 {
     if (!storage)
     {
@@ -30,8 +31,7 @@ pbft_operation_manager::pbft_operation_manager(std::optional<std::shared_ptr<bzn
 }
 
 std::shared_ptr<pbft_operation>
-pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, const bzn::hash_t &request_hash,
-                                          std::shared_ptr<const std::vector<bzn::peer_address_t>> peers_list)
+pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, const bzn::hash_t &request_hash)
 {
     std::lock_guard<std::mutex> lock(this->pbft_lock);
 
@@ -45,11 +45,11 @@ pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, cons
         std::shared_ptr<pbft_operation> op;
         if (this->storage)
         {
-            op = std::make_shared<pbft_persistent_operation>(view, sequence, request_hash, *(this->storage), peers_list->size());
+            op = std::make_shared<pbft_persistent_operation>(view, sequence, request_hash, *(this->storage));
         }
         else
         {
-            op = std::make_shared<pbft_memory_operation>(view, sequence, request_hash, peers_list);
+            op = std::make_shared<pbft_memory_operation>(view, sequence, request_hash);
         }
 
         bool added;
@@ -63,9 +63,9 @@ pbft_operation_manager::find_or_construct(uint64_t view, uint64_t sequence, cons
 }
 
 std::shared_ptr<pbft_operation>
-pbft_operation_manager::find_or_construct(const pbft_msg& msg, std::shared_ptr<const std::vector<bzn::peer_address_t>> peers_list)
+pbft_operation_manager::find_or_construct(const pbft_msg& msg)
 {
-    return this->find_or_construct(msg.view(), msg.sequence(), msg.request_hash(), peers_list);
+    return this->find_or_construct(msg.view(), msg.sequence(), msg.request_hash());
 }
 
 void
