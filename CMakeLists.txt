@@ -42,6 +42,12 @@ else()
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
         set(warnings "${warnings} -Wno-maybe-uninitialized")
     endif()
+
+    # todo: these may no longer be required...
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 9.2)
+        message(STATUS "GCC ${CMAKE_CXX_COMPILER_VERSION} warning workaround: -Wno-deprecated-copy -Wno-sign-compare (Still needed?)")
+        set(warnings "${warnings} -Wno-deprecated-copy -Wno-sign-compare")
+    endif()
 endif()
 
 set(CMAKE_CXX_FLAGS ${warnings})
