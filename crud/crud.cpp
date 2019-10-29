@@ -49,12 +49,15 @@ namespace
 
     inline std::pair<bzn::uuid_t, bzn::key_t> extract_uuid_key(const bzn::key_t& key)
     {
-        Json::Reader reader;
+        Json::CharReaderBuilder rbuilder;
+        std::unique_ptr<Json::CharReader> const reader(rbuilder.newCharReader());
+        std::string parse_errors;
+
         Json::Value json;
 
-        if (!reader.parse(key, json))
+        if (!reader->parse(key.c_str(), key.c_str() + key.size(), &json, &parse_errors))
         {
-            throw std::runtime_error("Failed to parse database json ttl data: " + reader.getFormattedErrorMessages());
+            throw std::runtime_error("Failed to parse database json ttl data: " + parse_errors);
         }
 
         return std::make_pair(json["uuid"].asString(), json["key"].asString());
@@ -920,12 +923,15 @@ crud::get_database_permissions(const bzn::uuid_t& uuid) const
             throw std::runtime_error("Failed to read database permission data!");
         }
 
-        Json::Reader reader;
+        Json::CharReaderBuilder rbuilder;
+        std::unique_ptr<Json::CharReader> const reader(rbuilder.newCharReader());
+        std::string parse_errors;
+
         Json::Value json;
 
-        if (!reader.parse(*perms_data, json))
+        if (!reader->parse((*perms_data).c_str(), (*perms_data).c_str() + (*perms_data).size(), &json, &parse_errors))
         {
-            throw std::runtime_error("Failed to parse database json permission data: " + reader.getFormattedErrorMessages());
+            throw std::runtime_error("Failed to parse database json permission data: " + parse_errors);
         }
 
         return {true, json};
@@ -1326,12 +1332,15 @@ crud::get_swarm_storage_usage()
 
         if (result)
         {
-            Json::Reader reader;
+            Json::CharReaderBuilder rbuilder;
+            std::unique_ptr<Json::CharReader> const reader(rbuilder.newCharReader());
+            std::string parse_errors;
+
             Json::Value json;
 
-            if (!reader.parse(result.value(), json))
+            if (!reader->parse(result.value().c_str(), result.value().c_str() + result.value().size(), &json, &parse_errors))
             {
-                throw std::runtime_error("Failed to parse database json uuid data: " + reader.getFormattedErrorMessages());
+                throw std::runtime_error("Failed to parse database json uuid data: " + parse_errors);
             }
 
             const auto max_size = this->max_database_size(json);

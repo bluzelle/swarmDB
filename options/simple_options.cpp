@@ -279,8 +279,6 @@ simple_options::validate_options()
 bool
 simple_options::handle_config_file_options()
 {
-    Json::Value json;
-
     std::ifstream ifile;
     ifile.exceptions(std::ios::failbit);
 
@@ -293,10 +291,13 @@ simple_options::handle_config_file_options()
         throw std::runtime_error("Failed to load: " + config_file + " : " + strerror(errno));
     }
 
-    Json::Reader reader;
-    if (!reader.parse(ifile, json))
+    Json::CharReaderBuilder rbuilder;
+    std::string parse_err;
+
+    Json::Value json;
+    if (!Json::parseFromStream(rbuilder, ifile, &json, &parse_err))
     {
-        throw std::runtime_error("Failed to parse: " + config_file + " : " + reader.getFormattedErrorMessages());
+        throw std::runtime_error("Failed to parse: " + config_file + " : " + parse_err);
     }
 
     if (!json.isObject())

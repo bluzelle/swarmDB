@@ -40,13 +40,17 @@ namespace bzn::utils::blacklist
         // string of 32 hex values, so let's at least remove the dashes.
         const std::string post_fields{boost::str(boost::format(ROPSTEN_REQUEST_DATA) % clean_uuid(raw_uuid))};
         bzn::json_message response;
-        Json::Reader reader;
+
+        Json::CharReaderBuilder rbuilder;
+        std::unique_ptr<Json::CharReader> const reader(rbuilder.newCharReader());
+        std::string parse_errors;
 
         bzn::utils_interface utils_object;
 
-        if (!reader.parse(utils_object.sync_req(url, post_fields), response))
+        auto res = utils_object.sync_req(url, post_fields);
+        if (!reader->parse(res.c_str(), res.c_str() + res.size(), &response, &parse_errors))
         {
-            LOG(error) << "Unable to parse response from Ropsten - could not validate peer";
+            LOG(error) << "Unable to parse response from Ropsten - could not validate peer (" << parse_errors << ")";
             return false;
         }
 

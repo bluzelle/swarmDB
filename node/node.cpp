@@ -265,14 +265,22 @@ node::send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope>
     try
     {
         auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
-        boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
-        this->send_signed_message(endpoint, msg);
+
+        if (const auto endpoint = bzn::make_endpoint(point_of_contact_address))
+        {
+            this->send_signed_message(*endpoint, msg);
+            return;
+        }
     }
     catch (const std::runtime_error& err)
     {
         LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
+        return;
     }
+
+    LOG(error) << "Unable send_signed_message to " << uuid << " -- resolver error";
 }
+
 
 void
 node::send_maybe_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
@@ -289,6 +297,7 @@ node::send_maybe_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::s
     }
 }
 
+
 void
 node::multicast_maybe_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
 {
@@ -302,21 +311,28 @@ node::multicast_maybe_signed_message(std::shared_ptr<std::vector<boost::asio::ip
         });
 }
 
+
 void
 node::send_maybe_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg)
 {
     try
     {
         auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
-        boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
-        this->send_maybe_signed_message(endpoint, msg);
+
+        if (const auto endpoint = bzn::make_endpoint(point_of_contact_address))
+        {
+            this->send_maybe_signed_message(*endpoint, msg);
+            return;
+        }
     }
     catch (const std::runtime_error& err)
     {
         LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
+        return;
     }
-}
 
+    LOG(error) << "Unable send_maybe_signed_message to " << uuid << " -- resolver error";
+}
 
 
 void

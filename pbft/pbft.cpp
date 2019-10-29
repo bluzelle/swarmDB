@@ -1,4 +1,4 @@
-// Copyrigh (C) 2018 Bluzelle
+// Copyright (C) 2018 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -409,8 +409,15 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
         return;
     }
 
-    this->node
-        ->send_signed_message(bzn::make_endpoint(*primary), std::make_shared<bzn_envelope>(request_env));
+    if (const auto endpoint = bzn::make_endpoint(*primary))
+    {
+        this->node->send_signed_message(*endpoint, std::make_shared<bzn_envelope>(request_env));
+    }
+    else
+    {
+        LOG(error) << "Unable to forward request to primary: " << (*primary).uuid << " -- resolver error";
+        return;
+    }
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
@@ -588,7 +595,14 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : *this->peers_beacon->current())
     {
-        this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);
+        if (const auto endpoint = bzn::make_endpoint(peer))
+        {
+            this->node->send_maybe_signed_message(*endpoint, msg_ptr);
+        }
+        else
+        {
+            LOG(error) << "Unable to broadcast to " << uuid << " -- resolver error";
+        }
     }
 }
 
@@ -624,7 +638,14 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
     auto targets = std::make_shared<std::vector<boost::asio::ip::tcp::endpoint>>();
     for (const auto& peer : *this->peers_beacon->current())
     {
-        targets->emplace_back(bzn::make_endpoint(peer));
+        if (const auto endpoint = bzn::make_endpoint(peer))
+        {
+            targets->emplace_back(*endpoint);
+        }
+        else
+        {
+            LOG(error) << "Unable to async_signed_broadcast to " << peer.uuid << "-- resolver error";
+        }
     }
 
     this->node->multicast_maybe_signed_message(std::move(targets), msg_env);

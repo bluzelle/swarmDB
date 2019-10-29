@@ -31,7 +31,7 @@ peers_beacon::start()
 {
     if (!this->refresh(true))
     {
-        throw std::runtime_error("could not construct initial peers list)");
+        throw std::runtime_error("could not construct initial peers list");
     }
 
     this->run_timer();
