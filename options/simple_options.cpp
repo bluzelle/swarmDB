@@ -61,6 +61,9 @@ simple_options::build_options()
                 (BOOTSTRAP_PEERS_URL.c_str(),
                         po::value<std::string>(),
                         "url for bootstrap peers list")
+                (CPR_URL.c_str(),
+                        po::value<std::string>()->default_value("https://cpr.bluzelle.com/api/v1"),
+                        "api root for centralized peers registry")
                 (PEERS_REFRESH_INTERVAL_SECONDS.c_str(),
                         po::value<uint64_t>()->default_value(600),
                         "interval at which to check for updates to the peers list")
@@ -106,6 +109,9 @@ simple_options::build_options()
                 (IGNORE_ESR.c_str(),
                         po::value<bool>()->default_value(false),
                         "do not use esr as a peer source")
+                (IGNORE_CPR.c_str(),
+                        po::value<bool>()->default_value(false),
+                        "do not use cpr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
                         "software stack used by swarm");

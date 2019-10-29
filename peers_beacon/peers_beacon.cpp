@@ -15,6 +15,7 @@
 #include <fstream>
 #include <peers_beacon/peers_beacon.hpp>
 #include <include/bluzelle.hpp>
+#include <boost/format.hpp>
 
 using namespace bzn;
 
@@ -105,11 +106,23 @@ peers_beacon::refresh(bool first_run)
             && !this->options->get_simple_options().get<bool>(bzn::option_names::IGNORE_ESR);
     bool has_file = !this->options->get_bootstrap_peers_file().empty();
     bool has_url = !this->options->get_bootstrap_peers_url().empty();
+    bool has_cpr = !this->options->get_simple_options().get<std::string>(bzn::option_names::CPR_URL).empty()
+            && !this->options->get_swarm_id().empty()
+            && !this->options->get_simple_options().get<bool>(bzn::option_names::IGNORE_CPR);
 
     /* Here we chose not to fall back on another method if the first priority from our config is unavailable. This is
      * chosen so that if, eg, a url based peers list is briefly unavailable, we do not abruptly switch to a very old
      * peers list from an unmaintained esr contract.
      */
+
+    if (has_cpr)
+    {
+        if(first_run)
+        {
+            LOG(info) << "CPR chosen as peers source";
+        }
+        return this->fetch_from_cpr();
+    }
 
     if (has_esr)
     {
@@ -126,7 +139,7 @@ peers_beacon::refresh(bool first_run)
         {
             LOG(info) << "URL chosen as peers source";
         }
-        return this->fetch_from_url();
+        return this->fetch_from_configured_url();
     }
 
     if (has_file)
@@ -158,9 +171,23 @@ peers_beacon::fetch_from_file()
 }
 
 bool
-peers_beacon::fetch_from_url()
+peers_beacon::fetch_from_configured_url()
 {
-    auto url = this->options->get_bootstrap_peers_url();
+    return this->fetch_from_url(this->options->get_bootstrap_peers_url());
+}
+
+bool
+peers_beacon::fetch_from_cpr()
+{
+    auto base_url = this->options->get_simple_options().get<std::string>(bzn::option_names::CPR_URL);
+    auto swarm_id = this->options->get_swarm_id();
+    boost::format fmt = boost::format("%1%/swarms/%2%") % base_url % swarm_id;
+    return this->fetch_from_url(fmt.str());
+}
+
+bool
+peers_beacon::fetch_from_url(const std::string& url)
+{
     std::string peers = this->utils->sync_req(url);
 
     LOG(info) << "Downloaded peer list from " << url;

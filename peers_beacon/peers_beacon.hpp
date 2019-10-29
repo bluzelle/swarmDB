@@ -44,7 +44,10 @@ namespace bzn
 
         bool fetch_from_esr();
         bool fetch_from_file();
-        bool fetch_from_url();
+        bool fetch_from_configured_url();
+        bool fetch_from_cpr();
+
+        bool fetch_from_url(const std::string& url);
 
         bool parse_and_save_peers(std::istream& source);
         peers_list_t build_peers_list_from_json(const Json::Value& root);
