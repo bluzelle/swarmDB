@@ -17,7 +17,6 @@
 #include <include/bluzelle.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <pbft/pbft_base.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <pbft/pbft_persistent_state.hpp>
 #include <pbft/operations/pbft_operation_manager.hpp>
@@ -30,7 +29,6 @@
 #include <mutex>
 #include <gtest/gtest_prod.h>
 #include <options/options_base.hpp>
-#include <pbft/pbft_failure_detector.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <limits>
 
@@ -51,6 +49,8 @@ namespace
     const std::string SAVED_NEWVIEW_KEY{"saved_newview"};
     const std::string TIMESTAMP_ERROR_MSG{"INVALID TIMESTAMP"};
     const std::string TOO_LARGE_ERROR_MSG{"REQUEST TOO LARGE"};
+    const std::string TOO_BUSY_ERROR_MSG{"SERVER TOO BUSY"};
+    const std::string DUPLICATE_ERROR_MSG{"DUPLICATE REQUEST"};
 }
 
 
@@ -77,7 +77,6 @@ namespace bzn
             , std::shared_ptr<bzn::peers_beacon_base> peers
             , std::shared_ptr<bzn::options_base> options
             , std::shared_ptr<pbft_service_base> service
-            , std::shared_ptr<pbft_failure_detector_base> failure_detector
             , std::shared_ptr<bzn::crypto_base> crypto
             , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
             , std::shared_ptr<bzn::storage_base> storage
@@ -91,6 +90,8 @@ namespace bzn
         void handle_database_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session) override;
 
         void handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
+
+        void handle_swarm_error_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> session);
 
         bool is_primary() const override;
 
@@ -190,7 +191,7 @@ namespace bzn
         void broadcast(const bzn_envelope& message);
 
         void send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
-            , const std::string& msg) const;
+            , const std::string& hash, const std::string& msg) const;
 
 
         void handle_audit_heartbeat_timeout(const boost::system::error_code& ec);
@@ -242,8 +243,6 @@ namespace bzn
         std::shared_ptr<bzn::options_base> options;
 
         std::shared_ptr<pbft_service_base> service;
-
-        std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::mutex pbft_lock;
 

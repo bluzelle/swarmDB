@@ -91,12 +91,6 @@ simple_options::build_options()
                 (WS_IDLE_TIMEOUT.c_str(),
                         po::value<uint64_t>()->default_value(300000),
                         "websocket idle timeout (ms)")
-                (FD_OPER_TIMEOUT.c_str(),
-                        po::value<uint64_t>()->default_value(30000),
-                        "failure-detector operation timeout (ms)")
-                (FD_FAIL_TIMEOUT.c_str(),
-                        po::value<uint64_t>()->default_value(300000),
-                        "failure-detector second failure timeout (ms)")
                 (SWARM_INFO_ESR_ADDRESS.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS),
                         "Address of ESR Swarm Info contract")
@@ -108,7 +102,13 @@ simple_options::build_options()
                         "do not use esr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
-                        "software stack used by swarm");
+                        "software stack used by swarm")
+                (ADMISSION_WINDOW.c_str(),
+                    po::value<size_t>()->default_value(30),
+                    "admission control request window")
+                (PEER_MESSAGE_SIGNING.c_str(),
+                    po::value<bool>()->default_value(false),
+                    "should peer messages be signed/verified");
 
     po::options_description logging("Logging");
     logging.add_options()

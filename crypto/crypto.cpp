@@ -82,6 +82,10 @@ crypto::extract_payload(const bzn_envelope& msg)
         {
             return msg.checkpoint_msg();
         }
+        case bzn_envelope::kSwarmError:
+        {
+            return msg.swarm_error();
+        }
         default :
         {
             throw std::runtime_error(

@@ -77,6 +77,12 @@ namespace bzn::test
                         ));
 
 
+        EXPECT_CALL(*(this->mock_node), register_error_handler(_))
+            .Times(Exactly(1));
+
+        EXPECT_CALL(*(this->mock_node), send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _))
+            .Times(AnyNumber());
+
         EXPECT_CALL(*(this->mock_io_context), make_unique_steady_timer())
                 .Times(AnyNumber())
                 .WillOnce(
@@ -155,7 +161,6 @@ namespace bzn::test
                 , this->beacon
                 , this->options
                 , this->mock_service
-                , this->mock_failure_detector
                 , this->crypto
                 , this->operation_manager
                 , this->storage
@@ -368,6 +373,13 @@ namespace bzn::test
         pbft_msg msg;
         msg.ParseFromString(wrapped_msg->pbft());
         return msg.type() == PBFT_MSG_NEWVIEW;
+    }
+
+    bool
+    is_swarm_error(std::shared_ptr<std::string> msg)
+    {
+        bzn_envelope env;
+        return env.ParseFromString(*msg) && env.payload_case() == bzn_envelope::kSwarmError;
     }
 
     bzn_envelope

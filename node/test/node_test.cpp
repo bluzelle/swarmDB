@@ -178,6 +178,51 @@ namespace  bzn
         ASSERT_FALSE(node->register_for_message(bzn_envelope::kDatabaseMsg, [](const auto&, auto){}));
     }
 
+    TEST(node, test_that_node_doesnt_call_error_handler_on_successful_connect)
+    {
+        std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+        std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+        std::shared_ptr<bzn::crypto_base> crypto = std::shared_ptr<bzn::crypto>();
+        std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+        std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
+        std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock_io, mock_io->websocket, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
+
+        bool called{false};
+        node->register_error_handler([&called](auto &/*ep*/, auto& ec)
+        {
+            ASSERT_NE(ec, boost::system::error_code{});
+            called = true;
+        });
+
+        node->send_message_str(TEST_ENDPOINT_2, std::make_shared<std::string>("test string"));
+        mock_io->yield_until_clear();
+        ASSERT_EQ(called, false);
+        mock_io->shutdown();
+    }
+
+    TEST(node, test_that_node_calls_error_handler_on_no_connect)
+    {
+        std::shared_ptr<bzn::mock_chaos_base> mock_chaos = std::make_shared<NiceMock<bzn::mock_chaos_base>>();
+        std::shared_ptr<bzn::options_base> options = std::make_shared<bzn::options>();
+        std::shared_ptr<bzn::crypto_base> crypto = std::shared_ptr<bzn::crypto>();
+        std::shared_ptr<bzn::mock_monitor> monitor = std::make_shared<NiceMock<bzn::mock_monitor>>();
+        std::shared_ptr<bzn::asio::smart_mock_io> mock_io = std::make_shared<bzn::asio::smart_mock_io>();
+        std::shared_ptr<bzn::node_base> node = std::make_shared<bzn::node>(mock_io, mock_io->websocket, mock_chaos, TEST_ENDPOINT, crypto, options, monitor);
+
+        bool called{false};
+        node->register_error_handler([&called](auto &/*ep*/, auto& ec)
+        {
+            ASSERT_NE(ec, boost::system::error_code{});
+            called = true;
+        });
+
+        mock_io->tcp_connect_works = false;
+        node->send_message_str(TEST_ENDPOINT_2, std::make_shared<std::string>("test string"));
+        mock_io->yield_until_clear();
+        ASSERT_EQ(called, true);
+        mock_io->shutdown();
+    }
+
 #if 0
     TEST(node, test_that_wrongly_signed_messages_are_dropped)
     {

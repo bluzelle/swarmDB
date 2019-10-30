@@ -1,6 +1,5 @@
 set(test_srcs
     pbft_test.cpp
-    pbft_failure_detector_test.cpp
     pbft_audit_test.cpp
     pbft_test_common.cpp
     pbft_checkpoint_tests.cpp

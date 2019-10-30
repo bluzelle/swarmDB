@@ -81,19 +81,23 @@ session::start_idle_timeout()
 
 
 void
-session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory)
+session::open(std::shared_ptr<bzn::beast::websocket_base> ws_factory, std::function<void(const boost::system::error_code&)> callback)
 {
-    this->strand->post([self = shared_from_this(), ws_factory]()
+    this->strand->post([self = shared_from_this(), ws_factory, callback]()
     {
         std::shared_ptr<bzn::asio::tcp_socket_base> socket = self->io_context->make_unique_tcp_socket(*(self->strand));
         socket->async_connect(self->ep,
-            self->strand->wrap([self, socket, ws_factory](const boost::system::error_code& ec)
+            self->strand->wrap([self, socket, ws_factory, callback](const boost::system::error_code& ec)
             {
                 self->activity = true;
 
                 if (ec)
                 {
                     LOG(error) << "failed to connect to: " << self->ep.address().to_string() << ":" << self->ep.port() << " - " << ec.message();
+                    if (callback)
+                    {
+                        callback(ec);
+                    }
                     return;
                 }
 

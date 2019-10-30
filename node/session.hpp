@@ -60,7 +60,7 @@ namespace bzn
 
         bool is_open() const override;
 
-        void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) override;
+        void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory, std::function<void(const boost::system::error_code&)> callback) override;
         void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;
 
         void add_shutdown_handler(const bzn::session_shutdown_handler handler) override;
