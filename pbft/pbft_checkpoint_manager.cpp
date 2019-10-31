@@ -88,7 +88,14 @@ pbft_checkpoint_manager::local_checkpoint_reached(const bzn::checkpoint_t& cp)
     auto msg_ptr = std::make_shared<bzn_envelope>(msg);
     for (const auto& peer : *(this->peers_beacon->current()))
     {
-        this->node->send_maybe_signed_message(make_endpoint(peer), msg_ptr);
+        if (const auto endpoint = bzn::make_endpoint(peer))
+        {
+            this->node->send_maybe_signed_message(*endpoint, msg_ptr);
+        }
+        else
+        {
+            LOG(error) << "Unable to send_signed_message to " << peer.uuid << "-- resolver error";
+        }
     }
 
     if (cp.first == this->latest_local_checkpoint.value().first && cp.second != this->latest_local_checkpoint.value().second)

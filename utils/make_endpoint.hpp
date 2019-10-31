@@ -19,7 +19,10 @@
 
 namespace bzn
 {
-    boost::asio::ip::tcp::endpoint
-    make_endpoint(const peer_address_t& peer);
+    std::optional<boost::asio::ip::tcp::endpoint>
+    make_endpoint(const bzn::peer_address_t& peer);
+
+    std::optional<boost::asio::ip::tcp::endpoint>
+    make_endpoint(const std::string& host, const std::string& port);
 }
 

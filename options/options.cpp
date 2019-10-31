@@ -17,6 +17,7 @@
 #include <regex>
 #include <cstdint>
 #include <utils/crypto.hpp>
+#include <utils/make_endpoint.hpp>
 #include <chrono>
 
 using namespace bzn;
@@ -45,11 +46,15 @@ options::get_listener() const
 {
     try
     {
-        auto ep = boost::asio::ip::tcp::endpoint{
-            boost::asio::ip::address::from_string(this->raw_opts.get<std::string>(LISTENER_ADDRESS)),
-            this->raw_opts.get<uint16_t>(LISTENER_PORT)};
-
-        return ep;
+        if (auto ep = bzn::make_endpoint(this->raw_opts.get<std::string>(LISTENER_ADDRESS),
+            std::to_string(this->raw_opts.get<uint16_t>(LISTENER_PORT))))
+        {
+            return *ep;
+        }
+        else
+        {
+            throw std::runtime_error(std::string("\nCould not create listener -- resolver error"));
+        }
     }
     catch (std::exception& ex)
     {

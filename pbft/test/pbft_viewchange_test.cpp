@@ -356,7 +356,7 @@ namespace bzn
         for (auto const &p : TEST_PEER_LIST)
         {
             EXPECT_CALL(*(this->mock_node),
-                send_maybe_signed_message(bzn::make_endpoint(p), ResultOf(test::is_viewchange, Eq(true))))
+                send_maybe_signed_message(*bzn::make_endpoint(p), ResultOf(test::is_viewchange, Eq(true))))
                 .Times(Exactly(1))
                 .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
@@ -379,7 +379,7 @@ namespace bzn
 
         for (auto const &p : TEST_PEER_LIST)
         {
-            EXPECT_CALL(*mock_node2, send_maybe_signed_message(bzn::make_endpoint(p), ResultOf(test::is_newview, Eq(true))))
+            EXPECT_CALL(*mock_node2, send_maybe_signed_message(*bzn::make_endpoint(p), ResultOf(test::is_newview, Eq(true))))
                 .Times(Exactly(1))
                 .WillRepeatedly(Invoke([&](auto, auto wmsg)
                 {
