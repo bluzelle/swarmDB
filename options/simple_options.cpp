@@ -110,7 +110,7 @@ simple_options::build_options()
                         po::value<std::string>()->required(),
                         "software stack used by swarm")
                 (ADMISSION_WINDOW.c_str(),
-                    po::value<size_t>()->default_value(30),
+                    po::value<size_t>()->default_value(500),
                     "admission control request window")
                 (PEER_MESSAGE_SIGNING.c_str(),
                     po::value<bool>()->default_value(false),

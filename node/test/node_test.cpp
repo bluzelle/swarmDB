@@ -139,7 +139,7 @@ namespace  bzn
         EXPECT_EQ(mock_io->socket_count, 3u);
     }
 
-    TEST_F(node_test2, test_replace_dead_session)
+    TEST_F(node_test2, DISABLED_test_replace_dead_session)
     {
         this->node->start(nullptr);
 

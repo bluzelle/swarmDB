@@ -33,6 +33,8 @@ namespace bzn {
             void());
         MOCK_CONST_METHOD0(is_open,
             bool());
+        MOCK_CONST_METHOD0(is_closing,
+            bool());
         MOCK_METHOD2(open,
             void(std::shared_ptr<bzn::beast::websocket_base> ws_factory, std::function<void(const boost::system::error_code&)>));
         MOCK_METHOD1(accept,

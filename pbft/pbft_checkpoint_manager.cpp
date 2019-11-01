@@ -22,7 +22,7 @@
 
 namespace
 {
-    const std::chrono::seconds CHECKPOINT_CATCHUP_GRACE_PERIOD{std::chrono::seconds(30)};
+    const std::chrono::milliseconds CHECKPOINT_CATCHUP_GRACE_PERIOD{std::chrono::milliseconds(100)};
 }
 
 using namespace bzn;

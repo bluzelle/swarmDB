@@ -58,6 +58,11 @@ namespace bzn
         virtual bool is_open() const = 0;
 
         /**
+         * Is the underlying socket in the process of closing? (subject to race conditions)
+         */
+        virtual bool is_closing() const = 0;
+
+        /**
          * Get the id associated with this session
          * @return id
          */
