@@ -36,16 +36,19 @@ namespace bzn
         request.set_sender(TEST_NODE_UUID);
 
         // the first time we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request);
 
         auto request2 = bzn_envelope(request);
 
         // this time no pre-prepare should be issued
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(0));
-        this->handle_request(request2);
+        std::shared_ptr<bzn::mock_session_base> session = std::make_shared<bzn::mock_session_base>();
+        EXPECT_CALL(*session, send_message(ResultOf(test::is_swarm_error, Eq(true))));
+
+        this->handle_request(request2, session);
     }
 
     TEST_F(pbft_proto_test, similar_request_generates_preprepare)
@@ -63,7 +66,7 @@ namespace bzn
         request.set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request);
 
@@ -73,7 +76,7 @@ namespace bzn
         request2.set_timestamp(request2.timestamp() + 1);
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request2);
 
@@ -87,7 +90,7 @@ namespace bzn
         request3.set_database_msg(dmsg3.SerializeAsString());
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request3);
     }
@@ -107,7 +110,7 @@ namespace bzn
         request.set_sender(TEST_NODE_UUID);
 
         // we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request);
 
@@ -116,7 +119,7 @@ namespace bzn
         request2.set_sender(SECOND_NODE_UUID);
 
         // again we should get pre-prepare messages
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(TEST_PEER_LIST.size()));
         this->handle_request(request2);
     }
@@ -135,9 +138,13 @@ namespace bzn
         request.set_sender(TEST_NODE_UUID);
 
         // we should NOT get pre-prepare messages since this is an old request
-        EXPECT_CALL(*this->mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
+        EXPECT_CALL(*this->mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(test::is_preprepare, Eq(true))))
             .Times(Exactly(0));
-        this->handle_request(request);
+
+        std::shared_ptr<bzn::mock_session_base> session = std::make_shared<bzn::mock_session_base>();
+        EXPECT_CALL(*session, send_message(ResultOf(test::is_swarm_error, Eq(true))));
+
+        this->handle_request(request, session);
     }
 
     TEST_F(pbft_proto_test, range_test)

@@ -15,7 +15,6 @@
 #pragma once
 
 #include <pbft/pbft_service_base.hpp>
-#include <pbft/pbft_failure_detector_base.hpp>
 #include <include/boost_asio_beast.hpp>
 #include <unordered_map>
 
@@ -46,7 +45,6 @@ namespace bzn
         void send_execute_response(const std::shared_ptr<pbft_operation>& op);
 
         uint64_t next_request_sequence = 1;
-        std::shared_ptr<pbft_failure_detector_base> failure_detector;
 
         std::unordered_map<uint64_t, std::shared_ptr<pbft_operation>> waiting_operations;
 

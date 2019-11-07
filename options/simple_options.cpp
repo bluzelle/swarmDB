@@ -94,12 +94,6 @@ simple_options::build_options()
                 (WS_IDLE_TIMEOUT.c_str(),
                         po::value<uint64_t>()->default_value(300000),
                         "websocket idle timeout (ms)")
-                (FD_OPER_TIMEOUT.c_str(),
-                        po::value<uint64_t>()->default_value(30000),
-                        "failure-detector operation timeout (ms)")
-                (FD_FAIL_TIMEOUT.c_str(),
-                        po::value<uint64_t>()->default_value(300000),
-                        "failure-detector second failure timeout (ms)")
                 (SWARM_INFO_ESR_ADDRESS.c_str(),
                         po::value<std::string>()->default_value(bzn::utils::DEFAULT_SWARM_INFO_ESR_ADDRESS),
                         "Address of ESR Swarm Info contract")
@@ -114,7 +108,13 @@ simple_options::build_options()
                         "do not use cpr as a peer source")
                 (STACK.c_str(),
                         po::value<std::string>()->required(),
-                        "software stack used by swarm");
+                        "software stack used by swarm")
+                (ADMISSION_WINDOW.c_str(),
+                    po::value<size_t>()->default_value(30),
+                    "admission control request window")
+                (PEER_MESSAGE_SIGNING.c_str(),
+                    po::value<bool>()->default_value(false),
+                    "should peer messages be signed/verified");
 
     po::options_description logging("Logging");
     logging.add_options()
@@ -285,8 +285,6 @@ simple_options::validate_options()
 bool
 simple_options::handle_config_file_options()
 {
-    Json::Value json;
-
     std::ifstream ifile;
     ifile.exceptions(std::ios::failbit);
 
@@ -299,10 +297,13 @@ simple_options::handle_config_file_options()
         throw std::runtime_error("Failed to load: " + config_file + " : " + strerror(errno));
     }
 
-    Json::Reader reader;
-    if (!reader.parse(ifile, json))
+    Json::CharReaderBuilder rbuilder;
+    std::string parse_err;
+
+    Json::Value json;
+    if (!Json::parseFromStream(rbuilder, ifile, &json, &parse_err))
     {
-        throw std::runtime_error("Failed to parse: " + config_file + " : " + reader.getFormattedErrorMessages());
+        throw std::runtime_error("Failed to parse: " + config_file + " : " + parse_err);
     }
 
     if (!json.isObject())

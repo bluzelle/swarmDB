@@ -66,7 +66,7 @@ namespace bzn
         /**
          * Create a new websocket connection for this session
          */
-        virtual void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory) = 0;
+        virtual void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory, std::function<void(const boost::system::error_code&)> callback) = 0;
 
         /**
          * Accept an incoming connection on some websocket

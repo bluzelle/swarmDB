@@ -1,4 +1,4 @@
-// Copyrigh (C) 2018 Bluzelle 
+// Copyright (C) 2018 Bluzelle
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License, version 3,
@@ -39,7 +39,6 @@ pbft::pbft(
     , std::shared_ptr<bzn::peers_beacon_base> peers
     , std::shared_ptr<bzn::options_base> options
     , std::shared_ptr<pbft_service_base> service
-    , std::shared_ptr<pbft_failure_detector_base> failure_detector
     , std::shared_ptr<bzn::crypto_base> crypto
     , std::shared_ptr<bzn::pbft_operation_manager> operation_manager
     , std::shared_ptr<bzn::storage_base> storage
@@ -50,7 +49,6 @@ pbft::pbft(
     , uuid(options->get_uuid())
     , options(options)
     , service(std::move(service))
-    , failure_detector(std::move(failure_detector))
     , io_context(io_context)
     , audit_heartbeat_timer(this->io_context->make_unique_steady_timer())
     , crypto(std::move(crypto))
@@ -87,6 +85,26 @@ pbft::start()
             this->node->register_for_message(bzn_envelope::kDatabaseResponse,
                 std::bind(&pbft::handle_database_response_message, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 
+            this->node->register_for_message(bzn_envelope::kSwarmError, [weak_this = weak_from_this()](auto msg, auto session)
+                {
+                    if (auto strong_this = weak_this.lock())
+                    {
+                        strong_this->handle_swarm_error_response_message(msg, session);
+                    }
+                });
+
+            this->node->register_error_handler([weak_this = this->weak_from_this()](const boost::asio::ip::tcp::endpoint& ep, const boost::system::error_code& ec)
+            {
+                if (auto strong_this = weak_this.lock())
+                {
+                    auto prim = strong_this->get_current_primary();
+                    if (ec && prim.has_value() && ep == bzn::make_endpoint(*prim))
+                    {
+                        strong_this->handle_failure();
+                    }
+                }
+            });
+
             this->checkpoint_manager->start();
 
             this->audit_heartbeat_timer->expires_from_now(HEARTBEAT_INTERVAL);
@@ -94,11 +112,9 @@ pbft::start()
                 std::bind(&pbft::handle_audit_heartbeat_timeout, shared_from_this(), std::placeholders::_1));
 
             this->service->register_execute_handler(
-                [weak_this = this->weak_from_this(), fd = this->failure_detector]
+                [weak_this = this->weak_from_this()]
                 (std::shared_ptr<pbft_operation> op)
                 {
-                    fd->request_executed(op->get_request_hash());
-
                     auto strong_this = weak_this.lock();
                     if (strong_this)
                     {
@@ -125,17 +141,6 @@ pbft::start()
                     }
                 }
             );
-
-            this->failure_detector->register_failure_handler(
-                [weak_this = this->weak_from_this()]()
-                {
-                    auto strong_this = weak_this.lock();
-                    if (strong_this)
-                    {
-                        strong_this->handle_failure();
-                    }
-                }
-                );
 
             auto peers = this->peers_beacon->ordered();
             this->pinned_primary = peers->at(this->view.value() % peers->size());
@@ -194,7 +199,7 @@ pbft::handle_membership_message(const bzn_envelope& msg, std::shared_ptr<bzn::se
         return;
     }
 
-    if ((!msg.sender().empty()) && (!this->crypto->verify(msg)))
+    if ((!msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -242,7 +247,7 @@ pbft::handle_message(const pbft_msg& msg, const bzn_envelope& original_msg)
         return;
     }
 
-    if ((!original_msg.sender().empty()) && (!this->crypto->verify(original_msg)))
+    if ((!original_msg.sender().empty()) && this->options->get_peer_message_signing() && (!this->crypto->verify(original_msg)))
     {
         LOG(error) << "Dropping message with invalid signature: " << original_msg.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
         return;
@@ -287,13 +292,6 @@ pbft::preliminary_filter_msg(const pbft_msg& msg)
             LOG(debug) << "Dropping message because it has the wrong view number";
             return false;
         }
-
-        if (msg.sequence() <= this->get_low_water_mark())
-        {
-            LOG(debug) << boost::format("Dropping message because sequence number %1% <= %2%") % msg.sequence()
-                % this->get_low_water_mark();
-            return false;
-        }
     }
 
     return true;
@@ -312,25 +310,34 @@ pbft::setup_request_operation(const bzn_envelope& request_env, const bzn::hash_t
 
 void
 pbft::send_error_response(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session
-    , const std::string& msg) const
+    , const std::string& hash, const std::string& msg) const
 {
     database_msg req;
     if (session && req.ParseFromString(request_env.database_msg()))
     {
-        database_response resp;
-        *resp.mutable_header() = req.header();
-        resp.mutable_error()->set_message(msg);
+        swarm_error err;
+        *err.mutable_message() = msg;
+        *err.mutable_data() = std::to_string(req.header().nonce());
+        *err.mutable_hash() = hash;
 
-        session->send_message(std::make_shared<std::string>(this->wrap_message(resp).SerializeAsString()));
+        bzn_envelope response;
+        response.set_swarm_error(err.SerializeAsString());
+        response.set_sender(this->uuid);
+        response.set_timestamp(this->now());
+        response.set_swarm_id(this->options->get_swarm_id());
+
+        session->send_message(std::make_shared<std::string>(response.SerializeAsString()));
     }
 }
 
 void
 pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<session_base>& session)
 {
+    const auto hash = this->crypto->hash(request_env);
+
     if (request_env.timestamp() < (this->now() - MAX_REQUEST_AGE_MS) || request_env.timestamp() > (this->now() + MAX_REQUEST_AGE_MS))
     {
-        this->send_error_response(request_env, session, TIMESTAMP_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, TIMESTAMP_ERROR_MSG);
 
         LOG(info) << "Rejecting request because it is outside allowable timestamp range: "
                 << request_env.ShortDebugString();
@@ -344,13 +351,11 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
     const size_t OVERHEAD_SIZE{512};
     if (!request_env.database_msg().empty() && request_env.database_msg().size() >= (bzn::MAX_VALUE_SIZE - OVERHEAD_SIZE))
     {
-        this->send_error_response(request_env, session, TOO_LARGE_ERROR_MSG);
+        this->send_error_response(request_env, session, hash, TOO_LARGE_ERROR_MSG);
 
         LOG(warning) << "Rejecting request because it is too large [" << request_env.database_msg().size() << " bytes]";
         return;
     }
-
-    const auto hash = this->crypto->hash(request_env);
 
     if (session)
     {
@@ -368,11 +373,18 @@ pbft::handle_request(const bzn_envelope& request_env, const std::shared_ptr<sess
         return;
     }
 
+    if ((this->next_issued_sequence_number.value()) - this->last_executed_sequence_number > this->options->get_admission_window())
+    {
+        LOG(debug) << "Rejecting request because we're too busy";
+        this->send_error_response(request_env, session, hash, TOO_BUSY_ERROR_MSG);
+        return;
+    }
+
     // keep track of what requests we've seen based on timestamp and only send preprepares once
     if (this->already_seen_request(request_env, hash))
     {
-        // TODO: send error message to client
         LOG(debug) << "Rejecting duplicate request: " << request_env.ShortDebugString().substr(0, MAX_MESSAGE_SIZE);
+        this->send_error_response(request_env, session, hash, DUPLICATE_ERROR_MSG);
         return;
     }
 
@@ -397,16 +409,18 @@ pbft::forward_request_to_primary(const bzn_envelope& request_env)
         return;
     }
 
-    this->node
-        ->send_signed_message(bzn::make_endpoint(*primary), std::make_shared<bzn_envelope>(request_env));
+    if (const auto endpoint = bzn::make_endpoint(*primary))
+    {
+        this->node->send_signed_message(*endpoint, std::make_shared<bzn_envelope>(request_env));
+    }
+    else
+    {
+        LOG(error) << "Unable to forward request to primary: " << (*primary).uuid << " -- resolver error";
+        return;
+    }
 
     const bzn::hash_t req_hash = this->crypto->hash(request_env);
     LOG(info) << "Forwarded request to primary, " << bzn::bytes_to_debug_string(req_hash);
-
-    if (this->is_view_valid())
-    {
-        this->failure_detector->request_seen(req_hash);
-    }
 }
 
 
@@ -581,7 +595,14 @@ pbft::broadcast(const bzn_envelope& msg)
 
     for (const auto& peer : *this->peers_beacon->current())
     {
-        this->node->send_signed_message(make_endpoint(peer), msg_ptr);
+        if (const auto endpoint = bzn::make_endpoint(peer))
+        {
+            this->node->send_maybe_signed_message(*endpoint, msg_ptr);
+        }
+        else
+        {
+            LOG(error) << "Unable to broadcast to " << uuid << " -- resolver error";
+        }
     }
 }
 
@@ -617,10 +638,17 @@ pbft::async_signed_broadcast(std::shared_ptr<bzn_envelope> msg_env)
     auto targets = std::make_shared<std::vector<boost::asio::ip::tcp::endpoint>>();
     for (const auto& peer : *this->peers_beacon->current())
     {
-        targets->emplace_back(bzn::make_endpoint(peer));
+        if (const auto endpoint = bzn::make_endpoint(peer))
+        {
+            targets->emplace_back(*endpoint);
+        }
+        else
+        {
+            LOG(error) << "Unable to async_signed_broadcast to " << peer.uuid << "-- resolver error";
+        }
     }
 
-    this->node->multicast_signed_message(std::move(targets), msg_env);
+    this->node->multicast_maybe_signed_message(std::move(targets), msg_env);
 }
 
 void
@@ -949,6 +977,30 @@ pbft::handle_database_response_message(const bzn_envelope& msg, std::shared_ptr<
     LOG(error) << "failed to read database response";
 }
 
+void
+pbft::handle_swarm_error_response_message(const bzn_envelope& msg, std::shared_ptr<bzn::session_base> /*session*/)
+{
+    swarm_error err;
+
+    std::lock_guard<std::mutex> lock(this->pbft_lock);
+
+    if (err.ParseFromString(msg.swarm_error()))
+    {
+        if (const auto session_it = this->sessions_waiting_on_forwarded_requests.find(err.hash());
+            session_it != this->sessions_waiting_on_forwarded_requests.end())
+        {
+            session_it->second->send_message(std::make_shared<bzn::encoded_message>(msg.SerializeAsString()));
+            this->monitor->finish_timer(bzn::statistic::request_latency, err.hash());
+            return;
+        }
+
+        LOG(warning) << "session not found for swarm error response";
+        return;
+    }
+
+    LOG(error) << "failed to read swarm error response";
+}
+
 uint64_t
 pbft::get_low_water_mark()
 {
@@ -998,7 +1050,8 @@ pbft::validate_and_extract_checkpoint_hashes(const pbft_msg &viewchange_message)
         const bzn_envelope& envelope{viewchange_message.checkpoint_messages(i)};
         checkpoint_msg checkpoint_message;
 
-        if (!this->crypto->verify(envelope) || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
+        if ((this->options->get_peer_message_signing() && !this->crypto->verify(envelope))
+            || !this->is_peer(envelope.sender()) || !checkpoint_message.ParseFromString(envelope.checkpoint_msg()))
         {
             LOG (error) << "Checkpoint validation failure - unable to verify envelope";
             continue;
@@ -1019,7 +1072,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
 {
     const bzn_envelope& pre_prepare_envelope{proof.pre_prepare()};
 
-    if (!this->is_peer(pre_prepare_envelope.sender()) || !this->crypto->verify(pre_prepare_envelope))
+    if (!this->is_peer(pre_prepare_envelope.sender())
+        || (this->options->get_peer_message_signing() && !this->crypto->verify(pre_prepare_envelope)))
     {
         LOG(error) << "is_valid_prepared_proof - a pre prepare message has a bad envelope, or the sender is not in the peers list";
         LOG(error) << "Sender: " << pre_prepare_envelope.sender() << " is " << (this->is_peer(pre_prepare_envelope.sender()) ? "" : "not ") << "a peer";
@@ -1038,7 +1092,8 @@ pbft::is_valid_prepared_proof(const prepared_proof& proof, uint64_t valid_checkp
     for (int j{0}; j < proof.prepare_size(); ++j)
     {
         bzn_envelope prepare_envelope{proof.prepare(j)};
-        if (!this->is_peer(prepare_envelope.sender()) || !this->crypto->verify(prepare_envelope))
+        if (!this->is_peer(prepare_envelope.sender()) ||
+            (this->options->get_peer_message_signing() && !this->crypto->verify(prepare_envelope)))
         {
             LOG(error) << "is_valid_prepared_proof - a prepare message has a bad envelope, "
                           "the sender may not be in the peer list, or the envelope failed cryptographic verification";
@@ -1206,7 +1261,7 @@ pbft::is_valid_newview_message(const pbft_msg& theirs, const bzn_envelope& origi
 
     for (int i{0};i < theirs.pre_prepare_messages_size();++i)
     {
-        if (!this->crypto->verify(theirs.pre_prepare_messages(i)))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(theirs.pre_prepare_messages(i)))
         {
             LOG(error) <<  "is_valid_newview_message - unable to verify thier pre prepare message";
             return false;
@@ -1388,7 +1443,7 @@ pbft::save_checkpoint(const pbft_msg& msg)
     {
         const bzn_envelope& original_checkpoint{msg.checkpoint_messages(i)};
 
-        if (!this->crypto->verify(original_checkpoint))
+        if (this->options->get_peer_message_signing() && !this->crypto->verify(original_checkpoint))
         {
             LOG(error) << "ignoring invalid checkpoint message";
             continue;

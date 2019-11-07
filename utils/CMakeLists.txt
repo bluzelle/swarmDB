@@ -11,7 +11,7 @@ add_library(utils STATIC
     utils_interface.hpp
     esr_peer_info.cpp
     http_req.cpp
-)
+    test/make_endpoint_test.cpp)
 
 target_link_libraries(utils ${JSONCPP_LIBRARIES} ${OPENSSL_LIBRARIES})
 

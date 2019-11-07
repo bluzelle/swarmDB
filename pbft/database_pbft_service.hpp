@@ -16,7 +16,6 @@
 
 #include <include/boost_asio_beast.hpp>
 #include <crud/crud_base.hpp>
-#include <pbft/pbft_failure_detector_base.hpp>
 #include <pbft/pbft_service_base.hpp>
 #include <monitor/monitor_base.hpp>
 #include <storage/storage_base.hpp>

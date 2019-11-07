@@ -80,6 +80,12 @@ node::register_for_message(const bzn_envelope::PayloadCase type, bzn::protobuf_h
     return true;
 }
 
+void
+node::register_error_handler(std::function<void(const boost::asio::ip::tcp::endpoint& ep
+    , const boost::system::error_code&)> error_handler)
+{
+    this->error_callback = std::move(error_handler);
+}
 
 void
 node::do_accept()
@@ -200,7 +206,13 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
                 , this->options
                 , std::nullopt
                 , this->client_ctx);
-        session->open(this->websocket);
+        session->open(this->websocket, [self = shared_from_this(), ep](const boost::system::error_code& ec)
+        {
+            if (ec && self->error_callback)
+            {
+                self->error_callback(ep, ec);
+            }
+        });
         this->sessions.insert_or_assign(key, session);
     }
     return session;
@@ -253,13 +265,73 @@ node::send_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope>
     try
     {
         auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
-        boost::asio::ip::tcp::endpoint endpoint{bzn::make_endpoint(point_of_contact_address)};
-        this->send_signed_message(endpoint, msg);
+
+        if (const auto endpoint = bzn::make_endpoint(point_of_contact_address))
+        {
+            this->send_signed_message(*endpoint, msg);
+            return;
+        }
     }
     catch (const std::runtime_error& err)
     {
         LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
+        return;
     }
+
+    LOG(error) << "Unable send_signed_message to " << uuid << " -- resolver error";
+}
+
+
+void
+node::send_maybe_signed_message(const boost::asio::ip::tcp::endpoint& ep, std::shared_ptr<bzn_envelope> msg)
+{
+    if (this->options->get_peer_message_signing())
+    {
+        this->find_session(ep)->send_signed_message(msg);
+    }
+    else
+    {
+        msg->set_sender(this->options->get_uuid());
+        msg->set_swarm_id(this->options->get_swarm_id());
+        this->find_session(ep)->send_message(std::make_shared<std::string>(msg->SerializeAsString()));
+    }
+}
+
+
+void
+node::multicast_maybe_signed_message(std::shared_ptr<std::vector<boost::asio::ip::tcp::endpoint>> eps, std::shared_ptr<bzn_envelope> msg)
+{
+    this->io_context->post(
+        [self =  shared_from_this(), msg, eps]()
+        {
+            for (const auto& ep : *eps)
+            {
+                self->send_maybe_signed_message(ep, msg);
+            }
+        });
+}
+
+
+void
+node::send_maybe_signed_message(const bzn::uuid_t& uuid, std::shared_ptr<bzn_envelope> msg)
+{
+    try
+    {
+        auto point_of_contact_address = this->pbft->get_peer_by_uuid(uuid);
+
+        if (const auto endpoint = bzn::make_endpoint(point_of_contact_address))
+        {
+            this->send_maybe_signed_message(*endpoint, msg);
+            return;
+        }
+    }
+    catch (const std::runtime_error& err)
+    {
+        LOG(error) << "Unable to send message to " << uuid << ": " << err.what();
+        return;
+    }
+
+    LOG(error) << "Unable send_maybe_signed_message to " << uuid << " -- resolver error";
 }
 
 

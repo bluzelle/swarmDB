@@ -47,10 +47,6 @@ namespace bzn
 
         std::chrono::milliseconds get_ws_idle_timeout() const override;
 
-        std::chrono::milliseconds get_fd_oper_timeout() const override;
-
-        std::chrono::milliseconds get_fd_fail_timeout() const override;
-
         size_t get_audit_mem_size() const override;
 
         std::string get_state_dir() const override;
@@ -85,6 +81,10 @@ namespace bzn
 
         std::string get_wss_server_dh_params_file() const override;
 
+
+        size_t get_admission_window() const override;
+
+        bool get_peer_message_signing() const override;
 
     private:
         size_t parse_size(const std::string& key) const;

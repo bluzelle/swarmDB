@@ -32,12 +32,12 @@ bzn::smart_mock_node::smart_mock_node()
             }
             ));
 
-    EXPECT_CALL(*this, multicast_signed_message(_, _)).WillRepeatedly(Invoke(
+    EXPECT_CALL(*this, multicast_maybe_signed_message(_, _)).WillRepeatedly(Invoke(
             [&](auto endpoints, auto message)
             {
                 for (const auto ep : *endpoints)
                 {
-                    this->send_signed_message(ep, message);
+                    this->send_maybe_signed_message(ep, message);
                 }
             }));
 }

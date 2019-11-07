@@ -34,7 +34,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_requests_fire_preprepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft->handle_database_message(this->request_msg, this->mock_session);
@@ -71,7 +71,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_different_requests_get_different_sequences)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).WillRepeatedly(Invoke(save_sequences));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).WillRepeatedly(Invoke(save_sequences));
 
         database_msg req, req2;
         req.mutable_header()->set_nonce(5);
@@ -86,7 +86,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_preprepare_triggers_prepare)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -95,7 +95,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_wrong_view_preprepare_rejected)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(0));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(0));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_view(6);
@@ -106,7 +106,7 @@ namespace bzn::test
     TEST_F(pbft_test, test_no_duplicate_prepares_same_sequence_number)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(TEST_PEER_LIST.size()));
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), _)).Times(Exactly(TEST_PEER_LIST.size()));
 
         pbft_msg preprepare2(this->preprepare_msg);
         preprepare2.set_request_hash("some other hash");
@@ -118,9 +118,9 @@ namespace bzn::test
     TEST_F(pbft_test, test_commit_messages_sent)
     {
         this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_commit, Eq(true))))
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_commit, Eq(true))))
                 .Times(Exactly(TEST_PEER_LIST.size()));
 
         this->pbft->handle_message(this->preprepare_msg, default_original_msg);
@@ -223,26 +223,6 @@ namespace bzn::test
         service.register_execute_handler([](auto){});
 
         service.apply_operation(op);
-    }
-
-    TEST_F(pbft_test, messages_before_low_water_mark_dropped)
-    {
-        this->build_pbft();
-        EXPECT_CALL(*mock_node, send_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_prepare, Eq(true))))
-                .Times(Exactly(0));
-
-        this->preprepare_msg.set_sequence(this->pbft->get_low_water_mark());
-        pbft->handle_message(preprepare_msg, default_original_msg);
-    }
-
-    TEST_F(pbft_test, request_redirect_to_primary_notifies_failure_detector) {
-        EXPECT_CALL(*mock_failure_detector, request_seen(_)).Times(Exactly(1));
-
-        this->uuid = SECOND_NODE_UUID;
-        this->build_pbft();
-
-        EXPECT_FALSE(pbft->is_primary());
-        pbft->handle_database_message(this->request_msg, this->mock_session);
     }
 
     MATCHER(operation_ptr_has_session, "")
@@ -357,4 +337,54 @@ namespace bzn::test
 
         this->pbft->handle_database_message(this->request_msg, this->mock_session);
     }
+
+    TEST_F(pbft_test, test_admission_control)
+    {
+        const size_t reqs{5};
+        this->options->get_mutable_simple_options().set("admission_window", std::to_string(reqs));
+        this->build_pbft();
+        EXPECT_CALL(*mock_node, send_maybe_signed_message(A<const boost::asio::ip::tcp::endpoint&>(), ResultOf(is_preprepare, Eq(true))))
+            .Times(Exactly(TEST_PEER_LIST.size() * reqs));
+
+        this->request_msg.set_timestamp(now());
+        for (size_t i = 0; i < reqs; i++)
+        {
+            pbft->handle_database_message(this->request_msg, this->mock_session);
+            this->request_msg.set_timestamp(this->request_msg.timestamp() + 1);
+        }
+
+        EXPECT_CALL(*mock_session, send_message(_))
+            .Times(Exactly(1))
+            .WillOnce(Invoke([&](auto& msg)
+        {
+            bzn_envelope env;
+            ASSERT_TRUE(env.ParseFromString(*msg));
+            ASSERT_EQ(env.payload_case(), bzn_envelope::kSwarmError);
+
+            swarm_error err;
+            ASSERT_TRUE(err.ParseFromString(env.swarm_error()));
+            ASSERT_EQ(err.message(), "SERVER TOO BUSY");
+        }));
+
+        pbft->handle_database_message(this->request_msg, this->mock_session);
+
+    }
+
+    TEST_F(pbft_test, too_big_request_generates_error)
+    {
+        this->build_pbft();
+
+        database_msg dmsg;
+        dmsg.mutable_create()->set_key(std::string("key"));
+        dmsg.mutable_create()->set_value(std::string(bzn::MAX_VALUE_SIZE + 1, 'a'));
+
+        bzn_envelope request;
+        request.set_database_msg(dmsg.SerializeAsString());
+        request.set_sender(TEST_NODE_UUID);
+
+        EXPECT_CALL(*this->mock_session, send_message(ResultOf(test::is_swarm_error, Eq(true))));
+        pbft->handle_database_message(request, this->mock_session);
+    }
+
+
 }

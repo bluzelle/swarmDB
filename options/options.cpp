@@ -17,6 +17,7 @@
 #include <regex>
 #include <cstdint>
 #include <utils/crypto.hpp>
+#include <utils/make_endpoint.hpp>
 #include <chrono>
 
 using namespace bzn;
@@ -45,11 +46,15 @@ options::get_listener() const
 {
     try
     {
-        auto ep = boost::asio::ip::tcp::endpoint{
-            boost::asio::ip::address::from_string(this->raw_opts.get<std::string>(LISTENER_ADDRESS)),
-            this->raw_opts.get<uint16_t>(LISTENER_PORT)};
-
-        return ep;
+        if (auto ep = bzn::make_endpoint(this->raw_opts.get<std::string>(LISTENER_ADDRESS),
+            std::to_string(this->raw_opts.get<uint16_t>(LISTENER_PORT))))
+        {
+            return *ep;
+        }
+        else
+        {
+            throw std::runtime_error(std::string("\nCould not create listener -- resolver error"));
+        }
     }
     catch (std::exception& ex)
     {
@@ -140,22 +145,6 @@ options::get_ws_idle_timeout() const
     //TODO: Remove this?
     return std::chrono::milliseconds(raw_opts.get<uint64_t>(WS_IDLE_TIMEOUT));
 }
-
-std::chrono::milliseconds
-options::get_fd_oper_timeout() const
-{
-    //TODO: Remove this?
-    return std::chrono::milliseconds(raw_opts.get<uint64_t>(FD_OPER_TIMEOUT));
-}
-
-
-std::chrono::milliseconds
-options::get_fd_fail_timeout() const
-{
-    //TODO: Remove this?
-    return std::chrono::milliseconds(raw_opts.get<uint64_t>(FD_FAIL_TIMEOUT));
-}
-
 
 
 size_t
@@ -296,4 +285,16 @@ std::string
 options::get_wss_server_dh_params_file() const
 {
     return this->raw_opts.get<std::string>(WSS_SERVER_DH_PARAMS_FILE);
+}
+
+size_t
+options::get_admission_window() const
+{
+    return this->raw_opts.get<size_t>(ADMISSION_WINDOW);
+}
+
+bool
+options::get_peer_message_signing() const
+{
+    return this->raw_opts.get<bool>(PEER_MESSAGE_SIGNING);
 }
