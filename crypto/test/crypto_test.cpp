@@ -79,7 +79,63 @@ public:
 
 TEST_F(crypto_test, messages_use_my_public_key)
 {
+    // bzn::kPbft
     EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kDatabaseMsg
+    this->msg.set_database_msg("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kPbftInternalRequest;
+    this->msg.set_pbft_internal_request("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kDatabaseResponse
+    this->msg.set_database_response("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kJson
+    this->msg.set_json("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kAudit
+    this->msg.set_audit("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kPbftMembership
+    this->msg.set_pbft_membership("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kStatusRequest
+    this->msg.set_status_request("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kStatusResponse
+    this->msg.set_status_response("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kCheckpointMsg
+    this->msg.set_checkpoint_msg("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // bzn_envelope::kSwarmError
+    this->msg.set_swarm_error("pretend this is a serialized protobuf message");
+    EXPECT_TRUE(crypto->sign(msg));
+    EXPECT_EQ(msg.sender(), this->options->get_uuid());
+
+    // invalid type throws
+    this->msg.clear_swarm_error();
+    EXPECT_THROW(crypto->sign(msg), std::exception);
     EXPECT_EQ(msg.sender(), this->options->get_uuid());
 }
 
