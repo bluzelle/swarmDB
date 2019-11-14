@@ -186,6 +186,19 @@ TEST_F(peers_beacon_test, test_url)
     ASSERT_EQ(peers->current()->size(), 2U);
 }
 
+TEST_F(peers_beacon_test, cpr_fetch_constructs_correct_endpoint)
+{
+    const std::string test_url = "https://example.org";
+    const std::string test_swarm_id = "the_best_swarm_to_ever_swarm_this_side_of_the_mississippi";
+    const std::string correct_url = test_url + "/swarms/" + test_swarm_id;
+
+    EXPECT_CALL(*(this->opt), get_swarm_id()).WillRepeatedly(Return(test_swarm_id));
+    this->inner_opt.set(bzn::option_names::CPR_URL, test_url);
+
+    EXPECT_CALL(*(this->utils), sync_req(correct_url, "")).Times(Exactly(1)).WillOnce(Return(valid_peers));
+    ASSERT_TRUE(peers->refresh());
+}
+
 TEST_F(peers_beacon_test, test_esr)
 {
     bzn::peer_address_t alice("alice.com", 8080, "alice", "alice's key");
@@ -193,6 +206,8 @@ TEST_F(peers_beacon_test, test_esr)
     bzn::uuid_t swarm_id = "foo";
     std::string esr_address = "bar";
     std::string esr_url = "example.tld";
+
+    this->inner_opt.set(bzn::option_names::IGNORE_CPR, "true");
 
     EXPECT_CALL(*(this->opt), get_bootstrap_peers_url()).WillRepeatedly(Return(""));
     EXPECT_CALL(*(this->opt), get_bootstrap_peers_file()).WillRepeatedly(Return(""));

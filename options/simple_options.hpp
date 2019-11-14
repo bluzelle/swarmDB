@@ -27,6 +27,7 @@ namespace bzn::option_names
     const std::string PEERS_REFRESH_INTERVAL_SECONDS = "peers_refresh_interval_seconds";
     const std::string BOOTSTRAP_PEERS_FILE = "bootstrap_file";
     const std::string BOOTSTRAP_PEERS_URL = "bootstrap_url";
+    const std::string CPR_URL = "cpr_url";
     const std::string DEBUG_LOGGING = "debug_logging";
     const std::string LISTENER_ADDRESS = "listener_address";
     const std::string LISTENER_PORT = "listener_port";
@@ -69,6 +70,7 @@ namespace bzn::option_names
     const std::string SWARM_INFO_ESR_ADDRESS = "swarm_info_esr_address";
     const std::string SWARM_INFO_ESR_URL = "swarm_info_esr_url";
     const std::string IGNORE_ESR = "ignore_esr";
+    const std::string IGNORE_CPR = "ignore_cpr";
 
     const std::string STACK = "stack";
 
