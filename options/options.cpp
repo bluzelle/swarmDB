@@ -113,8 +113,15 @@ options::get_uuid() const
         return this->raw_opts.get<std::string>(NODE_UUID);
     }
 
-    std::string pubkey_raw = bzn::utils::crypto::read_pem_file(this->raw_opts.get<std::string>(NODE_PUBKEY_FILE), "PUBLIC KEY");
-    return boost::beast::detail::base64_encode(pubkey_raw);
+    static std::string my_uuid{};
+    if (my_uuid.empty())
+    {
+        std::string pubkey_raw = bzn::utils::crypto::read_pem_file(this->raw_opts.get<std::string>(NODE_PUBKEY_FILE)
+            , "PUBLIC KEY");
+        my_uuid = boost::beast::detail::base64_encode(pubkey_raw);
+    }
+
+    return my_uuid;
 }
 
 bzn::swarm_id_t

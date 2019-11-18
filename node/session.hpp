@@ -59,6 +59,7 @@ namespace bzn
         bzn::session_id get_session_id() override { return this->session_id; }
 
         bool is_open() const override;
+        bool is_closing() const override;
 
         void open(std::shared_ptr<bzn::beast::websocket_base> ws_factory, std::function<void(const boost::system::error_code&)> callback) override;
         void accept(std::shared_ptr<bzn::beast::websocket_stream_base> ws) override;

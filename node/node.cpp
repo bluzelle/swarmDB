@@ -191,7 +191,7 @@ node::find_session(const boost::asio::ip::tcp::endpoint& ep)
     std::lock_guard<std::mutex> lock(this->session_map_mutex);
     auto key = this->key_from_ep(ep);
 
-    if (this->sessions.find(key) == this->sessions.end() || !(session = this->sessions.at(key).lock()) || !session->is_open())
+    if (this->sessions.find(key) == this->sessions.end() || !(session = this->sessions.at(key).lock()) || session->is_closing())
     {
         session = std::make_shared<bzn::session>(
                 this->io_context

@@ -370,6 +370,12 @@ session::is_open() const
     return this->websocket && this->websocket->is_open() && !this->closing;
 }
 
+bool
+session::is_closing() const
+{
+    return this->closing;
+}
+
 
 session::~session()
 {
